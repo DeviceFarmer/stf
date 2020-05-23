@@ -1,68 +1,37 @@
-<img src="res/common/logo/exports/STF-128.png?raw=true" style="width:100px;height:100px;" alt="STF">
+<img src="https://raw.githubusercontent.com/DeviceFarmer/stf/master/res/common/logo/exports/STF-128.png" style="width:100px;height:100px;" alt="STF">
 
-[![Build Status](https://travis-ci.org/openstf/stf.svg?branch=master)](https://travis-ci.org/openstf/stf)
-[![Docker Pulls](https://img.shields.io/docker/pulls/openstf/stf.svg)](https://hub.docker.com/r/openstf/stf/)
-[![NPM version](https://img.shields.io/npm/v/stf.svg)](https://www.npmjs.com/package/stf)
-[![Backers on Open Collective](https://opencollective.com/openstf/backers/badge.svg)](#backers) [![Sponsors on Open Collective](https://opencollective.com/openstf/sponsors/badge.svg)](#sponsors)
+[![Build Status](https://travis-ci.org/DeviceFarmer/stf.svg?branch=master&status=created)](https://travis-ci.org/github/DeviceFarmer/stf)
+[![Docker Pulls](https://img.shields.io/docker/pulls/devicefarmer/stf.svg)](https://hub.docker.com/r/devicefarmer/stf/)
+[![npm](https://img.shields.io/npm/v/@devicefarmer/stf)](https://www.npmjs.com/package/@devicefarmer/stf)
 
 **STF** (or Smartphone Test Farm) is a web application for debugging smartphones, smartwatches and other gadgets remotely, from the comfort of your browser.
 
-STF was originally developed at [CyberAgent](https://www.cyberagent.co.jp/en/) to control a growing collection of more than 160 devices. As of July 2016 development is mainly sponsored by [HeadSpin](https://performance.headspin.io/) and [other individual contributors](https://opencollective.com/openstf).
+## Overview
 
-We  welcome financial contributions in full transparency on our [open collective](https://opencollective.com/openstf).
+![Close-up of device shelf](https://raw.githubusercontent.com/DeviceFarmer/stf/master/doc/shelf_closeup_790x.jpg)
 
-![Close-up of device shelf](doc/shelf_closeup_790x.jpg?raw=true)
-
-![Super short screencast showing usage](doc/7s_usage.gif?raw=true)
-
-## Credits
-
-### Sponsors
-
-Thank you to all our sponsors! (please ask your company to also support this open source project by [becoming a sponsor](https://opencollective.com/openstf#sponsor))
-
-#### Gold Sponsor
-
-[<img src="doc/sponsors/headspin-wordmark-orange.png?raw=true" alt="HeadSpin" width="400">](https://ui.headspin.io/register?referral=start-testing-hs)
-
-> [HeadSpin](https://headspin.io/) provides secure and scalable STF for iOS integrated with Appium/XCTest/Selenium/Espresso, High speed interaction Audio/Video/Game testing and AI based Root cause analysis for Performance Management. It's free to start using HeadSpin in 150+ locations worldwide! [Try it out for free.](https://ui.headspin.io/register?referral=start-testing-hs)
-
-HeadSpin offers a generous monthly contribution towards STF development.
-
-### Contributors
-Thank you to all the people who have already contributed to STF!
-<a href="../../graphs/contributors"><img src="https://opencollective.com/openstf/contributors.svg?width=890" /></a>
-
-### Backers
-Thank you to all our backers! [[Become a backer](https://opencollective.com/openstf#backer)]
-
-<a href="https://opencollective.com/openstf#backers" target="_blank"><img src="https://opencollective.com/openstf/backers.svg?width=890"></a>
-
-
-### How to become a sponsor
-
-Please use our [open collective](https://opencollective.com/openstf#sponsor) or [contact us][contact-link] directly for sponsor arrangements. Both recurring and one-time contributions are most welcome. Contributions towards a specific issue or feature are also possible, and can be attributed to your company in our release notes and other related materials. Hardware-only contributions, whether new or used, are also extremely helpful and well received, especially if you find a device that doesn't work. Please see our [donation transparency report](DONATION-TRANSPARENCY.md) for past hardware contributions.
+![Super short screencast showing usage](https://raw.githubusercontent.com/DeviceFarmer/stf/master/doc/7s_usage.gif)
 
 ## Features
 
 * OS support
   - Android
-    * Supports versions 2.3.3 (SDK level 10) to 9.0 (SDK level 28)
+    * Supports versions 2.3.3 (SDK level 10) to 10 (SDK level 29)
     * Supports Wear 5.1 (but not 5.0 due to missing permissions)
     * Supports Fire OS, CyanogenMod, and other heavily Android based distributions
     * `root` is **not** required for any current functionality
 * Remote control any device from your browser
   - Real-time screen view
-    * Refresh speed can reach 30-40 FPS depending on specs and Android version. See [minicap](https://github.com/openstf/minicap) for more information.
+    * Refresh speed can reach 30-40 FPS depending on specs and Android version. See [minicap](https://github.com/devicefarmer/minicap) for more information.
     * Rotation support
   - Supports typing text from your own keyboard
     * Supports meta keys
     * Copy and paste support (although it can be a bit finicky on older devices, you may need to long-press and select paste manually)
     * May sometimes not work well with non-Latin languages unfortunately.
-  - Multitouch support on touch screens via [minitouch](https://github.com/openstf/minitouch), two finger pinch/rotate/zoom gesture support on regular screens by pressing `Alt` while dragging
+  - Multitouch support on touch screens via [minitouch](https://github.com/devicefarmer/minitouch), two finger pinch/rotate/zoom gesture support on regular screens by pressing `Alt` while dragging
   - Drag & drop installation and launching of `.apk` files
     * Launches main launcher activity if specified in the manifest
-  - Reverse port forwarding via [minirev](https://github.com/openstf/minirev)
+  - Reverse port forwarding via [minirev](https://github.com/devicefarmer/minirev)
     * Access your local server directly from the device, even if it's not on the same network
   - Open websites easily in any browser
     * Installed browsers are detected in real time and shown as selectable options
@@ -114,7 +83,7 @@ Please use our [open collective](https://opencollective.com/openstf#sponsor) or 
 
 ## Status
 
-STF is in continued, active development, but development is still largely funded by individual team members and their unpaid free time, leading to slow progress. While normal for many open source projects, STF is quite heavy on the hardware side, and is therefore somewhat of a money sink. See [how to become a sponsor](#how-to-become-a-sponsor) if you or your company would like to support future development.
+STF is in continued, active development, but development is still largely funded by individual team members and their unpaid free time, leading to slow progress. While normal for many open source projects, STF is quite heavy on the hardware side, and is therefore somewhat of a money sink.
 
 We're also actively working to expand the team, don't be afraid to ask if you're interested.
 
@@ -128,12 +97,6 @@ Here are some things we are planning to address ASAP.
 4. Automated scheduled restarts for devices
 5. More!
 
-### Consulting services
-
-We highly encourage open participation in the community. However, if you're running a business that uses STF or would like to use STF, you may sometimes want to have an expert, i.e. one of the original developers or a skilled contributor, work with you to set up a prototype for evaluation purposes, add support for new or old hardware, figure out an issue, fix a bug or add some new feature. Our services are similar to [FFmpeg's](https://ffmpeg.org/consulting.html). [Contact us][contact-link] with details and we'll see what we can do.
-
-Availability is limited and tied to individual developer's schedules.
-
 ## A quick note about security
 
 As the product has evolved from an internal tool running in our internal network, we have made certain assumptions about the trustworthiness of our users. As such, there is little to no security or encryption between the different processes. Furthermore, devices do not get completely reset between uses, potentially leaving accounts logged in or exposing other sensitive data. This is not an issue for us, as all of our devices are test devices and are only used with test accounts, but it may be an issue for you if you plan on deploying STF to a multiuser environment. We welcome contributions in this area.
@@ -146,7 +109,7 @@ As the product has evolved from an internal tool running in our internal network
 * [GraphicsMagick](http://www.graphicsmagick.org/) (for resizing screenshots)
 * [ZeroMQ](http://zeromq.org/) libraries installed
 * [Protocol Buffers](https://github.com/google/protobuf) libraries installed
-* [yasm](http://yasm.tortall.net/) installed (for compiling embedded [libjpeg-turbo](https://github.com/sorccu/node-jpeg-turbo))
+* [yasm](http://yasm.tortall.net/) installed (for compiling embedded [libjpeg-turbo](https://github.com/devicefarmer/node-jpeg-turbo))
 * [pkg-config](http://www.freedesktop.org/wiki/Software/pkg-config/) so that Node.js can find the libraries
 
 Note that you need these dependencies even if you've installed STF directly from [NPM](https://www.npmjs.com/), because they can't be included in the package.
@@ -159,7 +122,7 @@ brew install rethinkdb graphicsmagick zeromq protobuf yasm pkg-config
 
 On Windows you're on your own. In theory you might be able to get STF installed via [Cygwin](https://www.cygwin.com/) or similar, but we've never tried. In principle we will not provide any Windows installation support, but please do send a documentation pull request if you figure out what to do.
 
-We also provide a [Docker](http://docker.com/) container in the [Docker Hub](https://hub.docker.com/) as [openstf/stf](https://registry.hub.docker.com/u/openstf/stf/). You can use our [Dockerfile](Dockerfile) as guidance if you'd prefer to do the installation yourself.
+We also provide a [Docker](http://docker.com/) container in the [Docker Hub](https://hub.docker.com/) as [devicefarmer/stf](https://registry.hub.docker.com/u/devicefarmer/stf/). You can use our [Dockerfile](Dockerfile) as guidance if you'd prefer to do the installation yourself.
 
 You should now be ready to [build](#building) or [run](#running) STF.
 
@@ -195,7 +158,7 @@ You should now have a working installation for local development.
 
 ## Running
 
-STF comprises of several independent processes that must normally be launched separately. In our own setup each one these processes is its own [systemd](http://www.freedesktop.org/wiki/Software/systemd/) unit. See [DEPLOYMENT.md](doc/DEPLOYMENT.md) and [Setup Examples](https://github.com/openstf/setup-examples) if you're interested.
+STF comprises of several independent processes that must normally be launched separately. In our own setup each one these processes is its own [systemd](http://www.freedesktop.org/wiki/Software/systemd/) unit. See [DEPLOYMENT.md](doc/DEPLOYMENT.md) and [Setup Examples](https://github.com/devicefarmer/setup-examples) if you're interested.
 
 For development purposes, however, there's a helper command to quickly launch all required processes along with a mock login implementation. Note that you **must** have RethinkDB running first.
 
@@ -230,7 +193,7 @@ stf local
 
 After the [webpack](http://webpack.github.io/) build process has finished (which can take a small while) you should have your private STF running on [http://localhost:7100](http://localhost:7100). If you had devices connected before running the command, those devices should now be available for use. If not, you should see what went wrong from your console. Feel free to plug in or unplug any devices at any time.
 
-Note that if you see your device ready to use but without a name or a proper image, we're probably missing the data for that model in [our device database](https://github.com/openstf/stf-device-db). Everything should work fine either way.
+Note that if you see your device ready to use but without a name or a proper image, we're probably missing the data for that model in [our device database](https://github.com/devicefarmer/stf-device-db). Everything should work fine either way.
 
 If you want to access STF from other machines, you can add the `--public-ip` option for quick testing.
 
@@ -246,7 +209,7 @@ To update your development version, simply pull the repo and run `npm install` a
 
 ### Can I deploy STF to actual servers?
 
-Yes, see [DEPLOYMENT.md](doc/DEPLOYMENT.md) and [Setup Examples](https://github.com/openstf/setup-examples).
+Yes, see [DEPLOYMENT.md](doc/DEPLOYMENT.md) and [Setup Examples](https://github.com/devicefarmer/setup-examples).
 
 ### Will I have to change battery packs all the time?
 
@@ -441,7 +404,7 @@ Most powered USB 3.0 hubs we've tested have had a serious problem: the whole hub
 
 Currently STF UI is available in English and Japanese.
 
-If you would like translate to any other language, please contribute in the [STF Transifex project](https://www.transifex.com/projects/p/stf/).
+If you would like translate to any other language, please contribute in the [STF Transifex project](https://www.transifex.com/devicefarmer/stf-main).
 
 For updating the source and all the translation files first you have to install the [Transifex client](http://docs.transifex.com/client/setup/).
 
@@ -472,10 +435,14 @@ See [TESTING.md](TESTING.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## History
+
+Project was previously developed as [OpenSTF](https://github.com/openstf) and supported by [CyberAgent](https://www.cyberagent.co.jp/en/), [HeadSpin](https://performance.headspin.io/) and [other individual contributors](https://opencollective.com/openstf).
+
+See [Credits](doc/CREDITS.md) for more details.
+
 ## License
 
 See [LICENSE](LICENSE).
 
 Copyright © 2017 The OpenSTF Project. All Rights Reserved.
-
-[contact-link]: mailto:contact@openstf.io
