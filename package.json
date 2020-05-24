@@ -87,7 +87,7 @@
     "@devicefarmer/stf-browser-db": "^1.0.2",
     "@devicefarmer/stf-device-db": "^1.2.0",
     "@devicefarmer/stf-syrup": "^1.0.0",
-    "stf-wiki": "^1.0.0",
+    "@devicefarmer/stf-wiki": "^1.0.0",
     "swagger-express-mw": "^0.7.0",
     "swagger-tools": "^0.10.3",
     "temp": "^0.8.1",
