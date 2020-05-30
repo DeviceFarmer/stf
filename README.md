@@ -95,7 +95,10 @@ Here are some things we are planning to address ASAP.
 2. Properly expose the new VNC functionality in the UI
 3. Properly reset user data between uses (Android 4.0+)
 4. Automated scheduled restarts for devices
-5. More!
+
+### Long term goals
+
+1. iOS support
 
 ## A quick note about security
 
@@ -446,3 +449,5 @@ See [Credits](doc/CREDITS.md) for more details.
 See [LICENSE](LICENSE).
 
 Copyright © 2017 The OpenSTF Project. All Rights Reserved.
+
+Project is a part of [OW2 consortium](https://projects.ow2.org/view/openstf/).
