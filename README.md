@@ -136,7 +136,7 @@ Note that while Mac OS can be used for development, it doesn't provide a very re
 As mentioned earlier, you must have all of the [requirements](#requirements) installed first. Then you can simply install via NPM:
 
 ```bash
-npm install -g stf
+npm install -g @devicefarmer/stf
 ```
 
 Now you're ready to [run](#running). For development, though, you should [build](#building) instead.
