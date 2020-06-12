@@ -444,10 +444,33 @@ Project was previously developed as [OpenSTF](https://github.com/openstf) and su
 
 See [Credits](doc/CREDITS.md) for more details.
 
+### DeviceFarmer vs OpenSTF FAQ
+
+#### What exactly has changed?
+
+1. Organisation on GitHub to [DeviceFarmer](https://github.com/DeviceFarmer)
+1. Organisation on DockerHub to [devicefarmer](https://hub.docker.com/orgs/devicefarmer)
+1. Package coordinates on npmjs are now under [@devicefarmer scope](https://www.npmjs.com/package/@devicefarmer/stf)
+
+#### How to migrate?
+
+It depends on how you are using STF. One or more of those changes may be needed:
+
+* change Docker image coordinates eg. `docker pull openstf/stf` to `docker pull devicefarmer/stf`
+* change npmjs package coordinates eg. `npm install -g stf` to `npm install -g @devicefarmer/stf`
+
+#### Will version OpenSTF 3.4.2 be published to npmjs?
+
+No. Exceptionally, on npmjs the last OpenSTF version is 3.4.1.
+
+#### What about sponsorship?
+
+DeviceFarmer team have no access to OpenSTF donations collected using [Open Collective](https://opencollective.com/openstf). At the time of writing DeviceFarmer do not collect any donations.
+
 ## License
 
 See [LICENSE](LICENSE).
 
 Copyright © 2017 The OpenSTF Project. All Rights Reserved.
 
-Project is a part of [OW2 consortium](https://projects.ow2.org/view/openstf/).
+Project is a part of [OW2 consortium](https://projects.ow2.org/view/devicefarmer/).
