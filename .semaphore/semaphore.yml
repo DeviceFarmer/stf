@@ -5,7 +5,7 @@ agent:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
-  - name: Build Docker image
+  - name: Build Standard Docker image
     task:
       jobs:
         - name: docker build
@@ -25,6 +25,14 @@ blocks:
             - npm install
             - npm test
             - gulp build
+  - name: Build Debian Docker image
+    dependencies: []
+    task:
+      jobs:
+        - name: docker build
+          commands:
+            - checkout
+            - docker build . -f Dockerfile-debian-x86_64
 promotions:
   - name: Deploy to DockerHub
     pipeline_file: deploy.yml
