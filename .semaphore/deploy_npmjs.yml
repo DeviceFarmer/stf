@@ -1,0 +1,15 @@
+version: v1.0
+name: Deploy to npmjs
+blocks:
+  - name: Deploy to npmjs
+    task:
+      jobs:
+        - name: Deploy
+          commands:
+            - echo "job 1"
+      secrets:
+        - name: npmjs
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
