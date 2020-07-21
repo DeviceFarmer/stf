@@ -35,10 +35,10 @@ blocks:
             - docker build . -f Dockerfile-debian-x86_64
 promotions:
   - name: Deploy to DockerHub
-    pipeline_file: deploy.yml
+    pipeline_file: deploy_dockerhub.yml
     auto_promote:
       when: (branch = 'master' OR tag =~ '.*') AND result = 'passed'
   - name: Deploy to npmjs
-    pipeline_file: pipeline_3.yml
+    pipeline_file: deploy_npmjs.yml
     auto_promote:
       when: tag =~ '.*' AND result = 'passed'
