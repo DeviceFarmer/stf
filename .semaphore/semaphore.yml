@@ -38,3 +38,7 @@ promotions:
     pipeline_file: deploy.yml
     auto_promote:
       when: (branch = 'master' OR tag =~ '.*') AND result = 'passed'
+  - name: Deploy to npmjs
+    pipeline_file: pipeline_3.yml
+    auto_promote:
+      when: tag =~ '.*' AND result = 'passed'
