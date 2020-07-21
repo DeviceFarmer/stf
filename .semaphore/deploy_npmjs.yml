@@ -9,7 +9,7 @@ blocks:
             - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp
             - sem-version node 8.16.1
             - checkout
-            - npm build
+            - npm install
             - npm publish --access=public
       secrets:
         - name: npmjs
