@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.3 (2020-07-21)
+
+### Misc
+
+- Changed dependencies to equivalents using **@devicefarmer** scope
+
 ## 3.4.2 (2020-05-31)
 
 ### Fixes
