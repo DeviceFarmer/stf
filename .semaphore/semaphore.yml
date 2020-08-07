@@ -1,0 +1,44 @@
+version: v1.0
+name: Docker
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: Build Standard Docker image
+    task:
+      jobs:
+        - name: docker build
+          commands:
+            - checkout
+            - docker build .
+    dependencies: []
+  - name: Build npm package
+    dependencies: []
+    task:
+      jobs:
+        - name: npm test
+          commands:
+            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp
+            - sem-version node 8.16.1
+            - checkout
+            - npm install
+            - npm test
+            - gulp build
+  - name: Build Debian Docker image
+    dependencies: []
+    task:
+      jobs:
+        - name: docker build
+          commands:
+            - checkout
+            - docker build . -f Dockerfile-debian-x86_64
+promotions:
+  - name: Deploy to DockerHub
+    pipeline_file: deploy_dockerhub.yml
+    auto_promote:
+      when: (branch = 'master' OR tag =~ '.*') AND result = 'passed'
+  - name: Deploy to npmjs
+    pipeline_file: deploy_npmjs.yml
+    auto_promote:
+      when: tag =~ '.*' AND result = 'passed'
