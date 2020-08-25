@@ -1,0 +1,19 @@
+version: v1.0
+name: Deploy to npmjs
+blocks:
+  - name: Deploy to npmjs
+    task:
+      jobs:
+        - name: Deploy
+          commands:
+            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp
+            - sem-version node 8.16.1
+            - checkout
+            - npm install
+            - npm publish --access=public
+      secrets:
+        - name: npmjs
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804

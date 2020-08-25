@@ -7,15 +7,15 @@ blocks:
         - name: Deploy
           commands:
             - checkout
-            - 'docker build . -t "devicefarmer/stf:${SEMAPHORE_GIT_TAG_NAME:-latest}"'
+            - 'docker build . -t "devicefarmer/stf:$(echo ${SEMAPHORE_GIT_TAG_NAME:-vlatest} |cut -c 2-)"'
             - docker push devicefarmer/stf
       secrets:
         - name: dockerhub-secrets
       prologue:
         commands:
           - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
+    dependencies: []
 agent:
   machine:
     type: e1-standard-2
     os_image: ubuntu1804
-    
