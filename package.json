@@ -107,7 +107,7 @@
     "del": "^2.0.1",
     "eslint": "^3.2.2",
     "event-stream": "^3.3.2",
-    "exports-loader": "^0.6.2",
+    "exports-loader": "^0.7.0",
     "extract-text-webpack-plugin": "^1.0.1",
     "file-loader": "^0.9.0",
     "fs-extra": "^8.1.0",
