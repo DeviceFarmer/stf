@@ -60,7 +60,7 @@ module.exports = function ExplorerCtrl($scope) {
     $scope.control.fsretrieve(path)
       .then(function(result) {
         if (result.body) {
-          window.open(result.body.href + '?download', "_blank")
+          window.open(result.body.href + '?download', '_blank')
         }
       })
       .catch(function(err) {
