@@ -1,3 +1,7 @@
+/**
+* Copyright © 2020 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+**/
+
 module.exports = function ExplorerCtrl($scope) {
   $scope.explorer = {
     search: '',
@@ -56,7 +60,7 @@ module.exports = function ExplorerCtrl($scope) {
     $scope.control.fsretrieve(path)
       .then(function(result) {
         if (result.body) {
-          location.href = result.body.href + '?download'
+          window.open(result.body.href + '?download', '_blank')
         }
       })
       .catch(function(err) {
