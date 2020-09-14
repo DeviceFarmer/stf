@@ -25,7 +25,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
       stf && \
     sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
     apt-get update && \
-    apt-get -y install wget python build-essential && \
+    apt-get -y install wget python build-essential openjdk-8-jdk && \
     cd /tmp && \
     wget --progress=dot:mega \
       https://nodejs.org/dist/v8.9.3/node-v8.9.3-linux-x64.tar.xz && \
@@ -58,7 +58,7 @@ RUN set -x && \
     mv node_modules /app && \
     rm -rf ~/.node-gyp && \
     cd /app && \
-    rm -rf /tmp/*
+    find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete
 
 # Switch to the app user.
 USER stf
