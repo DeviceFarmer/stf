@@ -32,7 +32,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
-    apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick yasm && \
+    apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm && \
     apt-get clean && \
     rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
@@ -58,7 +58,7 @@ RUN set -x && \
     mv node_modules /app && \
     rm -rf ~/.node-gyp && \
     cd /app && \
-    rm -rf /tmp/*
+    find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete
 
 # Switch to the app user.
 USER stf
