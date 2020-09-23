@@ -34,14 +34,19 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
     apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm && \
     apt-get clean && \
-    rm -rf /var/cache/apt/* /var/lib/apt/lists/*
+    rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
+    mkdir /tmp/bundletool && \
+    cd /tmp/bundletool && \
+    wget --progress=dot:mega \
+      https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
+    mv bundletool-all-1.2.0.jar bundletool.jar
 
 # Copy app source.
 COPY . /tmp/build/
 
 # Give permissions to our build user.
 RUN mkdir -p /app && \
-    chown -R stf-build:stf-build /tmp/build /app
+    chown -R stf-build:stf-build /tmp/build /tmp/bundletool /app
 
 # Switch over to the build user.
 USER stf-build
@@ -57,6 +62,8 @@ RUN set -x && \
     npm prune --production && \
     mv node_modules /app && \
     rm -rf ~/.node-gyp && \
+    mkdir /app/bundletool && \
+    mv /tmp/bundletool/* /app/bundletool && \
     cd /app && \
     find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete
 
