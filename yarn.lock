@@ -836,14 +836,10 @@ bluebird@3.4.x, bluebird@~3.4.1:
   version "2.11.0"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-2.11.0.tgz#534b9033c022c9579c56ba3b3e5a5caafbb650e1"
 
-bluebird@^3:
+bluebird@^3, bluebird@^3.3.0, bluebird@^3.3.3, bluebird@^3.4.7:
   version "3.7.2"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.7.2.tgz#9f229c15be272454ffa973ace0dbee79a1b0c36f"
   integrity sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==
-
-bluebird@^3.3.0, bluebird@^3.3.3, bluebird@^3.4.7:
-  version "3.5.0"
-  resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.0.tgz#791420d7f551eea2897453a8a77653f96606d67c"
 
 bluebird@~1.1.0:
   version "1.1.1"
@@ -8418,8 +8414,9 @@ ret@~0.1.10:
   resolved "https://registry.yarnpkg.com/ret/-/ret-0.1.14.tgz#58c636837b12e161f8a380cf081c6a230fd1664e"
 
 rethinkdb@^2.0.2:
-  version "2.3.3"
-  resolved "https://registry.yarnpkg.com/rethinkdb/-/rethinkdb-2.3.3.tgz#3dc6586e22fa1dabee0d254e64bd0e379fad2f72"
+  version "2.4.2"
+  resolved "https://registry.yarnpkg.com/rethinkdb/-/rethinkdb-2.4.2.tgz#9c5d8dde3300ddacfdfae0fc8ded3754602d447a"
+  integrity sha512-6DzwqEpFc8cqesAdo07a845oBRxLiHvWzopTKBo/uY2ypGWIsJQFJk3wjRDtSEhczxJqLS0jnf37rwgzYAw8NQ==
   dependencies:
     bluebird ">= 2.3.2 < 3"
 
