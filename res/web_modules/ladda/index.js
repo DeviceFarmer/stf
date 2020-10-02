@@ -1,3 +1,3 @@
-require('ladda/dist/ladda-themeless.min.css')
-require('ladda/dist/spin.min.js')
-require('ladda/dist/ladda.min.js')
+require('ladda/css/ladda.scss')
+//require('spin.js/spin.ts')
+require('ladda/js/ladda.js')

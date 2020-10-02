@@ -1,7 +1,6 @@
-module.exports = function InstallCtrl(
-  $scope
-, InstallService
-) {
+module.exports = function InstallCtrl( $scope, InstallService ) {
+  "ngInject";
+  
   $scope.accordionOpen = true
   $scope.installation = null
 

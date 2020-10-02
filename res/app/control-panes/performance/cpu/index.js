@@ -1,6 +1,6 @@
 require('./cpu.css')
 
-module.exports = angular.module('stf.cpu', [
+module.exports = angular.module('stf.perf.cpu', [
   require('epoch').name
 ])
   .run(['$templateCache', function($templateCache) {

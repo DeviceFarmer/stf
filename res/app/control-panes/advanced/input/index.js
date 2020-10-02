@@ -6,5 +6,8 @@ module.exports = angular.module('stf.advanced.input', [
     $templateCache.put('control-panes/advanced/input/input.pug',
       require('./input.pug')
     )
+    $templateCache.put('control-panes/advanced/input/alert-dialog.pug',
+      require('./alert-dialog.pug')
+    )
   }])
-  .controller('InputAdvancedCtrl', require('./input-controller'))
+  .controller('InputAdvancedCtrl', require('./input-controller').default)

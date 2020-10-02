@@ -1,17 +1,18 @@
-/**
-* Copyright © 2019 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
-**/
+// Copyright © 2019 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+
+import * as d3 from "d3";
 
 require.ensure([], function(require) {
   require('angular')
   require('angular-route')
   require('angular-touch')
-
+  require('angular-hotkeys')
+  
   angular.module('app', [
     'ngRoute',
     'ngTouch',
     require('gettext').name,
-    require('angular-hotkeys').name,
+    'cfp.hotkeys',
     require('./layout').name,
     require('./device-list').name,
     require('./group-list').name,

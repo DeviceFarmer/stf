@@ -3,7 +3,8 @@
 **/
 
 module.exports = function SignInCtrl($scope, $http, CommonService) {
-
+  "ngInject";
+  
   $scope.error = null
 
   $scope.submit = function() {
@@ -12,13 +13,13 @@ module.exports = function SignInCtrl($scope, $http, CommonService) {
       , email: $scope.signin.email.$modelValue
     }
     $scope.invalid = false
-    $http.post('/auth/api/v1/mock', data)
-      .success(function(response) {
+    $http.post('/auth/api/v1/mock', data).then(
+      function successCallback(response) {
         $scope.error = null
-        location.replace(response.redirect)
-      })
-      .error(function(response) {
-        switch (response.error) {
+        location.replace(response.data.redirect)
+      },
+      function errorCallback(response) {
+        switch (response.data.error) {
           case 'ValidationError':
             $scope.error = {
               $invalid: true

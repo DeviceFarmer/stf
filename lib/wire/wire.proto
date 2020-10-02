@@ -90,6 +90,11 @@ enum MessageType {
   GroupChangeMessage         = 1205;
   UserChangeMessage          = 1206;
   DeviceChangeMessage        = 1207;
+  AlertTextMessage           = 1300;
+  AlertButtonsMessage        = 1301;
+  AlertAcceptMessage         = 1302;
+  AlertDismissMessage        = 1303;
+  InputWheelMessage          = 1304;
 }
 
 message UpdateAccessTokenMessage {
@@ -748,4 +753,22 @@ message PhoneStateEvent {
 message RotationEvent {
   required string serial = 1;
   required int32 rotation = 2;
+}
+
+message AlertTextMessage {
+}
+
+message AlertButtonsMessage {
+}
+
+message AlertAcceptMessage {
+  required string name = 1;
+}
+
+message AlertDismissMessage {
+  required string name = 1;
+}
+
+message InputWheelMessage {
+  required int32 dist = 1;
 }
