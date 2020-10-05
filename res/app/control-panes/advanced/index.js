@@ -1,4 +1,5 @@
 require('./advanced.css')
+require('./input/alert-dialog.css')
 
 module.exports = angular.module('stf.advanced', [
   require('./input').name,

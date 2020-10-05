@@ -1,74 +1,117 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04 AS nodebase
 
-# Sneak the stf executable into $PATH.
-ENV PATH /app/bin:$PATH
-
-# Work in app dir by default.
-WORKDIR /app
-
-# Export default app port, not enough for all processes but it should do
-# for now.
-EXPOSE 3000
-
-# Install app requirements. Trying to optimize push speed for dependant apps
-# by reducing layers as much as possible. Note that one of the final steps
-# installs development files for node-gyp so that npm install won't have to
-# wait for them on the first native module installation.
+# Install base packages
 RUN export DEBIAN_FRONTEND=noninteractive && \
-    useradd --system \
-      --create-home \
-      --shell /usr/sbin/nologin \
-      stf-build && \
-    useradd --system \
-      --create-home \
-      --shell /usr/sbin/nologin \
-      stf && \
-    sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
     apt-get update && \
-    apt-get -y install wget python build-essential && \
-    cd /tmp && \
-    wget --progress=dot:mega \
-      https://nodejs.org/dist/v8.9.3/node-v8.9.3-linux-x64.tar.xz && \
-    tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
-    rm node-v*.tar.xz && \
-    su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
-    apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm && \
-    apt-get clean && \
-    rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
-    mkdir /tmp/bundletool && \
-    cd /tmp/bundletool && \
-    wget --progress=dot:mega \
-      https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
-    mv bundletool-all-1.2.0.jar bundletool.jar
+    apt-get -y --no-install-recommends install curl wget libxml-bare-perl libzmq3-dev libprotobuf-dev graphicsmagick ca-certificates openjdk-8-jdk
 
-# Copy app source.
-COPY . /tmp/build/
+# Install node
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    curl -sL -o /tmp/install_node.sh https://deb.nodesource.com/setup_8.x && \
+    /bin/bash /tmp/install_node.sh && \
+    apt install --no-install-recommends -y nodejs
 
-# Give permissions to our build user.
-RUN mkdir -p /app && \
-    chown -R stf-build:stf-build /tmp/build /tmp/bundletool /app
+RUN useradd --system --create-home --shell /usr/sbin/nologin stf
 
-# Switch over to the build user.
-USER stf-build
+FROM nodebase as with_packages
 
-# Run the build.
+# Install additional packages for building things
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get -y --no-install-recommends install build-essential git yasm jq python vim
+
+# Install node-gyp ahead of time to avoid installation on native module install
+# RUN /bin/bash -c '/usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install'
+
+# Install just the package dependencies before copying in the full source
+RUN mkdir -p /tmp/build/res/build
+COPY ./package*.json /tmp/build/
+WORKDIR /tmp/build
 RUN set -x && \
-    cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
     npm install --loglevel http && \
-    npm pack && \
-    tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    bower cache clean && \
-    npm prune --production && \
-    mv node_modules /app && \
-    rm -rf ~/.node-gyp && \
-    mkdir /app/bundletool && \
-    mv /tmp/bundletool/* /app/bundletool && \
-    cd /app && \
-    find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete
+    curl -sf https://gobinaries.com/tj/node-prune | sh
 
-# Switch to the app user.
-USER stf
+wget --progress=dot:mega \
+	https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar \
+	-O /tmp/bundletool.jar
 
+# ********* FRONTEND **********
+    
+FROM with_packages as frontend
+
+# Install bower dependencies
+WORKDIR /tmp/build
+COPY ./bower.json /tmp/build/
+COPY ./.bowerrc /tmp/build/
+RUN mkdir bower_modules && \
+    ./node_modules/.bin/bower install
+
+# Copy the app ( res ) in
+COPY ./bower.json /tmp/build/
+COPY ./gulpfile.js /tmp/build/
+COPY ./webpack.config.js /tmp/build/
+COPY ./res /tmp/build/res
+COPY ./lib/util /tmp/build/lib/util
+
+RUN ./node_modules/.bin/gulp build
+
+# ********* BACKEND **********
+
+FROM with_packages as backend
+
+COPY ./lib /tmp/build/lib
+
+# Package and cleanup
+WORKDIR /tmp/build
+RUN npm pack 2>&1 | grep -v "npm notice [1-9]" && \
+    mv devicefarmer-stf-$(jq .version package.json -j).tgz stf.tgz
+
+#npm prune --production && \
+#    node-prune && \
+
+FROM alpine as app
+
+RUN mkdir -p /app
+COPY --from=backend /tmp/build/stf.tgz /tmp/stf.tgz
+RUN tar xf /tmp/stf.tgz --strip-components 1 -C /app
+
+# ********* RUNTIME **********
+
+FROM nodebase as runtime
+
+EXPOSE 3000
+
+# Setup user
+RUN mkdir -p /app/res && mkdir -p /app/bundletool && chown stf:stf /app && chown stf:stf /app/*
+
+WORKDIR /app
+
+# Copy in node_modules and prune them
+COPY --from=with_packages --chown=stf:stf /tmp/build/node_modules /app/node_modules
+COPY --from=with_packages --chown=stf:stf /tmp/build/package.json /app/package.json
+RUN npm prune --production
+
+# Copy in resources needed by backend
+COPY --chown=stf:stf ./res/common /app/res/common
+COPY --chown=stf:stf ./res/app/views /app/res/app/views
+COPY --chown=stf:stf ./res/auth/mock/views /app/res/auth/mock/views
+
+# Copy in the backend
+COPY --from=app --chown=stf:stf /app /app
+
+# Copy in the frontend
+COPY --from=frontend --chown=stf:stf /tmp/build/res/build /app/res/build
+
+# Copy in bundletool
+COPY --from=with_packages --chown=stf:stf /tmp/bundletool.jar /app/bundletool/bundletool.jar
+
+COPY ./webpackserver.config.js /app/
+
+#USER root
+#RUN apt-get -y --no-install-recommends install ncdu
+
+# Add stf executable dir into $PATH
+ENV PATH /app/bin:$PATH
+    
 # Show help by default.
 CMD stf --help

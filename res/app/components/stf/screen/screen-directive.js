@@ -3,21 +3,21 @@ var rotator = require('./rotator')
 var ImagePool = require('./imagepool')
 
 module.exports = function DeviceScreenDirective(
-  $document
-, ScalingService
-, VendorUtil
-, PageVisibilityService
-, $timeout
-, $window
+  $document,
+  ScalingService,
+  VendorUtil,
+  PageVisibilityService,
+  $timeout,
+  $window
 ) {
   return {
-    restrict: 'E'
-  , template: require('./screen.pug')
-  , scope: {
-      control: '&'
-    , device: '&'
-    }
-  , link: function(scope, element) {
+    restrict: 'E',
+    template: require('./screen.pug'),
+    scope: {
+      control: '&',
+      device: '&'
+    },
+    link: function(scope, element) {
       var URL = window.URL || window.webkitURL
       var BLANK_IMG =
         'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
@@ -29,19 +29,11 @@ module.exports = function DeviceScreenDirective(
       var input = element.find('input')
 
       var screen = scope.screen = {
-        rotation: 0
-      , bounds: {
-          x: 0
-        , y: 0
-        , w: 0
-        , h: 0
-        }
+        rotation: 0,
+        bounds: { x: 0, y: 0, w: 0, h: 0 }
       }
-
-      var scaler = ScalingService.coordinator(
-        device.display.width
-      , device.display.height
-      )
+      
+      var scaler = ScalingService.coordinator( device.display.width, device.display.height )
 
       /**
        * SCREEN HANDLING
@@ -90,9 +82,9 @@ module.exports = function DeviceScreenDirective(
         var frontBackRatio = devicePixelRatio / backingStoreRatio
 
         var options = {
-          autoScaleForRetina: true
-        , density: Math.max(1, Math.min(1.5, devicePixelRatio || 1))
-        , minscale: 0.36
+          autoScaleForRetina: true,
+          density: Math.max(1, Math.min(1.5, devicePixelRatio || 1)),
+          minscale: 0.36
         }
 
         var adjustedBoundSize
@@ -114,10 +106,7 @@ module.exports = function DeviceScreenDirective(
               sh *= f / sh
             }
 
-            return {
-              w: Math.ceil(sw)
-            , h: Math.ceil(sh)
-            }
+            return { w: Math.ceil(sw), h: Math.ceil(sh) }
           }
 
           // FIXME: element is an object HTMLUnknownElement in IE9
@@ -205,13 +194,8 @@ module.exports = function DeviceScreenDirective(
 
         ws.onmessage = (function() {
           var cachedScreen = {
-            rotation: 0
-          , bounds: {
-              x: 0
-            , y: 0
-            , w: 0
-            , h: 0
-            }
+            rotation: 0,
+            bounds: { x: 0, y: 0, w: 0, h: 0 }
           }
 
           var cachedImageWidth = 0
@@ -222,7 +206,9 @@ module.exports = function DeviceScreenDirective(
 
           function applyQuirks(banner) {
             element[0].classList.toggle(
-              'quirk-always-upright', alwaysUpright = banner.quirks.alwaysUpright)
+              'quirk-always-upright',
+              alwaysUpright = banner.quirks.alwaysUpright
+            )
           }
 
           function hasImageAreaChanged(img) {
@@ -411,16 +397,16 @@ module.exports = function DeviceScreenDirective(
           // Chrome/Safari/Opera
           if (
             // Mac | Kinesis keyboard | Karabiner | Latin key, Kana key
-          e.keyCode === 0 && e.keyIdentifier === 'U+0010' ||
+            e.keyCode === 0 && e.keyIdentifier === 'U+0010' ||
 
             // Mac | MacBook Pro keyboard | Latin key, Kana key
-          e.keyCode === 0 && e.keyIdentifier === 'U+0020' ||
+            e.keyCode === 0 && e.keyIdentifier === 'U+0020' ||
 
             // Win | Lenovo X230 keyboard | Alt+Latin key
-          e.keyCode === 246 && e.keyIdentifier === 'U+00F6' ||
+            e.keyCode === 246 && e.keyIdentifier === 'U+00F6' ||
 
             // Win | Lenovo X230 keyboard | Convert key
-          e.keyCode === 28 && e.keyIdentifier === 'U+001C'
+            e.keyCode === 28 && e.keyIdentifier === 'U+001C'
           ) {
             return true
           }
@@ -573,6 +559,11 @@ module.exports = function DeviceScreenDirective(
           }
         }
 
+        function mouseWheelListener(event) {
+          event.preventDefault();
+          control.wheel( event.deltaY );
+        }
+        
         function mouseDownListener(event) {
           var e = event
           if (e.originalEvent) {
@@ -593,20 +584,28 @@ module.exports = function DeviceScreenDirective(
 
           var x = e.pageX - screen.bounds.x
           var y = e.pageY - screen.bounds.y
-          var pressure = 0.5
+          
+          var pressure = 0.5;
+          if( e.shiftKey ) pressure = 1;
+          
           var scaled = scaler.coords(
-                screen.bounds.w
-              , screen.bounds.h
-              , x
-              , y
-              , screen.rotation
-              )
+            screen.bounds.w,
+            screen.bounds.h,
+            x,
+            y,
+            screen.rotation
+          )
 
           control.touchDown(nextSeq(), 0, scaled.xP, scaled.yP, pressure)
 
           if (fakePinch) {
-            control.touchDown(nextSeq(), 1, 1 - scaled.xP, 1 - scaled.yP,
-              pressure)
+            control.touchDown(
+              nextSeq(),
+              1,
+              1 - scaled.xP,
+              1 - scaled.yP,
+              pressure
+            )
           }
 
           control.touchCommit(nextSeq())
@@ -614,16 +613,22 @@ module.exports = function DeviceScreenDirective(
           activateFinger(0, x, y, pressure)
 
           if (fakePinch) {
-            activateFinger(1, -e.pageX + screen.bounds.x + screen.bounds.w,
-              -e.pageY + screen.bounds.y + screen.bounds.h, pressure)
+            activateFinger(
+              1,
+              -e.pageX + screen.bounds.x + screen.bounds.w,
+              -e.pageY + screen.bounds.y + screen.bounds.h,
+              pressure
+            )
           }
 
           element.bind('mousemove', mouseMoveListener)
           $document.bind('mouseup', mouseUpListener)
           $document.bind('mouseleave', mouseUpListener)
 
-          if (lastPossiblyBuggyMouseUpEvent &&
-              lastPossiblyBuggyMouseUpEvent.timeStamp > e.timeStamp) {
+          if (
+            lastPossiblyBuggyMouseUpEvent &&
+            lastPossiblyBuggyMouseUpEvent.timeStamp > e.timeStamp
+          ) {
             // We got mouseup before mousedown. See mouseUpBugWorkaroundListener
             // for details.
             mouseUpListener(lastPossiblyBuggyMouseUpEvent)
@@ -654,23 +659,35 @@ module.exports = function DeviceScreenDirective(
           var y = e.pageY - screen.bounds.y
           var pressure = 0.5
           var scaled = scaler.coords(
-                screen.bounds.w
-              , screen.bounds.h
-              , x
-              , y
-              , screen.rotation
-              )
+            screen.bounds.w,
+            screen.bounds.h,
+            x,
+            y,
+            screen.rotation
+          )
 
           control.touchMove(nextSeq(), 0, scaled.xP, scaled.yP, pressure)
 
           if (addGhostFinger) {
-            control.touchDown(nextSeq(), 1, 1 - scaled.xP, 1 - scaled.yP, pressure)
+            control.touchDown(
+              nextSeq(),
+              1,
+              1 - scaled.xP,
+              1 - scaled.yP,
+              pressure
+            )
           }
           else if (deleteGhostFinger) {
             control.touchUp(nextSeq(), 1)
           }
           else if (fakePinch) {
-            control.touchMove(nextSeq(), 1, 1 - scaled.xP, 1 - scaled.yP, pressure)
+            control.touchMove(
+              nextSeq(),
+              1,
+              1 - scaled.xP,
+              1 - scaled.yP,
+              pressure
+            )
           }
 
           control.touchCommit(nextSeq())
@@ -681,8 +698,12 @@ module.exports = function DeviceScreenDirective(
             deactivateFinger(1)
           }
           else if (fakePinch) {
-            activateFinger(1, -e.pageX + screen.bounds.x + screen.bounds.w,
-              -e.pageY + screen.bounds.y + screen.bounds.h, pressure)
+            activateFinger(
+              1,
+              -e.pageX + screen.bounds.x + screen.bounds.w,
+              -e.pageY + screen.bounds.y + screen.bounds.h,
+              pressure
+            )
           }
         }
 
@@ -834,12 +855,12 @@ module.exports = function DeviceScreenDirective(
             var y = touch.pageY - screen.bounds.y
             var pressure = touch.force || 0.5
             var scaled = scaler.coords(
-                  screen.bounds.w
-                , screen.bounds.h
-                , x
-                , y
-                , screen.rotation
-                )
+              screen.bounds.w,
+              screen.bounds.h,
+              x,
+              y,
+              screen.rotation
+            )
 
             slotted[touch.identifier] = slot
             control.touchDown(nextSeq(), slot, scaled.xP, scaled.yP, pressure)
@@ -868,12 +889,12 @@ module.exports = function DeviceScreenDirective(
             var y = touch.pageY - screen.bounds.y
             var pressure = touch.force || 0.5
             var scaled = scaler.coords(
-                  screen.bounds.w
-                , screen.bounds.h
-                , x
-                , y
-                , screen.rotation
-                )
+              screen.bounds.w,
+              screen.bounds.h,
+              x,
+              y,
+              screen.rotation
+            )
 
             control.touchMove(nextSeq(), slot, scaled.xP, scaled.yP, pressure)
             activateFinger(slot, x, y, pressure)
@@ -928,6 +949,7 @@ module.exports = function DeviceScreenDirective(
         element.on('touchstart', touchStartListener)
         element.on('mousedown', mouseDownListener)
         element.on('mouseup', mouseUpBugWorkaroundListener)
+        element.on('wheel', mouseWheelListener)
 
         createSlots()
       })()

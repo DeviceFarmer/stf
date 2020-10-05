@@ -1,5 +1,5 @@
 var pathutil = require('./../../../lib/util/pathutil')
-var options = require('./../../../webpack.config').webpack
+var options = require('./../../../webpack.config')
 var _ = require('lodash')
 
 module.exports = _.defaults(options, {

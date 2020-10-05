@@ -3,6 +3,7 @@ module.exports = function ControlServiceFactory(
 , $http
 , socket
 , TransactionService
+, TransactionError
 , $rootScope
 , gettext
 , KeycodesMapped
@@ -12,10 +13,12 @@ module.exports = function ControlServiceFactory(
 
   function ControlService(target, channel) {
     function sendOneWay(action, data) {
+      console.log("sendOneWay",action,data);
       socket.emit(action, channel, data)
     }
 
     function sendTwoWay(action, data) {
+      console.log("sendTwoWay",action,data);
       var tx = TransactionService.create(target)
       socket.emit(action, channel, tx.channel, data)
       return tx.promise
@@ -292,7 +295,51 @@ module.exports = function ControlServiceFactory(
     this.getWifiStatus = function() {
       return sendTwoWay('wifi.get')
     }
-
+    
+    this.getAlertInfo = function() {
+      return new Promise( function( resolve, reject ) {
+        sendTwoWay('alert.text',{}).then( function( res ) {
+          console.log( 'alert.text result', res );
+          sendTwoWay('alert.buttons',{}).then( function( res2 ) {
+            console.log( 'alert.buttons results', res2 );
+            resolve( [ res, res2 ] );
+          } )
+          .catch(TransactionError, function() {
+            throw new Error('alert.buttons failure')
+          });
+        } )
+        .catch(TransactionError, function() {
+          throw new Error('alert.text failure')
+        });
+      } );
+    }
+    
+    this.alertAccept = function( name ) {
+      return new Promise( function( resolve, reject ) {
+        sendTwoWay('alert.accept',{ name: name })
+          .then( function( res ) {
+            console.log( 'alert.accept result', res );
+            resolve( res );
+          } )
+          .catch(TransactionError, function() {
+            reject();
+          });
+      } );
+    }
+    
+    this.wheel = function( dist ) {
+      return new Promise( function( resolve, reject ) {
+        sendTwoWay('input.wheel',{ dist: dist })
+          .then( function( res ) {
+            console.log( 'input.wheel result', res );
+            resolve( res );
+          } )
+          .catch(TransactionError, function() {
+            reject();
+          });
+      } );
+    }
+    
     window.cc = this
   }
 

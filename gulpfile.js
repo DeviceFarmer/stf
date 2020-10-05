@@ -6,7 +6,7 @@ var jsonlint = require('gulp-jsonlint')
 var eslint = require('gulp-eslint')
 var EslintCLIEngine = require('eslint').CLIEngine
 var webpack = require('webpack')
-var webpackConfig = require('./webpack.config').webpack
+var webpackConfig = require('./webpack.config')
 var webpackStatusConfig = require('./res/common/status/webpack.config')
 var gettext = require('gulp-angular-gettext')
 var pug = require('gulp-pug')
@@ -35,7 +35,7 @@ gulp.task('eslint', function() {
   return gulp.src([
       'lib/**/*.js'
     , 'res/**/*.js'
-    , '!res/bower_components/**'
+    , '!cache/bower/**'
     , '*.js'
   ])
     // eslint() attaches the lint output to the "eslint" property
@@ -75,15 +75,54 @@ gulp.task('eslint-cli', function(done) {
   }
 })
 
+gulp.task('clean', function(done) {
+  gutil.log("clean")
+  del.sync([
+    './tmp'
+    //, './res/build'
+    , '.eslintcache'
+  ])
+  done()
+} )
 
-gulp.task('lint', ['jsonlint', 'eslint-cli'])
-gulp.task('test', ['lint', 'run:checkversion'])
-gulp.task('build', ['clean', 'webpack:build'])
-
-gulp.task('run:checkversion', function() {
+gulp.task('check_stf_version', function() {
   gutil.log('Checking STF version...')
   return run('./bin/stf -V').exec()
 })
+
+gulp.task('webpack:build', function(callback) {
+  gutil.log('webpack:build')
+  var myConfig = webpackConfig
+  myConfig.plugins = myConfig.plugins.concat(
+    new webpack.DefinePlugin({
+      'process.env': {
+        NODE_ENV: JSON.stringify('production')
+      }
+    })
+  )
+  myConfig.devtool = false
+
+  webpack(myConfig, function(err, stats) {
+    if (err) {
+      throw new gutil.PluginError('webpack:build', err)
+    }
+
+    gutil.log('[webpack:build]', stats.toString({
+      colors: true
+    }))
+
+    // Save stats to a json file
+    // Can be analyzed in http://webpack.github.io/analyse/
+    fromString('stats.json', JSON.stringify(stats.toJson()))
+      .pipe(gulp.dest('./tmp/'))
+
+    callback()
+  })
+} )
+
+gulp.task('lint', gulp.series( 'jsonlint', 'eslint-cli' ) )
+gulp.task('test', gulp.series( 'lint', 'check_stf_version' ) )
+gulp.task('build', gulp.series( 'clean', 'webpack:build' ) )
 
 gulp.task('karma_ci', function(done) {
   karma.start({
@@ -113,7 +152,7 @@ gulp.task('protractor-explorer', function(callback) {
   }, callback)
 })
 
-gulp.task('protractor', ['webdriver-update'], function(callback) {
+gulp.task('protractor', gulp.series( 'webdriver-update', function(callback) {
   gulp.src(['./res/test/e2e/**/*.js'])
     .pipe(protractor.protractor({
       configFile: protractorConfig
@@ -126,7 +165,7 @@ gulp.task('protractor', ['webdriver-update'], function(callback) {
       /* eslint no-console: 0 */
     })
     .on('end', callback)
-})
+} ) )
 
 // For piping strings
 function fromString(filename, string) {
@@ -142,37 +181,6 @@ function fromString(filename, string) {
   }
   return src
 }
-
-
-// For production
-gulp.task('webpack:build', function(callback) {
-  var myConfig = Object.create(webpackConfig)
-  myConfig.plugins = myConfig.plugins.concat(
-    new webpack.DefinePlugin({
-      'process.env': {
-        NODE_ENV: JSON.stringify('production')
-      }
-    })
-  )
-  myConfig.devtool = false
-
-  webpack(myConfig, function(err, stats) {
-    if (err) {
-      throw new gutil.PluginError('webpack:build', err)
-    }
-
-    gutil.log('[webpack:build]', stats.toString({
-      colors: true
-    }))
-
-    // Save stats to a json file
-    // Can be analyzed in http://webpack.github.io/analyse/
-    fromString('stats.json', JSON.stringify(stats.toJson()))
-      .pipe(gulp.dest('./tmp/'))
-
-    callback()
-  })
-})
 
 gulp.task('webpack:others', function(callback) {
   var myConfig = Object.create(webpackStatusConfig)
@@ -197,17 +205,10 @@ gulp.task('webpack:others', function(callback) {
   })
 })
 
-gulp.task('translate', [
-  'translate:extract'
-, 'translate:push'
-, 'translate:pull'
-, 'translate:compile'
-])
-
 gulp.task('pug', function() {
   return gulp.src([
       './res/**/*.pug'
-    , '!./res/bower_components/**'
+    , '!./bower_modules/**'
     ])
     .pipe(pug({
       locals: {
@@ -221,16 +222,17 @@ gulp.task('pug', function() {
     .pipe(gulp.dest('./tmp/html/'))
 })
 
-gulp.task('translate:extract', ['pug'], function() {
+gulp.task('translate:extract', gulp.series( 'pug', function(done) {
   return gulp.src([
       './tmp/html/**/*.html'
     , './res/**/*.js'
-    , '!./res/bower_components/**'
+    , '!./bower_modules/**'
     , '!./res/build/**'
     ])
     .pipe(gettext.extract('stf.pot'))
     .pipe(gulp.dest('./res/common/lang/po/'))
-})
+  done()
+}))
 
 gulp.task('translate:compile', function() {
   return gulp.src('./res/common/lang/po/**/*.po')
@@ -250,10 +252,9 @@ gulp.task('translate:pull', function() {
   return run('tx pull').exec()
 })
 
-gulp.task('clean', function(cb) {
-  del([
-    './tmp'
-    , './res/build'
-    , '.eslintcache'
-  ], cb)
-})
+gulp.task('translate', gulp.series(
+  'translate:extract'
+, 'translate:push'
+, 'translate:pull'
+, 'translate:compile'
+))

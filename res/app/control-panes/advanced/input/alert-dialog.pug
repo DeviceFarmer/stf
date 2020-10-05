@@ -1,0 +1,17 @@
+#alertModal.modal.micromodal-slide(aria-hidden="true")
+  .modal__overlay(tabindex="-1" data-micromodal-close="")
+    .modal__container(role="dialog" aria-modal="true" aria-labelledby="modal-1-title")
+      header.modal__header
+        h2#alertModal-title.modal__title
+          | Micromodal
+        button.modal__close(aria-label="Close modal" data-micromodal-close="")
+      main#alertModal-content.modal__content
+        p
+          | Try hitting the 
+          code tab
+          |  key and notice how the focus stays within the modal itself. Also, 
+          code esc
+          |  to close modal.
+      footer#alertModal-footer.modal__footer
+        button.modal__btn.modal__btn-primary Continue
+        button.modal__btn(data-micromodal-close="" aria-label="Close this dialog window") Close

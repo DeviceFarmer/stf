@@ -1,4 +1,8 @@
 {
-  "registry": "https://registry.bower.io",
-  "directory": "res/bower_components"
+  "registry": "http://registry.bower.io",
+  "directory": "/tmp/build/bower_modules",
+  "allow_root": true,
+  "off_proxy": "http://127.0.0.1:8080",
+  "off_https-proxy": "http://127.0.0.1:8080",
+  "strict-ssl": false
 }
