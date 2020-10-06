@@ -10,17 +10,17 @@
     "remote"
   ],
   "bugs": {
-    "url": "https://github.com/openstf/stf/issues"
+    "url": "https://github.com/DeviceFarmer/stf/issues"
   },
   "license": "Apache-2.0",
   "author": {
-    "name": "The OpenSTF Project",
+    "name": "The DeviceFarmer Project",
     "email": "contact@openstf.io",
-    "url": "https://openstf.io"
+    "url": "https://devicefarmer.github.io"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/openstf/stf.git"
+    "url": "https://github.com/DeviceFarmer/stf.git"
   },
   "bin": {
     "stf": "./bin/stf"
@@ -34,8 +34,8 @@
   },
   "dependencies": {
     "@slack/client": "^3.5.4",
-    "@devicefarmer/adbkit": "^2.11.2",
-    "@devicefarmer/adbkit-apkreader": "^3.2.1",
+    "@devicefarmer/adbkit": "^2.11.3",
+    "@devicefarmer/adbkit-apkreader": "^3.2.2",
     "@devicefarmer/adbkit-monkey": "^1.0.1",
     "android-device-list": "^1.2.1",
     "aws-sdk": "^2.4.13",
@@ -63,7 +63,7 @@
     "lodash": "^4.14.2",
     "markdown-serve": "^0.8.0",
     "mime": "^1.3.4",
-    "@devicefarmer/minicap-prebuilt": "^2.4.0",
+    "@devicefarmer/minicap-prebuilt": "^2.5.0",
     "minimatch": "^3.0.3",
     "@devicefarmer/minitouch-prebuilt": "^1.3.0",
     "my-local-ip": "^1.0.0",
