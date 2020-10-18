@@ -24,7 +24,6 @@ blocks:
             - checkout
             - npm install
             - npm test
-            - gulp build
   - name: Build Debian Docker image
     dependencies: []
     task:
