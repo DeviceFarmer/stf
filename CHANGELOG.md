@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.5.0 (2020-10-18)
+
+### Fixes
+
+- Update dependency versions
+- Fix minicap disconnection on getting file [#97](https://github.com/DeviceFarmer/stf/pull/97)
+- Fix icons displaying [#59](https://github.com/DeviceFarmer/stf/pull/59). Thanks @Cookies52!
+
+### Enhancements
+
+- Add .aab installation support [#103](https://github.com/DeviceFarmer/stf/pull/103). Thanks @nghiaviminh!
+- Change jpeg-turbo dependency to `@julusian/jpeg-turbo` [#90](https://github.com/DeviceFarmer/stf/pull/90)
+- Add Android 11 support
+
 ## 3.4.3 (2020-07-21)
 
 ### Misc
