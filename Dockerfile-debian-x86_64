@@ -6,7 +6,7 @@ FROM debian:stretch-slim
 
 LABEL Maintainer="Denis Barbaron <denis.barbaron@orange.com>"
 LABEL Name="STF"
-LABEL Url="https://github.com/openstf/stf/"
+LABEL Url="https://github.com/devicefarmer/stf/"
 LABEL Description="STF docker image for x86_64 architecture"
 
 # Sneak the stf executable into $PATH.
