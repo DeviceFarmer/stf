@@ -76,7 +76,7 @@
     "proxy-addr": "^1.0.10",
     "pug": "^2.0.0-beta4",
     "request": "^2.67.0",
-    "request-progress": "^2.0.1",
+    "request-progress": "^3.0.0",
     "rethinkdb": "^2.0.2",
     "semver": "^5.0.1",
     "serve-favicon": "^2.2.0",
