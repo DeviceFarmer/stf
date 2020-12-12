@@ -11,7 +11,7 @@ services:
 
   adb:
     container_name: adb
-    image: sorccu/adb:latest
+    image: devicefarmer/adb:latest
     restart: unless-stopped
     volumes: 
       - "/dev/bus/usb:/dev/bus/usb"
