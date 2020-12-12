@@ -22,9 +22,7 @@ services:
     image: devicefarmer/stf
     ports:
       - "7100:7100"
-        #- "7105:7105"
       - "7110:7110"
-        #- "7120:7120"
       - "7400-7500:7400-7500"
     environment:
       - TZ='America/Los_Angeles'
