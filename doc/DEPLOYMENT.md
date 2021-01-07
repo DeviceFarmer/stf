@@ -87,14 +87,15 @@ Requires=docker.service
 [Service]
 TimeoutStartSec=0
 Restart=always
+RestartSec=3
 ExecStartPre=/usr/bin/docker pull sorccu/adb:latest
 ExecStartPre=-/usr/bin/docker kill %p
 ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --privileged \
+  -p 5037:5037 \
   -v /dev/bus/usb:/dev/bus/usb \
-  --net host \
   sorccu/adb:latest
 ExecStop=/usr/bin/docker exec %p adb kill-server
 ```
@@ -407,13 +408,13 @@ The provider unit connects to ADB and start worker processes for each device. It
 
 The name of the provider shows up in the device list, making it easier to see where the physical devices are located. In this configuration the name is set to the hostname.
 
-Note that the provider needs to be able to manage a certain port range, so `--net host` is required until Docker makes it easier to work with ranges. The ports are used for internal services and the screen capturing WebSocket.
-
 This is a template unit, meaning that you'll need to start it with an instance identifier. In this example configuration the identifier is used to specify the provider ID, which can then be matched against in the [nginx](http://nginx.org/) configuration later on. The ID should be unique and persistent. This is only one way to set things up, you may choose to do things differently if it seems sketchy.
 
 Note that you cannot have more than one provider unit running on the same host, as they would compete over which one gets to control the devices. In the future we might add a negotiation protocol to allow for relatively seamless upgrades.
 
 Furthermore, if you're using a self-signed cert, you may have to add `-e "NODE_TLS_REJECT_UNAUTHORIZED=0"` to the `docker run` command. Don't forget to end the line with `\`.
+
+`--net host` is no longer required since newer Docker versions allow port ranges to be specified.
 
 ```ini
 [Unit]
@@ -425,12 +426,14 @@ BindsTo=adbd.service
 EnvironmentFile=/etc/environment
 TimeoutStartSec=0
 Restart=always
+RestartSec=3
 ExecStartPre=/usr/bin/docker pull openstf/stf:latest
 ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
-  --net host \
+  --link adbd:adbd \
+  -p 15000-25000:15000-25000 \
   openstf/stf:latest \
   stf provider \
     --name "%H/%i" \
@@ -441,7 +444,8 @@ ExecStart=/usr/bin/docker run --rm \
     --min-port=15000 \
     --max-port=25000 \
     --heartbeat-interval 10000 \
-    --screen-ws-url-pattern "wss://stf.example.org/d/%i/<%= serial %>/<%= publicPort %>/"
+    --screen-ws-url-pattern "wss://stf.example.org/d/%i/<%= serial %>/<%= publicPort %>/" \
+    --adb-host adbd
 ExecStop=-/usr/bin/docker stop -t 10 %p-%i
 ```
 
@@ -851,7 +855,7 @@ Description=STF s3 storage
 After=docker.service
 Requires=docker.service
 
-[Service]
+[Service]provider
 EnvironmentFile=/etc/environment
 TimeoutStartSec=0
 Restart=always
