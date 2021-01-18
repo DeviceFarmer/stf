@@ -206,6 +206,22 @@ If you want to access STF from other machines, you can add the `--public-ip` opt
 stf local --public-ip <your_internal_network_ip_here>
 ```
 
+## Quick Start
+
+You can try STF in one single mashine instantly.
+
+Requirements:
+- Linux OS (not working on arm images)
+- Docker-compose
+
+Steps:
+- Copy this repo on your repo
+- Go to the docker-compose file [link here](https://github.com/DeviceFarmer/stf/blob/master/docker-compose.yaml) and change IP. It can be your local IP, public IP or localhost (127.0.0.1)
+- Run docker-compose from your repo
+```bash
+sudo docker-compose up -d — build
+```
+
 ## Updating
 
 To update your development version, simply pull the repo and run `npm install` again. You may occasionally have to remove the whole `node_modules` and `res/bower_components` folder to prevent NPM or Bower from complaining about version mismatches.
