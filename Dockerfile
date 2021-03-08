@@ -28,7 +28,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
   apt-get -y install wget python build-essential cmake && \
   cd /tmp && \
   wget --progress=dot:mega \
-  https://nodejs.org/dist/v9.9.0/node-v9.9.0-linux-x64.tar.xz && \
+  https://nodejs.org/dist/v10.0.0/node-v10.0.0-linux-x64.tar.xz && \
   tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
   rm node-v*.tar.xz && \
   su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
