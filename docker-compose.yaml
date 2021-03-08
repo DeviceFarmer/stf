@@ -3,7 +3,7 @@ version: "3"
 services:
   rethinkdb:
     container_name: rethinkdb
-    image: rethinkdb:2.3
+    image: rethinkdb:latest
     restart: unless-stopped
     volumes:
         - "rethinkdb-data:/data"
