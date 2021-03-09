@@ -12,6 +12,7 @@ services:
   adb:
     container_name: adb
     image: devicefarmer/adb:latest
+    privileged: true
     restart: unless-stopped
     volumes: 
       - "/dev/bus/usb:/dev/bus/usb"
