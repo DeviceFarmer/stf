@@ -34,7 +34,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
       --shell /usr/sbin/nologin \
       stf && \
     su stf -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
-    apt-get -y install --no-install-recommends libzmq3-dev libprotobuf-dev git graphicsmagick yasm && \
+    apt-get -y install --no-install-recommends libzmq3-dev libprotobuf-dev git graphicsmagick yasm cmake && \
     echo '--- Building app' && \
     mkdir -p /app && \
     chown -R stf:stf /tmp/build && \
@@ -43,7 +43,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
     sed -i'' -e '/phantomjs/d' package.json && \
     npm install -g npm && \
-    echo 'npm install --no-optional --loglevel http' | su stf -s /bin/bash && \
+    echo 'npm install --no-optional --loglevel http --legacy-peer-deps' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
