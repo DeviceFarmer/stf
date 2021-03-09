@@ -3,7 +3,7 @@ version: "3"
 services:
   rethinkdb:
     container_name: rethinkdb
-    image: rethinkdb:2.3
+    image: rethinkdb:latest
     restart: unless-stopped
     volumes:
         - "rethinkdb-data:/data"
@@ -12,6 +12,7 @@ services:
   adb:
     container_name: adb
     image: devicefarmer/adb:latest
+    privileged: true
     restart: unless-stopped
     volumes: 
       - "/dev/bus/usb:/dev/bus/usb"
