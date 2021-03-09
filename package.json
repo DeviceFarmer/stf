@@ -1,6 +1,6 @@
 {
   "name": "@devicefarmer/stf",
-  "version": "3.5.1",
+  "version": "3.6.0",
   "description": "Smartphone Test Farm",
   "keywords": [
     "adb",
@@ -15,8 +15,8 @@
   "license": "Apache-2.0",
   "author": {
     "name": "The DeviceFarmer Project",
-    "email": "contact@openstf.io",
-    "url": "https://devicefarmer.github.io"
+    "email": "contact@devicefarmer.com",
+    "url": "https://devicefarmer.com"
   },
   "repository": {
     "type": "git",
