@@ -150,7 +150,7 @@
     "sinon": "^1.17.2",
     "sinon-chai": "^2.7.0",
     "socket.io-client": "1.4.8",
-    "style-loader": "^0.13.0",
+    "style-loader": "^0.23.1",
     "template-html-loader": "^0.0.3",
     "then-jade": "^2.4.1",
     "url-loader": "^0.5.7",

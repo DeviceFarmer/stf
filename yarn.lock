@@ -16,7 +16,14 @@
   resolved "https://registry.yarnpkg.com/@devicefarmer/adbkit-logcat/-/adbkit-logcat-1.1.0.tgz#866d3406dc9f3791446adfe3ae622ffc48607db4"
   integrity sha512-K90P5gUXM/w+yzLvJIRQ+tJooNU6ipUPPQkljtPJ0laR66TGtpt4Gqsjm0n9dPHK1W5KGgU1R5wnCd6RTSlPNA==
 
-"@devicefarmer/adbkit-monkey@^1.0.1", "@devicefarmer/adbkit-monkey@~1.0.1":
+"@devicefarmer/adbkit-monkey@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/adbkit-monkey/-/adbkit-monkey-1.1.0.tgz#87a53ac02278b9803cc753fea5ec87457c717f64"
+  integrity sha512-De6bm/IQXTeYI0/fMO+lddEmNCenTOsHMqCga7oGWL1x71VsOlrytn0Kqso0Rzq96xzizMPZ8jgoGG5M6f2baQ==
+  dependencies:
+    async "~0.2.9"
+
+"@devicefarmer/adbkit-monkey@~1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@devicefarmer/adbkit-monkey/-/adbkit-monkey-1.0.1.tgz#7d225e5fdbdad8d6772453390ecab3f1b0eb72b1"
   integrity sha512-HilPrVrCosYWqSyjfpDtaaN1kJwdlBpS+IAflP3z+e7nsEgk3JGJf1Vg0NgHJooTf5HDfXSyZqMVg+5jvXCK0g==
@@ -36,7 +43,7 @@
     node-forge "^0.10.0"
     split "~0.3.3"
 
-"@devicefarmer/minicap-prebuilt@^2.5.0":
+"@devicefarmer/minicap-prebuilt@^2.6.0":
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/@devicefarmer/minicap-prebuilt/-/minicap-prebuilt-2.6.0.tgz#59790e2f4ff2e07b6f846f13fda5e5203709aed0"
   integrity sha512-9D4myJ4+WcAz8GWOJSWadC8UgsTTX4jSlXOMTq9Dkgw4W+xdaVhHtywOai89+dUaHvGZVxRnPEgi+f61MCr2dQ==
@@ -61,10 +68,10 @@
   resolved "https://registry.yarnpkg.com/@devicefarmer/stf-device-db/-/stf-device-db-1.2.0.tgz#948e4d5800e77ae7154bb2255db151dca46ce83e"
   integrity sha512-p5mKfO2igS+JujpaFvZFifnaD6PZVL+dh3261iLQFO4bIl4QAif7UZPjqAlqQqjKLIR8NvSKPnXS8y7LPdpkUQ==
 
-"@devicefarmer/stf-syrup@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@devicefarmer/stf-syrup/-/stf-syrup-1.0.1.tgz#9990ad0f7b90c63de65f164a6338b789ef820e27"
-  integrity sha512-4i5EUvZfSYyM97N4E1y5ELQWe2pUMSuTgS9crLMetM4vp4jMZuafcDcPhjb57aI22Gl7mnoBXTh1A3Ic8CG85A==
+"@devicefarmer/stf-syrup@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/stf-syrup/-/stf-syrup-1.0.2.tgz#ca111f82b1c3e650102e52b7e7d6e1a5a5f535f1"
+  integrity sha512-5I/m/9lUF4sSrXAeihMIMJobuRK7ZvkG5bad3d+k+wd3BRSLlMHdBzkWiUVY91xRKXeh0jBvQ2x8yr8UTCEDGQ==
   dependencies:
     bluebird "~1.1.0"
     lodash "~2.4.1"
@@ -9452,11 +9459,13 @@ strip-json-comments@~2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
 
-style-loader@^0.13.0:
-  version "0.13.2"
-  resolved "https://registry.yarnpkg.com/style-loader/-/style-loader-0.13.2.tgz#74533384cf698c7104c7951150b49717adc2f3bb"
+style-loader@^0.23.1:
+  version "0.23.1"
+  resolved "https://registry.yarnpkg.com/style-loader/-/style-loader-0.23.1.tgz#cb9154606f3e771ab6c4ab637026a1049174d925"
+  integrity sha512-XK+uv9kWwhZMZ1y7mysB+zoihsEj4wneFWAS5qoiLwzW0WzSqMrrsIy+a3zkQJq0ipFtBpX5W3MqyRIBF/WFGg==
   dependencies:
-    loader-utils "^1.0.2"
+    loader-utils "^1.1.0"
+    schema-utils "^1.0.0"
 
 superagent@^3.5.2, superagent@^3.8.3:
   version "3.8.3"
