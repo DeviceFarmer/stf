@@ -36,7 +36,7 @@
     node-forge "^0.10.0"
     split "~0.3.3"
 
-"@devicefarmer/minicap-prebuilt@^2.5.0":
+"@devicefarmer/minicap-prebuilt@^2.6.0":
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/@devicefarmer/minicap-prebuilt/-/minicap-prebuilt-2.6.0.tgz#59790e2f4ff2e07b6f846f13fda5e5203709aed0"
   integrity sha512-9D4myJ4+WcAz8GWOJSWadC8UgsTTX4jSlXOMTq9Dkgw4W+xdaVhHtywOai89+dUaHvGZVxRnPEgi+f61MCr2dQ==
@@ -61,10 +61,10 @@
   resolved "https://registry.yarnpkg.com/@devicefarmer/stf-device-db/-/stf-device-db-1.2.0.tgz#948e4d5800e77ae7154bb2255db151dca46ce83e"
   integrity sha512-p5mKfO2igS+JujpaFvZFifnaD6PZVL+dh3261iLQFO4bIl4QAif7UZPjqAlqQqjKLIR8NvSKPnXS8y7LPdpkUQ==
 
-"@devicefarmer/stf-syrup@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@devicefarmer/stf-syrup/-/stf-syrup-1.0.1.tgz#9990ad0f7b90c63de65f164a6338b789ef820e27"
-  integrity sha512-4i5EUvZfSYyM97N4E1y5ELQWe2pUMSuTgS9crLMetM4vp4jMZuafcDcPhjb57aI22Gl7mnoBXTh1A3Ic8CG85A==
+"@devicefarmer/stf-syrup@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/stf-syrup/-/stf-syrup-1.0.2.tgz#ca111f82b1c3e650102e52b7e7d6e1a5a5f535f1"
+  integrity sha512-5I/m/9lUF4sSrXAeihMIMJobuRK7ZvkG5bad3d+k+wd3BRSLlMHdBzkWiUVY91xRKXeh0jBvQ2x8yr8UTCEDGQ==
   dependencies:
     bluebird "~1.1.0"
     lodash "~2.4.1"
@@ -104,6 +104,11 @@
 "@types/jasmine@^2.5.36":
   version "2.5.52"
   resolved "https://registry.yarnpkg.com/@types/jasmine/-/jasmine-2.5.52.tgz#6ea5435d5c71562296e63ef27a4718f94f2fbb13"
+
+"@types/json-schema@^7.0.6":
+  version "7.0.7"
+  resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.7.tgz#98a993516c859eb0d5c4c8f098317a9ea68db9ad"
+  integrity sha512-cxWFQVseBm6O9Gbw1IWb8r6OS4OhSt3hPZLkFApLjM8TEXROBuQGLAH2i2gZpcXdLBIrpXuTDhH7Vbm1iXmNGA==
 
 "@types/node@^6.0.46":
   version "6.0.78"
@@ -232,6 +237,11 @@ ajv-keywords@^3.1.0:
   resolved "https://registry.yarnpkg.com/ajv-keywords/-/ajv-keywords-3.4.1.tgz#ef916e271c64ac12171fd8384eaae6b2345854da"
   integrity sha512-RO1ibKvd27e6FEShVFfPALuHI3WjSVNeK5FIsmme/LYRNxjKuNj+Dt7bucLa6NdSv3JcVTyMlm9kGR84z1XpaQ==
 
+ajv-keywords@^3.5.2:
+  version "3.5.2"
+  resolved "https://registry.yarnpkg.com/ajv-keywords/-/ajv-keywords-3.5.2.tgz#31f29da5ab6e00d1c2d329acf7b5929614d5014d"
+  integrity sha512-5p6WTN0DdTGVQk6VjcEju19IgaHudalcfabD7yhDGeA6bcQnmL+CpveLJq/3hvfwd1aof6L386Ougkx6RfyMIQ==
+
 ajv@^4.7.0, ajv@^4.9.1:
   version "4.11.8"
   resolved "https://registry.yarnpkg.com/ajv/-/ajv-4.11.8.tgz#82ffb02b29e662ae53bdc20af15947706739c536"
@@ -253,6 +263,16 @@ ajv@^6.12.3:
   version "6.12.4"
   resolved "https://registry.yarnpkg.com/ajv/-/ajv-6.12.4.tgz#0614facc4522127fa713445c6bfd3ebd376e2234"
   integrity sha512-eienB2c9qVQs2KWexhkrdMLVDoIQCz5KSeLxwg9Lzk4DOfBtIK9PQwwufcsn1jjGuf9WZmqPMbGxOzfcuphJCQ==
+  dependencies:
+    fast-deep-equal "^3.1.1"
+    fast-json-stable-stringify "^2.0.0"
+    json-schema-traverse "^0.4.1"
+    uri-js "^4.2.2"
+
+ajv@^6.12.5:
+  version "6.12.6"
+  resolved "https://registry.yarnpkg.com/ajv/-/ajv-6.12.6.tgz#baf5a62e802b07d977034586f8c3baf5adf26df4"
+  integrity sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==
   dependencies:
     fast-deep-equal "^3.1.1"
     fast-json-stable-stringify "^2.0.0"
@@ -5103,6 +5123,13 @@ json5@^1.0.1:
   dependencies:
     minimist "^1.2.0"
 
+json5@^2.1.2:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/json5/-/json5-2.2.0.tgz#2dfefe720c6ba525d9ebd909950f0515316c89a3"
+  integrity sha512-f+8cldu7X/y7RAJurMEJmdoKXGB/X550w2Nr3tTbezL6RwEE/iMcm+tZnXeoZtKuOq6ft8+CqzEkrIgx1fPoQA==
+  dependencies:
+    minimist "^1.2.5"
+
 jsonfile@^2.1.0:
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/jsonfile/-/jsonfile-2.4.0.tgz#3736a2b428b87bbda0cc83b53fa3d633a35c2ae8"
@@ -5448,6 +5475,15 @@ loader-utils@^1.0.2, loader-utils@^1.1.0:
     big.js "^5.2.2"
     emojis-list "^3.0.0"
     json5 "^1.0.1"
+
+loader-utils@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/loader-utils/-/loader-utils-2.0.0.tgz#e4cace5b816d425a166b5f097e10cd12b36064b0"
+  integrity sha512-rP4F0h2RaWSvPEkD7BLDFQnvSf+nK+wr3ESUjNTyAGobqrijmW92zc+SO6d4p4B1wh7+B/Jg1mkQe5NYUEHtHQ==
+  dependencies:
+    big.js "^5.2.2"
+    emojis-list "^3.0.0"
+    json5 "^2.1.2"
 
 locate-path@^2.0.0:
   version "2.0.0"
@@ -8638,6 +8674,15 @@ schema-utils@^1.0.0:
     ajv-errors "^1.0.0"
     ajv-keywords "^3.1.0"
 
+schema-utils@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/schema-utils/-/schema-utils-3.0.0.tgz#67502f6aa2b66a2d4032b4279a2944978a0913ef"
+  integrity sha512-6D82/xSzO094ajanoOSbe4YvXWMfn2A//8Y1+MUqFAJul5Bs+yn36xbK9OtNDcRVSBJ9jjeoXftM6CfztsjOAA==
+  dependencies:
+    "@types/json-schema" "^7.0.6"
+    ajv "^6.12.5"
+    ajv-keywords "^3.5.2"
+
 script-loader@^0.7.0:
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/script-loader/-/script-loader-0.7.0.tgz#685dc7e7069e0dee7a92674f0ebc5b0f55baa5ec"
@@ -9452,11 +9497,13 @@ strip-json-comments@~2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
 
-style-loader@^0.13.0:
-  version "0.13.2"
-  resolved "https://registry.yarnpkg.com/style-loader/-/style-loader-0.13.2.tgz#74533384cf698c7104c7951150b49717adc2f3bb"
+style-loader@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/style-loader/-/style-loader-2.0.0.tgz#9669602fd4690740eaaec137799a03addbbc393c"
+  integrity sha512-Z0gYUJmzZ6ZdRUqpg1r8GsaFKypE+3xAzuFeMuoHgjc9KZv3wMyCRjQIWEbhoFSq7+7yoHXySDJyyWQaPajeiQ==
   dependencies:
-    loader-utils "^1.0.2"
+    loader-utils "^2.0.0"
+    schema-utils "^3.0.0"
 
 superagent@^3.5.2, superagent@^3.8.3:
   version "3.8.3"
