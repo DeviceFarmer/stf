@@ -8,7 +8,7 @@
 
 ### Enhancements
 
-- Update dependency versions, including adbkit rewritten in TypeScript
+- Update dependency versions
 
 ## 3.5.0 (2020-10-18)
 
