@@ -36,7 +36,7 @@
     "@slack/client": "^3.5.4",
     "@devicefarmer/adbkit": "^2.11.3",
     "@devicefarmer/adbkit-apkreader": "^3.2.2",
-    "@devicefarmer/adbkit-monkey": "^1.1.0",
+    "@devicefarmer/adbkit-monkey": "^1.0.1",
     "android-device-list": "^1.2.1",
     "aws-sdk": "^2.4.13",
     "basic-auth": "^1.0.3",
