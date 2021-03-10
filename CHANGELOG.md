@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.6.1 (2021-03-11)
+
+### Fixes
+
+- Revert adbkit upgrade
+
 ## 3.6.0 (2021-03-09)
 
 ### Fixes
