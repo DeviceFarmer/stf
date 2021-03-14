@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.6.1 (2021-03-11)
+
+### Fixes
+
+- Revert adbkit upgrade
+
 ## 3.6.0 (2021-03-09)
 
 ### Fixes
@@ -8,7 +14,7 @@
 
 ### Enhancements
 
-- Update dependency versions, including adbkit rewritten in TypeScript
+- Update dependency versions
 
 ## 3.5.0 (2020-10-18)
 
