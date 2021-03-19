@@ -45,7 +45,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     npm config set unsafe-perm true && \
     npm install -g npm && \
     echo 'npm cache clean --force' | su stf -s /bin/bash && \
-    echo 'npm install --no-optional --loglevel http' | su stf -s /bin/bash && \
+    echo 'npm install --no-optional --legacy-peer-deps --loglevel http' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
