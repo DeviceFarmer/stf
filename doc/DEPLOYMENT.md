@@ -855,7 +855,7 @@ Description=STF s3 storage
 After=docker.service
 Requires=docker.service
 
-[Service]provider
+[Service]
 EnvironmentFile=/etc/environment
 TimeoutStartSec=0
 Restart=always
