@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.6.1 (2021-03-11)
+
+### Fixes
+
+- Revert adbkit upgrade
+
+## 3.6.0 (2021-03-09)
+
+### Fixes
+
+- Fix AAB installation fails when /tmp is on different mountpoint than storage-temp save directory [#139](https://github.com/DeviceFarmer/stf/pull/139)
+
+### Enhancements
+
+- Update dependency versions
+
 ## 3.5.0 (2020-10-18)
 
 ### Fixes
