@@ -1877,6 +1877,45 @@ paths:
             $ref: "#/definitions/UnexpectedErrorResponse"
       security:
         - accessTokenAuth: []
+    put:
+      summary: Adds device informatin
+      description: Adds device information
+      operationId: putDeviceBySerial
+      consumes:
+        - application/json
+      tags:
+        - admin
+      parameters:
+        - name: serial
+          in: path
+          description: Device identifier (serial)
+          required: true
+          type: string
+        - name: device
+          in: body
+          description: >
+            Information to add for device. Supports only notes -field.
+          required: true
+          schema:
+            $ref: "#/definitions/DevicePayload"
+      responses:
+        "200":
+          description: Storing success
+          schema:
+            $ref: "#/definitions/Response"
+        default:
+          description: >
+            Unexpected Error:
+              * 400: Bad Request => invalid request
+              * 401: Unauthorized => bad credentials
+              * 404: Not Found => unknown device
+              * 500: Internal Server Error
+              * 503: Service Unavailable => server too busy or a lock on a resource is pending
+              * 504: Gateway Time-out => server is not responding
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: [ ]
   /devices/groups/{id}:
     x-swagger-router-controller: devices
     put:
@@ -2379,6 +2418,12 @@ definitions:
     properties:
       emails:
         description: Comma-separated list of emails
+        type: string
+  DevicePayload:
+    description: payload object for adding device information
+    properties:
+      note:
+        description: Device Note
         type: string
   DevicesPayload:
     description: Payload object for adding/removing devices
