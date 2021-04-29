@@ -36,7 +36,7 @@
     node-forge "^0.10.0"
     split "~0.3.3"
 
-"@devicefarmer/minicap-prebuilt@^2.5.0":
+"@devicefarmer/minicap-prebuilt@^2.6.0":
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/@devicefarmer/minicap-prebuilt/-/minicap-prebuilt-2.6.0.tgz#59790e2f4ff2e07b6f846f13fda5e5203709aed0"
   integrity sha512-9D4myJ4+WcAz8GWOJSWadC8UgsTTX4jSlXOMTq9Dkgw4W+xdaVhHtywOai89+dUaHvGZVxRnPEgi+f61MCr2dQ==
@@ -61,10 +61,10 @@
   resolved "https://registry.yarnpkg.com/@devicefarmer/stf-device-db/-/stf-device-db-1.2.0.tgz#948e4d5800e77ae7154bb2255db151dca46ce83e"
   integrity sha512-p5mKfO2igS+JujpaFvZFifnaD6PZVL+dh3261iLQFO4bIl4QAif7UZPjqAlqQqjKLIR8NvSKPnXS8y7LPdpkUQ==
 
-"@devicefarmer/stf-syrup@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@devicefarmer/stf-syrup/-/stf-syrup-1.0.1.tgz#9990ad0f7b90c63de65f164a6338b789ef820e27"
-  integrity sha512-4i5EUvZfSYyM97N4E1y5ELQWe2pUMSuTgS9crLMetM4vp4jMZuafcDcPhjb57aI22Gl7mnoBXTh1A3Ic8CG85A==
+"@devicefarmer/stf-syrup@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/stf-syrup/-/stf-syrup-1.0.2.tgz#ca111f82b1c3e650102e52b7e7d6e1a5a5f535f1"
+  integrity sha512-5I/m/9lUF4sSrXAeihMIMJobuRK7ZvkG5bad3d+k+wd3BRSLlMHdBzkWiUVY91xRKXeh0jBvQ2x8yr8UTCEDGQ==
   dependencies:
     bluebird "~1.1.0"
     lodash "~2.4.1"
@@ -298,6 +298,13 @@ angular-gettext-tools@^2.2.0:
     typescript "~2.0.3"
     typescript-eslint-parser "^1.0.2"
 
+ansi-colors@^1.0.1:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/ansi-colors/-/ansi-colors-1.1.0.tgz#6374b4dd5d4718ff3ce27a671a3b1cad077132a9"
+  integrity sha512-SFKX67auSNoVR38N3L+nvsPjOE0bybKTYbkf5tRvushrAPQ9V75huw0ZxBkKVeRU9kqH3d6HA4xTckbwZ4ixmA==
+  dependencies:
+    ansi-wrap "^0.1.0"
+
 ansi-colors@^3.0.0:
   version "3.2.4"
   resolved "https://registry.yarnpkg.com/ansi-colors/-/ansi-colors-3.2.4.tgz#e3a3da4bfbae6c86a9c285625de124a234026fbf"
@@ -340,6 +347,11 @@ ansi-styles@^3.2.0:
 ansi-styles@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/ansi-styles/-/ansi-styles-1.0.0.tgz#cb102df1c56f5123eab8b67cd7b98027a0279178"
+
+ansi-wrap@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/ansi-wrap/-/ansi-wrap-0.1.0.tgz#a82250ddb0015e9a27ca82e82ea603bbfa45efaf"
+  integrity sha1-qCJQ3bABXponyoLoLqYDu/pF768=
 
 ansi@^0.3.0, ansi@~0.3.0:
   version "0.3.1"
@@ -1449,9 +1461,19 @@ cliui@^5.0.0:
     strip-ansi "^5.2.0"
     wrap-ansi "^5.1.0"
 
+clone-buffer@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/clone-buffer/-/clone-buffer-1.0.0.tgz#e3e25b207ac4e701af721e2cb5a16792cac3dc58"
+  integrity sha1-4+JbIHrE5wGvch4staFnksrD3Fg=
+
 clone-stats@^0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/clone-stats/-/clone-stats-0.0.1.tgz#b88f94a82cf38b8791d58046ea4029ad88ca99d1"
+
+clone-stats@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/clone-stats/-/clone-stats-1.0.0.tgz#b3782dff8bb5474e18b9b6bf0fdfe782f8777680"
+  integrity sha1-s3gt/4u1R04Yuba/D9/ngvh3doA=
 
 clone@^0.2.0:
   version "0.2.0"
@@ -1460,6 +1482,20 @@ clone@^0.2.0:
 clone@^1.0.0, clone@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/clone/-/clone-1.0.2.tgz#260b7a99ebb1edfe247538175f783243cb19d149"
+
+clone@^2.1.1:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/clone/-/clone-2.1.2.tgz#1b7f4b9f591f1e8f83670401600345a02887435f"
+  integrity sha1-G39Ln1kfHo+DZwQBYANFoCiHQ18=
+
+cloneable-readable@^1.0.0:
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/cloneable-readable/-/cloneable-readable-1.1.3.tgz#120a00cb053bfb63a222e709f9683ea2e11d8cec"
+  integrity sha512-2EF8zTQOxYq70Y4XKtorQupqF0m49MBz2/yf5Bj+MHjvpG3Hy7sImifnqD6UA+TKYxeSV+u6qqQPawN5UvnpKQ==
+  dependencies:
+    inherits "^2.0.1"
+    process-nextick-args "^2.0.0"
+    readable-stream "^2.3.5"
 
 cmake-js@^5.2.0:
   version "5.3.2"
@@ -3882,13 +3918,14 @@ graphlib@^2.1.7:
     lodash "^4.17.5"
 
 gulp-angular-gettext@^2.1.0:
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/gulp-angular-gettext/-/gulp-angular-gettext-2.2.0.tgz#90b5f38e89b4be491e8bb5cabaf69b0a71ddf95f"
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/gulp-angular-gettext/-/gulp-angular-gettext-2.3.0.tgz#5d06d2854655c522f1ebdf6a7f81d675761d3244"
+  integrity sha512-LzCPhxuL0wvBXN1CQxAN+yH70HFte0x8dSDPW4UZPSOX+SepEeF8Nfgl+1TTOdrrwSk2FOZ/6KKtYUcJee2MvQ==
   dependencies:
     angular-gettext-tools "^2.2.0"
-    gulp-util "^3.0.7"
-    lodash.isstring "^4.0.1"
+    plugin-error "^1.0.1"
     through2 "^2.0.1"
+    vinyl "^2.2.0"
 
 gulp-eslint@^3.0.1:
   version "3.0.1"
@@ -7342,6 +7379,16 @@ please-update-dependencies@^2.0.0:
     chalk "^1.1.3"
     semver "^5.3.0"
 
+plugin-error@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/plugin-error/-/plugin-error-1.0.1.tgz#77016bd8919d0ac377fdcdd0322328953ca5781c"
+  integrity sha512-L1zP0dk7vGweZME2i+EeakvUNqSrdiI3F91TwEoYiGrAfUXmVv6fJIq4g82PAXxNsWOp0J7ZqQy/3Szz0ajTxA==
+  dependencies:
+    ansi-colors "^1.0.1"
+    arr-diff "^4.0.0"
+    arr-union "^3.1.0"
+    extend-shallow "^3.0.2"
+
 pluralize@^1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/pluralize/-/pluralize-1.2.1.tgz#d1a21483fd22bb41e58a12fa3421823140897c45"
@@ -7655,14 +7702,14 @@ private@^0.1.6, private@~0.1.5:
   version "0.1.7"
   resolved "https://registry.yarnpkg.com/private/-/private-0.1.7.tgz#68ce5e8a1ef0a23bb570cc28537b5332aba63ef1"
 
-process-nextick-args@~1.0.6:
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/process-nextick-args/-/process-nextick-args-1.0.7.tgz#150e20b756590ad3f91093f25a4f2ad8bff30ba3"
-
-process-nextick-args@~2.0.0:
+process-nextick-args@^2.0.0, process-nextick-args@~2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/process-nextick-args/-/process-nextick-args-2.0.1.tgz#7820d9b16120cc55ca9ae7792680ae7dba6d7fe2"
   integrity sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==
+
+process-nextick-args@~1.0.6:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/process-nextick-args/-/process-nextick-args-1.0.7.tgz#150e20b756590ad3f91093f25a4f2ad8bff30ba3"
 
 process@^0.11.0, process@^0.11.1, process@~0.11.0:
   version "0.11.10"
@@ -8310,6 +8357,11 @@ repeating@^2.0.0:
 replace-ext@0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/replace-ext/-/replace-ext-0.0.1.tgz#29bbd92078a739f0bcce2b4ee41e837953522924"
+
+replace-ext@^1.0.0:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/replace-ext/-/replace-ext-1.0.1.tgz#2d6d996d04a15855d967443631dd5f77825b016a"
+  integrity sha512-yD5BHCe7quCgBph4rMQ+0KkIRKwWCrHDOX1p1Gp6HwjPM5kVoCdKGNhN7ydqqsX6lJEnQDKZ/tFMiEdQ1dvPEw==
 
 request-progress@^2.0.1, request-progress@~2.0.1:
   version "2.0.1"
@@ -10286,6 +10338,18 @@ vinyl@^0.5.0:
     clone "^1.0.0"
     clone-stats "^0.0.1"
     replace-ext "0.0.1"
+
+vinyl@^2.2.0:
+  version "2.2.1"
+  resolved "https://registry.yarnpkg.com/vinyl/-/vinyl-2.2.1.tgz#23cfb8bbab5ece3803aa2c0a1eb28af7cbba1974"
+  integrity sha512-LII3bXRFBZLlezoG5FfZVcXflZgWP/4dCwKtxd5ky9+LOtM4CS3bIRQsmR1KMnMW07jpE8fqR2lcxPZ+8sJIcw==
+  dependencies:
+    clone "^2.1.1"
+    clone-buffer "^1.0.0"
+    clone-stats "^1.0.0"
+    cloneable-readable "^1.0.0"
+    remove-trailing-separator "^1.0.1"
+    replace-ext "^1.0.0"
 
 vm-browserify@0.0.4:
   version "0.0.4"
