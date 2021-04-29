@@ -153,7 +153,7 @@
     "style-loader": "^0.13.0",
     "template-html-loader": "^0.0.3",
     "then-jade": "^2.4.1",
-    "url-loader": "^0.5.7",
+    "url-loader": "^0.6.2",
     "webpack": "^1.12.11",
     "webpack-dev-server": "^3.1.11"
   },
