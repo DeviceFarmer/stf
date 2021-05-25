@@ -42,7 +42,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
     sed -i'' -e '/phantomjs/d' package.json && \
-    npm install -g npm && \
     echo 'npm install --no-optional --loglevel http --legacy-peer-deps' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
