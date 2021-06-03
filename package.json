@@ -117,7 +117,7 @@
     "gulp-eslint": "^3.0.1",
     "gulp-jsonlint": "^1.0.2",
     "gulp-protractor": "^3.0.0",
-    "gulp-pug": "^3.0.4",
+    "gulp-pug": "^4.0.1",
     "gulp-run": "^1.6.12",
     "gulp-util": "^3.0.7",
     "html-loader": "^0.5.5",
