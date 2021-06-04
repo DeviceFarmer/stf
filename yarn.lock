@@ -943,7 +943,7 @@ bluebird@3.4.x, bluebird@~3.4.1:
   version "2.11.0"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-2.11.0.tgz#534b9033c022c9579c56ba3b3e5a5caafbb650e1"
 
-bluebird@^3, bluebird@^3.3.0, bluebird@^3.3.3, bluebird@^3.4.7:
+bluebird@^3, bluebird@^3.1.1, bluebird@^3.3.0, bluebird@^3.3.3, bluebird@^3.4.7:
   version "3.7.2"
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.7.2.tgz#9f229c15be272454ffa973ace0dbee79a1b0c36f"
   integrity sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==
@@ -1853,9 +1853,12 @@ console-control-strings@^1.0.0, console-control-strings@~1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/console-control-strings/-/console-control-strings-1.1.0.tgz#3d7cf4464db6446ea644bf4b39507f9851008e8e"
 
-consolidate@~0.10.0:
-  version "0.10.0"
-  resolved "https://registry.yarnpkg.com/consolidate/-/consolidate-0.10.0.tgz#81f1a6ceba1247df9cef7a261ce527c2ce538f7a"
+consolidate@~0.14.0:
+  version "0.14.5"
+  resolved "https://registry.yarnpkg.com/consolidate/-/consolidate-0.14.5.tgz#5a25047bc76f73072667c8cb52c989888f494c63"
+  integrity sha1-WiUEe8dvcwcmZ8jLUsmJiI9JTGM=
+  dependencies:
+    bluebird "^3.1.1"
 
 constantinople@^3.0.1:
   version "3.1.0"
@@ -9772,11 +9775,12 @@ temp@^0.8.1:
     os-tmpdir "^1.0.0"
     rimraf "~2.2.6"
 
-template-html-loader@^0.0.3:
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/template-html-loader/-/template-html-loader-0.0.3.tgz#1a2c34e69386748573b19e9b5e9cd236a2046ea7"
+template-html-loader@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/template-html-loader/-/template-html-loader-0.0.4.tgz#c757a9962b938d73deb2a872f3f04cbfb1b8853b"
+  integrity sha1-x1epliuTjXPesqhy8/BMv7G4hTs=
   dependencies:
-    consolidate "~0.10.0"
+    consolidate "~0.14.0"
     loader-utils "~0.2.1"
 
 text-table@~0.2.0:
