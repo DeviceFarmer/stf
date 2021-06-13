@@ -54,8 +54,7 @@ module.exports = function DeviceListIconsDirective(
         }
 
         // .device-name
-        nt.nodeValue = device.enhancedName
-
+        nt.nodeValue = device.deviceTitle || ''
         // button
         at.nodeValue = $filter('translate')(device.enhancedStateAction)
 

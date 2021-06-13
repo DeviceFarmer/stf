@@ -82,6 +82,7 @@ enum MessageType {
   FileSystemGetMessage       = 82;
   ConnectStartedMessage      = 92;
   ConnectStoppedMessage      = 93;
+  DeviceNameMessage          = 94;
   GroupUserChangeMessage     = 1200;
   DeviceGroupChangeMessage   = 1201;
   DeviceOriginGroupMessage   = 1202;
@@ -177,6 +178,7 @@ message DeviceField {
   optional DeviceProviderField provider = 13;
   optional DeviceGroupField group = 14;
   optional string marketName = 15;
+  optional string deviceTitle = 16;
 }
 
 message DeviceChangeMessage {
@@ -410,6 +412,7 @@ message DeviceIdentityMessage {
   optional string cpuPlatform = 13;
   optional string openGLESVersion = 14;
   optional string marketName = 15;
+  optional string deviceTitle = 16;
 }
 
 message DeviceProperty {
@@ -555,6 +558,9 @@ message KeyPressMessage {
 }
 
 message RebootMessage {
+}
+
+message DeviceNameMessage {
 }
 
 // Output
