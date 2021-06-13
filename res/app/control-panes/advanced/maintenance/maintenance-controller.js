@@ -17,4 +17,11 @@ module.exports = function($scope, gettext, $filter) {
     }
   }
 
+  $scope.getDeviceName = function() {
+  console.log('in controller')
+    $scope.control.getDeviceName().then(function(result) {
+      console.error(result)
+    })
+  }
+
 }

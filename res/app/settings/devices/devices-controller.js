@@ -15,6 +15,7 @@ module.exports = function DevicesCtrl(
   const devicesBySerial = {}
   const deviceFields =
     'model,' +
+    'title,' +
     'serial,' +
     'version,' +
     'display.height,' +

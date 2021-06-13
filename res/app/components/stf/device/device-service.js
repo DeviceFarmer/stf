@@ -154,7 +154,6 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
       }
       **/
     }
-
     scopedSocket.on('device.add', addListener)
     scopedSocket.on('device.remove', changeListener)
     scopedSocket.on('device.change', changeListener)

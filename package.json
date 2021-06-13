@@ -30,7 +30,8 @@
   },
   "scripts": {
     "test": "gulp test",
-    "prepublish": "bower install && not-in-install && gulp build || in-install"
+    "prepublish": "bower install && not-in-install && gulp build || in-install",
+    "build": "gulp build"
   },
   "dependencies": {
     "@slack/client": "^3.5.4",
