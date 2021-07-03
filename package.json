@@ -131,7 +131,7 @@
     "karma-firefox-launcher": "^1.0.0",
     "karma-ie-launcher": "^1.0.0",
     "karma-jasmine": "^2.0.1",
-    "karma-junit-reporter": "^1.1.0",
+    "karma-junit-reporter": "^2.0.1",
     "karma-opera-launcher": "^1.0.0",
     "karma-phantomjs-launcher": "^1.0.0",
     "karma-safari-launcher": "^1.0.0",
