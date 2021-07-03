@@ -142,7 +142,7 @@
     "node-libs-browser": "^1.0.0",
     "node-sass": "^4.13.1",
     "phantomjs-prebuilt": "^2.1.11",
-    "protractor": "^5.4.1",
+    "protractor": "^7.0.0",
     "protractor-html-reporter-2": "1.0.4",
     "raw-loader": "^0.5.1",
     "sass-loader": "^4.0.0",
