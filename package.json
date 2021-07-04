@@ -112,7 +112,7 @@
     "extract-text-webpack-plugin": "^1.0.1",
     "file-loader": "^0.9.0",
     "fs-extra": "^8.1.0",
-    "gulp": "^3.8.11",
+    "gulp": "^4.0.2",
     "gulp-angular-gettext": "^2.1.0",
     "gulp-eslint": "^3.0.1",
     "gulp-jsonlint": "^1.0.2",
