@@ -146,6 +146,11 @@
   resolved "https://registry.yarnpkg.com/@types/selenium-webdriver/-/selenium-webdriver-3.0.16.tgz#50a4755f8e33edacd9c406729e9b930d2451902a"
   integrity sha512-lMC2G0ItF2xv4UCiwbJGbnJlIuUixHrioOhNGHSCsYCJ8l4t9hMCUimCytvFv7qy6AfSzRxhRHoGa+UqaqwyeA==
 
+"@xmldom/xmldom@^0.7.0", "@xmldom/xmldom@^0.7.5":
+  version "0.7.5"
+  resolved "https://registry.yarnpkg.com/@xmldom/xmldom/-/xmldom-0.7.5.tgz#09fa51e356d07d0be200642b0e4f91d8e6dd408d"
+  integrity sha512-V3BIhmY36fXZ1OtVcI9W+FxQqxVLsPKcNjWigIaa81dLC9IolJl5Mt4Cvhmr0flUnjSpTdrbMTSbXqYqV5dT6A==
+
 JSV@^4.0.x:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/JSV/-/JSV-4.0.2.tgz#d077f6825571f82132f9dffaed587b4029feff57"
@@ -662,7 +667,7 @@ async@^2.0.1, async@^2.5.0, async@^2.6.2:
   dependencies:
     lodash "^4.17.14"
 
-async@~0.2.6, async@~0.2.7, async@~0.2.9:
+async@~0.2.6, async@~0.2.9:
   version "0.2.10"
   resolved "https://registry.yarnpkg.com/async/-/async-0.2.10.tgz#b6bbe0b0674b9d719708ca38de8c237cb526c3d1"
 
@@ -2289,10 +2294,10 @@ debug@3.2.6, debug@^3.1.0, debug@^3.1.1, debug@^3.2.5, debug@^3.2.6:
   dependencies:
     ms "^2.1.1"
 
-debug@^4, debug@^4.1.0, debug@~4.2.0:
-  version "4.2.0"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-4.2.0.tgz#7f150f93920e94c58f5574c2fd01a3110effe7f1"
-  integrity sha512-IX2ncY78vDTjZMFUdmsvIRFY2Cf4FnD0wRs+nQwJU8Lu99/tPFdb0VybiiMTPe3I6rQmwsqQqRBvxU+bZ/I8sg==
+debug@^4, debug@^4.1.0, debug@^4.3.2:
+  version "4.3.2"
+  resolved "https://registry.yarnpkg.com/debug/-/debug-4.3.2.tgz#f0a49c18ac8779e31d4a0c6029dfb76873c7428b"
+  integrity sha512-mOp8wKcvj7XxC78zLgw/ZA+6TSgkoE2C/ienthhRD298T7UNwAg9diBpLRxC0mOezLl4B0xV7M0cCO6P/O0Xhw==
   dependencies:
     ms "2.1.2"
 
@@ -2309,6 +2314,13 @@ debug@~4.1.0:
   integrity sha512-pYAIzeRo8J6KPEaJ0VWOh5Pzkbw/RetuzehGM7QRRX5he4fPHx2rdKMB256ehJCkX+XRQm16eZLqLNS8RSZXZw==
   dependencies:
     ms "^2.1.1"
+
+debug@~4.2.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/debug/-/debug-4.2.0.tgz#7f150f93920e94c58f5574c2fd01a3110effe7f1"
+  integrity sha512-IX2ncY78vDTjZMFUdmsvIRFY2Cf4FnD0wRs+nQwJU8Lu99/tPFdb0VybiiMTPe3I6rQmwsqQqRBvxU+bZ/I8sg==
+  dependencies:
+    ms "2.1.2"
 
 decamelize@^1.0.0, decamelize@^1.1.1, decamelize@^1.1.2, decamelize@^1.2.0:
   version "1.2.0"
@@ -2663,10 +2675,6 @@ ee-first@1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/ee-first/-/ee-first-1.1.1.tgz#590c61156b0ae2f4f0255732a158b266bc56b21d"
 
-ejs@~0.8.3:
-  version "0.8.8"
-  resolved "https://registry.yarnpkg.com/ejs/-/ejs-0.8.8.tgz#ffdc56dcc35d02926dd50ad13439bbc54061d598"
-
 electron-to-chromium@^1.2.7:
   version "1.3.14"
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.14.tgz#64af0f9efd3c3c6acd57d71f83b49ca7ee9c4b43"
@@ -2967,7 +2975,7 @@ escalade@^3.1.1:
   resolved "https://registry.yarnpkg.com/escalade/-/escalade-3.1.1.tgz#d8cfdc7000965c5a0174b4a82eaa5c0552742e40"
   integrity sha512-k0er2gUkLf8O0zKJiAhmkTnJlTvINGv7ygDNPbeIsX/TJjGJZHuh9B2UxbsaEkmlEo9MfhrSzmhIlhRlI2GXnw==
 
-escape-html@~1.0.3:
+escape-html@^1.0.3, escape-html@~1.0.3:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/escape-html/-/escape-html-1.0.3.tgz#0258eae4d3d0c0974de1c169188ef0051d1d1988"
 
@@ -6007,10 +6015,6 @@ lodash@~2.4.1:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-2.4.2.tgz#fadd834b9683073da179b3eae6d9c0d15053f73e"
 
-lodash@~3.2.0:
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-3.2.0.tgz#4bf50a3243f9aeb0bac41a55d3d5990675a462fb"
-
 log4js@^0.6.31:
   version "0.6.38"
   resolved "https://registry.yarnpkg.com/log4js/-/log4js-0.6.38.tgz#2c494116695d6fb25480943d3fc872e662a522fd"
@@ -6580,10 +6584,6 @@ node-abi@^2.7.0:
   integrity sha512-HbtmIuByq44yhAzK7b9j/FelKlHYISKQn0mtvcBrU5QBkhoCMp5bu8Hv5AI34DcKfOAcJBcOEMwLlwO62FFu9A==
   dependencies:
     semver "^5.4.1"
-
-node-forge@0.2.24:
-  version "0.2.24"
-  resolved "https://registry.yarnpkg.com/node-forge/-/node-forge-0.2.24.tgz#fa6f846f42fa93f63a0a30c9fbff7b4e130e0858"
 
 node-forge@0.9.0:
   version "0.9.0"
@@ -7236,19 +7236,20 @@ passport-oauth2@^1.1.2:
     uid2 "0.0.x"
     utils-merge "1.x.x"
 
-passport-saml@^0.15.0:
-  version "0.15.0"
-  resolved "https://registry.yarnpkg.com/passport-saml/-/passport-saml-0.15.0.tgz#7d45c07baaf80d8e2cf898367132a5e4c0535cad"
+passport-saml@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/passport-saml/-/passport-saml-3.2.0.tgz#72ec8203df6dd872a205b8d5f578859a4e723e42"
+  integrity sha512-EUzL+Wk8ZVdvOYhCBTkUrR1fwuMwF9za1FinFabP5Tl9qeJktsJWfoiBz7Fk6jQvpLwfnfryGdvwcOlGVct41A==
   dependencies:
-    passport-strategy "*"
-    q "1.1.x"
-    xml-crypto "0.8.x"
-    xml-encryption "~0.7"
-    xml2js "0.4.x"
-    xmlbuilder "2.5.x"
-    xmldom "0.1.x"
+    "@xmldom/xmldom" "^0.7.5"
+    debug "^4.3.2"
+    passport-strategy "^1.0.0"
+    xml-crypto "^2.1.3"
+    xml-encryption "^1.3.0"
+    xml2js "^0.4.23"
+    xmlbuilder "^15.1.1"
 
-passport-strategy@*, passport-strategy@1.x.x:
+passport-strategy@1.x.x, passport-strategy@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/passport-strategy/-/passport-strategy-1.0.0.tgz#b5539aa8fc225a3d1ad179476ddf236b440f52e4"
 
@@ -8027,10 +8028,6 @@ punycode@^2.1.0, punycode@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/punycode/-/punycode-2.1.1.tgz#b58b010ac40c22c5657616c8d2c2c02c7bf479ec"
   integrity sha512-XRsRjdf+j5ml+y/6GKHPZbrF/8p2Yga0JPtdqTIY2Xe5ohJPD9saDJJLPvp9+NSBprVvevdXZybnj2cv8OEd0A==
-
-q@1.1.x:
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/q/-/q-1.1.2.tgz#6357e291206701d99f197ab84e57e8ad196f2a89"
 
 q@1.4.1, q@^1.1.2, q@^1.4.1:
   version "1.4.1"
@@ -10753,24 +10750,25 @@ wtf-8@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/wtf-8/-/wtf-8-1.0.0.tgz#392d8ba2d0f1c34d1ee2d630f15d0efb68e1048a"
 
-xml-crypto@0.8.x:
-  version "0.8.5"
-  resolved "https://registry.yarnpkg.com/xml-crypto/-/xml-crypto-0.8.5.tgz#2bbcfb3eb33f3a82a218b822bf672b6b1c20e538"
+xml-crypto@^2.1.3:
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/xml-crypto/-/xml-crypto-2.1.3.tgz#6a7272b610ea3e4ea7f13e9e4876f1b20cbc32c8"
+  integrity sha512-MpXZwnn9JK0mNPZ5mnFIbNnQa+8lMGK4NtnX2FlJMfMWR60sJdFO9X72yO6ji068pxixzk53O7x0/iSKh6IhyQ==
   dependencies:
-    xmldom "=0.1.19"
-    xpath.js ">=0.0.3"
+    "@xmldom/xmldom" "^0.7.0"
+    xpath "0.0.32"
 
-xml-encryption@~0.7:
-  version "0.7.4"
-  resolved "https://registry.yarnpkg.com/xml-encryption/-/xml-encryption-0.7.4.tgz#42791ec64d556d2455dcb9da0a54123665ac65c7"
+xml-encryption@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/xml-encryption/-/xml-encryption-1.3.0.tgz#4cad44a59bf8bdec76d7865ce0b89e13c09962f4"
+  integrity sha512-3P8C4egMMxSR1BmsRM+fG16a3WzOuUEQKS2U4c3AZ5v7OseIfdUeVkD8dwxIhuLryFZSRWUL5OP6oqkgU7hguA==
   dependencies:
-    async "~0.2.7"
-    ejs "~0.8.3"
-    node-forge "0.2.24"
-    xmldom "~0.1.15"
-    xpath "0.0.5"
+    "@xmldom/xmldom" "^0.7.0"
+    escape-html "^1.0.3"
+    node-forge "^0.10.0"
+    xpath "0.0.32"
 
-xml2js@0.4.17, xml2js@0.4.x:
+xml2js@0.4.17:
   version "0.4.17"
   resolved "https://registry.yarnpkg.com/xml2js/-/xml2js-0.4.17.tgz#17be93eaae3f3b779359c795b419705a8817e868"
   dependencies:
@@ -10784,7 +10782,7 @@ xml2js@0.4.4:
     sax "0.6.x"
     xmlbuilder ">=1.0.0"
 
-xml2js@^0.4.17:
+xml2js@^0.4.17, xml2js@^0.4.23:
   version "0.4.23"
   resolved "https://registry.yarnpkg.com/xml2js/-/xml2js-0.4.23.tgz#a0c69516752421eb2ac758ee4d4ccf58843eac66"
   integrity sha512-ySPiMjM0+pLDftHgXY4By0uswI3SPKLDw/i3UXbnO8M/p28zqexCUoPmQFrYD+/1BzhGJSs2i1ERWKJAtiLrug==
@@ -10792,22 +10790,21 @@ xml2js@^0.4.17:
     sax ">=0.6.0"
     xmlbuilder "~11.0.0"
 
-xmlbuilder@12.0.0, xmlbuilder@>=1.0.0:
+xmlbuilder@12.0.0:
   version "12.0.0"
   resolved "https://registry.yarnpkg.com/xmlbuilder/-/xmlbuilder-12.0.0.tgz#e2ed675e06834a089ddfb84db96e2c2b03f78c1a"
   integrity sha512-lMo8DJ8u6JRWp0/Y4XLa/atVDr75H9litKlb2E5j3V3MesoL50EBgZDWoLT3F/LztVnG67GjPXLZpqcky/UMnQ==
-
-xmlbuilder@2.5.x:
-  version "2.5.2"
-  resolved "https://registry.yarnpkg.com/xmlbuilder/-/xmlbuilder-2.5.2.tgz#5ab88fc508ab2ff14873010b56163d3f92b19325"
-  dependencies:
-    lodash "~3.2.0"
 
 xmlbuilder@4.2.1, xmlbuilder@^4.1.0:
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/xmlbuilder/-/xmlbuilder-4.2.1.tgz#aa58a3041a066f90eaa16c2f5389ff19f3f461a5"
   dependencies:
     lodash "^4.0.0"
+
+xmlbuilder@>=1.0.0, xmlbuilder@^15.1.1:
+  version "15.1.1"
+  resolved "https://registry.yarnpkg.com/xmlbuilder/-/xmlbuilder-15.1.1.tgz#9dcdce49eea66d8d10b42cae94a79c3c8d0c2ec5"
+  integrity sha512-yMqGBqtXyeN1e3TGYvgNgDVZ3j84W4cwkOXQswghol6APgZWaff9lnbvN7MHYJOiXsvGPXtjTYJEiC9J2wv9Eg==
 
 xmlbuilder@~11.0.0:
   version "11.0.1"
@@ -10821,13 +10818,9 @@ xmldoc@^0.5.1:
   dependencies:
     sax "~1.1.1"
 
-xmldom@0.1.x, xmldom@^0.1.22, xmldom@~0.1.15:
+xmldom@^0.1.22:
   version "0.1.27"
   resolved "https://registry.yarnpkg.com/xmldom/-/xmldom-0.1.27.tgz#d501f97b3bdb403af8ef9ecc20573187aadac0e9"
-
-xmldom@=0.1.19:
-  version "0.1.19"
-  resolved "https://registry.yarnpkg.com/xmldom/-/xmldom-0.1.19.tgz#631fc07776efd84118bf25171b37ed4d075a0abc"
 
 xmlhttprequest-ssl@1.5.1:
   version "1.5.1"
@@ -10842,13 +10835,10 @@ xmlhttprequest-ssl@~1.5.4:
   resolved "https://registry.yarnpkg.com/xmlhttprequest-ssl/-/xmlhttprequest-ssl-1.5.5.tgz#c2876b06168aadc40e57d97e81191ac8f4398b3e"
   integrity sha1-wodrBhaKrcQOV9l+gRkayPQ5iz4=
 
-xpath.js@>=0.0.3:
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/xpath.js/-/xpath.js-1.0.7.tgz#7e94627f541276cbc6a6b02b5d35e9418565b3e4"
-
-xpath@0.0.5:
-  version "0.0.5"
-  resolved "https://registry.yarnpkg.com/xpath/-/xpath-0.0.5.tgz#454036f6ef0f3df5af5d4ba4a119fb75674b3e6c"
+xpath@0.0.32:
+  version "0.0.32"
+  resolved "https://registry.yarnpkg.com/xpath/-/xpath-0.0.32.tgz#1b73d3351af736e17ec078d6da4b8175405c48af"
+  integrity sha512-rxMJhSIoiO8vXcWvSifKqhvV96GjiD5wYb8/QHdoRyQvraTpp4IEv944nhGausZZ3u7dhQXteZuZbaqfpB7uYw==
 
 xregexp@4.0.0:
   version "4.0.0"
