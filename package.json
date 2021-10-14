@@ -106,7 +106,7 @@
     "chai": "^3.4.1",
     "css-loader": "^0.23.1",
     "del": "^2.0.1",
-    "eslint": "^3.2.2",
+    "eslint": "^8.0.1",
     "event-stream": "^3.3.2",
     "exports-loader": "^0.7.0",
     "extract-text-webpack-plugin": "^1.0.1",
