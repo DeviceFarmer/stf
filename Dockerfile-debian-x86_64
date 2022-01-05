@@ -2,7 +2,7 @@
 # Copyright © 2020 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM debian:stretch-slim
+FROM debian:buster-slim
 
 LABEL Maintainer="Denis Barbaron <denis.barbaron@orange.com>"
 LABEL Name="STF"
