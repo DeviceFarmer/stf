@@ -2,7 +2,7 @@
 # Copyright © 2020 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM arm32v7/debian:stretch-slim
+FROM arm32v7/debian:buster-slim
 
 LABEL Maintainer="Denis Barbaron <denis.barbaron@orange.com>"
 LABEL Name="STF"
@@ -26,7 +26,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install wget python build-essential cmake && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v9.9.0/node-v9.9.0-linux-armv7l.tar.xz && \
+      https://nodejs.org/dist/v8.9.3/node-v8.9.3-linux-armv7l.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     useradd --system \
@@ -43,7 +43,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
     sed -i'' -e '/phantomjs/d' package.json && \
     npm config set unsafe-perm true && \
-    npm install -g npm && \
     echo 'npm cache clean --force' | su stf -s /bin/bash && \
     echo 'npm install --no-optional --legacy-peer-deps --loglevel http' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
