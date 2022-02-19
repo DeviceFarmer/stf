@@ -94,7 +94,7 @@
     "transliteration": "^2.2.0",
     "url-join": "1.1.0",
     "utf-8-validate": "^1.2.1",
-    "uuid": "^3.0.0",
+    "uuid": "^8.3.2",
     "ws": "^3.0.0",
     "yargs": "^6.6.0",
     "yauzl": "^2.10.0",
