@@ -7,8 +7,9 @@ blocks:
         - name: Deploy
           commands:
             - checkout
-            - 'docker build . -t "devicefarmer/stf:$(echo ${SEMAPHORE_GIT_TAG_NAME:-vlatest} |cut -c 2-)"'
-            - docker push devicefarmer/stf
+            - export TAG=$(echo ${SEMAPHORE_GIT_TAG_NAME:-vlatest} |cut -c 2-)
+            - 'docker build -t "$TAG" .'
+            - docker push devicefarmer/stf:$TAG
       secrets:
         - name: dockerhub-secrets
       prologue:
