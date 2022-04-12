@@ -27,15 +27,7 @@ module.exports = function(config) {
     webpack: {
       cache: true,
       module: webpackConfig.webpack.module,
-      resolve: webpackConfig.webpack.resolve,
-//      plugins: [
-//        new webpack.ResolverPlugin(
-//          new webpack.ResolverPlugin.DirectoryDescriptionFilePlugin(
-//            'bower.json'
-//            , ['main']
-//          )
-//        )
-//      ]
+      resolve: webpackConfig.webpack.resolve
     },
     webpackServer: {
       debug: true,
