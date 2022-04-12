@@ -1,3 +1,7 @@
+//
+// Copyright © 2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+//
+
 var path = require('path')
 
 var gulp = require('gulp')
@@ -24,7 +28,7 @@ gulp.task('jsonlint', function() {
       '.bowerrc'
     , '.yo-rc.json'
     , '*.json'
-    ])
+    ], {allowEmpty: true})
     .pipe(jsonlint())
     .pipe(jsonlint.reporter())
 })
@@ -75,15 +79,11 @@ gulp.task('eslint-cli', function(done) {
   }
 })
 
-
-gulp.task('lint', ['jsonlint', 'eslint-cli'])
-gulp.task('test', ['lint', 'run:checkversion'])
-gulp.task('build', ['clean', 'webpack:build'])
-
 gulp.task('run:checkversion', function() {
   gutil.log('Checking STF version...')
   return run('./bin/stf -V').exec()
 })
+
 
 gulp.task('karma_ci', function(done) {
   karma.start({
@@ -113,7 +113,7 @@ gulp.task('protractor-explorer', function(callback) {
   }, callback)
 })
 
-gulp.task('protractor', ['webdriver-update'], function(callback) {
+gulp.task('protractor', gulp.series('webdriver-update', function(callback) {
   gulp.src(['./res/test/e2e/**/*.js'])
     .pipe(protractor.protractor({
       configFile: protractorConfig
@@ -126,7 +126,7 @@ gulp.task('protractor', ['webdriver-update'], function(callback) {
       /* eslint no-console: 0 */
     })
     .on('end', callback)
-})
+}))
 
 // For piping strings
 function fromString(filename, string) {
@@ -136,7 +136,7 @@ function fromString(filename, string) {
       cwd: ''
     , base: ''
     , path: filename
-    , contents: new Buffer(string)
+    , contents: Buffer.from(string)
     }))
     this.push(null)
   }
@@ -174,6 +174,7 @@ gulp.task('webpack:build', function(callback) {
   })
 })
 
+
 gulp.task('webpack:others', function(callback) {
   var myConfig = Object.create(webpackStatusConfig)
   myConfig.plugins = myConfig.plugins.concat(
@@ -197,13 +198,6 @@ gulp.task('webpack:others', function(callback) {
   })
 })
 
-gulp.task('translate', [
-  'translate:extract'
-, 'translate:push'
-, 'translate:pull'
-, 'translate:compile'
-])
-
 gulp.task('pug', function() {
   return gulp.src([
       './res/**/*.pug'
@@ -221,7 +215,7 @@ gulp.task('pug', function() {
     .pipe(gulp.dest('./tmp/html/'))
 })
 
-gulp.task('translate:extract', ['pug'], function() {
+gulp.task('translate:extract', gulp.series('pug', function() {
   return gulp.src([
       './tmp/html/**/*.html'
     , './res/**/*.js'
@@ -230,7 +224,7 @@ gulp.task('translate:extract', ['pug'], function() {
     ])
     .pipe(gettext.extract('stf.pot'))
     .pipe(gulp.dest('./res/common/lang/po/'))
-})
+}))
 
 gulp.task('translate:compile', function() {
   return gulp.src('./res/common/lang/po/**/*.po')
@@ -251,9 +245,19 @@ gulp.task('translate:pull', function() {
 })
 
 gulp.task('clean', function(cb) {
-  del([
+  return del([
     './tmp'
     , './res/build'
     , '.eslintcache'
   ], cb)
 })
+
+gulp.task('build', gulp.parallel('clean', 'webpack:build'))
+gulp.task('lint', gulp.parallel('jsonlint', 'eslint-cli'))
+gulp.task('test', gulp.parallel('lint', 'run:checkversion'))
+gulp.task('translate', gulp.parallel(
+  'translate:extract'
+, 'translate:push'
+, 'translate:pull'
+, 'translate:compile'
+))
