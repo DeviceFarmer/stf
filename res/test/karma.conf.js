@@ -1,3 +1,7 @@
+//
+// Copyright © 2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+//
+
 var webpackConfig = require('./../../webpack.config')
 
 var webpack = require('webpack')
@@ -24,14 +28,14 @@ module.exports = function(config) {
       cache: true,
       module: webpackConfig.webpack.module,
       resolve: webpackConfig.webpack.resolve,
-      plugins: [
-        new webpack.ResolverPlugin(
-          new webpack.ResolverPlugin.DirectoryDescriptionFilePlugin(
-            'bower.json'
-            , ['main']
-          )
-        )
-      ]
+//      plugins: [
+//        new webpack.ResolverPlugin(
+//          new webpack.ResolverPlugin.DirectoryDescriptionFilePlugin(
+//            'bower.json'
+//            , ['main']
+//          )
+//        )
+//      ]
     },
     webpackServer: {
       debug: true,
@@ -63,7 +67,7 @@ module.exports = function(config) {
     // Start these browsers, currently available:
     // Chrome, ChromeCanary, Firefox, Opera, Safari, PhantomJS, IE
     browsers: ['Chrome'],
-    //browsers: ['PhantomJS'],
+    // browsers: ['PhantomJS'],
 
     plugins: [
       require('karma-jasmine'),

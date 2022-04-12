@@ -1,5 +1,5 @@
 /**
-* Copyright © 2019 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+* Copyright © 2019,2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 **/
 
 var oboe = require('oboe')
@@ -7,7 +7,7 @@ var _ = require('lodash')
 var EventEmitter = require('eventemitter3')
 let Promise = require('bluebird')
 
-module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceService) {
+module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceService, CommonService) {
   var deviceService = {}
 
   function Tracker($scope, options) {
@@ -216,7 +216,7 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
     , digest: false
     })
 
-    oboe('/api/v1/devices')
+    oboe(CommonService.getBaseUrl() + '/api/v1/devices')
       .node('devices[*]', function(device) {
         tracker.add(device)
       })
@@ -232,7 +232,7 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
     , digest: true
     })
 
-    oboe('/api/v1/user/devices')
+    oboe(CommonService.getBaseUrl() + '/api/v1/user/devices')
       .node('devices[*]', function(device) {
         tracker.add(device)
       })
