@@ -1,5 +1,5 @@
 #
-# Copyright © 2020 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+# Copyright © 2020,2022 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
 FROM debian:buster-slim
@@ -23,10 +23,10 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     echo '--- Updating repositories' && \
     apt-get update && \
     echo '--- Building node' && \
-    apt-get -y install wget python build-essential && \
+    apt-get -y install wget python3 build-essential && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v8.9.3/node-v8.9.3-linux-x64.tar.xz && \
+      https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     useradd --system \
@@ -42,7 +42,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
     sed -i'' -e '/phantomjs/d' package.json && \
-    echo 'npm install --no-optional --loglevel http --legacy-peer-deps' | su stf -s /bin/bash && \
+    echo 'npm install --python="/usr/bin/python3" --no-optional --loglevel http' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
@@ -53,7 +53,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     echo '--- Cleaning up' && \
     echo 'npm cache clean --force' | su stf -s /bin/bash && \
     rm -rf ~/.node-gyp && \
-    apt-get -y purge wget python build-essential && \
+    apt-get -y purge wget python3 build-essential && \
     apt-get -y clean && \
     apt-get -y autoremove && \
     rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
