@@ -1,7 +1,6 @@
 *.!sync
 .DS_Store
 /*.tgz
-/.bowerrc
 /.dockerignore
 /.editorconfig
 /.env
@@ -13,12 +12,10 @@
 /.python-version
 /.travis.yml
 /Dockerfile
-/bower.json
 /component.json
 /docker
 /gulpfile.js
 /npm-debug.log
-/res/bower_components/
 /res/test/
 /res/web_modules/
 /rethinkdb_data/
