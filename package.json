@@ -78,6 +78,7 @@
     "oboe": "2.1.5",
     "font-lato-2-subset": "file:font-lato-2-subset",
     "basic-auth": "^1.0.3",
+    "bootstrap": "3.3.7",
     "bluebird": "^2.10.1",
     "body-parser": "^1.13.3",
     "bufferutil": "^4.0.3",
@@ -131,6 +132,7 @@
     "zeromq": "^5.0.0"
   },
   "devDependencies": {
+    "angular-mocks": "1.5.11",
     "async": "^2.0.1",
     "bower": "^1.8.8",
     "chai": "^3.4.1",
