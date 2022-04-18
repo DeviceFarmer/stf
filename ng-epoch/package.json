@@ -1,0 +1,8 @@
+{
+  "name": "ng-epoch",
+  "version": "1.0.7",
+  "homepage": "https://github.com/dainbrump/ng-epoch",
+  "description": "Angular directive wrapper for EpochJS, a charting plugin by Fastly.",
+  "main": "ng-epoch.js",
+  "license": "MIT"
+}
