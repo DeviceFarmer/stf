@@ -1,0 +1,8 @@
+{
+  "name": "font-lato-2-subset",
+  "version": "0.4.0",
+  "homepage": "https://github.com/gunta/font-lato-2-subset",
+  "description": "A subset of the font Lato 2",
+  "main": "css/font-lato-2.css",
+  "license": "SIL OPEN FONT LICENSE"
+}
