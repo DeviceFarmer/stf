@@ -30,7 +30,10 @@
   },
   "scripts": {
     "test": "gulp test",
-    "prepare": "bower install && not-in-install && gulp build || in-install"
+    "prepare": "not-in-install && gulp build || in-install",
+    "test:unit": "gulp karma",
+    "test:e2e": "gulp protractor",
+    "lint": "gulp lint"
   },
   "dependencies": {
     "@devicefarmer/adbkit": "^2.11.3",
@@ -46,8 +49,34 @@
     "@julusian/jpeg-turbo": "^0.5.4",
     "@slack/client": "^3.5.4",
     "android-device-list": "^1.2.1",
+    "angular": "1.5.11",
+    "angular-animate": "1.5.11",
+    "angular-borderlayout": "https://github.com/filearts/angular-borderlayout#7c9716aebd9260763f798561ca49d6fbfd4a5c67",
+    "angular-cookies": "1.5.11",
+    "angular-elastic": "2.5.1",
+    "angular-gettext": "2.2.1",
+    "angular-growl-v2": "https://github.com/JanStevens/angular-growl-2#v0.7.9",
+    "angular-hotkeys": "1.6.0",
+    "angular-ladda": "0.3.3",
+    "angular-route": "1.5.11",
+    "angular-touch": "1.5.11",
+    "angular-ui-bootstrap": "1.1.2",
+    "angular-xeditable": "0.1.12",
     "aws-sdk": "^2.4.13",
+    "packery": "1.4.3",
+    "components-font-awesome": "4.7.0",
+    "draggabilly": "1.2.4",
+    "epoch-charting": "0.8.4",
+    "underscore.string": "3.2.3",
+    "d3": "3.5.17",
+    "ng-context-menu": "https://github.com/swimlane/ng-context-menu#93d825d981dc6f49bcaa861ef5a87fa9d1923f34",
+    "ng-epoch": "file:ng-epoch",
+    "ng-file-upload": "2.2.2",
+    "ng-table": "1.0.0",
+    "oboe": "2.1.5",
+    "font-lato-2-subset": "file:font-lato-2-subset",
     "basic-auth": "^1.0.3",
+    "bootstrap": "3.3.7",
     "bluebird": "^2.10.1",
     "body-parser": "^1.13.3",
     "bufferutil": "^4.0.3",
@@ -99,11 +128,11 @@
     "ws": "^3.0.0",
     "yargs": "^6.6.0",
     "yauzl": "^2.10.0",
-    "zeromq": "^5.0.0"
+    "zeromq": "^5.2.8"
   },
   "devDependencies": {
+    "angular-mocks": "1.5.11",
     "async": "^2.0.1",
-    "bower": "^1.8.8",
     "chai": "^3.4.1",
     "css-loader": "^0.28.11",
     "del": "^2.0.1",
@@ -120,6 +149,7 @@
     "gulp-pug": "^4.0.1",
     "gulp-run": "^1.6.12",
     "gulp-util": "^3.0.7",
+    "grunt": "^0.4.0",
     "html-loader": "^0.5.5",
     "http-https": "^1.0.0",
     "imports-loader": "^0.8.0",
@@ -158,7 +188,8 @@
     "webpack-dev-server": "^2.11.5"
   },
   "engines": {
-    "node": ">= 6.9"
+    "node": ">= 12",
+    "npm": "8.5.5"
   },
   "externalDependencies": {
     "rethinkdb": ">= 2.2",
