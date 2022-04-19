@@ -26,7 +26,7 @@
                   i.fa.fa-columns
                   span(ng-bind='"Customize"|translate')
 
-                ul.uib-dropdown-menu(role='menu').pointer.stf-device-details-customize
+                ul(uib-dropdown-menu, role='menu').pointer.stf-device-details-customize
                   li(ng-repeat='column in columns track by column.name',
                   ng-hide='!adminMode && columnDefinitions[column.name].admin',
                   ng-click='$event.stopPropagation()')
