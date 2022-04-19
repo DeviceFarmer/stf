@@ -70,11 +70,9 @@
     "underscore.string": "3.2.3",
     "d3": "3.5.17",
     "ng-context-menu": "https://github.com/swimlane/ng-context-menu#93d825d981dc6f49bcaa861ef5a87fa9d1923f34",
-    "ng-epoch": "file:ng-epoch",
     "ng-file-upload": "2.2.2",
     "ng-table": "1.0.0",
     "oboe": "2.1.5",
-    "font-lato-2-subset": "file:font-lato-2-subset",
     "basic-auth": "^1.0.3",
     "bootstrap": "3.3.7",
     "bluebird": "^2.10.1",
@@ -189,7 +187,7 @@
   },
   "engines": {
     "node": ">= 12",
-    "npm": "8.5.5"
+    "npm": ">=8.5.5"
   },
   "externalDependencies": {
     "rethinkdb": ">= 2.2",
