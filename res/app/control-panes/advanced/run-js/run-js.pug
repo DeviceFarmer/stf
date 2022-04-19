@@ -16,10 +16,10 @@
         button(ng-click='saveDialog()', ng-disabled='!snippet.editorText').btn.btn-sm.btn-default-outline
           i.fa.fa-save
           span(translate)  Save...
-        button(type='button',
-        ng-disabled='!hasSnippets()').btn.btn-sm.btn-default-outline.uib-dropdown-toggle
+        button(type='button', uib-dropdown-toggle,
+        ng-disabled='!hasSnippets()').btn.btn-sm.btn-default-outline
           span.caret
-        ul.uib-dropdown-menu.pull-right
+        ul(uib-dropdown-menu).pull-right
           li(ng-repeat='snip in snippets')
             a(ng-click='openSnippet(snip)').btn-link {{snip.name}}
           li.divider
