@@ -7,7 +7,6 @@
 /*.tgz
 /.env
 /node_modules/
-/res/bower_components/
 /res/build/
 /res/test_out/
 /rethinkdb_data/
