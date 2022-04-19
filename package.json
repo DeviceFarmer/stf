@@ -1,6 +1,6 @@
 {
   "name": "@devicefarmer/stf",
-  "version": "3.6.2",
+  "version": "3.6.1",
   "description": "Smartphone Test Farm",
   "keywords": [
     "adb",
@@ -33,7 +33,7 @@
     "prepare": "not-in-install && gulp build || in-install",
     "test:unit": "gulp karma",
     "test:e2e": "gulp protractor",
-    "lint": "gulp test"
+    "lint": "gulp lint"
   },
   "dependencies": {
     "@devicefarmer/adbkit": "^2.11.3",
@@ -128,12 +128,11 @@
     "ws": "^3.0.0",
     "yargs": "^6.6.0",
     "yauzl": "^2.10.0",
-    "zeromq": "^5.0.0"
+    "zeromq": "^5.2.8"
   },
   "devDependencies": {
     "angular-mocks": "1.5.11",
     "async": "^2.0.1",
-    "bower": "^1.8.8",
     "chai": "^3.4.1",
     "css-loader": "^0.28.11",
     "del": "^2.0.1",
@@ -150,6 +149,7 @@
     "gulp-pug": "^4.0.1",
     "gulp-run": "^1.6.12",
     "gulp-util": "^3.0.7",
+    "grunt": "^0.4.0",
     "html-loader": "^0.5.5",
     "http-https": "^1.0.0",
     "imports-loader": "^0.8.0",
@@ -185,8 +185,7 @@
     "then-jade": "^2.4.1",
     "url-loader": "^0.6.2",
     "webpack": "^3.1.0",
-    "webpack-dev-server": "^2.11.5",
-    "zeromq": "5.2.8"
+    "webpack-dev-server": "^2.11.5"
   },
   "engines": {
     "node": ">= 12",

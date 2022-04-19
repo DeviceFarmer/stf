@@ -37,12 +37,9 @@ module.exports = {
         , extensions: ['.js', '.json']
         , enforceModuleExtension: false
       , alias: {
-        '@devicefarmer/adbkit': './adbkit'
-        , 'angular-bootstrap': 'angular-bootstrap/ui-bootstrap-tpls'
-        , localforage: 'localforage/dist/localforage.js'
-        , 'socket.io': 'socket.io-client'
-        , stats: 'stats.js/src/Stats.js'
-        , 'underscore.string': 'underscore.string/index'
+            localforage: 'localforage/dist/localforage.js'
+          , 'socket.io': 'socket.io-client'
+          , stats: 'stats.js/src/Stats.js'
       }
     }
     , module: {
