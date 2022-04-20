@@ -13660,7 +13660,7 @@
   optionalDependencies:
     "commander" "^2.7.1"
 
-"zeromq@^5.2.8":
+"zeromq@^5.0.0":
   "integrity" "sha512-bXzsk7KOmgLSv1tC0Ms1VXBy90+Rz27ZYf27cLuldRYbpqYpuWJfxxHFhO710t22zgWBnmdUP0m3SKFpLI0u5g=="
   "resolved" "https://registry.npmjs.org/zeromq/-/zeromq-5.2.8.tgz"
   "version" "5.2.8"

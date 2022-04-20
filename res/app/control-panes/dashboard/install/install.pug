@@ -58,7 +58,8 @@
                   span(ng-if='!showManifest') Show Manifest
                 pre.manifest-text(ng-if='showManifest') {{ installation.manifest | json }}
 
-      alert(type='danger', close='clear()', ng-if='installation.error')
+      .alert.alert-danger.alert-dismissible(role="alert", ng-if='installation.error')
         strong(translate) Oops!
-        | &#x20;
+        .button.close(type="button", data-dismiss="alert" aria-label="Close")
+          span(aria-hidden="true") &times;
         span {{ installation.error | installError | translate }} ({{ installation.error }})
