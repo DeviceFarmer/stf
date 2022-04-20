@@ -1,4 +1,4 @@
-require('angular-bootstrap')
+require('angular-ui-bootstrap')
 
 module.exports = angular.module('ui-local-settings', [
   require('stf/settings').name,
