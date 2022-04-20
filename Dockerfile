@@ -62,7 +62,6 @@ RUN set -x && \
     npm install --python="/usr/bin/python3"  --loglevel http && \
     npm pack && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    bower cache clean && \
     npm prune --production && \
     mv node_modules /app && \
     rm -rf ~/.node-gyp && \
