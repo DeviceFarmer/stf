@@ -1,6 +1,6 @@
 {
   "name": "@devicefarmer/stf",
-  "version": "3.6.2",
+  "version": "3.6.3",
   "description": "Smartphone Test Farm",
   "keywords": [
     "adb",
@@ -33,7 +33,7 @@
     "prepare": "bower install && not-in-install && gulp build || in-install"
   },
   "dependencies": {
-    "@devicefarmer/adbkit": "^3.2.2",
+    "@devicefarmer/adbkit": "^3.2.1",
     "@devicefarmer/adbkit-apkreader": "^3.2.3",
     "@devicefarmer/adbkit-monkey": "^1.2.0",
     "@devicefarmer/minicap-prebuilt": "^2.7.1",
