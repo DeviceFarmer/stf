@@ -45,7 +45,7 @@
     "@devicefarmer/stf-wiki": "^1.0.0",
     "@julusian/jpeg-turbo": "^0.5.4",
     "@slack/client": "^3.5.4",
-    "android-device-list": "^1.2.1",
+    "android-device-list": "^1.2.7",
     "aws-sdk": "^2.4.13",
     "basic-auth": "^1.0.3",
     "bluebird": "^2.10.1",
