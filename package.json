@@ -141,7 +141,7 @@
     "memory-fs": "^0.3.0",
     "node-libs-browser": "^1.0.0",
     "phantomjs-prebuilt": "^2.1.11",
-    "protractor": "^5.4.1",
+    "protractor": "^7.0.0",
     "protractor-html-reporter-2": "1.0.4",
     "raw-loader": "^0.5.1",
     "sass": "^1.49.9",
