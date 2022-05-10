@@ -30,20 +30,17 @@ module.exports = {
         modules: [
           pathutil.resource('app/components')
           , 'web_modules'
-          , 'bower_components'
           , 'node_modules'
         ]
-        , descriptionFiles: ['package.json', 'bower.json']
+        , descriptionFiles: ['package.json']
         , moduleExtensions: ['-loader']
         , extensions: ['.js', '.json']
         , enforceModuleExtension: false
-        , alias: {
-            'angular-bootstrap': 'angular-bootstrap/ui-bootstrap-tpls'
-            , localforage: 'localforage/dist/localforage.js'
-            , 'socket.io': 'socket.io-client'
-            , stats: 'stats.js/src/Stats.js'
-            , 'underscore.string': 'underscore.string/index'
-        }
+      , alias: {
+            localforage: 'localforage/dist/localforage.js'
+          , 'socket.io': 'socket.io-client'
+          , stats: 'stats.js/src/Stats.js'
+      }
     }
     , module: {
         loaders: [
@@ -62,12 +59,12 @@ module.exports = {
           , {test: /\.pug$/, loader: 'template-html-loader?engine=jade'}
           , {test: /\.html$/, loader: 'html-loader'}
           , {test: /angular\.js$/, loader: 'exports-loader?angular'}
-          , {test: /angular-cookies\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /angular-route\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /angular-touch\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /angular-animate\.js$/, loader: 'imports-loader?angular=angular'}
           , {test: /angular-growl\.js$/, loader: 'imports-loader?angular=angular'}
           , {test: /dialogs\.js$/, loader: 'script-loader'}
+          , {
+            test: /node_modules\/(draggabilly|fizzy-ui-utils|get-size|outlayer|packery|unipointer)/
+            , loader: 'imports-loader?define=>false'
+          }
         ]
     }
     , plugins: [
