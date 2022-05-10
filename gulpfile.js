@@ -25,8 +25,7 @@ var run = require('gulp-run')
 
 gulp.task('jsonlint', function() {
   return gulp.src([
-      '.bowerrc'
-    , '.yo-rc.json'
+      '.yo-rc.json'
     , '*.json'
     ], {allowEmpty: true})
     .pipe(jsonlint())
@@ -39,7 +38,6 @@ gulp.task('eslint', function() {
   return gulp.src([
       'lib/**/*.js'
     , 'res/**/*.js'
-    , '!res/bower_components/**'
     , '*.js'
   ])
     // eslint() attaches the lint output to the "eslint" property
@@ -201,7 +199,6 @@ gulp.task('webpack:others', function(callback) {
 gulp.task('pug', function() {
   return gulp.src([
       './res/**/*.pug'
-    , '!./res/bower_components/**'
     ])
     .pipe(pug({
       locals: {
@@ -219,7 +216,6 @@ gulp.task('translate:extract', gulp.series('pug', function() {
   return gulp.src([
       './tmp/html/**/*.html'
     , './res/**/*.js'
-    , '!./res/bower_components/**'
     , '!./res/build/**'
     ])
     .pipe(gettext.extract('stf.pot'))
