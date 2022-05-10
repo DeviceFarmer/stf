@@ -36,7 +36,7 @@
     "lint": "gulp lint"
   },
   "dependencies": {
-    "@devicefarmer/adbkit": "^2.11.3",
+    "@devicefarmer/adbkit": "^3.2.3",
     "@devicefarmer/adbkit-apkreader": "^3.2.3",
     "@devicefarmer/adbkit-monkey": "^1.2.0",
     "@devicefarmer/minicap-prebuilt": "^2.7.1",
@@ -49,7 +49,7 @@
     "@devicefarmer/stf-wiki": "^1.0.0",
     "@julusian/jpeg-turbo": "^0.5.4",
     "@slack/client": "^3.5.4",
-    "android-device-list": "^1.2.1",
+    "android-device-list": "^1.2.7",
     "angular": "1.5.11",
     "angular-animate": "1.5.11",
     "angular-borderlayout": "https://github.com/filearts/angular-borderlayout#7c9716aebd9260763f798561ca49d6fbfd4a5c67",
@@ -105,7 +105,6 @@
     "passport": "^0.4.1",
     "passport-oauth2": "^1.1.2",
     "passport-saml": "^0.15.0",
-    "please-update-dependencies": "^2.0.0",
     "protobufjs": "^3.8.2",
     "proxy-addr": "^2.0.7",
     "pug": "^2.0.0-beta4",
