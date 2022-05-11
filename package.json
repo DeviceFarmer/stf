@@ -33,7 +33,7 @@
     "prepare": "bower install && not-in-install && gulp build || in-install"
   },
   "dependencies": {
-    "@devicefarmer/adbkit": "^3.2.3",
+    "@devicefarmer/adbkit": "^2.11.3",
     "@devicefarmer/adbkit-apkreader": "^3.2.3",
     "@devicefarmer/adbkit-monkey": "^1.2.0",
     "@devicefarmer/minicap-prebuilt": "^2.7.1",
