@@ -58,6 +58,14 @@
   resolved "https://registry.yarnpkg.com/@devicefarmer/minitouch-prebuilt/-/minitouch-prebuilt-1.3.0.tgz#bef394e3aa9f7029f4929325419504e45b181982"
   integrity sha512-vZKh2b4EHxeySLmuO+4YTF5JUEsSuQXOkiVearkBgXerdnbQsVIBRyBvU5xVPkLWz7AI4b9eWIQWjz/a8nwodA==
 
+"@devicefarmer/please-update-dependencies@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/please-update-dependencies/-/please-update-dependencies-2.0.1.tgz#4f926736dd81eb243af5e7243499973de0e1d06d"
+  integrity sha512-tvm/VXhs+3qSWzZfVjxzAenW0my2D4MZn877xYAyrUZ4EDvQ602z+XtI4gdQke/I7iaM3Um624n+FhdzJDECaQ==
+  dependencies:
+    chalk "^1.1.3"
+    semver "^5.3.0"
+
 "@devicefarmer/stf-appstore-db@^1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@devicefarmer/stf-appstore-db/-/stf-appstore-db-1.0.0.tgz#84131703c83ad92a6eb1350616bb894be0e39789"
@@ -373,7 +381,7 @@ anchor@^1.2.0:
     "@sailshq/lodash" "^3.10.2"
     validator "5.7.0"
 
-android-device-list@^1.2.1:
+android-device-list@^1.2.7:
   version "1.2.7"
   resolved "https://registry.yarnpkg.com/android-device-list/-/android-device-list-1.2.7.tgz#704bab91698fa352db83955ee07dc89eb14da475"
   integrity sha512-2YwXSPFMgZEEOLUq2QbWGcB9+YOzTF12Gg9N1Y7WPY6xajLQEl0Lx0/ScyhRpEdg0pWdB3fu01dGpLV2uE2pfg==
@@ -8447,14 +8455,6 @@ pkginfo@^0.4.0:
   resolved "https://registry.yarnpkg.com/pkginfo/-/pkginfo-0.4.1.tgz#b5418ef0439de5425fc4995042dced14fb2a84ff"
   integrity sha1-tUGO8EOd5UJfxJlQQtztFPsqhP8=
 
-please-update-dependencies@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/please-update-dependencies/-/please-update-dependencies-2.0.0.tgz#9a99433f3789d1e2757c04e3803395b6fa55a348"
-  integrity sha1-mplDPzeJ0eJ1fATjgDOVtvpVo0g=
-  dependencies:
-    chalk "^1.1.3"
-    semver "^5.3.0"
-
 plugin-error@1.0.1, plugin-error@^1.0.0, plugin-error@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/plugin-error/-/plugin-error-1.0.1.tgz#77016bd8919d0ac377fdcdd0322328953ca5781c"
@@ -12307,7 +12307,12 @@ ws@^1.0.1:
     options ">=0.0.5"
     ultron "1.0.x"
 
-ws@^3.0.0, ws@~3.3.1:
+ws@^8.8.0:
+  version "8.8.0"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-8.8.0.tgz#8e71c75e2f6348dbf8d78005107297056cb77769"
+  integrity sha512-JDAgSYQ1ksuwqfChJusw1LSJ8BizJ2e/vVu5Lxjq3YvNJNlROv1ui4i+c/kUUrPheBvQl4c5UbERhTwKa6QBJQ==
+
+ws@~3.3.1:
   version "3.3.3"
   resolved "https://registry.yarnpkg.com/ws/-/ws-3.3.3.tgz#f1cf84fe2d5e901ebce94efaece785f187a228f2"
   integrity sha512-nnWLa/NwZSt4KQJu51MYlCcSQ5g7INpOrOMt4XV8j4dqTXdmlUmSHQ8/oLC069ckre0fRsgfvsKwbTdtKLCDkA==
