@@ -12,6 +12,12 @@
 
 ![Super short screencast showing usage](https://raw.githubusercontent.com/DeviceFarmer/stf/master/doc/7s_usage.gif)
 
+## Contributors
+Thank you to all the people who have already contributed to STF!
+<a href = "https://github.com/devicefarmer/stf/graphs/contributors">
+  <img src = "https://contrib.rocks/image?repo=devicefarmer/stf"/>
+</a>
+
 ## Features
 
 * OS support
