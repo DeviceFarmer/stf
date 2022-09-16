@@ -69,7 +69,7 @@ module.exports.config = {
                   browser.takeScreenshot().then(function(png) {
                       var stream = fs.createWriteStream(dashboardReportDirectory + '/' +
                         browserName + '-' + result.fullName + '.png')
-                      stream.write(new Buffer(png, 'base64'))
+                      stream.write(Buffer.from(png, 'base64'))
                       stream.end()
                   })
               })
