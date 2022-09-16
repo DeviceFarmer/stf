@@ -102,7 +102,7 @@
     "zeromq": "^5.0.0"
   },
   "devDependencies": {
-    "async": "^2.0.1",
+    "async": "^3.2.4",
     "bower": "^1.8.8",
     "chai": "^3.4.1",
     "css-loader": "^0.28.11",
