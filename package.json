@@ -74,7 +74,7 @@
     "minimatch": "^3.0.3",
     "my-local-ip": "^1.0.0",
     "openid": "^2.0.1",
-    "passport": "^0.4.1",
+    "passport": "^0.6.0",
     "passport-oauth2": "^1.1.2",
     "passport-saml": "^0.15.0",
     "protobufjs": "^3.8.2",
