@@ -94,10 +94,15 @@ module.exports = function EnhanceDeviceServiceFactory($filter, AppState) {
     return url
   }
 
+  function enhanceDeviceAppState(device) {
+    AppState.device.platform = device.platform
+  }
+
   service.enhance = function(device) {
     setState(device)
     enhanceDevice(device)
     enhanceDeviceDetails(device)
+    enhanceDeviceAppState(device)
   }
 
   return service
