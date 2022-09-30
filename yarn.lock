@@ -396,7 +396,7 @@
     "@sailshq/lodash" "^3.10.2"
     "validator" "5.7.0"
 
-"android-device-list@^1.2.7":
+"android-device-list@^1.2.8":
   "integrity" "sha512-U17fI3nmlFRkMeG/fRQh2GTsFb+mt+Ygz7h39t8+ACdwGMvvFXqZt7yMejVPEXhcQlIMZYc4E8ZvVhExHWvs7w=="
   "resolved" "https://registry.npmjs.org/android-device-list/-/android-device-list-1.2.8.tgz"
   "version" "1.2.8"
