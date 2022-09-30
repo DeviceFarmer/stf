@@ -79,7 +79,7 @@
     "passport-saml": "^0.15.0",
     "protobufjs": "^3.8.2",
     "proxy-addr": "^2.0.7",
-    "pug": "^2.0.0-beta4",
+    "pug": "^3.0.2",
     "request": "^2.67.0",
     "request-progress": "^2.0.1",
     "rethinkdb": "^2.0.2",
