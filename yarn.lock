@@ -146,9 +146,9 @@
   version "3.0.19"
   resolved "https://registry.npmjs.org/@types/selenium-webdriver/-/selenium-webdriver-3.0.19.tgz"
 
-"@xmldom/xmldom@^0.7.3":
-  version "0.7.5"
-  resolved "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.7.5.tgz"
+"@xmldom/xmldom@^0.7.0", "@xmldom/xmldom@^0.7.3", "@xmldom/xmldom@^0.7.6":
+  version "0.7.6"
+  resolved "https://registry.yarnpkg.com/@xmldom/xmldom/-/xmldom-0.7.6.tgz#6f55073fa73e65776bd85826958b98c8cd1457b5"
 
 JSV@^4.0.x:
   version "4.0.2"
@@ -746,7 +746,7 @@ async@^2.0.0, async@^2.0.1, async@^2.1.2, async@^2.5.0, async@^2.6.2, async@~2.6
   dependencies:
     lodash "^4.17.14"
 
-async@~0.2.7, async@~0.2.9:
+async@~0.2.9:
   version "0.2.10"
   resolved "https://registry.npmjs.org/async/-/async-0.2.10.tgz"
   integrity "sha1-trvgsGdLnXGXCMo43owjfLUmw9E=sha512-eAkdoKxU6/LkKDBzLpT+t6Ff5EtfSF4wx1WfJiPEEV7WNLnDaRXk0oVysiEPm262roaachGexwUv94WhSgN5TQ== sha512-eAkdoKxU6/LkKDBzLpT+t6Ff5EtfSF4wx1WfJiPEEV7WNLnDaRXk0oVysiEPm262roaachGexwUv94WhSgN5TQ=="
@@ -2476,7 +2476,7 @@ debug@3.2.7, debug@^3.1.0, debug@^3.1.1:
   dependencies:
     ms "^2.1.1"
 
-debug@^4, debug@^4.1.0, debug@^4.1.1, debug@~4.3.1:
+debug@^4, debug@^4.1.0, debug@^4.1.1, debug@^4.3.2, debug@~4.3.1:
   version "4.3.4"
   resolved "https://registry.npmjs.org/debug/-/debug-4.3.4.tgz"
   dependencies:
@@ -2834,11 +2834,6 @@ ee-first@1.1.1:
   resolved "https://registry.npmjs.org/ee-first/-/ee-first-1.1.1.tgz"
   integrity "sha1-WQxhFWsK4vTwJVcyoViyZrxWsh0=sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow== sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow=="
 
-ejs@~0.8.3:
-  version "0.8.8"
-  resolved "https://registry.npmjs.org/ejs/-/ejs-0.8.8.tgz"
-  integrity "sha1-/9xW3MNdApJt1QrRNDm7xUBh1Zg=sha512-2E5HBH8LoaSQ2OLW2LmEE1/9dL3YZCKqrQXBEeCv9P/dQlZOfdAYvJFHhNZ35uY6AXba+RllQTRtmJmXXm7i7g== sha512-2E5HBH8LoaSQ2OLW2LmEE1/9dL3YZCKqrQXBEeCv9P/dQlZOfdAYvJFHhNZ35uY6AXba+RllQTRtmJmXXm7i7g=="
-
 electron-to-chromium@^1.2.7:
   version "1.4.122"
   resolved "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.122.tgz"
@@ -3136,7 +3131,7 @@ escalade@^3.1.1:
   version "3.1.1"
   resolved "https://registry.npmjs.org/escalade/-/escalade-3.1.1.tgz"
 
-escape-html@~1.0.3:
+escape-html@^1.0.3, escape-html@~1.0.3:
   version "1.0.3"
   resolved "https://registry.npmjs.org/escape-html/-/escape-html-1.0.3.tgz"
   integrity "sha1-Aljq5NPQwJdN4cFpGI7wBR0dGYg=sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow== sha512-NiSupZ4OeuGwr68lGIeym/ksIZMJodUGOSCZ/FSnTxcrekbvqrgdUxlJOMpijaKZVjAJrWrGs/6Jy8OMuyj9ow=="
@@ -6373,11 +6368,6 @@ lodash@~2.4.1:
   resolved "https://registry.npmjs.org/lodash/-/lodash-2.4.2.tgz"
   integrity "sha1-+t2DS5aDBz2hebPq5tnA0VBT9z4=sha512-Kak1hi6/hYHGVPmdyiZijoQyz5x2iGVzs6w9GYB/HiXEtylY7tIoYEROMjvM1d9nXJqPOrG2MNPMn01bJ+S0Rw== sha512-Kak1hi6/hYHGVPmdyiZijoQyz5x2iGVzs6w9GYB/HiXEtylY7tIoYEROMjvM1d9nXJqPOrG2MNPMn01bJ+S0Rw=="
 
-lodash@~3.2.0:
-  version "3.2.0"
-  resolved "https://registry.npmjs.org/lodash/-/lodash-3.2.0.tgz"
-  integrity "sha1-S/UKMkP5rrC6xBpV09WZBnWkYvs=sha512-pg876Sz2B6iut18K5PlFGZUxagOP9LACajQ4nzQHPZ8JcU15tviPV6q/u/dEQMV64TzKu8yJM3NprFxqRb3oHA== sha512-pg876Sz2B6iut18K5PlFGZUxagOP9LACajQ4nzQHPZ8JcU15tviPV6q/u/dEQMV64TzKu8yJM3NprFxqRb3oHA=="
-
 log-symbols@^2.1.0:
   version "2.2.0"
   resolved "https://registry.npmjs.org/log-symbols/-/log-symbols-2.2.0.tgz"
@@ -6967,11 +6957,6 @@ node-abi@^2.7.0:
   resolved "https://registry.npmjs.org/node-abi/-/node-abi-2.30.1.tgz"
   dependencies:
     semver "^5.4.1"
-
-node-forge@0.2.24:
-  version "0.2.24"
-  resolved "https://registry.npmjs.org/node-forge/-/node-forge-0.2.24.tgz"
-  integrity "sha1-+m+Eb0L6k/Y6CjDJ+/97ThMOCFg=sha512-1y4WL1S6NQxoWH/pwweve88fhXD0tbMfiakZileMHDJDbhXjPh5omL2B5EVDtjdGkBOrTxqRjE3y8tucCl7AfQ== sha512-1y4WL1S6NQxoWH/pwweve88fhXD0tbMfiakZileMHDJDbhXjPh5omL2B5EVDtjdGkBOrTxqRjE3y8tucCl7AfQ=="
 
 node-forge@^0.10.0:
   version "0.10.0"
@@ -7633,20 +7618,19 @@ passport-oauth2@^1.1.2:
     uid2 "0.0.x"
     utils-merge "1.x.x"
 
-passport-saml@^0.15.0:
-  version "0.15.0"
-  resolved "https://registry.npmjs.org/passport-saml/-/passport-saml-0.15.0.tgz"
-  integrity "sha1-fUXAe6r4DY4s+Jg2cTKl5MBTXK0=sha512-YJzzCsphGBMMfnnRyRDlG0WXrADGlD+aueOYhIK5Q3y2dnU4yG31+X6E6m3kxhaoC+CY3f9y+eW2RM8SzcQJMA== sha512-YJzzCsphGBMMfnnRyRDlG0WXrADGlD+aueOYhIK5Q3y2dnU4yG31+X6E6m3kxhaoC+CY3f9y+eW2RM8SzcQJMA=="
+passport-saml@^3.2.4:
+  version "3.2.4"
+  resolved "https://registry.yarnpkg.com/passport-saml/-/passport-saml-3.2.4.tgz#e8e9523f954988a3a47d12e425d7fa0f20a74dc9"
   dependencies:
-    passport-strategy "*"
-    q "1.1.x"
-    xml-crypto "0.8.x"
-    xml-encryption "~0.7"
-    xml2js "0.4.x"
-    xmlbuilder "2.5.x"
-    xmldom "0.1.x"
+    "@xmldom/xmldom" "^0.7.6"
+    debug "^4.3.2"
+    passport-strategy "^1.0.0"
+    xml-crypto "^2.1.3"
+    xml-encryption "^2.0.0"
+    xml2js "^0.4.23"
+    xmlbuilder "^15.1.1"
 
-passport-strategy@*, passport-strategy@1.x.x:
+passport-strategy@1.x.x, passport-strategy@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/passport-strategy/-/passport-strategy-1.0.0.tgz"
   integrity "sha1-tVOaqPwiWj0a0XlHbd8ja0QPUuQ=sha512-CB97UUvDKJde2V0KDWWB3lyf6PC3FaZP7YxZ2G8OAtn9p4HI9j9JLP9qjOGZFvyl8uwNT8qM+hGnz/n16NI7oA== sha512-CB97UUvDKJde2V0KDWWB3lyf6PC3FaZP7YxZ2G8OAtn9p4HI9j9JLP9qjOGZFvyl8uwNT8qM+hGnz/n16NI7oA=="
@@ -8511,15 +8495,15 @@ punycode@^2.1.0, punycode@^2.1.1:
   version "2.1.1"
   resolved "https://registry.npmjs.org/punycode/-/punycode-2.1.1.tgz"
 
-q@1.1.x, q@^1.1.2:
-  version "1.1.2"
-  resolved "https://registry.npmjs.org/q/-/q-1.1.2.tgz"
-  integrity "sha1-Y1fikSBnAdmfGXq4TlforRlvKok=sha512-ROtylwux7Vkc4C07oKE/ReigUmb33kVoLtcR4SJ1QVqwaZkBEDL3vX4/kwFzIERQ5PfCl0XafbU8u2YUhyGgVA== sha512-ROtylwux7Vkc4C07oKE/ReigUmb33kVoLtcR4SJ1QVqwaZkBEDL3vX4/kwFzIERQ5PfCl0XafbU8u2YUhyGgVA=="
-
 q@1.4.1, q@^1.4.1:
   version "1.4.1"
   resolved "https://registry.npmjs.org/q/-/q-1.4.1.tgz"
   integrity "sha1-VXBbzZPF82c1MMLCy8DCs63cKG4=sha512-/CdEdaw49VZVmyIDGUQKDDT53c7qBkO6g5CefWz91Ae+l4+cRtcDYwMTXh6me4O8TMldeGHG3N2Bl84V78Ywbg== sha512-/CdEdaw49VZVmyIDGUQKDDT53c7qBkO6g5CefWz91Ae+l4+cRtcDYwMTXh6me4O8TMldeGHG3N2Bl84V78Ywbg=="
+
+q@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.npmjs.org/q/-/q-1.1.2.tgz"
+  integrity "sha1-Y1fikSBnAdmfGXq4TlforRlvKok=sha512-ROtylwux7Vkc4C07oKE/ReigUmb33kVoLtcR4SJ1QVqwaZkBEDL3vX4/kwFzIERQ5PfCl0XafbU8u2YUhyGgVA== sha512-ROtylwux7Vkc4C07oKE/ReigUmb33kVoLtcR4SJ1QVqwaZkBEDL3vX4/kwFzIERQ5PfCl0XafbU8u2YUhyGgVA=="
 
 qjobs@^1.1.4:
   version "1.2.0"
@@ -11453,26 +11437,22 @@ ws@~7.4.2:
   version "7.4.6"
   resolved "https://registry.npmjs.org/ws/-/ws-7.4.6.tgz"
 
-xml-crypto@0.8.x:
-  version "0.8.5"
-  resolved "https://registry.npmjs.org/xml-crypto/-/xml-crypto-0.8.5.tgz"
-  integrity "sha1-K7z7PrM/OoKiGLgiv2craxwg5Tg=sha512-bmO0+G7iSf8dldIehyokvLps0ZZpGMe3gQNa+MPOrdBZbpzUG/Ass4njwWmPKCtR4pN+N921uH4M+Uskc7g/IA== sha512-bmO0+G7iSf8dldIehyokvLps0ZZpGMe3gQNa+MPOrdBZbpzUG/Ass4njwWmPKCtR4pN+N921uH4M+Uskc7g/IA=="
+xml-crypto@^2.1.3:
+  version "2.1.4"
+  resolved "https://registry.yarnpkg.com/xml-crypto/-/xml-crypto-2.1.4.tgz#85b3c62fa0debc4956ee72cb2dfee65651e865b5"
   dependencies:
-    xmldom "=0.1.19"
-    xpath.js ">=0.0.3"
+    "@xmldom/xmldom" "^0.7.0"
+    xpath "0.0.32"
 
-xml-encryption@~0.7:
-  version "0.7.4"
-  resolved "https://registry.npmjs.org/xml-encryption/-/xml-encryption-0.7.4.tgz"
-  integrity "sha1-Qnkexk1VbSRV3LnaClQSNmWsZcc=sha512-gwwKa9TwNT8S4dimixE+k4wsOOxK6Rt7ctxGRtuZyT7bWPvJwMTbYLLDKu7WG19vKwDMqMqGkVjbLQquKDY7pw== sha512-gwwKa9TwNT8S4dimixE+k4wsOOxK6Rt7ctxGRtuZyT7bWPvJwMTbYLLDKu7WG19vKwDMqMqGkVjbLQquKDY7pw=="
+xml-encryption@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/xml-encryption/-/xml-encryption-2.0.0.tgz#d4e1eb3ec1f2c5d2a2a0a6e23d199237e8b4bf83"
   dependencies:
-    async "~0.2.7"
-    ejs "~0.8.3"
-    node-forge "0.2.24"
-    xmldom "~0.1.15"
-    xpath "0.0.5"
+    "@xmldom/xmldom" "^0.7.0"
+    escape-html "^1.0.3"
+    xpath "0.0.32"
 
-xml2js@0.4.19, xml2js@0.4.x, xml2js@^0.4.17:
+xml2js@0.4.19:
   version "0.4.19"
   resolved "https://registry.npmjs.org/xml2js/-/xml2js-0.4.19.tgz"
   dependencies:
@@ -11487,16 +11467,24 @@ xml2js@0.4.4:
     sax "0.6.x"
     xmlbuilder ">=1.0.0"
 
-xmlbuilder@12.0.0, xmlbuilder@>=1.0.0:
+xml2js@^0.4.17, xml2js@^0.4.23:
+  version "0.4.23"
+  resolved "https://registry.yarnpkg.com/xml2js/-/xml2js-0.4.23.tgz#a0c69516752421eb2ac758ee4d4ccf58843eac66"
+  dependencies:
+    sax ">=0.6.0"
+    xmlbuilder "~11.0.0"
+
+xmlbuilder@12.0.0:
   version "12.0.0"
   resolved "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-12.0.0.tgz"
 
-xmlbuilder@2.5.x:
-  version "2.5.2"
-  resolved "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-2.5.2.tgz"
-  integrity "sha1-WriPxQirL/FIcwELVhY9P5KxkyU=sha512-KjolMh3rfQaytYw7jMYzYUbfdcW3bV3Jm4QEws72e7fo/MuEMLImppWh4Zn2QqNhEKbKW8yOwfDlVO3+lUEspA== sha512-KjolMh3rfQaytYw7jMYzYUbfdcW3bV3Jm4QEws72e7fo/MuEMLImppWh4Zn2QqNhEKbKW8yOwfDlVO3+lUEspA=="
-  dependencies:
-    lodash "~3.2.0"
+xmlbuilder@>=1.0.0, xmlbuilder@^15.1.1:
+  version "15.1.1"
+  resolved "https://registry.yarnpkg.com/xmlbuilder/-/xmlbuilder-15.1.1.tgz#9dcdce49eea66d8d10b42cae94a79c3c8d0c2ec5"
+
+xmlbuilder@~11.0.0:
+  version "11.0.1"
+  resolved "https://registry.yarnpkg.com/xmlbuilder/-/xmlbuilder-11.0.1.tgz#be9bae1c8a046e76b31127726347d0ad7002beb3"
 
 xmlbuilder@~9.0.1:
   version "9.0.7"
@@ -11509,15 +11497,6 @@ xmldoc@^0.5.1:
   integrity "sha1-kuQ36QDb/wRFDvrpDTyl8WVl9zg=sha512-RT40I5jVmRRle710br/W2XwIBg3Ev2y1FMQ5tKA4ueBuxTL1+hCOvRMpHeNshzmT0mTmR0TROP70srD/x9EWnQ== sha512-RT40I5jVmRRle710br/W2XwIBg3Ev2y1FMQ5tKA4ueBuxTL1+hCOvRMpHeNshzmT0mTmR0TROP70srD/x9EWnQ=="
   dependencies:
     sax "~1.1.1"
-
-xmldom@0.1.x, xmldom@~0.1.15:
-  version "0.1.31"
-  resolved "https://registry.npmjs.org/xmldom/-/xmldom-0.1.31.tgz"
-
-xmldom@=0.1.19:
-  version "0.1.19"
-  resolved "https://registry.npmjs.org/xmldom/-/xmldom-0.1.19.tgz"
-  integrity "sha1-Yx/Ad3bv2EEYvyUXGzftTQdaCrw=sha512-pDyxjQSFQgNHkU+yjvoF+GXVGJU7e9EnOg/KcGMDihBIKjTsOeDYaECwC/O9bsUWKY+Sd9izfE43JXC46EOHKA== sha512-pDyxjQSFQgNHkU+yjvoF+GXVGJU7e9EnOg/KcGMDihBIKjTsOeDYaECwC/O9bsUWKY+Sd9izfE43JXC46EOHKA=="
 
 xmlhttprequest-ssl@1.5.1:
   version "1.5.1"
@@ -11533,14 +11512,9 @@ xmlhttprequest-ssl@~1.6.2:
   version "1.6.3"
   resolved "https://registry.npmjs.org/xmlhttprequest-ssl/-/xmlhttprequest-ssl-1.6.3.tgz"
 
-xpath.js@>=0.0.3:
-  version "1.1.0"
-  resolved "https://registry.npmjs.org/xpath.js/-/xpath.js-1.1.0.tgz"
-
-xpath@0.0.5:
-  version "0.0.5"
-  resolved "https://registry.npmjs.org/xpath/-/xpath-0.0.5.tgz"
-  integrity "sha1-RUA29u8PPfWvXUukoRn7dWdLPmw=sha512-Y1Oyy8lyIDwWpmKIWBF0RZrQOP1fzE12G0ekSB1yzKPtbAdCI5sBCqBU/CAZUkKk81OXuq9tul/5lyNS+22iKg== sha512-Y1Oyy8lyIDwWpmKIWBF0RZrQOP1fzE12G0ekSB1yzKPtbAdCI5sBCqBU/CAZUkKk81OXuq9tul/5lyNS+22iKg=="
+xpath@0.0.32:
+  version "0.0.32"
+  resolved "https://registry.yarnpkg.com/xpath/-/xpath-0.0.32.tgz#1b73d3351af736e17ec078d6da4b8175405c48af"
 
 xregexp@2.0.0:
   version "2.0.0"
