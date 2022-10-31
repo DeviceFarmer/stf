@@ -10237,7 +10237,7 @@ swagger-methods@^1.0.0:
 
 "swagger-node-runner@git+https://github.com/fintechx/swagger-node-runner.git#v1.0.0":
   version "1.2.0"
-  resolved "git+ssh://git@github.com/fintechx/swagger-node-runner.git"
+  resolved "git+https://github.com/fintechx/swagger-node-runner.git"
   dependencies:
     async "^1.5.0"
     bagpipes "^0.2.2"
