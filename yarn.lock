@@ -65,9 +65,9 @@
   version "1.0.2"
   resolved "https://registry.npmjs.org/@devicefarmer/stf-browser-db/-/stf-browser-db-1.0.2.tgz"
 
-"@devicefarmer/stf-device-db@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/@devicefarmer/stf-device-db/-/stf-device-db-1.2.0.tgz"
+"@devicefarmer/stf-device-db@^1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/stf-device-db/-/stf-device-db-1.3.0.tgz#bd810a0cd512816ea3dabeed5db59cd445c2e294"
 
 "@devicefarmer/stf-syrup@^1.0.2":
   version "1.0.2"
@@ -740,11 +740,15 @@ async@^1.4.2, async@^1.5.0, async@^1.5.2:
   resolved "https://registry.npmjs.org/async/-/async-1.5.2.tgz"
   integrity "sha1-7GphrlZIDAw8skHJVhjiCJL5Zyo=sha512-nSVgobk4rv61R9PUSDtYt7mPVB2olxNR5RWJcAsH676/ef11bUZwvu7+RGYrYauVdDPcO519v68wRhXQtxsV9w== sha512-nSVgobk4rv61R9PUSDtYt7mPVB2olxNR5RWJcAsH676/ef11bUZwvu7+RGYrYauVdDPcO519v68wRhXQtxsV9w=="
 
-async@^2.0.0, async@^2.0.1, async@^2.1.2, async@^2.5.0, async@^2.6.2, async@~2.6.0:
+async@^2.0.0, async@^2.1.2, async@^2.5.0, async@^2.6.2, async@~2.6.0:
   version "2.6.4"
   resolved "https://registry.npmjs.org/async/-/async-2.6.4.tgz"
   dependencies:
     lodash "^4.17.14"
+
+async@^3.2.4:
+  version "3.2.4"
+  resolved "https://registry.yarnpkg.com/async/-/async-3.2.4.tgz#2d22e00f8cddeb5fde5dd33522b56d1cf569a81c"
 
 async@~0.2.7, async@~0.2.9:
   version "0.2.10"
