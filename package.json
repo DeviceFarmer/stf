@@ -33,7 +33,7 @@
     "prepare": "not-in-install && gulp build || in-install",
     "test:unit": "gulp karma",
     "test:e2e": "gulp protractor",
-    "lint": "gulp test"
+    "lint": "gulp lint"
   },
   "dependencies": {
     "@devicefarmer/adbkit": "^3.2.3",
@@ -93,14 +93,12 @@
     "bootstrap": "3.3.7",
     "bluebird": "^2.10.1",
     "body-parser": "^1.13.3",
-    "bootstrap": "3.3.7",
     "bufferutil": "^4.0.3",
     "chalk": "~1.1.1",
     "components-font-awesome": "4.7.0",
     "compression": "^1.5.2",
     "cookie-session": "^2.0.0-alpha.1",
     "csurf": "^1.7.0",
-    "d3": "3.5.17",
     "debug": "^2.2.0",
     "draggabilly": "1.2.4",
     "epoch-charting": "0.8.4",
@@ -127,7 +125,6 @@
     "openid": "^2.0.1",
     "passport": "^0.6.0",
     "packery": "1.4.3",
-    "passport": "^0.4.1",
     "passport-oauth2": "^1.1.2",
     "passport-saml": "^0.15.0",
     "protobufjs": "^3.8.2",
