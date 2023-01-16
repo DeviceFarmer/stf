@@ -1954,7 +1954,7 @@ paths:
             Unexpected Error:
               * 400: Bad Request => group is not an origin one
               * 401: Unauthorized => bad credentials
-              * 403: Fobidden => a device is currently booked 
+              * 403: Forbidden => a device is currently booked 
               * 404: Not Found => unknown group or devices 
               * 500: Internal Server Error
               * 503: Service Unavailable => server too busy or a lock on a resource is pending
@@ -1996,7 +1996,7 @@ paths:
             Unexpected Error:
               * 400: Bad Request => group is not an origin one
               * 401: Unauthorized => bad credentials
-              * 403: Fobidden => a device is currently booked
+              * 403: Forbidden => a device is currently booked
               * 404: Not Found => unknown group or devices 
               * 500: Internal Server Error
               * 503: Service Unavailable => server too busy or a lock on a resource is pending
@@ -2102,7 +2102,7 @@ paths:
             Unexpected Error:
               * 400: Bad Request => group is not an origin one
               * 401: Unauthorized => bad credentials
-              * 403: Fobidden => the device is currently booked
+              * 403: Forbidden => the device is currently booked
               * 404: Not Found => unknown group or device
               * 500: Internal Server Error
               * 503: Service Unavailable => server too busy or a lock on a resource is pending
@@ -2138,7 +2138,7 @@ paths:
             Unexpected Error:
               * 400: Bad Request => group is not an origin one
               * 401: Unauthorized => bad credentials
-              * 403: Fobidden => the device is currently booked
+              * 403: Forbidden => the device is currently booked
               * 404: Not Found => unknown group or device
               * 500: Internal Server Error
               * 503: Service Unavailable => server too busy or a lock on a resource is pending
