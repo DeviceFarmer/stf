@@ -89,6 +89,49 @@
     nan "^2.14.0"
     prebuild-install "^5.3.3"
 
+"@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/aspromise/-/aspromise-1.1.2.tgz#9b8b0cc663d669a7d8f6f5d0893a14d348f30fbf"
+
+"@protobufjs/base64@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/base64/-/base64-1.1.2.tgz#4c85730e59b9a1f1f349047dbf24296034bb2735"
+
+"@protobufjs/codegen@^2.0.4":
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/@protobufjs/codegen/-/codegen-2.0.4.tgz#7ef37f0d010fb028ad1ad59722e506d9262815cb"
+
+"@protobufjs/eventemitter@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/eventemitter/-/eventemitter-1.1.0.tgz#355cbc98bafad5978f9ed095f397621f1d066b70"
+
+"@protobufjs/fetch@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/fetch/-/fetch-1.1.0.tgz#ba99fb598614af65700c1619ff06d454b0d84c45"
+  dependencies:
+    "@protobufjs/aspromise" "^1.1.1"
+    "@protobufjs/inquire" "^1.1.0"
+
+"@protobufjs/float@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/float/-/float-1.0.2.tgz#5e9e1abdcb73fc0a7cb8b291df78c8cbd97b87d1"
+
+"@protobufjs/inquire@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/inquire/-/inquire-1.1.0.tgz#ff200e3e7cf2429e2dcafc1140828e8cc638f089"
+
+"@protobufjs/path@^1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/path/-/path-1.1.2.tgz#6cc2b20c5c9ad6ad0dccfd21ca7673d8d7fbf68d"
+
+"@protobufjs/pool@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/pool/-/pool-1.1.0.tgz#09fd15f2d6d3abfa9b65bc366506d6ad7846ff54"
+
+"@protobufjs/utf8@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
+
 "@sailshq/lodash@^3.10.2":
   version "3.10.4"
   resolved "https://registry.npmjs.org/@sailshq/lodash/-/lodash-3.10.4.tgz"
@@ -123,6 +166,10 @@
 "@types/jasmine@^2.5.36":
   version "2.8.19"
   resolved "https://registry.npmjs.org/@types/jasmine/-/jasmine-2.8.19.tgz"
+
+"@types/node@>=13.7.0":
+  version "18.13.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.13.0.tgz#0400d1e6ce87e9d3032c19eb6c58205b0d3f7850"
 
 "@types/node@^6.0.46":
   version "6.14.13"
@@ -636,14 +683,6 @@ asap@~2.0.3:
   version "2.0.6"
   resolved "https://registry.npmjs.org/asap/-/asap-2.0.6.tgz"
   integrity "sha1-5QNHYR1+aQlDIIu9r+vLwvuGbUY=sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA== sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA=="
-
-ascli@~0.3:
-  version "0.3.0"
-  resolved "https://registry.npmjs.org/ascli/-/ascli-0.3.0.tgz"
-  integrity "sha1-XmYjDlIZ/j6JUqTvtPIPrllqgTo=sha512-6JOAjpM6FuU/qdhg8xRnEjoVy8cnk3PygbrbJfSdbiRE+dUkl5h7nTvMoKMYI3qiMwM7amHSmsVOcdN/TFtdDQ== sha512-6JOAjpM6FuU/qdhg8xRnEjoVy8cnk3PygbrbJfSdbiRE+dUkl5h7nTvMoKMYI3qiMwM7amHSmsVOcdN/TFtdDQ=="
-  dependencies:
-    colour latest
-    optjs latest
 
 asn1.js@^5.2.0:
   version "5.4.1"
@@ -1360,11 +1399,6 @@ bufferutil@^4.0.3:
   dependencies:
     node-gyp-build "^4.3.0"
 
-bufferview@~1:
-  version "1.0.1"
-  resolved "https://registry.npmjs.org/bufferview/-/bufferview-1.0.1.tgz"
-  integrity "sha1-ev10pF+Tf6QiodM4wIu/3HbNcl0=sha512-q87jdvsZ/sEngmDUvPT/PJsBGCi998c3B1U/6IN1uGg+R2HrTFJUDccXZEx6OxpuLySyBDGXc7vkSt4BXTyKxA== sha512-q87jdvsZ/sEngmDUvPT/PJsBGCi998c3B1U/6IN1uGg+R2HrTFJUDccXZEx6OxpuLySyBDGXc7vkSt4BXTyKxA=="
-
 buildmail@4.0.1:
   version "4.0.1"
   resolved "https://registry.npmjs.org/buildmail/-/buildmail-4.0.1.tgz"
@@ -1405,14 +1439,6 @@ busboy@^1.0.0:
   resolved "https://registry.npmjs.org/busboy/-/busboy-1.6.0.tgz"
   dependencies:
     streamsearch "^1.1.0"
-
-"bytebuffer@~3 >=3.5":
-  version "3.5.5"
-  resolved "https://registry.npmjs.org/bytebuffer/-/bytebuffer-3.5.5.tgz"
-  integrity "sha1-em+vGhNRSwg/H8+VQcTJv75+f9M=sha512-z2+y+RwT1gZzk4h06++Jzj9ojR//w0hbr0vKqR7PwNbynAC4cJKaopb3ANVtG/0tRgJLEa4nGIOGIMwJI3XkSQ== sha512-z2+y+RwT1gZzk4h06++Jzj9ojR//w0hbr0vKqR7PwNbynAC4cJKaopb3ANVtG/0tRgJLEa4nGIOGIMwJI3XkSQ=="
-  dependencies:
-    bufferview "~1"
-    long "~2 >=2.2.3"
 
 bytes@3.0.0:
   version "3.0.0"
@@ -1911,11 +1937,6 @@ colors@~1.1.2:
   version "1.1.2"
   resolved "https://registry.npmjs.org/colors/-/colors-1.1.2.tgz"
   integrity "sha1-FopHAXVran9RoSzgyXv6KMCE7WM=sha512-ENwblkFQpqqia6b++zLD/KUWafYlVY/UNnAp7oz7LY7E924wmpye416wBOmvv/HMWzl8gL1kJlfvId/1Dg176w== sha512-ENwblkFQpqqia6b++zLD/KUWafYlVY/UNnAp7oz7LY7E924wmpye416wBOmvv/HMWzl8gL1kJlfvId/1Dg176w=="
-
-colour@latest:
-  version "0.7.1"
-  resolved "https://registry.npmjs.org/colour/-/colour-0.7.1.tgz"
-  integrity "sha1-nLFpkX7F0SwHNtPoaFdG3xyt93g=sha512-Rel466v0EnmKPcsxHo91L4kgPs/6XF7Pu2LJNszq9lXYwi5CFWEeIiRaTX5ym7PPMdj4udDHkLSVC1//JVkZQg== sha512-Rel466v0EnmKPcsxHo91L4kgPs/6XF7Pu2LJNszq9lXYwi5CFWEeIiRaTX5ym7PPMdj4udDHkLSVC1//JVkZQg=="
 
 combine-lists@^1.0.0:
   version "1.0.1"
@@ -6427,10 +6448,9 @@ lolex@1.3.2:
   resolved "https://registry.npmjs.org/lolex/-/lolex-1.3.2.tgz"
   integrity "sha1-fD2mL/yzDw9agKJWbKJORdigHzE=sha512-YYp8cqz7/8eruZ15L1mzcPkvLYxipfdsWIDESvNdNmQP9o7TsDitRhNuV2xb7aFu2ofZngao1jiVrVZ842x4BQ== sha512-YYp8cqz7/8eruZ15L1mzcPkvLYxipfdsWIDESvNdNmQP9o7TsDitRhNuV2xb7aFu2ofZngao1jiVrVZ842x4BQ=="
 
-"long@~2 >=2.2.3":
-  version "2.4.0"
-  resolved "https://registry.npmjs.org/long/-/long-2.4.0.tgz"
-  integrity "sha1-n6GAux2VAM3CnEFWdmoZleH0Uk8=sha512-ijUtjmO/n2A5PaosNG9ZGDsQ3vxJg7ZW8vsY8Kp0f2yIZWhSJvjmegV7t+9RPQKxKrvj8yKGehhS+po14hPLGQ== sha512-ijUtjmO/n2A5PaosNG9ZGDsQ3vxJg7ZW8vsY8Kp0f2yIZWhSJvjmegV7t+9RPQKxKrvj8yKGehhS+po14hPLGQ=="
+long@^5.0.0:
+  version "5.2.1"
+  resolved "https://registry.yarnpkg.com/long/-/long-5.2.1.tgz#e27595d0083d103d2fa2c20c7699f8e0c92b897f"
 
 longest@^1.0.1:
   version "1.0.1"
@@ -7380,11 +7400,6 @@ options@>=0.0.5:
   resolved "https://registry.npmjs.org/options/-/options-0.0.6.tgz"
   integrity "sha1-7CLTEoBrtT5zF3Pnza788cZDEo8=sha512-bOj3L1ypm++N+n7CEbbe473A414AB7z+amKYshRb//iuL3MpdDCLhPnw6aVTdKB9g5ZRVHIEp8eUln6L2NUStg== sha512-bOj3L1ypm++N+n7CEbbe473A414AB7z+amKYshRb//iuL3MpdDCLhPnw6aVTdKB9g5ZRVHIEp8eUln6L2NUStg=="
 
-optjs@latest:
-  version "3.2.2"
-  resolved "https://registry.npmjs.org/optjs/-/optjs-3.2.2.tgz"
-  integrity "sha1-aabOicRCpEQDFBrS+bNwvVu29O4=sha512-f8lTJm4LKirX+45xsFhuRNjA4f46QVLQKfGoNH7e2AEWS+24eM4XNH4pQ8Tw2LISCIvbST/wNcLdtgvgcqVaxA== sha512-f8lTJm4LKirX+45xsFhuRNjA4f46QVLQKfGoNH7e2AEWS+24eM4XNH4pQ8Tw2LISCIvbST/wNcLdtgvgcqVaxA=="
-
 ordered-read-streams@^1.0.0:
   version "1.0.1"
   resolved "https://registry.npmjs.org/ordered-read-streams/-/ordered-read-streams-1.0.1.tgz"
@@ -8272,13 +8287,22 @@ promisify-call@^2.0.2:
   dependencies:
     with-callback "^1.0.2"
 
-protobufjs@^3.8.2:
-  version "3.8.2"
-  resolved "https://registry.npmjs.org/protobufjs/-/protobufjs-3.8.2.tgz"
-  integrity "sha1-vIJuNMOvRpfo0K96Zp5NYSrtzRc=sha512-7gkzNGmNqb0b/RcE7ubrZgOpIGEroc7dl91v/mm3R+EXnL+C+Loft4UQ3/RZ7M5U6CHS/EoTtbijPb1Q6wW6uA== sha512-7gkzNGmNqb0b/RcE7ubrZgOpIGEroc7dl91v/mm3R+EXnL+C+Loft4UQ3/RZ7M5U6CHS/EoTtbijPb1Q6wW6uA=="
+protobufjs@^7.2.2:
+  version "7.2.2"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-7.2.2.tgz#2af401d8c547b9476fb37ffc65782cf302342ca3"
   dependencies:
-    ascli "~0.3"
-    bytebuffer "~3 >=3.5"
+    "@protobufjs/aspromise" "^1.1.2"
+    "@protobufjs/base64" "^1.1.2"
+    "@protobufjs/codegen" "^2.0.4"
+    "@protobufjs/eventemitter" "^1.1.0"
+    "@protobufjs/fetch" "^1.1.0"
+    "@protobufjs/float" "^1.0.2"
+    "@protobufjs/inquire" "^1.1.0"
+    "@protobufjs/path" "^1.1.2"
+    "@protobufjs/pool" "^1.1.0"
+    "@protobufjs/utf8" "^1.1.0"
+    "@types/node" ">=13.7.0"
+    long "^5.0.0"
 
 protractor-html-reporter-2@1.0.4:
   version "1.0.4"
