@@ -6,9 +6,9 @@
   version "7.17.9"
   resolved "https://registry.npmjs.org/@babel/parser/-/parser-7.17.9.tgz"
 
-"@devicefarmer/adbkit-apkreader@^3.2.3":
-  version "3.2.3"
-  resolved "https://registry.npmjs.org/@devicefarmer/adbkit-apkreader/-/adbkit-apkreader-3.2.3.tgz"
+"@devicefarmer/adbkit-apkreader@^3.2.4":
+  version "3.2.4"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/adbkit-apkreader/-/adbkit-apkreader-3.2.4.tgz#0f4921977462fe6f1454c99b8272ab1815e8ee32"
   dependencies:
     bluebird "^3.4.7"
     debug "~4.3.1"
@@ -18,11 +18,9 @@
   version "1.1.0"
   resolved "https://registry.npmjs.org/@devicefarmer/adbkit-logcat/-/adbkit-logcat-1.1.0.tgz"
 
-"@devicefarmer/adbkit-monkey@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/@devicefarmer/adbkit-monkey/-/adbkit-monkey-1.2.0.tgz"
-  dependencies:
-    async "~0.2.9"
+"@devicefarmer/adbkit-monkey@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@devicefarmer/adbkit-monkey/-/adbkit-monkey-1.2.1.tgz#28cd6a121c5d572588081dd1c53454c604eef241"
 
 "@devicefarmer/adbkit-monkey@~1.0.1":
   version "1.0.1"
@@ -9219,11 +9217,11 @@ safe-buffer@5.1.1:
   version "5.1.1"
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.1.tgz"
 
-safe-buffer@5.1.2, safe-buffer@>=5.1.0, safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@~5.1.0, safe-buffer@~5.1.1, safe-buffer@~5.1.2:
+safe-buffer@5.1.2, safe-buffer@~5.1.0, safe-buffer@~5.1.1, safe-buffer@~5.1.2:
   version "5.1.2"
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz"
 
-safe-buffer@5.2.1, safe-buffer@^5.2.0, safe-buffer@^5.2.1, safe-buffer@~5.2.0:
+safe-buffer@5.2.1, safe-buffer@>=5.1.0, safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@^5.2.1, safe-buffer@~5.2.0:
   version "5.2.1"
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz"
 
@@ -11440,7 +11438,11 @@ ws@^1.0.1:
     options ">=0.0.5"
     ultron "1.0.x"
 
-ws@^3.0.0, ws@~3.3.1:
+ws@^8.13.0:
+  version "8.13.0"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-8.13.0.tgz#9a9fb92f93cf41512a0735c8f4dd09b8a1211cd0"
+
+ws@~3.3.1:
   version "3.3.3"
   resolved "https://registry.npmjs.org/ws/-/ws-3.3.3.tgz"
   dependencies:
