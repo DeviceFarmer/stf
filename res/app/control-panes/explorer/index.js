@@ -1,8 +1,8 @@
 require('./explorer.css')
 
-const S_IFMT = 0o0170000
-const S_IFDIR = 0o040000
-const S_IFLNK = 0o120000
+const S_IFMT = 0o0170000 // Bit mask for checking file types
+const S_IFDIR = 0o040000 // Directory type
+const S_IFLNK = 0o120000 // Symlink type
 
 module.exports = angular.module('stf.explorer', [])
   .run(['$templateCache', function($templateCache) {
