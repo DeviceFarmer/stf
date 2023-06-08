@@ -1,6 +1,6 @@
 require('./explorer.css')
 
-const S_IFMT  = 0o0170000
+const S_IFMT = 0o0170000
 const S_IFDIR = 0o040000
 const S_IFLNK = 0o120000
 
@@ -24,7 +24,13 @@ module.exports = angular.module('stf.explorer', [])
             }
           }
         }
-        res.unshift((mode & S_IFMT) === S_IFDIR ? 'd' : ((mode & S_IFMT) === S_IFLNK ? 'l' : '-'))
+        if ((mode & S_IFMT) === S_IFDIR) {
+          res.unshift('d')
+        } else if ((mode & S_IFMT) === S_IFLNK) {
+          res.unshift('l')
+        } else {
+          res.unshift('-')
+        }
         return res.join('')
       }
     }
