@@ -306,7 +306,7 @@ This is one of the multiple options for authentication provided by STF. It uses 
 
 This is a template unit, meaning that you'll need to start it with an instance identifier. In this example configuration the identifier is used to specify the exposed port number (i.e. `stf-auth@3200.service` runs on port 3200). You can have multiple instances running on the same host by using different ports.
 
-**NOTE:** Don't forget to change the `--auth-url` option in the `stf-app` unit. For SAML 2.0, the value should be `https://stf.example.org/auth/saml/`.
+**NOTE:** Don't forget to change the `--auth-url` option in the `stf-app` unit. For SAML 2.0, the value should be `https://stf.example.org/auth/saml/`. Regarding the Service Provider (SP) Metadata, it can be accessed via the path `/auth/saml/metadata`, so for instance using the URL `https://stf.example.org/auth/saml/metadata`.
 
 ```ini
 [Unit]
