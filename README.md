@@ -132,7 +132,7 @@ brew install rethinkdb graphicsmagick zeromq protobuf yasm pkg-config cmake
 
 On Windows you're on your own. In theory you might be able to get STF installed via [Cygwin](https://www.cygwin.com/) or similar, but we've never tried. In principle we will not provide any Windows installation support, but please do send a documentation pull request if you figure out what to do.
 
-We also provide a [Docker](http://docker.com/) container in the [Docker Hub](https://hub.docker.com/) as [devicefarmer/stf](https://registry.hub.docker.com/u/devicefarmer/stf/). You can use our [Dockerfile](Dockerfile) as guidance if you'd prefer to do the installation yourself.
+We also provide a [Docker](http://docker.com/) container in the [Docker Hub](https://hub.docker.com/) as [devicefarmer/stf](https://hub.docker.com/r/devicefarmer/stf). You can use our [Dockerfile](Dockerfile) as guidance if you'd prefer to do the installation yourself.
 An example standalone [docker-compose.yaml](docker-compose.yaml) file is also provided.
 
 You should now be ready to [build](#building) or [run](#running) STF.
