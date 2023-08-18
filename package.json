@@ -41,7 +41,7 @@
     "@devicefarmer/please-update-dependencies": "^2.0.1",
     "@devicefarmer/stf-appstore-db": "^1.0.0",
     "@devicefarmer/stf-browser-db": "^1.0.2",
-    "@devicefarmer/stf-device-db": "^1.3.0",
+    "@devicefarmer/stf-device-db": "^1.4.0",
     "@devicefarmer/stf-syrup": "^1.0.2",
     "@devicefarmer/stf-wiki": "^1.0.0",
     "@julusian/jpeg-turbo": "^2.1.0",
