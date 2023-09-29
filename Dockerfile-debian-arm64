@@ -7,7 +7,7 @@ FROM arm64v8/debian:buster-slim
 LABEL Maintainer="Denis Barbaron <denis.barbaron@orange.com>"
 LABEL Name="STF"
 LABEL Url="https://github.com/devicefarmer/stf/"
-LABEL Description="STF docker image for armhf architecture"
+LABEL Description="STF docker image for arm64 architecture"
 
 # Sneak the stf executable into $PATH.
 ENV PATH /app/bin:$PATH
