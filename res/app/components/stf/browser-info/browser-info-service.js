@@ -31,10 +31,6 @@ module.exports = function BrowserInfoServiceFactory() {
     return windowWidth < 800
   })
 
-  addTest('mobile', function() {
-    return !!(service.small && service.touch)
-  })
-
   addTest('os', function() {
     var ua = navigator.userAgent
     if (ua.match(/Android/i)) {
@@ -46,6 +42,10 @@ module.exports = function BrowserInfoServiceFactory() {
     else {
       return 'pc'
     }
+  })
+
+  addTest('mobile', function() {
+    return !!(service.small && service.touch && (service.os !== 'pc'))
   })
 
   addTest('webgl', function() {
