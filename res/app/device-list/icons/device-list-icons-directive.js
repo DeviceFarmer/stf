@@ -6,6 +6,8 @@ module.exports = function DeviceListIconsDirective(
 , DeviceColumnService
 , GroupService
 , StandaloneService
+, LogcatService
+, $rootScope
 ) {
   function DeviceItem() {
     return {
@@ -83,15 +85,17 @@ module.exports = function DeviceListIconsDirective(
           name.classList.remove('state-available')
         }
 
-        if (device.usable) {
+        if (device.usable && !device.using) {
           a.href = '#!/control/' + device.serial
           li.classList.remove('device-is-busy')
+        }
+        else if (device.using && device.usable) {
+          a.href = '#!/control/' + device.serial
         }
         else {
           a.removeAttribute('href')
           li.classList.add('device-is-busy')
         }
-
         return li
       }
     }
@@ -119,6 +123,11 @@ module.exports = function DeviceListIconsDirective(
 
 
       function kickDevice(device, force) {
+        if (Object.keys(LogcatService.deviceEntries).includes(device.serial)) {
+          LogcatService.deviceEntries[device.serial].allowClean = true
+        }
+        LogcatService.allowClean = true
+        $rootScope.LogcatService = LogcatService
         return GroupService.kick(device, force).catch(function(e) {
           alert($filter('translate')(gettext('Device cannot get kicked from the group')))
           throw new Error(e)
@@ -159,8 +168,10 @@ module.exports = function DeviceListIconsDirective(
           }
 
           if (device.using) {
-            kickDevice(device)
-            e.preventDefault()
+            if (e.target.classList.contains('btn') && e.target.classList.contains('state-using')) {
+              kickDevice(device)
+              e.preventDefault()
+            }
           }
         }
       })

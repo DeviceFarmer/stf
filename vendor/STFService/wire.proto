@@ -21,6 +21,7 @@ enum MessageType {
     GET_VERSION = 8;
     GET_WIFI_STATUS = 23;
     GET_BLUETOOTH_STATUS = 29;
+    GET_ROOT_STATUS = 31;
     SET_CLIPBOARD = 9;
     SET_KEYGUARD_STATE = 10;
     SET_RINGER_MODE = 21;
@@ -244,6 +245,14 @@ message GetWifiStatusRequest {
 }
 
 message GetWifiStatusResponse {
+    required bool success = 1;
+    required bool status = 2;
+}
+
+message GetRootStatusRequest {
+}
+
+message GetRootStatusResponse {
     required bool success = 1;
     required bool status = 2;
 }

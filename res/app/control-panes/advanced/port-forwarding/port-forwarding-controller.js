@@ -1,9 +1,12 @@
+/**
+* Copyright © 2023 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+**/
+
 var uuid = require('uuid')
 var Promise = require('bluebird')
 
 module.exports = function PortForwardingCtrl(
   $scope
-, SettingsService
 ) {
   function defaults(id) {
     return {
@@ -17,25 +20,26 @@ module.exports = function PortForwardingCtrl(
 
   $scope.reversePortForwards = [defaults('_default')]
 
-  SettingsService.bind($scope, {
-    target: 'reversePortForwards'
-  , source: 'reversePortForwards'
-  })
-
   $scope.$watch('device.reverseForwards', function(newValue) {
-    var map = Object.create(null)
+    let map = Object.create(null)
 
     if (newValue) {
       newValue.forEach(function(forward) {
         map[forward.id] = forward
       })
-    }
 
-    $scope.reversePortForwards.forEach(function(forward) {
-      var deviceForward = map[forward.id]
-      forward.enabled = !!(deviceForward && deviceForward.id === forward.id &&
-        deviceForward.devicePort === forward.devicePort)
-    })
+     $scope.reversePortForwards.forEach(function(forward) {
+       let deviceForward = map[forward.id]
+
+       if (deviceForward) {
+         forward.enabled = !!(deviceForward.id === forward.id &&
+           deviceForward.devicePort === Number(forward.devicePort))
+       }
+       else if (forward.enabled) {
+         $scope.removeRow(forward)
+       }
+     })
+    }
   })
 
   $scope.applyForward = function(forward) {

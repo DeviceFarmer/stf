@@ -25,7 +25,7 @@
     "angular-hotkeys": "chieffancypants/angular-hotkeys#~1.6.0",
     "angular-borderlayout": "git://github.com/filearts/angular-borderlayout.git#7c9716aebd9260763f798561ca49d6fbfd4a5c67",
     "angular-ui-bootstrap": "~1.1.1",
-    "ng-context-menu": "AdiDahan/ng-context-menu#~1.0.5",
+    "ng-context-menu": "swimlane/ng-context-menu#~1.0.1",
     "components-font-awesome": "~4.5.0",
     "epoch": "~0.8.4",
     "ng-epoch": "~1.0.7",

@@ -1,4 +1,8 @@
-FROM ubuntu:16.04
+#
+# Copyright © 2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+#
+
+FROM ubuntu:20.04
 
 # Sneak the stf executable into $PATH.
 ENV PATH /app/bin:$PATH
@@ -25,23 +29,28 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
       stf && \
     sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
     apt-get update && \
-    apt-get -y install wget python build-essential && \
+    apt-get -y install wget python3 build-essential && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v6.11.2/node-v6.11.2-linux-x64.tar.xz && \
+      https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
-    apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick yasm && \
+    apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm cmake && \
     apt-get clean && \
-    rm -rf /var/cache/apt/* /var/lib/apt/lists/*
+    rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
+    mkdir /tmp/bundletool && \
+    cd /tmp/bundletool && \
+    wget --progress=dot:mega \
+      https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
+    mv bundletool-all-1.2.0.jar bundletool.jar
 
 # Copy app source.
 COPY . /tmp/build/
 
 # Give permissions to our build user.
 RUN mkdir -p /app && \
-    chown -R stf-build:stf-build /tmp/build /app
+    chown -R stf-build:stf-build /tmp/build /tmp/bundletool /app
 
 # Switch over to the build user.
 USER stf-build
@@ -50,16 +59,17 @@ USER stf-build
 RUN set -x && \
     cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
-    npm install --loglevel http && \
+    npm install --python="/usr/bin/python3"  --loglevel http && \
     npm pack && \
-    tar xzf stf-*.tgz --strip-components 1 -C /app && \
+    tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
     bower cache clean && \
     npm prune --production && \
     mv node_modules /app && \
-    npm cache clean && \
     rm -rf ~/.node-gyp && \
+    mkdir /app/bundletool && \
+    mv /tmp/bundletool/* /app/bundletool && \
     cd /app && \
-    rm -rf /tmp/*
+    find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete
 
 # Switch to the app user.
 USER stf

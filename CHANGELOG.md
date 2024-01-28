@@ -1,11 +1,186 @@
 # Changelog
 
-## HEAD
+## 3.6.6 (2023-08-18)
+
+* fix bug on taking control of a device: set a lock for exclusive access by @denis99999 in https://github.com/DeviceFarmer/stf/pull/650
+* Update STF Service APK to 2.4.10 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/661
+* Explorer directory fix by @tyopoyt in https://github.com/DeviceFarmer/stf/pull/670
+* add support of node version 20.3.0 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/672
+* update oauth2 to get contact information by @denis99999 in https://github.com/DeviceFarmer/stf/pull/673
+* Update the documentation of SAML 2.0 authentication by @denis99999 in https://github.com/DeviceFarmer/stf/pull/675
+* update saml2 to get contact information and service provider metadata by @denis99999 in https://github.com/DeviceFarmer/stf/pull/674
+* cookies' generic removing by @denis99999 in https://github.com/DeviceFarmer/stf/pull/676
+* fix docker url of STF by @denis99999 in https://github.com/DeviceFarmer/stf/pull/682
+* Update dependencies by @koral-- in https://github.com/DeviceFarmer/stf/pull/694
+* Update STFService app to 2.4.12 by @koral-- in https://github.com/DeviceFarmer/stf/pull/695
+
+## 3.6.5 (2023-03-30)
+
+* stf: Device name related updates by @sirmordred in https://github.com/DeviceFarmer/stf/pull/516
+* Fix adbkit API invocations by @koral-- in https://github.com/DeviceFarmer/stf/pull/524
+* use the fork of the please-update-dependencies package by @denis99999 in https://github.com/DeviceFarmer/stf/pull/522
+* Revert "Fix adbkit API invocations (#524)" by @koral-- in https://github.com/DeviceFarmer/stf/pull/528
+* fix bug on screen grabber management by @denis99999 in https://github.com/DeviceFarmer/stf/pull/554
+* add contributors by @denis99999 in https://github.com/DeviceFarmer/stf/pull/555
+* add frame rate management by @denis99999 in https://github.com/DeviceFarmer/stf/pull/558
+* Update DEPLOYMENT.md by @denis99999 in https://github.com/DeviceFarmer/stf/pull/569
+* fix deprecated warnings on Buffer class by @denis99999 in https://github.com/DeviceFarmer/stf/pull/580
+* Upload the ipa files for the iOS platform by @mankoffs in https://github.com/DeviceFarmer/stf/pull/583
+* fix #592 Fix marketName issue by @jsjs4013 in https://github.com/DeviceFarmer/stf/pull/593
+* Bump passport from 0.4.1 to 0.6.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/581
+* Fixing the link to get the package swagger-node-runner from ssh to https by @Energoblock in https://github.com/DeviceFarmer/stf/pull/607
+* Update rethinkdb to 2.4.2 in docker compose sample by @koral-- in https://github.com/DeviceFarmer/stf/pull/611
+* Enable device market name by @MykytaIvshkn in https://github.com/DeviceFarmer/stf/pull/601
+* move off screen password autofill by @Ristakis in https://github.com/DeviceFarmer/stf/pull/610
+* Bump moment from 2.29.3 to 2.29.4 by @dependabot in https://github.com/DeviceFarmer/stf/pull/596
+* Update device-db to 1.3.0 by @koral-- in https://github.com/DeviceFarmer/stf/pull/619
+* Bump decode-uri-component from 0.2.0 to 0.2.2 by @dependabot in https://github.com/DeviceFarmer/stf/pull/622
+* Bump debug from 2.6.9 to 3.1.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/627
+* fix bug on port forwarding feature by @denis99999 in https://github.com/DeviceFarmer/stf/pull/629
+* fix spelling mistakes in API file by @denis99999 in https://github.com/DeviceFarmer/stf/pull/630
+* Bump cookiejar from 2.1.3 to 2.1.4 by @dependabot in https://github.com/DeviceFarmer/stf/pull/632
+* Release 3.6.5 by @koral-- in https://github.com/DeviceFarmer/stf/pull/649
+
+## 3.6.4 (2022-04-27)
+
+* Downgrade adbkit to 2.11.3 by @koral-- in https://github.com/DeviceFarmer/stf/pull/520
+
+## 3.6.3 (2022-04-26)
+
+* Fix build error on arm platform by @C0reFast in https://github.com/DeviceFarmer/stf/pull/212
+* Changed ng-context-menu coordinates by @koral-- in https://github.com/DeviceFarmer/stf/pull/227
+* add rest API for update Device note by @jupe in https://github.com/DeviceFarmer/stf/pull/222
+* Upgrade to GitHub-native Dependabot by @dependabot-preview in https://github.com/DeviceFarmer/stf/pull/239
+* Remove npm install from Debian x64 Dockerfile by @koral-- in https://github.com/DeviceFarmer/stf/pull/260
+* Minicap update to support more devices (included Android 12) by @pcrepieux in https://github.com/DeviceFarmer/stf/pull/262
+* Update STFService APK to 2.4.7 by @koral-- in https://github.com/DeviceFarmer/stf/pull/265
+* Bump dns-packet from 1.3.1 to 1.3.4 by @dependabot in https://github.com/DeviceFarmer/stf/pull/261
+* Bump @devicefarmer/adbkit-monkey from 1.0.1 to 1.1.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/242
+* Bump hosted-git-info from 2.4.2 to 2.8.9 by @dependabot in https://github.com/DeviceFarmer/stf/pull/257
+* Bump url-parse from 1.4.7 to 1.5.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/253
+* Bump gm from 1.23.0 to 1.23.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/247
+* Bump gulp-angular-gettext from 2.2.0 to 2.3.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/249
+* Bump lodash from 4.17.20 to 4.17.21 by @dependabot in https://github.com/DeviceFarmer/stf/pull/256
+* Bump url-loader from 0.5.9 to 0.6.2 by @dependabot in https://github.com/DeviceFarmer/stf/pull/243
+* [Security] Bump y18n from 3.2.1 to 3.2.2 by @dependabot-preview in https://github.com/DeviceFarmer/stf/pull/217
+* Bump phantomjs-prebuilt from 2.1.14 to 2.1.16 by @dependabot in https://github.com/DeviceFarmer/stf/pull/241
+* Bump proxy-addr from 1.1.4 to 2.0.7 by @dependabot in https://github.com/DeviceFarmer/stf/pull/263
+* Bump transliteration from 1.6.2 to 2.2.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/246
+* Bump passport-oauth2 from 1.4.0 to 1.5.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/269
+* Bump semver from 5.7.1 to 7.3.5 by @dependabot-preview in https://github.com/DeviceFarmer/stf/pull/235
+* Bump json-loader from 0.5.4 to 0.5.7 by @dependabot in https://github.com/DeviceFarmer/stf/pull/270
+* Bump gulp-pug from 3.3.0 to 4.0.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/272
+* Bump template-html-loader from 0.0.3 to 0.0.4 by @dependabot in https://github.com/DeviceFarmer/stf/pull/277
+* Bump gulp-jsonlint from 1.2.0 to 1.3.2 by @dependabot in https://github.com/DeviceFarmer/stf/pull/275
+* --net host is no longer needed for stf-provider by @petemyron in https://github.com/DeviceFarmer/stf/pull/165
+* Bump serve-favicon from 2.4.3 to 2.5.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/285
+* Bump style-loader from 0.13.2 to 0.23.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/274
+* Bump karma-chrome-launcher from 2.2.0 to 3.1.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/276
+* Bump karma-junit-reporter from 1.2.0 to 2.0.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/287
+* Bump openid from 2.0.6 to 2.0.9 by @dependabot in https://github.com/DeviceFarmer/stf/pull/288
+* Add cmake to main Dockerfile by @koral-- in https://github.com/DeviceFarmer/stf/pull/292
+* Bump path-parse from 1.0.5 to 1.0.7 by @dependabot in https://github.com/DeviceFarmer/stf/pull/308
+* Bump url-parse from 1.5.1 to 1.5.3 by @dependabot in https://github.com/DeviceFarmer/stf/pull/310
+* Bump jszip from 3.2.2 to 3.7.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/309
+* Update STFService.apk to 2.4.8 by @koral-- in https://github.com/DeviceFarmer/stf/pull/328
+* upgrade from stretch to buster the Docker image for x86_64 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/385
+* upgrade from stretch to buster the Docker image for armhf by @denis99999 in https://github.com/DeviceFarmer/stf/pull/386
+* Bump axios from 0.21.1 to 0.21.4 by @dependabot in https://github.com/DeviceFarmer/stf/pull/330
+* Bump follow-redirects from 1.14.4 to 1.14.7 by @dependabot in https://github.com/DeviceFarmer/stf/pull/401
+* Bump passport-oauth2 from 1.5.0 to 1.6.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/329
+* update minicap-prebuilt version to 2.7.1 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/405
+* :bug: Fix: Increase PID retrieval timeout for edge-cases by @mark-omarov in https://github.com/DeviceFarmer/stf/pull/419
+* Bump follow-redirects from 1.14.7 to 1.14.8 by @dependabot in https://github.com/DeviceFarmer/stf/pull/435
+* Bump simple-get from 3.1.0 to 3.1.1 by @dependabot in https://github.com/DeviceFarmer/stf/pull/436
+* Bump url-parse from 1.5.3 to 1.5.7 by @dependabot in https://github.com/DeviceFarmer/stf/pull/443
+* Fix deploy to dockerhub by @koral-- in https://github.com/DeviceFarmer/stf/pull/448
+* Update STF Service APK to v2.4.9 by @koral-- in https://github.com/DeviceFarmer/stf/pull/482
+* upgrade node to latest version v17.9.0 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/500
+* update semaphore files for consistency with upgrading node to latest tag by @denis99999 in https://github.com/DeviceFarmer/stf/pull/505
+* Bump aws-sdk from 2.1110.0 to 2.1117.0 by @dependabot in https://github.com/DeviceFarmer/stf/pull/511
+* Release 3.6.2 by @koral-- in https://github.com/DeviceFarmer/stf/pull/515
+* Downgrade adbkit to 3.2.1 by @koral-- in https://github.com/DeviceFarmer/stf/pull/519
+
+## 3.6.1 (2021-03-11)
+
+### Fixes
+
+- Revert adbkit upgrade
+
+## 3.6.0 (2021-03-09)
+
+### Fixes
+
+- Fix AAB installation fails when /tmp is on different mountpoint than storage-temp save directory [#139](https://github.com/DeviceFarmer/stf/pull/139)
 
 ### Enhancements
 
+- Update dependency versions
+
+## 3.5.0 (2020-10-18)
+
+### Fixes
+
+- Update dependency versions
+- Fix minicap disconnection on getting file [#97](https://github.com/DeviceFarmer/stf/pull/97)
+- Fix icons displaying [#59](https://github.com/DeviceFarmer/stf/pull/59). Thanks @Cookies52!
+
+### Enhancements
+
+- Add .aab installation support [#103](https://github.com/DeviceFarmer/stf/pull/103). Thanks @nghiaviminh!
+- Change jpeg-turbo dependency to `@julusian/jpeg-turbo` [#90](https://github.com/DeviceFarmer/stf/pull/90)
+- Add Android 11 support
+
+## 3.4.3 (2020-07-21)
+
+### Misc
+
+- Changed dependencies to equivalents using **@devicefarmer** scope
+
+## 3.4.2 (2020-05-31)
+
+### Fixes
+
+- Fixed SAML_ID_PROVIDER_CERT_PATH in example SAML auth provider unit [#1061](https://github.com/openstf/stf/pull/1061). Thanks @mitchtech!
+- Fixed Chinese characters handling [#1204](https://github.com/openstf/stf/pull/1204). Thanks @xu-duqing!
+
+### Enhancements
+
+- Updated STFService.apk, minitouch and minicap to support Android 10. Thanks @denis99999 and @pcrepieux!
+- Added addAdbPublicKey endpoint [#770](https://github.com/openstf/stf/pull/770). Thanks @neofreko!
+- Added pt_BR translation [#1038](https://github.com/openstf/stf/pull/1038). Thanks @esmiralha!
+- Added market name to device properties [#1002](https://github.com/openstf/stf/pull/1002).
+- Added [group feature](https://github.com/openstf/stf/blob/master/doc/GroupFeature.pdf) [#1056](https://github.com/openstf/stf/pull/1056). Thanks @denis99999!
+- Added validation for filter.pid/ filter.tid/ filter.data input objects [#1074](https://github.com/openstf/stf/pull/1074). Thanks @lukzeg!
+- Added opening device view via reselecting device from device view [#1077](https://github.com/openstf/stf/pull/1077). Thanks @lukzeg!
+ - Added device logs separation [#1095](https://github.com/openstf/stf/pull/1095). Thanks @lukzeg!
+ - Updated NodeJS to 8.9.3 [#1169](https://github.com/openstf/stf/pull/1169).
+ - Added alternative dockerfiles for armhf and x86_64 architectures [#1174](https://github.com/openstf/stf/pull/1174), [#1191](https://github.com/openstf/stf/pull/1191). Thanks @denis99999 and @petemyron!
+ - Added touchMove error handling [#1189](https://github.com/openstf/stf/pull/1189). Thanks @att55!
+ 
+
+## 3.4.1 (2019-05-03)
+
+### Fixes
+
+- Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to fix an APK manifest parsing issue on applications processed by 360 encryption services, which changes the `application` key to `com.stub.StubApp`. Thanks @JChord!
+- Updated [adbkit](https://github.com/openstf/adbkit) to public key parsing on recent versions of ADB. Thanks @codeskyblue!
+
+### Enhancements
+
+- Exposed the [`ZMQ_IPV6`](http://api.zeromq.org/3-3:zmq-ctx-set#toc5) environment variable, making it possible to enable IPv6 for ZeroMQ. Thanks @aokhotin!
+
+## 3.4.0 (2018-08-09)
+
+### Enhancements
+
+- Android 9.0 is now supported. This feature was sponsored by [HeadSpin](https://headspin.io/).
 - The OAuth2 unit now supports state tokens. Thanks @quangola!
 - [STFService.apk](https://github.com/openstf/STFService.apk) can now display the identity activity (red screen) automatically if a device gets disconnected from USB (or ADB), which can make maintenance easier. This feature is in beta, please enable it by running `adb shell pm grant jp.co.cyberagent.stf android.permission.DUMP` on the devices you want to try it on. Thanks @Malinskiy!
+
+### Fixes
+
+- Use `ps -lef` instead of `ps` to list pids on Android 8.x. In new versions, `ps` doesn't return anything. Thanks @thinkhy!
 
 ## 3.3.1 (2018-07-14)
 

@@ -1,5 +1,9 @@
 require('./explorer.css')
 
+const S_IFMT = 0o0170000 // Bit mask for checking file types
+const S_IFDIR = 0o040000 // Directory type
+const S_IFLNK = 0o120000 // Symlink type
+
 module.exports = angular.module('stf.explorer', [])
   .run(['$templateCache', function($templateCache) {
     $templateCache.put('control-panes/explorer/explorer.pug',
@@ -20,7 +24,13 @@ module.exports = angular.module('stf.explorer', [])
             }
           }
         }
-        res.unshift(mode & 040000 ? 'd' : '-')
+        if ((mode & S_IFMT) === S_IFDIR) {
+          res.unshift('d')
+        } else if ((mode & S_IFMT) === S_IFLNK) {
+          res.unshift('l')
+        } else {
+          res.unshift('-')
+        }
         return res.join('')
       }
     }
@@ -30,8 +40,7 @@ module.exports = angular.module('stf.explorer', [])
       var mode = m
       if (mode !== null) {
         mode = parseInt(mode, 10)
-        mode -= (mode & 0777)
-        return (mode === 040000) || (mode === 0120000)
+        return ((mode & S_IFMT) === S_IFDIR) || ((mode & S_IFMT) === S_IFLNK)
       }
     }
   })
