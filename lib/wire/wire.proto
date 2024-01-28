@@ -71,7 +71,6 @@ enum MessageType {
   RingerGetMessage           = 64;
   WifiSetEnabledMessage      = 57;
   WifiGetStatusMessage       = 58;
-  BluetoothGetStatusMessage  = 95;
   AccountAddMenuMessage      = 59;
   AccountAddMessage          = 60;
   AccountCheckMessage        = 63;
@@ -84,6 +83,7 @@ enum MessageType {
   ConnectStartedMessage      = 92;
   ConnectStoppedMessage      = 93;
   BluetoothSetEnabledMessage = 94;
+  BluetoothGetStatusMessage  = 95;
   GroupUserChangeMessage     = 1200;
   DeviceGroupChangeMessage   = 1201;
   DeviceOriginGroupMessage   = 1202;
