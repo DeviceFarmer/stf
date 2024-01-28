@@ -238,7 +238,6 @@ message GroupUserChangeMessage {
   required string id = 3;
   required bool isDeletedLater = 4;
   repeated string devices = 5;
-  BluetoothSetEnabledMessage = 94;
 }
 
 message ConnectStartedMessage {
