@@ -11,6 +11,7 @@ enum MessageType {
     DO_WAKE = 4;
     DO_ADD_ACCOUNT_MENU = 24;
     DO_REMOVE_ACCOUNT = 20;
+    DO_CLEAN_BLUETOOTH_BONDED_DEVICES = 32;
     GET_ACCOUNTS = 26;
     GET_BROWSERS = 5;
     GET_CLIPBOARD = 6;
@@ -271,6 +272,12 @@ message GetBluetoothStatusRequest {
 message GetBluetoothStatusResponse {
     required bool success = 1;
     required bool status = 2;
+}
+
+message DoCleanBluetoothBondedDevicesRequest {
+}
+message DoCleanBluetoothBondedDevicesResponse {
+    required bool success = 1;
 }
 
 message GetSdStatusRequest {
