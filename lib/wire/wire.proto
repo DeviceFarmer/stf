@@ -84,6 +84,7 @@ enum MessageType {
   ConnectStoppedMessage      = 93;
   BluetoothSetEnabledMessage = 94;
   BluetoothGetStatusMessage  = 95;
+  BluetoothCleanBondedMessage = 96;
   GroupUserChangeMessage     = 1200;
   DeviceGroupChangeMessage   = 1201;
   DeviceOriginGroupMessage   = 1202;
@@ -719,6 +720,9 @@ message BluetoothSetEnabledMessage {
 
 message BluetoothGetStatusMessage {
 }
+message BluetoothCleanBondedMessage {
+}
+
 
 // Events, these must be kept in sync with STFService/wire.proto
 

@@ -29,6 +29,8 @@
             i.fa.fa-power-off.fa-fw
           label.btn.btn-sm.btn-primary-outline(ng-model='bluetoothEnabled', ng-click='toggleBluetooth(true)', ng-disabled='bluetoothPending', uib-btn-radio='true', uib-tooltip='{{"Enable Bluetooth" | translate}}')
             i.fa.fa-bluetooth-b.fa-fw
+          label.btn.btn-sm.btn-primary-outline(ng-click='cleanBluetoothBondedDevices()', uib-tooltip='{{"Clean Bluetooth bonded devices" | translate}}')
+            i.fa.fa-trash.fa-fw
 
     //.row
       .col-md-12
