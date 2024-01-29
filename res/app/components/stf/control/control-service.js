@@ -303,6 +303,10 @@ module.exports = function ControlServiceFactory(
       return sendTwoWay('bluetooth.get')
     }
 
+    this.cleanBluetoothBondedDevices = function() {
+      return sendTwoWay('bluetooth.cleanBonds')
+    }
+
     window.cc = this
   }
 

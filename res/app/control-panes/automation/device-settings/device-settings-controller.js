@@ -50,6 +50,12 @@ module.exports = function DeviceSettingsCtrl($scope, $timeout) {
     }
   }
 
+  $scope.cleanBluetoothBondedDevices = function() {
+    if ($scope.control) {
+      $scope.control.cleanBluetoothBondedDevices()
+    }
+  }
+
   $scope.$watch('ringerMode', function(newValue, oldValue) {
     if (oldValue) {
       if ($scope.control) {
