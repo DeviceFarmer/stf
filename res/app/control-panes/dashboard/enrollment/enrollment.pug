@@ -1,0 +1,17 @@
+.widget-container.fluid-height.stf-enrollment(ng-controller='EnrollmentCtrl')
+  .heading
+    stacked-icon(icon='fa-external-link', color='color-blue')
+    span(translate) Activate with EL - FI links go here
+    clear-button(ng-click='clear()', ng-disabled='!command && !data').btn-xs
+    help-icon(topic='Remote-Shell', uib-tooltip='{{"Activates the app with the enrollment link" | translate}}')
+
+  .widget-content.padded
+    .input-group.form-inline
+      input(type=text, ng-model='command', Xtext-focus-select,
+      autocapitalize='off', spellcheck='false',
+      tabindex='30', accesskey='S', autocomplete='on' placeholder='https://e.wandera.co.uk/...').form-control.enrollment-input
+      span.input-group-btn
+        button.btn.btn-primary-outline(ng-click='enroll(command)', ng-disabled='!command')
+          i.fa.fa-play
+  pre.enrollment-results.selectable(ng-show='data') {{data}}
+  pre.enrollment-results.selectable.enrollment-results-empty(ng-show='result.settled && !data') No output

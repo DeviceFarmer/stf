@@ -9,7 +9,7 @@
 
     button.btn.btn-primary-outline.icon-app.pull-right(ng-click='control.openStore()').color-pink
       i.fa.fa-shopping-cart.fa-lg.color-blue
-      .icon-title {{"App Store" | translate}}
+      .icon-title {{"Play Store" | translate}}
 
   .widget-content.padded
     button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openWiFiSettings()')
@@ -24,4 +24,41 @@
       i.fa.fa-sliders.fa-lg.color-darkgreen
       .icon-title {{"Developer" | translate}}
 
+    // WANDERA CUSTOM - START
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openAppTester()')
+      i.fa.fa-gear.fa-lg.color-yellow
+      .icon-title {{"App Tester" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openWandera()')
+      i.fa.fa-bug.fa-lg.color-skyblue
+      .icon-title {{"Wandera" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openWanderaDev()')
+      i.fa.fa-bug.fa-lg.color-skyblue
+      .icon-title {{"Wandera Dev" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openWanderaDebug()')
+      i.fa.fa-bug.fa-lg.color-skyblue
+      .icon-title {{"Wandera Debug" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openGMail()')
+      i.fa.fa-envelope.fa-lg.color-red
+      .icon-title {{"Gmail" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openChrome()')
+      i.fa.fa-chrome.fa-lg.color-red
+      .icon-title {{"Chrome" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openSettingActivity("VPN_SETTINGS")')
+      i.fa.fa-gear.fa-lg.color-darkgray
+      .icon-title {{"VPN Settings" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openAccountsSettings()')
+      i.fa.fa-gear.fa-lg.color-darkgray
+      .icon-title {{"Accounts" | translate}}
+
+    button.btn.btn-primary-outline.icon-app.pull-right(ng-click='openTestDpc()')
+      i.fa.fa-briefcase.fa-lg.color-blue
+      .icon-title {{"TestDPC" | translate}}
+    // WANDERA CUSTOM - END
     .clearfix
