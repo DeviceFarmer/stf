@@ -1,5 +1,5 @@
 /**
-* Copyright © 2019 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+* Copyright © 2019-2024 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 **/
 
 const _ = require('lodash')
@@ -357,7 +357,7 @@ module.exports = function GroupListCtrl(
     CommonService.copyToClipboard(_.uniq(groups.map(function(group) {
       return group.owner.email
     }))
-    .join(SettingsService.get('emailSeparator')))
+    .join(SettingsService.get('emailAddressSeparator')))
     .url('mailto:?body=*** Paste the email addresses from the clipboard! ***')
   }
 
@@ -366,7 +366,7 @@ module.exports = function GroupListCtrl(
     CommonService.copyToClipboard(users.map(function(user) {
       return user.email
     })
-    .join(SettingsService.get('emailSeparator')))
+    .join(SettingsService.get('emailAddressSeparator')))
     .url('mailto:?body=*** Paste the email addresses from the clipboard! ***')
   }
 
