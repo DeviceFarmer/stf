@@ -1,5 +1,31 @@
 # Changelog
 
+## 3.6.8 (2024-04-04)
+
+* grant STFService permissions to be able to use features by @jupe in https://github.com/DeviceFarmer/stf/pull/765
+* Update STFService.apk to 2.5.2 by @koral-- in https://github.com/DeviceFarmer/stf/pull/766
+* Update version to 3.6.8 by @koral-- in https://github.com/DeviceFarmer/stf/pull/767
+
+## 3.6.7 (2024-03-23)
+
+* Add Dockerfile for arm64 by @im-0 in https://github.com/DeviceFarmer/stf/pull/712
+* Add more CLI options for `stf local` to support reverse proxies by @im-0 in https://github.com/DeviceFarmer/stf/pull/714
+* Fix the description in Dockerfile-debian-arm64 by @im-0 in https://github.com/DeviceFarmer/stf/pull/713
+* Fix mobile browser detection so that "Desktop mode" works as expected by @im-0 in https://github.com/DeviceFarmer/stf/pull/715
+* Update STFService.apk to 2.4.12 by @koral-- in https://github.com/DeviceFarmer/stf/pull/718
+* Update STF Service APK to 2.4.12 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/717
+* Bump browserify-sign from 4.2.1 to 4.2.2 by @dependabot in https://github.com/DeviceFarmer/stf/pull/720
+* Bump word-wrap from 1.2.3 to 1.2.5 by @dependabot in https://github.com/DeviceFarmer/stf/pull/722
+* Bump semver from 7.5.1 to 7.5.2 by @dependabot in https://github.com/DeviceFarmer/stf/pull/721
+* fix bug on cookie using https by @denis99999 in https://github.com/DeviceFarmer/stf/pull/752
+* Implement enable/disable bluetooth of devices by @jupe in https://github.com/DeviceFarmer/stf/pull/754
+* Update STF service APK to 2.5.0 by @koral-- in https://github.com/DeviceFarmer/stf/pull/755
+* fix syrup require by @jupe in https://github.com/DeviceFarmer/stf/pull/756
+* UI support to cleanup bluetooth bonded devices by @jupe in https://github.com/DeviceFarmer/stf/pull/757
+* options to disable bluetooth and/or clean bonded (paired) devices by @jupe in https://github.com/DeviceFarmer/stf/pull/758
+* Update STFService APK to 2.5.1 by @koral-- in https://github.com/DeviceFarmer/stf/pull/761
+* Update version to 3.6.7 in package.json by @koral-- in https://github.com/DeviceFarmer/stf/pull/762
+
 ## 3.6.6 (2023-08-18)
 
 * fix bug on taking control of a device: set a lock for exclusive access by @denis99999 in https://github.com/DeviceFarmer/stf/pull/650
