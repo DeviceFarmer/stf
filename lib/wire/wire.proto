@@ -1,5 +1,5 @@
 //
-// Copyright © 2019 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+// Copyright © 2019-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 //
 
 // Message wrapper
@@ -160,8 +160,11 @@ message DeviceProviderField {
 }
 
 message DeviceGroupField {
-  optional string origin = 1;
-  optional string originName = 2;
+  optional string id = 1;
+  optional string name = 2;
+  optional string origin = 3;
+  optional string originName = 4;
+  optional GroupOwnerField owner = 5;
 }
 
 message DeviceField {

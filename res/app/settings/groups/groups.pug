@@ -1,5 +1,5 @@
 //
-  Copyright © 2019 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+  Copyright © 2019-2024 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 //
 
 .widget-container.fluid-height.stf-groups(ng-controller='GroupsCtrl')
@@ -84,7 +84,7 @@
           .group-line.group-actions
             i.fa.fa-object-group.fa-2x.fa-fw.group-list-icon
             .group-list-details.selectable
-              form.form-inline(name='nameForm' ng-if="group.state === 'pending' && showName")
+              form.form-inline(name='nameForm' ng-if="showName")
                 input.form-control.input-sm(
                   size='35' type='text' placeholder="Name"
                   ng-model='groupsEnv[group.id].tmpName'
@@ -92,7 +92,7 @@
                   uib-tooltip="{{'Regex syntax' | translate}}: {{::nameRegexStr}}"
                   tooltip-placement='top'
                   tooltip-popup-delay='500'
-                  tooltip-enable="group.state === 'pending' && nameForm.$invalid"
+                  tooltip-enable="nameForm.$invalid"
                   required)
 
                 button.btn.btn-sm.btn-primary.btn-check-name(
@@ -103,7 +103,7 @@
 
               .group-list-name(
                 ng-bind-template='{{group.name}}'
-                ng-if="group.state !== 'pending' || !showName")
+                ng-if="!showName")
 
               .group-list-id
                 span(translate) Identifier
@@ -134,10 +134,9 @@
 
             button.btn.btn-xs.pull-right(
               type='button'
-              ng-show="group.state === 'pending'"
               ng-click='initTemporaryName(group); showName = !showName'
-              ng-class='{"btn-primary-outline": !showName && group.state === "pending",\
-                         "btn-primary": showName && group.state === "pending"}')
+              ng-class='{"btn-primary-outline": !showName,\
+                         "btn-primary": showName}')
                 i.fa.fa-tag
                 span(translate) Name 
 
