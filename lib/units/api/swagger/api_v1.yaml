@@ -1,10 +1,10 @@
 ##
-# Copyright © 2019 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+# Copyright © 2019-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 ##
 
 swagger: "2.0"
 info:
-  version: "2.4.0"
+  version: "2.4.1"
   title: Smartphone Test Farm
   description: Control and manages real Smartphone devices from browser and restful apis
   license:
@@ -724,6 +724,62 @@ paths:
               * 404: Not Found => unknown users 
               * 500: Internal Server Error
               * 503: Service Unavailable => server too busy or a lock on a resource is pending
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
+  /users/alertMessage:
+    x-swagger-router-controller: users
+    get:
+      summary: Gets the users alert message
+      description: The Users Alert Message endpoint returns the current alert message launched by the administrator user
+      operationId: getUsersAlertMessage
+      tags:
+        - users
+      parameters:
+        - name: fields
+          in: query
+          description: Fields query parameter takes a comma seperated list of fields. Only listed field will be return in response
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Current Users Alert Message
+          schema:
+            $ref: "#/definitions/AlertMessageResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
+    put:
+      summary: Updates the users alert message
+      description: Updates the users alert message
+      operationId: updateUsersAlertMessage
+      tags:
+        - admin
+      parameters:
+        - name: alertMessage
+          in: body
+          description: Alert message properties
+          required: true
+          schema:
+            $ref: "#/definitions/AlertMessagePayload"
+      responses:
+        "200":
+          description: Updated Users Alert Message
+          schema:
+            $ref: "#/definitions/AlertMessageResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 400: Bad Request
+              * 401: Unauthorized => bad credentials
+              * 500: Internal Server Error
           schema:
             $ref: "#/definitions/UnexpectedErrorResponse"
       security:
@@ -2270,6 +2326,49 @@ definitions:
         type: string
       user:
         type: object
+  AlertMessage:
+    type: object
+    properties:
+      activation:
+        description: Enable or disablee the alert message
+        type: string
+      data:
+        description: Alert message text to display
+        type: string
+      level:
+        description: Alert message level
+        type: string
+  AlertMessageResponse:
+    required:
+      - success
+      - description
+      - alertMessage
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      alertMessage:
+        $ref: '#/definitions/AlertMessage'
+  AlertMessagePayload:
+    description: Payload object for updating the alert message
+    properties:
+      activation:
+        description: Enable or disablee the alert message
+        type: string
+        enum:
+          - 'True'
+          - 'False'
+      data:
+        description: Alert message text to display
+        type: string
+      level:
+        description: Alert message level
+        type: string
+        enum:
+          - Information
+          - Warning
+          - Critical
   Token:
     type: object
     properties:

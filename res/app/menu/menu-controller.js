@@ -1,10 +1,12 @@
 /**
-* Copyright © 2019-2023 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+* Copyright © 2019-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 **/
 
 module.exports = function MenuCtrl(
   $scope
 , $rootScope
+, UsersService
+, AppState
 , SettingsService
 , $location
 , $http
@@ -48,4 +50,41 @@ module.exports = function MenuCtrl(
       socket.disconnect()
     }, 100)
   }
+
+  $scope.alertMessage = {
+    activation: 'False'
+  , data: ''
+  , level: ''
+  }
+
+  if (AppState.user.privilege === 'admin') {
+    $scope.alertMessage = SettingsService.get('alertMessage')
+  }
+  else {
+    UsersService.getUsersAlertMessage().then(function(response) {
+      $scope.alertMessage = response.data.alertMessage
+    })
+  }
+
+  $scope.isAlertMessageActive = function() {
+    return $scope.alertMessage.activation === 'True'
+  }
+
+  $scope.isInformationAlert = function() {
+    return $scope.alertMessage.level === 'Information'
+  }
+
+  $scope.isWarningAlert = function() {
+    return $scope.alertMessage.level === 'Warning'
+  }
+
+  $scope.isCriticalAlert = function() {
+    return $scope.alertMessage.level === 'Critical'
+  }
+
+  $scope.$on('user.menu.users.updated', function(event, message) {
+    if (message.user.privilege === 'admin') {
+      $scope.alertMessage = message.user.settings.alertMessage
+    }
+  })
 }
