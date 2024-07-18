@@ -1,0 +1,34 @@
+//
+  Copyright © 2024 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+//
+
+.widget-container.fluid-height(ng-controller='AlertMessageCtrl')
+  .heading
+    i.fa.fa-exclamation-triangle
+    span(translate) Alert Message
+  .widget-content.padded
+    .form-horizontal
+      .form-group.general-item
+        .input-group
+          .input-group-addon.input-sm
+            i.fa.fa-exclamation-triangle(
+            uib-tooltip="{{'Define your own alert message' | translate}}" tooltip-placement='auto top-right' tooltip-popup-delay='500')
+          input.form-control.input-sm(size='20' type='text' placeholder='' ng-model='alertMessage.data')
+      .form-group.general-item
+        label.general-label(
+          translate
+          uib-tooltip="{{'Alert message activation' | translate}}"
+          tooltip-placement='auto top-right'
+          tooltip-popup-delay='500') Activation
+        select(
+          ng-model='alertMessage.activation'
+          ng-options='option for option in alertMessageActivationOptions')
+      .form-group.general-item
+        label.general-label(
+          translate
+          uib-tooltip="{{'Alert message level' | translate}}"
+          tooltip-placement='auto top-right'
+          tooltip-popup-delay='500') Level
+        select(
+          ng-model='alertMessage.level'
+          ng-options='option for option in alertMessageLevelOptions')

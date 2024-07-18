@@ -125,11 +125,21 @@ message UserGroupsField {
   repeated string subscribed = 2;
 }
 
+message AlertMessageField {
+  required string activation = 1;
+  required string data = 2;
+  required string level = 3;
+}
+
+message UserSettingsField {
+  optional AlertMessageField alertMessage = 1;
+}
 message UserField {
   required string email = 1;
   required string name = 2;
   required string privilege = 3;
   required UserGroupsField groups = 4;
+  required UserSettingsField settings = 5;
 }
 
 message UserChangeMessage {
