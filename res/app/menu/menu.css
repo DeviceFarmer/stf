@@ -97,7 +97,6 @@
   white-space: nowrap;
   position: relative;
   top: 50%;
-  //left: 50%;
   transform: translate(0%,-50%);
   line-height: 44px;
 }

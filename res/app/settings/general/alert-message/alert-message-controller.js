@@ -19,7 +19,6 @@ module.exports = function AlertMessageCtrl(
   , defaultValue: $scope.defaultAlertMessage
   })
 
-  //$scope.alertMessage = $scope.defaultAlertMessage
   $scope.alertMessageActivationOptions = ['True', 'False']
   $scope.alertMessageLevelOptions = ['Information', 'Warning', 'Critical']
 
