@@ -1,3 +1,16 @@
+/*
+  Copyright © 2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+*/
+
 .stf-general {
 
+}
+
+.stf-general .general-item {
+  margin: 0px 10px 15px 0px;
+}
+
+.stf-general .general-label {
+  font-weight: bold;
+  margin-right: 10px;
 }
