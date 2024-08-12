@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.7.0 (2024-08-12)
+
+* Update minicap to 2.7.2 by @koral-- in https://github.com/DeviceFarmer/stf/pull/787
+* Update STF Service APK to 2.5.3 by @koral-- in https://github.com/DeviceFarmer/stf/pull/788
+* fix bug on email separator by @denis99999 in https://github.com/DeviceFarmer/stf/pull/792
+* Allow group name change by @denis99999 in https://github.com/DeviceFarmer/stf/pull/795
+* Add maintenance banner on UI by @denis99999 in https://github.com/DeviceFarmer/stf/pull/797
+* fix bug on user name management by @denis99999 in https://github.com/DeviceFarmer/stf/pull/799
+
 ## 3.6.8 (2024-04-04)
 
 * grant STFService permissions to be able to use features by @jupe in https://github.com/DeviceFarmer/stf/pull/765
