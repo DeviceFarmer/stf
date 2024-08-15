@@ -30,7 +30,8 @@
   },
   "scripts": {
     "test": "gulp test",
-    "prepare": "bower install && not-in-install && gulp build || in-install"
+    "prepare": "bower install && not-in-install && gulp build || in-install",
+    "local": "node lib/cli/index.js local"
   },
   "dependencies": {
     "@devicefarmer/adbkit": "^2.11.3",
