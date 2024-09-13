@@ -1,3 +1,7 @@
+//
+// Copyright © 2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+//
+
 $main: #167FFC;
 $gray: #757575;
 $success: #60c561;
@@ -881,10 +885,12 @@ input[type="text"] {
   .btn {
     margin: 0 10px 0 0;
   }
-  border: 0;
-  padding: 15px;
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
+  & {
+    border: 0;
+    padding: 15px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
 }
 
 .modal-header {
