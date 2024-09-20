@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.7.1 (2024-09-20)
+
+* option to cleanup tmp folder during cleanup phase by @jupe in https://github.com/DeviceFarmer/stf/pull/772
+* fix SDK<34 STFService installation  by @jupe in https://github.com/DeviceFarmer/stf/pull/804
+* fix bug on deprecation warning using sass by @denis99999 in https://github.com/DeviceFarmer/stf/pull/808
+
 ## 3.7.0 (2024-08-12)
 
 * Update minicap to 2.7.2 by @koral-- in https://github.com/DeviceFarmer/stf/pull/787
