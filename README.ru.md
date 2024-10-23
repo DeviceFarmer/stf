@@ -11,17 +11,21 @@ You can watch a presentation about our product at the Heisenbug 2024 conference 
 [Presentation at Heisenbug 2024 conference](https://heisenbug.ru/talks/cee3ec59796e43f6a3d4ae508db157d3/?referer=/schedule/days/)
 <img src="doc/showcase.png" alt="VK Devicehub">
 
-## How to run
-Run `docker compose -f docker-compose-prod.yaml --env-file scripts/variables.env up` and a local production-like installation of DeviceHub will be launched on your computer on port 8082. See [docker-compose-prod.yaml](./docker-compose-prod.yaml) for more information.
+## Как запустить?
 
-All that's left for you is to add the devices.
-To add the devices you will need a running provider instance and one or multiple adb servers that are connected to the devices.
-The easiest way to run the provider is to do
-1) npm ci
-2) npm link --force
-3) MONGODB_PORT_27017_TCP=mongodb://localhost:27017 stf provider --connect-sub "tcp://localhost:7250" --connect-push "tcp://localhost:7270" --storage-url "http://localhost:8082"
+1) Установите Docker
+2) Запустите `docker compose -f docker-compose-prod.yaml --env-file scripts/variables.env up` и будет поднята локальная инсталляция на порту 8082. См [docker-compose-prod.yaml](./docker-compose-prod.yaml).
 
-Note: some features require direct access to the provider instance from the browser, so if you are running the provider on a different machine - make sure you pass accessible url to the --public-ip.
+Осталось только добавить в ферму девайсы
+Для этого нужно запустить провайдер и иметь работающее adb соединение с устройством.
+Самый простой способ это:
+1) Убедиться что установлен питон и в нём установлен setuptools (нужен для одной из наших npm зависимостей)
+2) `npm ci` - скачать и установить зависимости
+3) `npm link --force` - Добавить исполняемый файл в текущий PATH
+4) `MONGODB_PORT_27017_TCP=mongodb://localhost:27017 stf provider --connect-sub "tcp://localhost:7250" --connect-push "tcp://localhost:7270" --storage-url "http://localhost:8082"`
+
+Замечание:
+Некоторый функционал требует наличия прямого доступа до провайдера из браузера. Поэтому в случае сложных инсталляций не забудьте передать внешнедоступный url в параметр --public-url
 
 ## Features
 

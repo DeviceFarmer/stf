@@ -1,6 +1,6 @@
 version: "3"
 networks:
-    devicehub:
+  devicehub:
 
 services:
   nginx:
@@ -23,17 +23,19 @@ services:
     image: mongo:6.0.10
     hostname: mongo1
     container_name: mongo1
-    entrypoint: [ "mongod", "--replSet", "myReplicaSet", "--bind_ip", "localhost,mongo1" ]
+    ports:
+      - 27017:27017
+    entrypoint: ["mongod", "--replSet", "myReplicaSet", "--bind_ip_all"]
   mongo2:
     image: mongo:6.0.10
     hostname: mongo2
     container_name: mongo2
-    entrypoint: [ "mongod", "--replSet", "myReplicaSet", "--bind_ip", "localhost,mongo2" ]
+    entrypoint: ["mongod", "--replSet", "myReplicaSet", "--bind_ip_all"]
   mongo3:
     image: mongo:6.0.10
     hostname: mongo3
     container_name: mongo3
-    entrypoint: [ "mongod", "--replSet", "myReplicaSet", "--bind_ip", "localhost,mongo3" ]
+    entrypoint: ["mongod", "--replSet", "myReplicaSet", "--bind_ip_all"]
   mongosetup:
     image: mongo:6.0.10
     container_name: mongosetup
@@ -44,7 +46,7 @@ services:
     volumes:
       - ./scripts/mongo_setup.sh:/scripts/mongo_setup.sh
     restart: "no"
-    entrypoint: [ "bash", "/scripts/mongo_setup.sh" ]
+    entrypoint: ["bash", "/scripts/mongo_setup.sh"]
   devicehub-migrate:
     build: .
     image: devicehub
