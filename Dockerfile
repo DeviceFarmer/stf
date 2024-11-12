@@ -1,8 +1,8 @@
 #
-# Copyright © 2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+# Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # Sneak the stf executable into $PATH.
 ENV PATH /app/bin:$PATH
@@ -32,7 +32,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install wget python3 build-essential && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
+      https://nodejs.org/dist/v20.18.0/node-v20.18.0-linux-x64.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
