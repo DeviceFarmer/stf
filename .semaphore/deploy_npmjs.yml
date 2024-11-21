@@ -7,7 +7,7 @@ blocks:
         - name: Deploy
           commands:
             - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3
-            - sem-version node 17.9.0
+            - sem-version node 20
             - checkout
             - npm install
             - npm publish --access=public

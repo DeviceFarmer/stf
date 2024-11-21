@@ -373,6 +373,7 @@ enum DeviceStatus {
 message DeviceStatusMessage {
   required string serial = 1;
   required DeviceStatus status = 2;
+  required double statusTimeStamp = 3;
 }
 
 message DeviceDisplayMessage {

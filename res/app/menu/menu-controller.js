@@ -16,6 +16,9 @@ module.exports = function MenuCtrl(
 , $cookies
 , $window) {
 
+  $window.angular.version = {}
+  $window.d3.version = {}
+
   SettingsService.bind($scope, {
     target: 'lastUsedDevice'
   })

@@ -1,11 +1,11 @@
 #
-# Copyright © 2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+# Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # Sneak the stf executable into $PATH.
-ENV PATH /app/bin:$PATH
+ENV PATH=/app/bin:$PATH
 
 # Work in app dir by default.
 WORKDIR /app
@@ -28,15 +28,18 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
       --shell /usr/sbin/nologin \
       stf && \
     sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
+    echo '--- Updating repositories' && \
     apt-get update && \
+    echo '--- Upgrading repositories' && \
+    apt-get -y dist-upgrade && \
     apt-get -y install wget python3 build-essential && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v17.9.0/node-v17.9.0-linux-x64.tar.xz && \
+      https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-x64.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
-    apt-get -y install libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm cmake && \
+    apt-get -y install --no-install-recommends libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm cmake && \
     apt-get clean && \
     rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
     mkdir /tmp/bundletool && \
@@ -57,22 +60,29 @@ USER stf-build
 
 # Run the build.
 RUN set -x && \
+    echo '--- Building app' && \
     cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
-    npm install --python="/usr/bin/python3"  --loglevel http && \
+    npm install --python="/usr/bin/python3" --omit=optional --loglevel http && \
+    echo '--- Assembling app' && \
     npm pack && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
     bower cache clean && \
-    npm prune --production && \
+    npm prune --omit=dev && \
     mv node_modules /app && \
     rm -rf ~/.node-gyp && \
     mkdir /app/bundletool && \
     mv /tmp/bundletool/* /app/bundletool && \
     cd /app && \
-    find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete
+    find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete && \
+    rm -rf doc .github .tx .semaphore *.md *.yaml LICENSE Dockerfile* \
+      .eslintrc .nvmrc .tool-versions res/.eslintrc && \
+    cd && \
+    rm -rf .npm .cache .config .local && \
+    cd /app
 
 # Switch to the app user.
 USER stf
 
 # Show help by default.
-CMD stf --help
+CMD ["stf", "--help"]
