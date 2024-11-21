@@ -1,6 +1,6 @@
 {
   "name": "@devicefarmer/stf",
-  "version": "3.7.1",
+  "version": "3.7.2",
   "description": "Smartphone Test Farm",
   "keywords": [
     "adb",
@@ -34,7 +34,7 @@
     "local": "node lib/cli/index.js local"
   },
   "dependencies": {
-    "@devicefarmer/adbkit": "^3.3.6",
+    "@devicefarmer/adbkit": "^3.3.7",
     "@devicefarmer/adbkit-apkreader": "^3.2.4",
     "@devicefarmer/adbkit-monkey": "^1.2.1",
     "@devicefarmer/minicap-prebuilt": "^2.7.2",
@@ -80,7 +80,7 @@
     "passport-saml": "^0.15.0",
     "protobufjs": "^3.8.2",
     "proxy-addr": "^2.0.7",
-    "pug": "^2.0.0-beta4",
+    "pug": "^3.0.3",
     "request": "^2.67.0",
     "request-progress": "^2.0.1",
     "rethinkdb": "^2.0.2",
@@ -100,7 +100,7 @@
     "ws": "^3.0.0",
     "yargs": "^6.6.0",
     "yauzl": "^2.10.0",
-    "zeromq": "^6.1.1"
+    "zeromq": "^6.1.2"
   },
   "devDependencies": {
     "async": "^2.0.1",

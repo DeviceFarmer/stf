@@ -3,7 +3,7 @@ name: Docker
 agent:
   machine:
     type: e1-standard-2
-    os_image: ubuntu2204
+    os_image: ubuntu2004
 blocks:
   - name: Build Standard Docker image
     task:
@@ -20,7 +20,7 @@ blocks:
         - name: npm test
           commands:
             - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3
-            - sem-version node 20.18.0
+            - sem-version node 20
             - checkout
             - npm install
             - npm test
