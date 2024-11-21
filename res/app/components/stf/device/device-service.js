@@ -1,5 +1,5 @@
 /**
-* Copyright © 2019,2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+* Copyright © 2019-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 **/
 
 var oboe = require('oboe')
@@ -136,6 +136,10 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
     function changeListener(event) {
       var device = get(event.data)
       if (device) {
+        if (event.data.likelyLeaveReason === 'status_change' &&
+            device.statusTimeStamp > event.data.statusTimeStamp) {
+          return
+        }
         modify(device, event.data)
         if (!options.filter(device)) {
           remove(device)
