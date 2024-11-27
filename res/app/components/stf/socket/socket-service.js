@@ -1,4 +1,8 @@
-var io = require('socket.io')
+/**
+* Copyright © 2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+**/
+
+var io = require('socket.io-client').io
 
 module.exports = function SocketFactory(
   $rootScope
@@ -6,7 +10,6 @@ module.exports = function SocketFactory(
 , AppState
 ) {
   var websocketUrl = AppState.config.websocketUrl || ''
-
   var socket = io(websocketUrl, {
     reconnection: false, transports: ['websocket']
   })
