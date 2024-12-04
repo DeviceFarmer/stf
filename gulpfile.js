@@ -1,5 +1,5 @@
 //
-// Copyright © 2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+// Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 //
 
 var path = require('path')
@@ -10,7 +10,6 @@ var jsonlint = require('gulp-jsonlint')
 var eslint = require('gulp-eslint')
 var EslintCLIEngine = require('eslint').CLIEngine
 var webpack = require('webpack')
-var webpackConfig = require('./webpack.config').webpack
 var webpackStatusConfig = require('./res/common/status/webpack.config')
 var gettext = require('gulp-angular-gettext')
 var pug = require('gulp-pug')
@@ -146,15 +145,7 @@ function fromString(filename, string) {
 
 // For production
 gulp.task('webpack:build', function(callback) {
-  var myConfig = Object.create(webpackConfig)
-  myConfig.plugins = myConfig.plugins.concat(
-    new webpack.DefinePlugin({
-      'process.env': {
-        NODE_ENV: JSON.stringify('production')
-      }
-    })
-  )
-  myConfig.devtool = false
+  var myConfig = require('./webpack.config').webpack
 
   webpack(myConfig, function(err, stats) {
     if (err) {

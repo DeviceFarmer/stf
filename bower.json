@@ -1,6 +1,6 @@
 {
   "name": "stf",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "dependencies": {
     "angular": "~1.8.3",
     "angular-animate": "~1.8.3",
@@ -16,7 +16,7 @@
     "angular-sanitize": "~1.8.3",
     "angular-touch": "~1.8.3",
     "angular-ui-ace": "~0.2.3",
-    "angular-ui-bootstrap": "~1.1.2",
+    "angular-ui-bootstrap": "~2.5.6",
     "angular-xeditable": "~0.10.2",
     "bootstrap": "~3.4.1",
     "components-font-awesome": "~4.7.0",
