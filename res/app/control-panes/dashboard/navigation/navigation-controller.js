@@ -1,3 +1,7 @@
+//
+// Copyright © 2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+//
+
 var _ = require('lodash')
 
 module.exports = function NavigationCtrl($scope, $rootScope) {
@@ -11,7 +15,7 @@ module.exports = function NavigationCtrl($scope, $rootScope) {
   }
 
   function resetFavicon() {
-    $scope.urlFavicon = require('./default-favicon.png')
+    $scope.urlFavicon = require('./default-favicon.png').default
     faviconIsSet = false
   }
 

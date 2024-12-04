@@ -1,5 +1,5 @@
 //
-// Copyright © 2022 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+// Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 //
 
 var _ = require('lodash')
@@ -10,7 +10,12 @@ var log = require('./lib/util/logger').createLogger('webpack:config')
 
 module.exports = {
   webpack: {
-    context: __dirname
+    mode: 'none'
+    , performance: {
+        hints: false
+      , maxAssetSize: 512000
+      }
+    , context: __dirname
     , cache: true
     , entry: {
         app: pathutil.resource('app/app.js')
@@ -34,59 +39,57 @@ module.exports = {
           , 'node_modules'
         ]
         , descriptionFiles: ['package.json', 'bower.json']
-        , moduleExtensions: ['-loader']
         , extensions: ['.js', '.json']
-        , enforceModuleExtension: false
         , alias: {
             'angular-bootstrap': 'angular-bootstrap/ui-bootstrap-tpls'
             , localforage: 'localforage/dist/localforage.js'
-            , 'socket.io': 'socket.io-client'
             , stats: 'stats.js/src/Stats.js'
             , 'underscore.string': 'underscore.string/index'
         }
     }
     , module: {
-        loaders: [
-          {test: /\.css$/, loader: 'style-loader!css-loader'}
-          , {test: /\.scss$/, loader: 'style-loader!css-loader!sass-loader'}
-          , {test: /\.less$/, loader: 'style-loader!css-loader!less-loader'}
-          , {test: /\.json$/, loader: 'json-loader'}
-          , {test: /\.jpg$/, loader: 'url-loader?limit=1000&mimetype=image/jpeg'}
-          , {test: /\.png$/, loader: 'url-loader?limit=1000&mimetype=image/png'}
-          , {test: /\.gif$/, loader: 'url-loader?limit=1000&mimetype=image/gif'}
-          , {test: /\.svg/, loader: 'url-loader?limit=1&mimetype=image/svg+xml'}
-          , {test: /\.woff/, loader: 'url-loader?limit=1&mimetype=application/font-woff'}
-          , {test: /\.otf/, loader: 'url-loader?limit=1&mimetype=application/font-woff'}
-          , {test: /\.ttf/, loader: 'url-loader?limit=1&mimetype=application/font-woff'}
-          , {test: /\.eot/, loader: 'url-loader?limit=1&mimetype=vnd.ms-fontobject'}
-          , {test: /\.pug$/, loader: 'template-html-loader?engine=jade'}
-          , {test: /\.html$/, loader: 'html-loader'}
-          , {test: /angular\.js$/, loader: 'exports-loader?angular'}
-          , {test: /angular-cookies\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /angular-route\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /angular-touch\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /angular-animate\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /angular-growl\.js$/, loader: 'imports-loader?angular=angular'}
-          , {test: /dialogs\.js$/, loader: 'script-loader'}
+        rules: [
+          {test: /\.css$/i, use: ['style-loader', 'css-loader']}
+          , {test: /\.scss$/i, use: ['style-loader', 'css-loader', 'sass-loader']}
+          , {test: /\.less$/i, use: ['style-loader', 'css-loader', 'less-loader']}
+          , {test: /\.(jpg|png|gif)$/i, use: [{loader: 'url-loader', options: {limit: 1000}}]}
+          , {test: /\.svg/i
+            , use: [{loader: 'url-loader', options: {limit: 1, mimetype: 'image/svg+xml'}}]}
+          , {test: /\.eot$/i
+            , use: [{loader: 'url-loader', options: {limit: 1, mimetype: 'vnd.ms-fontobject'}}]}
+          , {test: /\.(woff|otf|ttf)/i
+            , use: [{loader: 'url-loader', options: {limit: '1', mimetype: 'vnd.ms-fontobject'}}]}
+          , {test: /\.pug$/i
+            , use: [{loader: 'template-html-loader', options: {engine: 'jade'}}]}
+          , {test: /\.html$/i, loader: 'html-loader'}
+          , {test: /angular\.js$/i
+            , use: [{loader: 'exports-loader', options: {type: 'commonjs', exports: 'angular'}}]}
+          , {test: /angular-cookies\.js$/i
+            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
+          , {test: /angular-route\.js$/i
+            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
+          , {test: /angular-touch\.js$/i
+            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
+          , {test: /angular-animate\.js$/i
+            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
+          , {test: /angular-growl\.js$/i
+            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
+          , {test: /dialogs\.js$/, use: [{loader: 'script-loader'}]}
         ]
     }
     , plugins: [
-        new webpack.optimize.CommonsChunkPlugin({
-          name: 'commons.entry'
-          , filename: 'entry/commons.entry.js'
-        })
-        , new ProgressPlugin(_.throttle(
-            function(progress, message) {
-              var msg
-              if (message) {
-                msg = message
-              }
-              else {
-                msg = progress >= 1 ? 'complete' : 'unknown'
-              }
-              log.info('Build progress %d%% (%s)', Math.floor(progress * 100), msg)
+        new ProgressPlugin(_.throttle(
+          function(progress, message) {
+            var msg
+            if (message) {
+              msg = message
             }
-            , 1000
+            else {
+              msg = progress >= 1 ? 'complete' : 'unknown'
+            }
+            log.info('Build progress %d%% (%s)', Math.floor(progress * 100), msg)
+          }
+          , 1000
         ))
     ]
   }
@@ -94,10 +97,6 @@ module.exports = {
       plugins: [
         new webpack.LoaderOptionsPlugin({
           debug: true
-        })
-        , new webpack.optimize.CommonsChunkPlugin({
-            name: 'commons.entry'
-            , filename: 'entry/commons.entry.js'
         })
       ]
       , devtool: 'eval'
