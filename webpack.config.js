@@ -11,10 +11,6 @@ var log = require('./lib/util/logger').createLogger('webpack:config')
 module.exports = {
   webpack: {
     mode: 'none'
-    , performance: {
-        hints: false
-      , maxAssetSize: 512000
-      }
     , context: __dirname
     , cache: true
     , entry: {
