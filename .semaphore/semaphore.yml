@@ -11,7 +11,8 @@ blocks:
         - name: docker build
           commands:
             - checkout
-            - docker build .
+            - docker buildx create --platform=linux/amd64,linux/arm64 --use
+            - docker buildx build --platform=linux/amd64,linux/arm64 .
     dependencies: []
   - name: Build npm package
     dependencies: []
