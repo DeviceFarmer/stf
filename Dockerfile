@@ -9,16 +9,16 @@ ENV PATH=/app/bin:$PATH
 
 # Work in app dir by default.
 WORKDIR /app
+COPY . /tmp/build/
 
 # Export default app port, not enough for all processes but it should do
 # for now.
 EXPOSE 3000
 
-# Install app requirements. Trying to optimize push speed for dependant apps
-# by reducing layers as much as possible. Note that one of the final steps
-# installs development files for node-gyp so that npm install won't have to
-# wait for them on the first native module installation.
-RUN export DEBIAN_FRONTEND=noninteractive && \
+ARG TARGETARCH
+
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+    export DEBIAN_FRONTEND=noninteractive && \
     useradd --system \
       --create-home \
       --shell /usr/sbin/nologin \
@@ -46,28 +46,18 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     cd /tmp/bundletool && \
     wget --progress=dot:mega \
       https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
-    mv bundletool-all-1.2.0.jar bundletool.jar
-
-# Copy app source.
-COPY . /tmp/build/
-
-# Give permissions to our build user.
-RUN mkdir -p /app && \
-    chown -R stf-build:stf-build /tmp/build /tmp/bundletool /app
-
-# Switch over to the build user.
-USER stf-build
-
-# Run the build.
-RUN set -x && \
+    mv bundletool-all-1.2.0.jar bundletool.jar && \
+    mkdir -p /app && \
+    chown -R stf:stf /tmp/build /tmp/bundletool /app && \
+    set -x && \
     echo '--- Building app' && \
     cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
-    npm install --python="/usr/bin/python3" --omit=optional --loglevel http && \
+    echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
-    npm pack && \
+    echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    bower cache clean && \
+    echo '/tmp/build/node_modules/.bin/bower cache clean' | su stf -s /bin/bash && \
     npm prune --omit=dev && \
     mv node_modules /app && \
     rm -rf ~/.node-gyp && \
@@ -79,7 +69,63 @@ RUN set -x && \
       .eslintrc .nvmrc .tool-versions res/.eslintrc && \
     cd && \
     rm -rf .npm .cache .config .local && \
-    cd /app
+    cd /app; \
+  fi
+  
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+    export DEBIAN_FRONTEND=noninteractive && \
+    echo '--- Updating repositories' && \
+    apt-get update && \
+    echo '--- Upgrading repositories' && \
+    apt-get -y dist-upgrade && \
+    echo '--- Building node' && \
+    apt-get -y install pkg-config curl zip unzip wget python3 build-essential cmake ninja-build && \
+    cd /tmp && \
+    wget --progress=dot:mega \
+      https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-arm64.tar.xz && \
+    tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
+    rm node-v*.tar.xz && \
+    useradd --system \
+      --create-home \
+      --shell /usr/sbin/nologin \
+      stf && \
+    su stf -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
+    apt-get -y install --no-install-recommends libzmq3-dev libprotobuf-dev git graphicsmagick yasm && \
+    echo '--- Building app' && \
+    mkdir -p /app && \
+    chown -R stf:stf /tmp/build && \
+    set -x && \
+    cd /tmp/build && \
+    export PATH=$PWD/node_modules/.bin:$PATH && \
+    sed -i'' -e '/phantomjs/d' package.json && \
+    export VCPKG_FORCE_SYSTEM_BINARIES="arm" && \
+    echo 'npm install --save-dev pnpm' | su stf -s /bin/bash && \
+    echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
+    echo '--- Assembling app' && \
+    echo 'npm pack' | su stf -s /bin/bash && \
+    tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
+    echo '/tmp/build/node_modules/.bin/bower cache clean' | su stf -s /bin/bash && \
+    echo 'npm prune --omit=dev' | su stf -s /bin/bash && \
+    wget --progress=dot:mega \
+      https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
+    mkdir -p /app/bundletool && \
+    mv bundletool-all-1.2.0.jar /app/bundletool/bundletool.jar && \
+    mv node_modules /app && \
+    chown -R root:root /app && \
+    echo '--- Cleaning up' && \
+    echo 'npm cache clean --force' | su stf -s /bin/bash && \
+    rm -rf ~/.node-gyp && \
+    apt-get -y purge pkg-config curl zip unzip wget python3 build-essential cmake ninja-build && \
+    apt-get -y clean && \
+    apt-get -y autoremove && \
+    cd /home/stf && \
+    rm -rf vcpkg .npm .cache .cmake-ts .config .local && \
+    rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
+    cd /app && \
+    rm -rf doc .github .tx .semaphore *.md *.yaml LICENSE Dockerfile* \
+      .eslintrc .nvmrc .tool-versions res/.eslintrc && \
+    rm -rf /tmp/*; \
+  fi
 
 # Switch to the app user.
 USER stf
