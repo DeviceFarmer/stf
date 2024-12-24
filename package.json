@@ -38,7 +38,6 @@
     "@devicefarmer/stf-wiki": "1.0.0",
     "@julusian/jpeg-turbo": "2.1.0",
     "@sentry/node": "^8.34.0",
-    "android-device-list": "1.2.10",
     "angular": "1.8.3",
     "angular-animate": "1.8.3",
     "angular-borderlayout": "https://github.com/filearts/angular-borderlayout#7c9716aebd9260763f798561ca49d6fbfd4a5c67",
