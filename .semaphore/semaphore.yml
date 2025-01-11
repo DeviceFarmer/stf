@@ -2,8 +2,8 @@ version: v1.0
 name: Docker
 agent:
   machine:
-    type: e1-standard-2
-    os_image: ubuntu2004
+    type: r1-standard-4
+    os_image: ubuntu2204
 blocks:
   - name: Build Standard Docker image
     task:
@@ -11,7 +11,8 @@ blocks:
         - name: docker build
           commands:
             - checkout
-            - docker build .
+            - docker buildx create --platform=linux/amd64,linux/arm64 --use
+            - docker buildx build --platform=linux/amd64,linux/arm64 .
     dependencies: []
   - name: Build npm package
     dependencies: []
@@ -19,10 +20,14 @@ blocks:
       jobs:
         - name: npm test
           commands:
-            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3
-            - sem-version node 20
             - checkout
-            - npm install
+            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3 pkg-config curl zip unzip wget build-essential cmake ninja-build git
+            - sem-version node 22
+            - export PATH=$PWD/node_modules/.bin:$PATH 
+            - sed -i'' -e '/phantomjs/d' package.json
+            - export VCPKG_FORCE_SYSTEM_BINARIES="arm"
+            - npm install --save-dev pnpm
+            - npm install --python="/usr/bin/python3" --omit=optional --loglevel http
             - npm test
   - name: Build Debian Docker image
     dependencies: []
@@ -31,7 +36,8 @@ blocks:
         - name: docker build
           commands:
             - checkout
-            - docker build . -f Dockerfile-debian-x86_64
+            - docker buildx create --platform=linux/amd64 --use
+            - docker buildx build --platform=linux/amd64 . -f Dockerfile-debian-x86_64
 promotions:
   - name: Deploy to DockerHub
     pipeline_file: deploy_dockerhub.yml
