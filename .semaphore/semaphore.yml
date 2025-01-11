@@ -36,7 +36,8 @@ blocks:
         - name: docker build
           commands:
             - checkout
-            - docker build . -f Dockerfile-debian-x86_64
+            - docker buildx create --platform=linux/amd64 --use
+            - docker buildx build --platform=linux/amd64 . -f Dockerfile-debian-x86_64
 promotions:
   - name: Deploy to DockerHub
     pipeline_file: deploy_dockerhub.yml
