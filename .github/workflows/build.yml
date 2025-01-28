@@ -1,0 +1,54 @@
+name: Build and Push to ECR Public
+
+on:
+  push:
+    branches: [ "master" ]  # Trigger on push to main branch
+  workflow_dispatch:      # Allow manual trigger
+
+env:
+  AWS_REGION: us-east-1  # Change this if your ECR repository is in a different region
+  ECR_REGISTRY: public.ecr.aws/aura  # Your ECR public registry
+  ECR_REPOSITORY: stf                # Replace with your repository name
+  IMAGE_TAG: ${{ github.sha }}       # Using git commit SHA as image tag
+  RUN_NUMBER: ${{ github.run_id }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-push:
+    name: Build and Push to ECR Public
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::805787217936:role/jenkins-infra-031d444
+          role-session-name: aura-stf-pro
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: public
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push Docker Image Multi-arch
+        id: build_multi_platform
+        uses: docker/build-push-action@v5
+        with:
+          provenance: false
+          push: true
+          load: false
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}/sha-${{ env.IMAGE_TAG }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}/run-${{ env.RUN_NUMBER }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}/latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
