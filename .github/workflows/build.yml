@@ -2,7 +2,7 @@ name: Build and Push to ECR Public
 
 on:
   push:
-    branches: [ "master" ]  # Trigger on push to main branch
+    branches: [ "develop" ]  # Trigger on push to main branch
   workflow_dispatch:      # Allow manual trigger
 
 env:
@@ -49,6 +49,6 @@ jobs:
           provenance: false
           push: true
           load: false
-          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}/sha-${{ env.IMAGE_TAG }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}/run-${{ env.RUN_NUMBER }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}/latest
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:sha-${{ env.IMAGE_TAG }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:run-${{ env.RUN_NUMBER }},${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
