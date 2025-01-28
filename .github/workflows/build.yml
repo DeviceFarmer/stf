@@ -10,7 +10,7 @@ env:
   ECR_REGISTRY: public.ecr.aws/aura  # Your ECR public registry
   ECR_REPOSITORY: stf                # Replace with your repository name
   IMAGE_TAG: ${{ github.sha }}       # Using git commit SHA as image tag
-  RUN_NUMBER: ${{ github.run_id }}
+  RUN_NUMBER: ${{ github.run_number }}
 
 permissions:
   contents: read
