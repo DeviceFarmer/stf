@@ -244,6 +244,15 @@ def device_in_group_check(api_client, successful_response_check):
 
 
 @pytest.fixture()
+def devices_in_group_check(api_client, device_in_group_check):
+    def devices_in_group_check_func(serials, group_id, group_name=None):
+        for serial in serials:
+            device_in_group_check(serial, group_id, group_name)
+
+    return devices_in_group_check_func
+
+
+@pytest.fixture()
 def common_group_id(api_client):
     response = get_groups.sync_detailed(client=api_client)
     equal(response.status_code, 200)
@@ -260,6 +269,15 @@ def first_device_serial(successful_response_check, api_client):
     is_not_none(response.parsed.devices)
     greater(len(response.parsed.devices), 0)
     return response.parsed.devices[0].serial
+
+
+@pytest.fixture()
+def devices_serial(successful_response_check, api_client):
+    response = get_devices.sync_detailed(client=api_client)
+    successful_response_check(response, description='Devices Information')
+    is_not_none(response.parsed.devices)
+    greater(len(response.parsed.devices), 0)
+    return list(map(lambda x: x.serial, response.parsed.devices))
 
 
 @pytest.fixture()

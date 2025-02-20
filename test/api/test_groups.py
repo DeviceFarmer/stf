@@ -30,7 +30,6 @@ def test_get_groups_devices_empty_fields(
     common_group_id,
     successful_response_check
 ):
-
     response = get_group_devices.sync_detailed(client=api_client, id=common_group_id, fields='')
     successful_response_check(response, description='Devices Information')
     is_not_none(response.parsed.devices)
@@ -46,7 +45,6 @@ def test_get_groups_devices_with_fields(
     successful_response_check,
     fake_device_certain_field_check
 ):
-
     response = get_group_devices.sync_detailed(
         client=api_client,
         id=common_group_id,
@@ -66,7 +64,6 @@ def test_get_groups_devices_with_wrong_fields(
     successful_response_check,
     fake_device_certain_field_check
 ):
-
     response = get_group_devices.sync_detailed(
         client=api_client,
         id=common_group_id,
@@ -164,3 +161,41 @@ def test_return_device_to_origin_group(
     successful_response_check(response, description='Deleted (groups)')
     # check device return to common group
     device_in_group_check(serial=first_device_serial, group_id=common_group_id, group_name='Common')
+
+
+# @pytest.mark.focus
+def test_return_devices_after_delete_bookable_group(
+    api_client,
+    api_client_custom_token,
+    service_user_token,
+    random_str,
+    random_user,
+    successful_response_check,
+    failure_response_check,
+    common_group_id,
+    devices_serial,
+    devices_in_group_check
+):
+    # create bookable group by admin
+    bookable_group_name = f'Group_bookable-{random_str()}'
+    response = create_group.sync_detailed(
+        client=api_client,
+        body=GroupPayload(
+            name=bookable_group_name,
+            class_=GroupPayloadClass.BOOKABLE
+        )
+    )
+    successful_response_check(response, status_code=201, description='Created')
+    # add device to admin bookable group
+    bookable_group_id = response.parsed.group.to_dict()['id']
+    response = add_origin_group_devices.sync_detailed(
+        id=bookable_group_id,
+        client=api_client,
+        body=DevicesPayload(serials=','.join(devices_serial))
+    )
+    successful_response_check(response, description='Updated (devices)')
+    # delete bookable group
+    response = delete_group.sync_detailed(id=bookable_group_id, client=api_client)
+    successful_response_check(response, description='Deleted (groups)')
+    # check device return to common group
+    devices_in_group_check(serials=devices_serial, group_id=common_group_id, group_name='Common')
