@@ -19,10 +19,12 @@ ARG TARGETARCH
 
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
     export DEBIAN_FRONTEND=noninteractive && \
+    # 「stf-build」ユーザ追加
     useradd --system \
       --create-home \
       --shell /usr/sbin/nologin \
       stf-build && \
+    # 「stf」ユーザ追加
     useradd --system \
       --create-home \
       --shell /usr/sbin/nologin \
@@ -32,13 +34,18 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     apt-get update && \
     echo '--- Upgrading repositories' && \
     apt-get -y dist-upgrade && \
+    # Node.jsがのインストールに必要なツールのインストール
     apt-get -y install wget python3 build-essential && \
     cd /tmp && \
+    # Node.js v22.11.0 のインストール
     wget --progress=dot:mega \
       https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-x64.tar.xz && \
+    # /usr/local に展開してグローバルで利用可能にする
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
+    # stf-buildユーザでnode-gyp（ネイティブアドオンビルドツール）のインストール
     su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
+    # ビルドに必要なパッケージのインストール
     apt-get -y install --no-install-recommends libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm cmake && \
     apt-get clean && \
     rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
@@ -54,6 +61,10 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
     echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
+#    echo '--- Running bower install' && \
+#    echo '/tmp/build/node_modules/.bin/bower install' | su stf -s /bin/bash && \
+#    echo '--- Running gulp build' && \
+#    echo '/tmp/build/node_modules/.bin/gulp build' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
@@ -71,7 +82,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     rm -rf .npm .cache .config .local && \
     cd /app; \
   fi
-  
+
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
     export DEBIAN_FRONTEND=noninteractive && \
     echo '--- Updating repositories' && \
@@ -102,6 +113,10 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     export VCPKG_FORCE_SYSTEM_BINARIES="arm" && \
     echo 'npm install --save-dev pnpm' | su stf -s /bin/bash && \
     echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
+#    echo '--- Running bower install' && \
+#    echo '/tmp/build/node_modules/.bin/bower install' | su stf -s /bin/bash && \
+#    echo '--- Running gulp build' && \
+#    echo '/tmp/build/node_modules/.bin/gulp build' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \

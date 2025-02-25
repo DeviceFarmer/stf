@@ -20,8 +20,6 @@ services:
 
   stf:
     container_name: stf
-#    image: devicefarmer/stf
-    # FIXME:ビルドしたものが適用されていない
     build:
       context: .
       dockerfile: Dockerfile
@@ -35,7 +33,6 @@ services:
       - STF_ADMIN_EMAIL=<YOUR_EMAIL>
       - STF_ADMIN_NAME=<YOUR_NAME>
     restart: unless-stopped
-    #    command: stf local --adb-host adb --public-ip YOUR_IP --provider-min-port 7400 --provider-max-port 7500
     # adb-hostでhost.docker.internalを指定し、adbコンテナを使わずにローカルインストールされたadbを使う
     # YOUR_IPを設定し、localhostではなく、指定したIPでアクセスするとSTF上にも画面が映る
     command: stf local --adb-host host.docker.internal --public-ip YOUR_IP --provider-min-port 7400 --provider-max-port 7500
