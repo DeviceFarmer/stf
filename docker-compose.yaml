@@ -9,17 +9,22 @@ services:
         - "rethinkdb-data:/data"
     command: "rethinkdb --bind all --cache-size 2048"
 
-  adb:
-    container_name: adb
-    image: devicefarmer/adb:latest
-    restart: unless-stopped
-    volumes: 
-      - "/dev/bus/usb:/dev/bus/usb"
-    privileged: true
+  # ローカルインストールされたadbを使うためコメントアウト
+  #  adb:
+  #    container_name: adb
+  #    image: devicefarmer/adb:latest
+  #    restart: unless-stopped
+  #    volumes:
+  #      - "/dev/bus/usb:/dev/bus/usb"
+  #    privileged: true
 
   stf:
     container_name: stf
-    image: devicefarmer/stf
+#    image: devicefarmer/stf
+    # FIXME:ビルドしたものが適用されていない
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "7100:7100"
       - "7110:7110"
@@ -30,7 +35,10 @@ services:
       - STF_ADMIN_EMAIL=<YOUR_EMAIL>
       - STF_ADMIN_NAME=<YOUR_NAME>
     restart: unless-stopped
-    command: stf local --adb-host adb --public-ip YOUR_IP --provider-min-port 7400 --provider-max-port 7500
+    #    command: stf local --adb-host adb --public-ip YOUR_IP --provider-min-port 7400 --provider-max-port 7500
+    # adb-hostでhost.docker.internalを指定し、adbコンテナを使わずにローカルインストールされたadbを使う
+    # YOUR_IPを設定し、localhostではなく、指定したIPでアクセスするとSTF上にも画面が映る
+    command: stf local --adb-host host.docker.internal --public-ip YOUR_IP --provider-min-port 7400 --provider-max-port 7500
 
 volumes:
   rethinkdb-data: {}
