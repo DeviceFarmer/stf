@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.7.5 (2025-02-28)
+
+* Update changelog, fix version number consistency by @koral-- in https://github.com/DeviceFarmer/stf/pull/842
+
+## 3.7.4 (2025-02-20)
+
+* improve saml authentication by @denis99999 in https://github.com/DeviceFarmer/stf/pull/836
+
+## 3.7.3 (2025-02-11)
+
+* fix bug by completing the PR https://github.com/DeviceFarmer/stf/pull/650 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/824
+* Add musl installation to Dockerfile by @koral-- in https://github.com/DeviceFarmer/stf/pull/826
+* improve device state consistency by @denis99999 in https://github.com/DeviceFarmer/stf/pull/831
+* fix: remove progressed from call as it prohibits the system from working by @slankes in https://github.com/DeviceFarmer/stf/pull/827
+* Log reasons for phone reservation cancellations by @jupe in https://github.com/DeviceFarmer/stf/pull/833
+
+## 3.7.2 (2025-01-13)
+
+* Upgrading STF for security reasons by @denis99999 in https://github.com/DeviceFarmer/stf/pull/813
+* fix all vulnerabilities in the production code by @denis99999 in https://github.com/DeviceFarmer/stf/pull/817
+* migrates to webpack 4 to enforce security by @denis99999 in https://github.com/DeviceFarmer/stf/pull/818
+* upgrades to webpack 5 to enforce security by @denis99999 in https://github.com/DeviceFarmer/stf/pull/819
+* Add support for arm64 to Dockerfile by @koral-- in https://github.com/DeviceFarmer/stf/pull/821
+
 ## 3.7.1 (2024-09-20)
 
 * option to cleanup tmp folder during cleanup phase by @jupe in https://github.com/DeviceFarmer/stf/pull/772
