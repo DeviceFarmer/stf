@@ -1,6 +1,6 @@
 {
   "name": "@devicefarmer/stf",
-  "version": "3.7.4",
+  "version": "3.7.5",
   "description": "Smartphone Test Farm",
   "keywords": [
     "adb",
