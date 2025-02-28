@@ -53,6 +53,8 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     echo '--- Building app' && \
     cd /tmp/build && \
     export PATH=$PWD/node_modules/.bin:$PATH && \
+    # prepare(bower installとgulp build）を行うためにnpm installを実行
+    echo 'npm install' | su stf -s /bin/bash && \
     echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
@@ -100,6 +102,8 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     export PATH=$PWD/node_modules/.bin:$PATH && \
     sed -i'' -e '/phantomjs/d' package.json && \
     export VCPKG_FORCE_SYSTEM_BINARIES="arm" && \
+    # prepare(bower installとgulp build）を行うためにnpm installを実行
+    echo 'npm install' | su stf -s /bin/bash && \
     echo 'npm install --save-dev pnpm' | su stf -s /bin/bash && \
     echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
