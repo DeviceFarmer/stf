@@ -28,14 +28,13 @@ services:
       - "7110:7110"
       - "7400-7500:7400-7500"
     environment:
-      - TZ='America/Los_Angeles'
+      - TZ='Asia/Tokyo'
       - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
       - STF_ADMIN_EMAIL=<YOUR_EMAIL>
       - STF_ADMIN_NAME=<YOUR_NAME>
     restart: unless-stopped
     # adb-hostでhost.docker.internalを指定し、adbコンテナを使わずにローカルインストールされたadbを使う
-    # YOUR_IPを設定し、localhostではなく、指定したIPでアクセスするとSTF上にも画面が映る
-    command: stf local --adb-host host.docker.internal --public-ip YOUR_IP --provider-min-port 7400 --provider-max-port 7500
+    command: stf local --adb-host host.docker.internal --provider-min-port 7400 --provider-max-port 7500
 
 volumes:
   rethinkdb-data: {}
