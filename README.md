@@ -202,6 +202,20 @@ You're now ready to start up STF itself:
 stf local
 ```
 
+Later, if you want to change the values of these built-in objects, for example to change the identity of the administrator user, you must follow the below instructions or you are likely to encounter data inconsistency issues:
+1. stop the STF server (without stop the RethinkDB database)
+2. It is recommended to make a backup of the database (in case of inconsistency problem during migration)
+3. set environment variables to new desired values for built-in objects
+4. if you change the administrator identity, make sure the user does not exist in the database yet, if it does you need to delete it first via the UI or RestFul API
+5. run the `stf migrate` command
+   * If you get an STF error like `ERR/db:api..` (e.g. you tried to change the name of the current administrator or the new administrator already exists in the database), it means that no changes have been made to the database that remain consistent
+   * otherwise you get a STF message telling you the built-in objects have been updated successfully
+6. Finally if all went well you are now ready to start STF itself:
+
+```bash
+stf local
+```
+
 After the [webpack](http://webpack.github.io/) build process has finished (which can take a small while) you should have your private STF running on [http://localhost:7100](http://localhost:7100). If you had devices connected before running the command, those devices should now be available for use. If not, you should see what went wrong from your console. Feel free to plug in or unplug any devices at any time.
 
 Note that if you see your device ready to use but without a name or a proper image, we're probably missing the data for that model in [our device database](https://github.com/devicefarmer/stf-device-db). Everything should work fine either way.
