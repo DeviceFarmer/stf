@@ -22,7 +22,7 @@ Thank you to all the people who have already contributed to STF!
 
 * OS support
   - Android
-    * Supports versions 2.3.3 (SDK level 10) to 12 (SDK level 32)
+    * Supports versions 2.3.3 (SDK level 10) to 15 (SDK level 35)
     * Supports Wear 5.1 (but not 5.0 due to missing permissions)
     * Supports Fire OS, CyanogenMod, and other heavily Android based distributions
     * `root` is **not** required for any current functionality
