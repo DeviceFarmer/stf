@@ -21,7 +21,7 @@ blocks:
         - name: npm test
           commands:
             - checkout
-            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3 pkg-config curl zip unzip wget build-essential cmake ninja-build git
+            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3 pkg-config curl zip unzip wget build-essential cmake ninja-build git --update
             - sem-version node 22
             - export PATH=$PWD/node_modules/.bin:$PATH 
             - sed -i'' -e '/phantomjs/d' package.json

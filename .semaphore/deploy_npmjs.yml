@@ -6,7 +6,7 @@ blocks:
       jobs:
         - name: Deploy
           commands:
-            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3
+            - install-package libzmq3-dev libprotobuf-dev graphicsmagick yasm gulp python3 --update
             - sem-version node 20
             - checkout
             - npm install
