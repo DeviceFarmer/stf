@@ -1,0 +1,70 @@
+#
+# Copyright © 2020-2025 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+#
+
+FROM node:jod-alpine
+
+LABEL Maintainer="Denis Barbaron <denis.barbaron@orange.com>"
+LABEL Name="STF"
+LABEL Url="https://github.com/devicefarmer/stf/"
+LABEL Description="STF docker image for arm64 architecture"
+
+# Sneak the stf executable into $PATH.
+ENV PATH=/app/bin:$PATH
+
+# Work in app dir by default.
+WORKDIR /app
+
+# Copy app source.
+COPY . /tmp/build/
+
+# Install app requirements
+RUN echo '--- Check hardware compatibility' && \ 
+    echo '--- Updating repositories' && \
+    apk update && \
+    echo '--- Upgrading repositories' && \
+    apk upgrade && \
+    echo '--- Adding packages' && \
+    apk add --no-cache zeromq-dev musl-dev protobuf-dev graphicsmagick yasm ninja g++ git wget python3 cmake make coreutils shadow && \
+    useradd --system \
+      --create-home \
+      --shell /sbin/nologin \
+      stf && \
+    echo '--- Building app' && \
+    mkdir -p /app && \
+    chown -R stf:stf /tmp/build && \
+    set -x && \
+    cd /tmp/build && \
+    export PATH=$PWD/node_modules/.bin:$PATH && \
+    sed -i'' -e '/phantomjs/d' package.json && \
+    export VCPKG_FORCE_SYSTEM_BINARIES="arm" && \
+    echo 'npm install --save-dev pnpm' | su stf -s /bin/sh && \
+    echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/sh && \
+    echo '--- Assembling app' && \
+    echo 'npm pack' | su stf -s /bin/sh && \
+    tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
+    echo '/tmp/build/node_modules/.bin/bower cache clean' | su stf -s /bin/sh && \
+    echo 'npm prune --omit=dev' | su stf -s /bin/sh && \
+    wget --progress=dot:mega \
+      https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
+    mkdir -p /app/bundletool && \
+    mv bundletool-all-1.2.0.jar /app/bundletool/bundletool.jar && \
+    mv node_modules /app && \
+    chown -R root:root /app && \
+    echo '--- Cleaning up' && \
+    echo 'npm cache clean --force' | su stf -s /bin/sh && \
+    rm -rf ~/.node-gyp && \
+    apk del ninja g++ git wget python3 cmake make shadow && \
+    cd /home/stf && \
+    rm -rf vcpkg .npm .cache .cmake-ts .config .local && \
+    rm -rf /var/cache/apk/* && \
+    cd /app && \
+    rm -rf doc .github .tx .semaphore *.md *.yaml LICENSE Dockerfile* \
+      .eslintrc .nvmrc .tool-versions res/.eslintrc && \
+    rm -rf /tmp/*
+
+# Switch to the app user.
+USER stf
+
+# Show help by default.
+CMD ["stf", "--help"]
