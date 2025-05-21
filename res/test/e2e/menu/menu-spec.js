@@ -1,6 +1,6 @@
 describe('Menu', function() {
   it('should display the STF version', function() {
-    // Navigate to the device list page (default page after login)
+    // Navigate to the device list page
     browser.get('/#!/devices')
 
     // Find the version display element
