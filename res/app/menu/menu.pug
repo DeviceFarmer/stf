@@ -41,7 +41,10 @@
         type='button'
         ng-click='logout()')
           i.fa.fa-sign-out
-          span(translate) Logout 
+          span(translate) Logout
+
+      li
+        span.version-text v{{ $root.state.config.stfVersion }}
 
       li(ng-show='!$root.basicMode')
         a(ng-href='/#!/help', accesskey='6')
