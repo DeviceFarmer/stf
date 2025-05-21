@@ -70,6 +70,17 @@
   min-height: 44px !important;
 }
 
+.stf-menu .version-text {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 44px;
+  color: #777777;
+  font-weight: 400;
+  padding: 0 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
 .stf-menu .information-level {
   background-color: #5bc0df;
 }
