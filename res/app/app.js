@@ -35,4 +35,8 @@ require.ensure([], function(require) {
     .config(function(hotkeysProvider) {
       hotkeysProvider.templateTitle = 'Keyboard Shortcuts:'
     })
+    
+    .run(['$rootScope', 'AppState', function($rootScope, AppState) {
+      $rootScope.state = AppState
+    }])
 })
