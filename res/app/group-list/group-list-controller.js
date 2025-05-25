@@ -64,6 +64,15 @@ module.exports = function GroupListCtrl(
         incrStateStats(oldGroup, -1)
       }
     }
+    // Send group metrics to backend if available (for metrics collection)
+    if (typeof $window !== 'undefined' && $window.stfMetrics) {
+      $window.stfMetrics.updateGroupMetrics({
+        total: $scope.groups.length,
+        active: $scope.activeGroups,
+        ready: $scope.readyGroups,
+        pending: $scope.pendingGroups
+      })
+    }
   }
 
   function updateGroupExtraProperties(group) {
