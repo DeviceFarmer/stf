@@ -7,6 +7,7 @@ const _ = require('lodash')
 module.exports = function GroupListCtrl(
   $scope
 , $filter
+, $window
 , GroupsService
 , UserService
 , UsersService
