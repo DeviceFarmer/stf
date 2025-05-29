@@ -5,7 +5,7 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.device_list_response import DeviceListResponse
+from ...models.adb_range_response import AdbRangeResponse
 from ...types import Response
 
 
@@ -20,9 +20,9 @@ def _get_kwargs() -> Dict[str, Any]:
 
 def _parse_response(
     *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Optional[DeviceListResponse]:
+) -> Optional[AdbRangeResponse]:
     if response.status_code == 200:
-        response_200 = DeviceListResponse.from_dict(response.json())
+        response_200 = AdbRangeResponse.from_dict(response.json())
 
         return response_200
     if client.raise_on_unexpected_status:
@@ -33,7 +33,7 @@ def _parse_response(
 
 def _build_response(
     *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Response[DeviceListResponse]:
+) -> Response[AdbRangeResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -45,7 +45,7 @@ def _build_response(
 def sync_detailed(
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[DeviceListResponse]:
+) -> Response[AdbRangeResponse]:
     """AdbRange
 
      The range whic used to forward adb ports
@@ -55,7 +55,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[DeviceListResponse]
+        Response[AdbRangeResponse]
     """
 
     kwargs = _get_kwargs()
@@ -70,7 +70,7 @@ def sync_detailed(
 def sync(
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[DeviceListResponse]:
+) -> Optional[AdbRangeResponse]:
     """AdbRange
 
      The range whic used to forward adb ports
@@ -80,7 +80,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        DeviceListResponse
+        AdbRangeResponse
     """
 
     return sync_detailed(
@@ -91,7 +91,7 @@ def sync(
 async def asyncio_detailed(
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[DeviceListResponse]:
+) -> Response[AdbRangeResponse]:
     """AdbRange
 
      The range whic used to forward adb ports
@@ -101,7 +101,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[DeviceListResponse]
+        Response[AdbRangeResponse]
     """
 
     kwargs = _get_kwargs()
@@ -114,7 +114,7 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[DeviceListResponse]:
+) -> Optional[AdbRangeResponse]:
     """AdbRange
 
      The range whic used to forward adb ports
@@ -124,7 +124,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        DeviceListResponse
+        AdbRangeResponse
     """
 
     return (

@@ -5,6 +5,6 @@ clean-schema:
     rm -rf {{justfile_directory()}}/devicehub_client
 
 regen-schema: clean-schema
-    poetry run openapi-python-client generate --overwrite --path $(git rev-parse --show-cdup)lib/units/api/swagger/api_v1.yaml --config openapi-gen-config.yaml
+    poetry run openapi-python-client generate --overwrite --path $(git rev-parse --show-cdup)lib/units/api/swagger/api_v1.yaml --config openapi-gen-config.yaml --meta poetry
     poetry lock
     poetry install

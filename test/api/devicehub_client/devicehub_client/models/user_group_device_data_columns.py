@@ -5,33 +5,39 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="UserResponseUserSettingsDeviceListSortFixedItem")
+T = TypeVar("T", bound="UserGroupDeviceDataColumns")
 
 
 @_attrs_define
-class UserResponseUserSettingsDeviceListSortFixedItem:
+class UserGroupDeviceDataColumns:
     """
     Attributes:
         name (Union[Unset, str]):
-        order (Union[Unset, str]):
+        selected (Union[Unset, bool]):
+        sort (Union[Unset, str]):
     """
 
     name: Union[Unset, str] = UNSET
-    order: Union[Unset, str] = UNSET
+    selected: Union[Unset, bool] = UNSET
+    sort: Union[Unset, str] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         name = self.name
 
-        order = self.order
+        selected = self.selected
+
+        sort = self.sort
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({})
         if name is not UNSET:
             field_dict["name"] = name
-        if order is not UNSET:
-            field_dict["order"] = order
+        if selected is not UNSET:
+            field_dict["selected"] = selected
+        if sort is not UNSET:
+            field_dict["sort"] = sort
 
         return field_dict
 
@@ -40,15 +46,18 @@ class UserResponseUserSettingsDeviceListSortFixedItem:
         d = src_dict.copy()
         name = d.pop("name", UNSET)
 
-        order = d.pop("order", UNSET)
+        selected = d.pop("selected", UNSET)
 
-        user_response_user_settings_device_list_sort_fixed_item = cls(
+        sort = d.pop("sort", UNSET)
+
+        user_group_device_data_columns = cls(
             name=name,
-            order=order,
+            selected=selected,
+            sort=sort,
         )
 
-        user_response_user_settings_device_list_sort_fixed_item.additional_properties = d
-        return user_response_user_settings_device_list_sort_fixed_item
+        user_group_device_data_columns.additional_properties = d
+        return user_group_device_data_columns
 
     @property
     def additional_keys(self) -> List[str]:

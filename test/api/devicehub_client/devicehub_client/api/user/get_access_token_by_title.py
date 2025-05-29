@@ -5,26 +5,36 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.adb_port_response import AdbPortResponse
+from ...models.get_access_token_by_title_body import GetAccessTokenByTitleBody
+from ...models.user_access_token_response import UserAccessTokenResponse
 from ...types import Response
 
 
 def _get_kwargs(
-    serial: str,
+    *,
+    body: GetAccessTokenByTitleBody,
 ) -> Dict[str, Any]:
+    headers: Dict[str, Any] = {}
+
     _kwargs: Dict[str, Any] = {
-        "method": "put",
-        "url": f"/devices/{serial}/adbPort",
+        "method": "post",
+        "url": "/user/accessTokens/byTitle",
     }
 
+    _body = body.to_dict()
+
+    _kwargs["json"] = _body
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
     return _kwargs
 
 
 def _parse_response(
     *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Optional[AdbPortResponse]:
+) -> Optional[UserAccessTokenResponse]:
     if response.status_code == 200:
-        response_200 = AdbPortResponse.from_dict(response.json())
+        response_200 = UserAccessTokenResponse.from_dict(response.json())
 
         return response_200
     if client.raise_on_unexpected_status:
@@ -35,7 +45,7 @@ def _parse_response(
 
 def _build_response(
     *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Response[AdbPortResponse]:
+) -> Response[UserAccessTokenResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -45,27 +55,27 @@ def _build_response(
 
 
 def sync_detailed(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[AdbPortResponse]:
-    """Renews adb port for device
+    body: GetAccessTokenByTitleBody,
+) -> Response[UserAccessTokenResponse]:
+    """Obtains an access token by its title from an authorized user
 
-     Renews adb port for device
+     Gets one of your access tokens
 
     Args:
-        serial (str):
+        body (GetAccessTokenByTitleBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[AdbPortResponse]
+        Response[UserAccessTokenResponse]
     """
 
     kwargs = _get_kwargs(
-        serial=serial,
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -76,53 +86,53 @@ def sync_detailed(
 
 
 def sync(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[AdbPortResponse]:
-    """Renews adb port for device
+    body: GetAccessTokenByTitleBody,
+) -> Optional[UserAccessTokenResponse]:
+    """Obtains an access token by its title from an authorized user
 
-     Renews adb port for device
+     Gets one of your access tokens
 
     Args:
-        serial (str):
+        body (GetAccessTokenByTitleBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        AdbPortResponse
+        UserAccessTokenResponse
     """
 
     return sync_detailed(
-        serial=serial,
         client=client,
+        body=body,
     ).parsed
 
 
 async def asyncio_detailed(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[AdbPortResponse]:
-    """Renews adb port for device
+    body: GetAccessTokenByTitleBody,
+) -> Response[UserAccessTokenResponse]:
+    """Obtains an access token by its title from an authorized user
 
-     Renews adb port for device
+     Gets one of your access tokens
 
     Args:
-        serial (str):
+        body (GetAccessTokenByTitleBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[AdbPortResponse]
+        Response[UserAccessTokenResponse]
     """
 
     kwargs = _get_kwargs(
-        serial=serial,
+        body=body,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -131,28 +141,28 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[AdbPortResponse]:
-    """Renews adb port for device
+    body: GetAccessTokenByTitleBody,
+) -> Optional[UserAccessTokenResponse]:
+    """Obtains an access token by its title from an authorized user
 
-     Renews adb port for device
+     Gets one of your access tokens
 
     Args:
-        serial (str):
+        body (GetAccessTokenByTitleBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        AdbPortResponse
+        UserAccessTokenResponse
     """
 
     return (
         await asyncio_detailed(
-            serial=serial,
             client=client,
+            body=body,
         )
     ).parsed

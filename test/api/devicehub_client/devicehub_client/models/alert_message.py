@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Type, TypeVar, Union
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
+from ..models.alert_message_level import AlertMessageLevel
 from ..types import UNSET, Unset
 
 T = TypeVar("T", bound="AlertMessage")
@@ -14,12 +15,12 @@ class AlertMessage:
     Attributes:
         activation (Union[Unset, str]): Enable or disablee the alert message
         data (Union[Unset, str]): Alert message text to display
-        level (Union[Unset, str]): Alert message level
+        level (Union[Unset, AlertMessageLevel]): Alert message level
     """
 
     activation: Union[Unset, str] = UNSET
     data: Union[Unset, str] = UNSET
-    level: Union[Unset, str] = UNSET
+    level: Union[Unset, AlertMessageLevel] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -27,7 +28,9 @@ class AlertMessage:
 
         data = self.data
 
-        level = self.level
+        level: Union[Unset, str] = UNSET
+        if not isinstance(self.level, Unset):
+            level = self.level.value
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -48,7 +51,12 @@ class AlertMessage:
 
         data = d.pop("data", UNSET)
 
-        level = d.pop("level", UNSET)
+        _level = d.pop("level", UNSET)
+        level: Union[Unset, AlertMessageLevel]
+        if isinstance(_level, Unset):
+            level = UNSET
+        else:
+            level = AlertMessageLevel(_level)
 
         alert_message = cls(
             activation=activation,

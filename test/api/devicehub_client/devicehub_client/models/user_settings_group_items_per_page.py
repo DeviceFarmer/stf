@@ -5,50 +5,50 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="UserResponseUserGroupsQuotasConsumed")
+T = TypeVar("T", bound="UserSettingsGroupItemsPerPage")
 
 
 @_attrs_define
-class UserResponseUserGroupsQuotasConsumed:
+class UserSettingsGroupItemsPerPage:
     """
     Attributes:
-        number (Union[Unset, float]):
-        duration (Union[Unset, float]):
+        name (Union[Unset, str]):
+        value (Union[Unset, int]):
     """
 
-    number: Union[Unset, float] = UNSET
-    duration: Union[Unset, float] = UNSET
+    name: Union[Unset, str] = UNSET
+    value: Union[Unset, int] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        number = self.number
+        name = self.name
 
-        duration = self.duration
+        value = self.value
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({})
-        if number is not UNSET:
-            field_dict["number"] = number
-        if duration is not UNSET:
-            field_dict["duration"] = duration
+        if name is not UNSET:
+            field_dict["name"] = name
+        if value is not UNSET:
+            field_dict["value"] = value
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         d = src_dict.copy()
-        number = d.pop("number", UNSET)
+        name = d.pop("name", UNSET)
 
-        duration = d.pop("duration", UNSET)
+        value = d.pop("value", UNSET)
 
-        user_response_user_groups_quotas_consumed = cls(
-            number=number,
-            duration=duration,
+        user_settings_group_items_per_page = cls(
+            name=name,
+            value=value,
         )
 
-        user_response_user_groups_quotas_consumed.additional_properties = d
-        return user_response_user_groups_quotas_consumed
+        user_settings_group_items_per_page.additional_properties = d
+        return user_settings_group_items_per_page
 
     @property
     def additional_keys(self) -> List[str]:

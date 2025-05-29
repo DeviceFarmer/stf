@@ -1,54 +1,61 @@
-from typing import Any, Dict, List, Type, TypeVar, Union
+from typing import Any, Dict, List, Type, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-T = TypeVar("T", bound="UserResponseUserSettingsGroupItemsPerPage")
+T = TypeVar("T", bound="AdbPortResponse")
 
 
 @_attrs_define
-class UserResponseUserSettingsGroupItemsPerPage:
+class AdbPortResponse:
     """
     Attributes:
-        name (Union[Unset, str]):
-        value (Union[Unset, int]):
+        success (bool):  Default: True.
+        description (str):
+        port (float):
     """
 
-    name: Union[Unset, str] = UNSET
-    value: Union[Unset, int] = UNSET
+    description: str
+    port: float
+    success: bool = True
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        name = self.name
+        success = self.success
 
-        value = self.value
+        description = self.description
+
+        port = self.port
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({})
-        if name is not UNSET:
-            field_dict["name"] = name
-        if value is not UNSET:
-            field_dict["value"] = value
+        field_dict.update(
+            {
+                "success": success,
+                "description": description,
+                "port": port,
+            }
+        )
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         d = src_dict.copy()
-        name = d.pop("name", UNSET)
+        success = d.pop("success")
 
-        value = d.pop("value", UNSET)
+        description = d.pop("description")
 
-        user_response_user_settings_group_items_per_page = cls(
-            name=name,
-            value=value,
+        port = d.pop("port")
+
+        adb_port_response = cls(
+            success=success,
+            description=description,
+            port=port,
         )
 
-        user_response_user_settings_group_items_per_page.additional_properties = d
-        return user_response_user_settings_group_items_per_page
+        adb_port_response.additional_properties = d
+        return adb_port_response
 
     @property
     def additional_keys(self) -> List[str]:

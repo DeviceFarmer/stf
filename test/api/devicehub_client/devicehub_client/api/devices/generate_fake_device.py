@@ -5,16 +5,24 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.adb_port_response import AdbPortResponse
-from ...types import Response
+from ...models.generate_fake_device_response_200 import GenerateFakeDeviceResponse200
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
-    serial: str,
+    *,
+    number: Union[Unset, float] = 1.0,
 ) -> Dict[str, Any]:
+    params: Dict[str, Any] = {}
+
+    params["number"] = number
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
     _kwargs: Dict[str, Any] = {
-        "method": "put",
-        "url": f"/devices/{serial}/adbPort",
+        "method": "get",
+        "url": "/devices/fake",
+        "params": params,
     }
 
     return _kwargs
@@ -22,9 +30,9 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Optional[AdbPortResponse]:
+) -> Optional[GenerateFakeDeviceResponse200]:
     if response.status_code == 200:
-        response_200 = AdbPortResponse.from_dict(response.json())
+        response_200 = GenerateFakeDeviceResponse200.from_dict(response.json())
 
         return response_200
     if client.raise_on_unexpected_status:
@@ -35,7 +43,7 @@ def _parse_response(
 
 def _build_response(
     *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Response[AdbPortResponse]:
+) -> Response[GenerateFakeDeviceResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -45,27 +53,27 @@ def _build_response(
 
 
 def sync_detailed(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[AdbPortResponse]:
-    """Renews adb port for device
+    number: Union[Unset, float] = 1.0,
+) -> Response[GenerateFakeDeviceResponse200]:
+    """Device List
 
-     Renews adb port for device
+     Method generates fake devices ame as stf generate-fake-device
 
     Args:
-        serial (str):
+        number (Union[Unset, float]):  Default: 1.0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[AdbPortResponse]
+        Response[GenerateFakeDeviceResponse200]
     """
 
     kwargs = _get_kwargs(
-        serial=serial,
+        number=number,
     )
 
     response = client.get_httpx_client().request(
@@ -76,53 +84,53 @@ def sync_detailed(
 
 
 def sync(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[AdbPortResponse]:
-    """Renews adb port for device
+    number: Union[Unset, float] = 1.0,
+) -> Optional[GenerateFakeDeviceResponse200]:
+    """Device List
 
-     Renews adb port for device
+     Method generates fake devices ame as stf generate-fake-device
 
     Args:
-        serial (str):
+        number (Union[Unset, float]):  Default: 1.0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        AdbPortResponse
+        GenerateFakeDeviceResponse200
     """
 
     return sync_detailed(
-        serial=serial,
         client=client,
+        number=number,
     ).parsed
 
 
 async def asyncio_detailed(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[AdbPortResponse]:
-    """Renews adb port for device
+    number: Union[Unset, float] = 1.0,
+) -> Response[GenerateFakeDeviceResponse200]:
+    """Device List
 
-     Renews adb port for device
+     Method generates fake devices ame as stf generate-fake-device
 
     Args:
-        serial (str):
+        number (Union[Unset, float]):  Default: 1.0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[AdbPortResponse]
+        Response[GenerateFakeDeviceResponse200]
     """
 
     kwargs = _get_kwargs(
-        serial=serial,
+        number=number,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -131,28 +139,28 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    serial: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[AdbPortResponse]:
-    """Renews adb port for device
+    number: Union[Unset, float] = 1.0,
+) -> Optional[GenerateFakeDeviceResponse200]:
+    """Device List
 
-     Renews adb port for device
+     Method generates fake devices ame as stf generate-fake-device
 
     Args:
-        serial (str):
+        number (Union[Unset, float]):  Default: 1.0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        AdbPortResponse
+        GenerateFakeDeviceResponse200
     """
 
     return (
         await asyncio_detailed(
-            serial=serial,
             client=client,
+            number=number,
         )
     ).parsed

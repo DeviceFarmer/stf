@@ -5,26 +5,25 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.adb_port_response import AdbPortResponse
+from ...models.group_response import GroupResponse
 from ...types import Response
 
 
 def _get_kwargs(
-    serial: str,
+    id: str,
+    email: str,
 ) -> Dict[str, Any]:
     _kwargs: Dict[str, Any] = {
         "method": "put",
-        "url": f"/devices/{serial}/adbPort",
+        "url": f"/groups/{id}/moderators/{email}",
     }
 
     return _kwargs
 
 
-def _parse_response(
-    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Optional[AdbPortResponse]:
+def _parse_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Optional[GroupResponse]:
     if response.status_code == 200:
-        response_200 = AdbPortResponse.from_dict(response.json())
+        response_200 = GroupResponse.from_dict(response.json())
 
         return response_200
     if client.raise_on_unexpected_status:
@@ -33,9 +32,7 @@ def _parse_response(
         return None
 
 
-def _build_response(
-    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
-) -> Response[AdbPortResponse]:
+def _build_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Response[GroupResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -45,27 +42,30 @@ def _build_response(
 
 
 def sync_detailed(
-    serial: str,
+    id: str,
+    email: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[AdbPortResponse]:
-    """Renews adb port for device
+) -> Response[GroupResponse]:
+    """Adds a user as a moderator to a group
 
-     Renews adb port for device
+     Adds a user as a moderator to a group owned by you or if you are an administrator
 
     Args:
-        serial (str):
+        id (str):
+        email (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[AdbPortResponse]
+        Response[GroupResponse]
     """
 
     kwargs = _get_kwargs(
-        serial=serial,
+        id=id,
+        email=email,
     )
 
     response = client.get_httpx_client().request(
@@ -76,53 +76,59 @@ def sync_detailed(
 
 
 def sync(
-    serial: str,
+    id: str,
+    email: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[AdbPortResponse]:
-    """Renews adb port for device
+) -> Optional[GroupResponse]:
+    """Adds a user as a moderator to a group
 
-     Renews adb port for device
+     Adds a user as a moderator to a group owned by you or if you are an administrator
 
     Args:
-        serial (str):
+        id (str):
+        email (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        AdbPortResponse
+        GroupResponse
     """
 
     return sync_detailed(
-        serial=serial,
+        id=id,
+        email=email,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    serial: str,
+    id: str,
+    email: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Response[AdbPortResponse]:
-    """Renews adb port for device
+) -> Response[GroupResponse]:
+    """Adds a user as a moderator to a group
 
-     Renews adb port for device
+     Adds a user as a moderator to a group owned by you or if you are an administrator
 
     Args:
-        serial (str):
+        id (str):
+        email (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[AdbPortResponse]
+        Response[GroupResponse]
     """
 
     kwargs = _get_kwargs(
-        serial=serial,
+        id=id,
+        email=email,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -131,28 +137,31 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    serial: str,
+    id: str,
+    email: str,
     *,
     client: Union[AuthenticatedClient, Client],
-) -> Optional[AdbPortResponse]:
-    """Renews adb port for device
+) -> Optional[GroupResponse]:
+    """Adds a user as a moderator to a group
 
-     Renews adb port for device
+     Adds a user as a moderator to a group owned by you or if you are an administrator
 
     Args:
-        serial (str):
+        id (str):
+        email (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        AdbPortResponse
+        GroupResponse
     """
 
     return (
         await asyncio_detailed(
-            serial=serial,
+            id=id,
+            email=email,
             client=client,
         )
     ).parsed

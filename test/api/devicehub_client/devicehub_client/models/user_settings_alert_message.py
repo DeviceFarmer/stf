@@ -3,24 +3,24 @@ from typing import Any, Dict, List, Type, TypeVar, Union
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..models.user_response_user_settings_alert_message_level import UserResponseUserSettingsAlertMessageLevel
+from ..models.user_settings_alert_message_level import UserSettingsAlertMessageLevel
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="UserResponseUserSettingsAlertMessage")
+T = TypeVar("T", bound="UserSettingsAlertMessage")
 
 
 @_attrs_define
-class UserResponseUserSettingsAlertMessage:
+class UserSettingsAlertMessage:
     """
     Attributes:
         activation (Union[Unset, str]):
         data (Union[Unset, str]):
-        level (Union[Unset, UserResponseUserSettingsAlertMessageLevel]):
+        level (Union[Unset, UserSettingsAlertMessageLevel]):
     """
 
     activation: Union[Unset, str] = UNSET
     data: Union[Unset, str] = UNSET
-    level: Union[Unset, UserResponseUserSettingsAlertMessageLevel] = UNSET
+    level: Union[Unset, UserSettingsAlertMessageLevel] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -52,20 +52,20 @@ class UserResponseUserSettingsAlertMessage:
         data = d.pop("data", UNSET)
 
         _level = d.pop("level", UNSET)
-        level: Union[Unset, UserResponseUserSettingsAlertMessageLevel]
+        level: Union[Unset, UserSettingsAlertMessageLevel]
         if isinstance(_level, Unset):
             level = UNSET
         else:
-            level = UserResponseUserSettingsAlertMessageLevel(_level)
+            level = UserSettingsAlertMessageLevel(_level)
 
-        user_response_user_settings_alert_message = cls(
+        user_settings_alert_message = cls(
             activation=activation,
             data=data,
             level=level,
         )
 
-        user_response_user_settings_alert_message.additional_properties = d
-        return user_response_user_settings_alert_message
+        user_settings_alert_message.additional_properties = d
+        return user_settings_alert_message
 
     @property
     def additional_keys(self) -> List[str]:

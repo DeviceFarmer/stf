@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class UserResponseUserSettingsAlertMessageLevel(str, Enum):
+class AlertMessageLevel(str, Enum):
     CRITICAL = "Critical"
     INFORMATION = "Information"
     WARNING = "Warning"

@@ -1,27 +1,21 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Type, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-if TYPE_CHECKING:
-    from ..models.user import User
-
-
-T = TypeVar("T", bound="UserListResponse")
+T = TypeVar("T", bound="GenerateFakeDeviceResponse200")
 
 
 @_attrs_define
-class UserListResponse:
+class GenerateFakeDeviceResponse200:
     """
     Attributes:
         success (bool):
         description (str):
-        users (List['User']):
     """
 
     success: bool
     description: str
-    users: List["User"]
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -29,18 +23,12 @@ class UserListResponse:
 
         description = self.description
 
-        users = []
-        for users_item_data in self.users:
-            users_item = users_item_data.to_dict()
-            users.append(users_item)
-
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
                 "success": success,
                 "description": description,
-                "users": users,
             }
         )
 
@@ -48,28 +36,18 @@ class UserListResponse:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user import User
-
         d = src_dict.copy()
         success = d.pop("success")
 
         description = d.pop("description")
 
-        users = []
-        _users = d.pop("users")
-        for users_item_data in _users:
-            users_item = User.from_dict(users_item_data)
-
-            users.append(users_item)
-
-        user_list_response = cls(
+        generate_fake_device_response_200 = cls(
             success=success,
             description=description,
-            users=users,
         )
 
-        user_list_response.additional_properties = d
-        return user_list_response
+        generate_fake_device_response_200.additional_properties = d
+        return generate_fake_device_response_200
 
     @property
     def additional_keys(self) -> List[str]:

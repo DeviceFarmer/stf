@@ -5,11 +5,11 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="UserResponseUserSettingsDeviceListColumnsItem")
+T = TypeVar("T", bound="UserSettingsDeviceListColumnsItem")
 
 
 @_attrs_define
-class UserResponseUserSettingsDeviceListColumnsItem:
+class UserSettingsDeviceListColumnsItem:
     """
     Attributes:
         name (Union[Unset, str]):
@@ -42,13 +42,13 @@ class UserResponseUserSettingsDeviceListColumnsItem:
 
         selected = d.pop("selected", UNSET)
 
-        user_response_user_settings_device_list_columns_item = cls(
+        user_settings_device_list_columns_item = cls(
             name=name,
             selected=selected,
         )
 
-        user_response_user_settings_device_list_columns_item.additional_properties = d
-        return user_response_user_settings_device_list_columns_item
+        user_settings_device_list_columns_item.additional_properties = d
+        return user_settings_device_list_columns_item
 
     @property
     def additional_keys(self) -> List[str]:

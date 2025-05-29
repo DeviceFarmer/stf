@@ -1,54 +1,61 @@
-from typing import Any, Dict, List, Type, TypeVar, Union
+from typing import Any, Dict, List, Type, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..types import UNSET, Unset
-
-T = TypeVar("T", bound="UserResponseUserGroupsQuotasAllocated")
+T = TypeVar("T", bound="AdbRangeResponse")
 
 
 @_attrs_define
-class UserResponseUserGroupsQuotasAllocated:
+class AdbRangeResponse:
     """
     Attributes:
-        number (Union[Unset, float]):
-        duration (Union[Unset, float]):
+        success (bool):  Default: True.
+        description (str):
+        adb_range (str):
     """
 
-    number: Union[Unset, float] = UNSET
-    duration: Union[Unset, float] = UNSET
+    description: str
+    adb_range: str
+    success: bool = True
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        number = self.number
+        success = self.success
 
-        duration = self.duration
+        description = self.description
+
+        adb_range = self.adb_range
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({})
-        if number is not UNSET:
-            field_dict["number"] = number
-        if duration is not UNSET:
-            field_dict["duration"] = duration
+        field_dict.update(
+            {
+                "success": success,
+                "description": description,
+                "adbRange": adb_range,
+            }
+        )
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         d = src_dict.copy()
-        number = d.pop("number", UNSET)
+        success = d.pop("success")
 
-        duration = d.pop("duration", UNSET)
+        description = d.pop("description")
 
-        user_response_user_groups_quotas_allocated = cls(
-            number=number,
-            duration=duration,
+        adb_range = d.pop("adbRange")
+
+        adb_range_response = cls(
+            success=success,
+            description=description,
+            adb_range=adb_range,
         )
 
-        user_response_user_groups_quotas_allocated.additional_properties = d
-        return user_response_user_groups_quotas_allocated
+        adb_range_response.additional_properties = d
+        return adb_range_response
 
     @property
     def additional_keys(self) -> List[str]:

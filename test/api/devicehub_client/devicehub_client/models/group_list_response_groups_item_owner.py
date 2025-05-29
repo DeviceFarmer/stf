@@ -5,59 +5,50 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="DeviceService")
+T = TypeVar("T", bound="GroupListResponseGroupsItemOwner")
 
 
 @_attrs_define
-class DeviceService:
+class GroupListResponseGroupsItemOwner:
     """
     Attributes:
-        has_hms (Union[Unset, bool]):
-        has_gms (Union[Unset, bool]):
-        has_apns (Union[Unset, bool]):
+        email (Union[Unset, str]):
+        name (Union[Unset, str]):
     """
 
-    has_hms: Union[Unset, bool] = UNSET
-    has_gms: Union[Unset, bool] = UNSET
-    has_apns: Union[Unset, bool] = UNSET
+    email: Union[Unset, str] = UNSET
+    name: Union[Unset, str] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        has_hms = self.has_hms
+        email = self.email
 
-        has_gms = self.has_gms
-
-        has_apns = self.has_apns
+        name = self.name
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({})
-        if has_hms is not UNSET:
-            field_dict["hasHMS"] = has_hms
-        if has_gms is not UNSET:
-            field_dict["hasGMS"] = has_gms
-        if has_apns is not UNSET:
-            field_dict["hasAPNS"] = has_apns
+        if email is not UNSET:
+            field_dict["email"] = email
+        if name is not UNSET:
+            field_dict["name"] = name
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         d = src_dict.copy()
-        has_hms = d.pop("hasHMS", UNSET)
+        email = d.pop("email", UNSET)
 
-        has_gms = d.pop("hasGMS", UNSET)
+        name = d.pop("name", UNSET)
 
-        has_apns = d.pop("hasAPNS", UNSET)
-
-        device_service = cls(
-            has_hms=has_hms,
-            has_gms=has_gms,
-            has_apns=has_apns,
+        group_list_response_groups_item_owner = cls(
+            email=email,
+            name=name,
         )
 
-        device_service.additional_properties = d
-        return device_service
+        group_list_response_groups_item_owner.additional_properties = d
+        return group_list_response_groups_item_owner
 
     @property
     def additional_keys(self) -> List[str]:

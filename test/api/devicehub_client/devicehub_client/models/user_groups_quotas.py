@@ -6,27 +6,27 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
-    from ..models.user_response_user_groups_quotas_allocated import UserResponseUserGroupsQuotasAllocated
-    from ..models.user_response_user_groups_quotas_consumed import UserResponseUserGroupsQuotasConsumed
+    from ..models.user_groups_quotas_allocated import UserGroupsQuotasAllocated
+    from ..models.user_groups_quotas_consumed import UserGroupsQuotasConsumed
 
 
-T = TypeVar("T", bound="UserResponseUserGroupsQuotas")
+T = TypeVar("T", bound="UserGroupsQuotas")
 
 
 @_attrs_define
-class UserResponseUserGroupsQuotas:
+class UserGroupsQuotas:
     """
     Attributes:
-        allocated (Union[Unset, UserResponseUserGroupsQuotasAllocated]):
-        consumed (Union[Unset, UserResponseUserGroupsQuotasConsumed]):
+        allocated (Union[Unset, UserGroupsQuotasAllocated]):
+        consumed (Union[Unset, UserGroupsQuotasConsumed]):
         default_groups_number (Union[Unset, float]):
         default_groups_duration (Union[Unset, float]):
         default_groups_repetitions (Union[Unset, float]):
         repetitions (Union[Unset, int]):
     """
 
-    allocated: Union[Unset, "UserResponseUserGroupsQuotasAllocated"] = UNSET
-    consumed: Union[Unset, "UserResponseUserGroupsQuotasConsumed"] = UNSET
+    allocated: Union[Unset, "UserGroupsQuotasAllocated"] = UNSET
+    consumed: Union[Unset, "UserGroupsQuotasConsumed"] = UNSET
     default_groups_number: Union[Unset, float] = UNSET
     default_groups_duration: Union[Unset, float] = UNSET
     default_groups_repetitions: Union[Unset, float] = UNSET
@@ -70,23 +70,23 @@ class UserResponseUserGroupsQuotas:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user_response_user_groups_quotas_allocated import UserResponseUserGroupsQuotasAllocated
-        from ..models.user_response_user_groups_quotas_consumed import UserResponseUserGroupsQuotasConsumed
+        from ..models.user_groups_quotas_allocated import UserGroupsQuotasAllocated
+        from ..models.user_groups_quotas_consumed import UserGroupsQuotasConsumed
 
         d = src_dict.copy()
         _allocated = d.pop("allocated", UNSET)
-        allocated: Union[Unset, UserResponseUserGroupsQuotasAllocated]
+        allocated: Union[Unset, UserGroupsQuotasAllocated]
         if isinstance(_allocated, Unset):
             allocated = UNSET
         else:
-            allocated = UserResponseUserGroupsQuotasAllocated.from_dict(_allocated)
+            allocated = UserGroupsQuotasAllocated.from_dict(_allocated)
 
         _consumed = d.pop("consumed", UNSET)
-        consumed: Union[Unset, UserResponseUserGroupsQuotasConsumed]
+        consumed: Union[Unset, UserGroupsQuotasConsumed]
         if isinstance(_consumed, Unset):
             consumed = UNSET
         else:
-            consumed = UserResponseUserGroupsQuotasConsumed.from_dict(_consumed)
+            consumed = UserGroupsQuotasConsumed.from_dict(_consumed)
 
         default_groups_number = d.pop("defaultGroupsNumber", UNSET)
 
@@ -96,7 +96,7 @@ class UserResponseUserGroupsQuotas:
 
         repetitions = d.pop("repetitions", UNSET)
 
-        user_response_user_groups_quotas = cls(
+        user_groups_quotas = cls(
             allocated=allocated,
             consumed=consumed,
             default_groups_number=default_groups_number,
@@ -105,8 +105,8 @@ class UserResponseUserGroupsQuotas:
             repetitions=repetitions,
         )
 
-        user_response_user_groups_quotas.additional_properties = d
-        return user_response_user_groups_quotas
+        user_groups_quotas.additional_properties = d
+        return user_groups_quotas
 
     @property
     def additional_keys(self) -> List[str]:

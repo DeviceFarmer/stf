@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 if TYPE_CHECKING:
     from ..models.device_battery import DeviceBattery
     from ..models.device_browser import DeviceBrowser
+    from ..models.device_capabilities import DeviceCapabilities
     from ..models.device_cpu import DeviceCpu
     from ..models.device_display import DeviceDisplay
     from ..models.device_group import DeviceGroup
@@ -29,7 +30,8 @@ T = TypeVar("T", bound="Device")
 class Device:
     """
     Attributes:
-        serial (Union[Unset, str]):
+        serial (str):
+        group (DeviceGroup):
         field_id (Union[Unset, str]):
         present (Union[Unset, bool]):
         presence_changed_at (Union[Unset, datetime.datetime]):
@@ -45,7 +47,6 @@ class Device:
         usage (Union[None, Unset, str]):
         logs_enabled (Union[Unset, bool]):
         created_at (Union[Unset, datetime.datetime]):
-        group (Union[Unset, DeviceGroup]):
         adb_port (Union[Unset, int]):
         network (Union[Unset, DeviceNetwork]):
         display (Union[Unset, DeviceDisplay]):
@@ -84,9 +85,11 @@ class Device:
         device_type (Union[Unset, str]):
         likely_leave_reason (Union[Unset, str]):
         using (Union[Unset, bool]):
+        capabilities (Union[Unset, DeviceCapabilities]):
     """
 
-    serial: Union[Unset, str] = UNSET
+    serial: str
+    group: "DeviceGroup"
     field_id: Union[Unset, str] = UNSET
     present: Union[Unset, bool] = UNSET
     presence_changed_at: Union[Unset, datetime.datetime] = UNSET
@@ -102,7 +105,6 @@ class Device:
     usage: Union[None, Unset, str] = UNSET
     logs_enabled: Union[Unset, bool] = UNSET
     created_at: Union[Unset, datetime.datetime] = UNSET
-    group: Union[Unset, "DeviceGroup"] = UNSET
     adb_port: Union[Unset, int] = UNSET
     network: Union[Unset, "DeviceNetwork"] = UNSET
     display: Union[Unset, "DeviceDisplay"] = UNSET
@@ -141,12 +143,15 @@ class Device:
     device_type: Union[Unset, str] = UNSET
     likely_leave_reason: Union[Unset, str] = UNSET
     using: Union[Unset, bool] = UNSET
+    capabilities: Union[Unset, "DeviceCapabilities"] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         from ..models.device_owner_type_0 import DeviceOwnerType0
 
         serial = self.serial
+
+        group = self.group.to_dict()
 
         field_id = self.field_id
 
@@ -204,10 +209,6 @@ class Device:
         created_at: Union[Unset, str] = UNSET
         if not isinstance(self.created_at, Unset):
             created_at = self.created_at.isoformat()
-
-        group: Union[Unset, Dict[str, Any]] = UNSET
-        if not isinstance(self.group, Unset):
-            group = self.group.to_dict()
 
         adb_port = self.adb_port
 
@@ -309,10 +310,18 @@ class Device:
 
         using = self.using
 
+        capabilities: Union[Unset, Dict[str, Any]] = UNSET
+        if not isinstance(self.capabilities, Unset):
+            capabilities = self.capabilities.to_dict()
+
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        if serial is not UNSET:
-            field_dict["serial"] = serial
+        field_dict.update(
+            {
+                "serial": serial,
+                "group": group,
+            }
+        )
         if field_id is not UNSET:
             field_dict["_id"] = field_id
         if present is not UNSET:
@@ -343,8 +352,6 @@ class Device:
             field_dict["logs_enabled"] = logs_enabled
         if created_at is not UNSET:
             field_dict["createdAt"] = created_at
-        if group is not UNSET:
-            field_dict["group"] = group
         if adb_port is not UNSET:
             field_dict["adbPort"] = adb_port
         if network is not UNSET:
@@ -421,6 +428,8 @@ class Device:
             field_dict["likelyLeaveReason"] = likely_leave_reason
         if using is not UNSET:
             field_dict["using"] = using
+        if capabilities is not UNSET:
+            field_dict["capabilities"] = capabilities
 
         return field_dict
 
@@ -428,6 +437,7 @@ class Device:
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         from ..models.device_battery import DeviceBattery
         from ..models.device_browser import DeviceBrowser
+        from ..models.device_capabilities import DeviceCapabilities
         from ..models.device_cpu import DeviceCpu
         from ..models.device_display import DeviceDisplay
         from ..models.device_group import DeviceGroup
@@ -440,7 +450,9 @@ class Device:
         from ..models.device_service import DeviceService
 
         d = src_dict.copy()
-        serial = d.pop("serial", UNSET)
+        serial = d.pop("serial")
+
+        group = DeviceGroup.from_dict(d.pop("group"))
 
         field_id = d.pop("_id", UNSET)
 
@@ -525,13 +537,6 @@ class Device:
             created_at = UNSET
         else:
             created_at = isoparse(_created_at)
-
-        _group = d.pop("group", UNSET)
-        group: Union[Unset, DeviceGroup]
-        if isinstance(_group, Unset):
-            group = UNSET
-        else:
-            group = DeviceGroup.from_dict(_group)
 
         adb_port = d.pop("adbPort", UNSET)
 
@@ -666,8 +671,16 @@ class Device:
 
         using = d.pop("using", UNSET)
 
+        _capabilities = d.pop("capabilities", UNSET)
+        capabilities: Union[Unset, DeviceCapabilities]
+        if isinstance(_capabilities, Unset):
+            capabilities = UNSET
+        else:
+            capabilities = DeviceCapabilities.from_dict(_capabilities)
+
         device = cls(
             serial=serial,
+            group=group,
             field_id=field_id,
             present=present,
             presence_changed_at=presence_changed_at,
@@ -683,7 +696,6 @@ class Device:
             usage=usage,
             logs_enabled=logs_enabled,
             created_at=created_at,
-            group=group,
             adb_port=adb_port,
             network=network,
             display=display,
@@ -722,6 +734,7 @@ class Device:
             device_type=device_type,
             likely_leave_reason=likely_leave_reason,
             using=using,
+            capabilities=capabilities,
         )
 
         device.additional_properties = d

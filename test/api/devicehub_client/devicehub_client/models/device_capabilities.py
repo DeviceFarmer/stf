@@ -1,43 +1,34 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Type, TypeVar
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-if TYPE_CHECKING:
-    from ..models.user import User
-
-
-T = TypeVar("T", bound="UserResponse")
+T = TypeVar("T", bound="DeviceCapabilities")
 
 
 @_attrs_define
-class UserResponse:
+class DeviceCapabilities:
     """
     Attributes:
-        success (bool):
-        description (str):
-        user (User):
+        has_touch (bool):
+        has_cursor (bool):
     """
 
-    success: bool
-    description: str
-    user: "User"
+    has_touch: bool
+    has_cursor: bool
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        success = self.success
+        has_touch = self.has_touch
 
-        description = self.description
-
-        user = self.user.to_dict()
+        has_cursor = self.has_cursor
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update(
             {
-                "success": success,
-                "description": description,
-                "user": user,
+                "hasTouch": has_touch,
+                "hasCursor": has_cursor,
             }
         )
 
@@ -45,23 +36,18 @@ class UserResponse:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user import User
-
         d = src_dict.copy()
-        success = d.pop("success")
+        has_touch = d.pop("hasTouch")
 
-        description = d.pop("description")
+        has_cursor = d.pop("hasCursor")
 
-        user = User.from_dict(d.pop("user"))
-
-        user_response = cls(
-            success=success,
-            description=description,
-            user=user,
+        device_capabilities = cls(
+            has_touch=has_touch,
+            has_cursor=has_cursor,
         )
 
-        user_response.additional_properties = d
-        return user_response
+        device_capabilities.additional_properties = d
+        return device_capabilities
 
     @property
     def additional_keys(self) -> List[str]:

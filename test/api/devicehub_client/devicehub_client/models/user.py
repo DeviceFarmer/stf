@@ -8,16 +8,17 @@ from dateutil.parser import isoparse
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
-    from ..models.user_response_user_adb_keys_item import UserResponseUserAdbKeysItem
-    from ..models.user_response_user_groups import UserResponseUserGroups
-    from ..models.user_response_user_settings import UserResponseUserSettings
+    from ..models.user_adb_keys_item import UserAdbKeysItem
+    from ..models.user_group_device_data import UserGroupDeviceData
+    from ..models.user_groups import UserGroups
+    from ..models.user_settings import UserSettings
 
 
-T = TypeVar("T", bound="UserResponseUser")
+T = TypeVar("T", bound="User")
 
 
 @_attrs_define
-class UserResponseUser:
+class User:
     """
     Attributes:
         field_id (Union[Unset, str]):
@@ -28,11 +29,12 @@ class UserResponseUser:
         last_logged_in_at (Union[Unset, datetime.datetime]):
         created_at (Union[Unset, datetime.datetime]):
         forwards (Union[Unset, List[Any]]):
-        adb_keys (Union[Unset, List['UserResponseUserAdbKeysItem']]):
-        settings (Union[Unset, UserResponseUserSettings]):
+        group_device_data (Union[Unset, UserGroupDeviceData]):
+        adb_keys (Union[Unset, List['UserAdbKeysItem']]):
+        settings (Union[Unset, UserSettings]):
         accepted_policy (Union[Unset, bool]):
         privilege (Union[Unset, str]):
-        groups (Union[Unset, UserResponseUserGroups]):
+        groups (Union[Unset, UserGroups]):
     """
 
     field_id: Union[Unset, str] = UNSET
@@ -43,11 +45,12 @@ class UserResponseUser:
     last_logged_in_at: Union[Unset, datetime.datetime] = UNSET
     created_at: Union[Unset, datetime.datetime] = UNSET
     forwards: Union[Unset, List[Any]] = UNSET
-    adb_keys: Union[Unset, List["UserResponseUserAdbKeysItem"]] = UNSET
-    settings: Union[Unset, "UserResponseUserSettings"] = UNSET
+    group_device_data: Union[Unset, "UserGroupDeviceData"] = UNSET
+    adb_keys: Union[Unset, List["UserAdbKeysItem"]] = UNSET
+    settings: Union[Unset, "UserSettings"] = UNSET
     accepted_policy: Union[Unset, bool] = UNSET
     privilege: Union[Unset, str] = UNSET
-    groups: Union[Unset, "UserResponseUserGroups"] = UNSET
+    groups: Union[Unset, "UserGroups"] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -72,6 +75,10 @@ class UserResponseUser:
         forwards: Union[Unset, List[Any]] = UNSET
         if not isinstance(self.forwards, Unset):
             forwards = self.forwards
+
+        group_device_data: Union[Unset, Dict[str, Any]] = UNSET
+        if not isinstance(self.group_device_data, Unset):
+            group_device_data = self.group_device_data.to_dict()
 
         adb_keys: Union[Unset, List[Dict[str, Any]]] = UNSET
         if not isinstance(self.adb_keys, Unset):
@@ -111,6 +118,8 @@ class UserResponseUser:
             field_dict["createdAt"] = created_at
         if forwards is not UNSET:
             field_dict["forwards"] = forwards
+        if group_device_data is not UNSET:
+            field_dict["groupDeviceData"] = group_device_data
         if adb_keys is not UNSET:
             field_dict["adbKeys"] = adb_keys
         if settings is not UNSET:
@@ -126,9 +135,10 @@ class UserResponseUser:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user_response_user_adb_keys_item import UserResponseUserAdbKeysItem
-        from ..models.user_response_user_groups import UserResponseUserGroups
-        from ..models.user_response_user_settings import UserResponseUserSettings
+        from ..models.user_adb_keys_item import UserAdbKeysItem
+        from ..models.user_group_device_data import UserGroupDeviceData
+        from ..models.user_groups import UserGroups
+        from ..models.user_settings import UserSettings
 
         d = src_dict.copy()
         field_id = d.pop("_id", UNSET)
@@ -157,32 +167,39 @@ class UserResponseUser:
 
         forwards = cast(List[Any], d.pop("forwards", UNSET))
 
+        _group_device_data = d.pop("groupDeviceData", UNSET)
+        group_device_data: Union[Unset, UserGroupDeviceData]
+        if isinstance(_group_device_data, Unset):
+            group_device_data = UNSET
+        else:
+            group_device_data = UserGroupDeviceData.from_dict(_group_device_data)
+
         adb_keys = []
         _adb_keys = d.pop("adbKeys", UNSET)
         for adb_keys_item_data in _adb_keys or []:
-            adb_keys_item = UserResponseUserAdbKeysItem.from_dict(adb_keys_item_data)
+            adb_keys_item = UserAdbKeysItem.from_dict(adb_keys_item_data)
 
             adb_keys.append(adb_keys_item)
 
         _settings = d.pop("settings", UNSET)
-        settings: Union[Unset, UserResponseUserSettings]
+        settings: Union[Unset, UserSettings]
         if isinstance(_settings, Unset):
             settings = UNSET
         else:
-            settings = UserResponseUserSettings.from_dict(_settings)
+            settings = UserSettings.from_dict(_settings)
 
         accepted_policy = d.pop("acceptedPolicy", UNSET)
 
         privilege = d.pop("privilege", UNSET)
 
         _groups = d.pop("groups", UNSET)
-        groups: Union[Unset, UserResponseUserGroups]
+        groups: Union[Unset, UserGroups]
         if isinstance(_groups, Unset):
             groups = UNSET
         else:
-            groups = UserResponseUserGroups.from_dict(_groups)
+            groups = UserGroups.from_dict(_groups)
 
-        user_response_user = cls(
+        user = cls(
             field_id=field_id,
             email=email,
             name=name,
@@ -191,6 +208,7 @@ class UserResponseUser:
             last_logged_in_at=last_logged_in_at,
             created_at=created_at,
             forwards=forwards,
+            group_device_data=group_device_data,
             adb_keys=adb_keys,
             settings=settings,
             accepted_policy=accepted_policy,
@@ -198,8 +216,8 @@ class UserResponseUser:
             groups=groups,
         )
 
-        user_response_user.additional_properties = d
-        return user_response_user
+        user.additional_properties = d
+        return user
 
     @property
     def additional_keys(self) -> List[str]:

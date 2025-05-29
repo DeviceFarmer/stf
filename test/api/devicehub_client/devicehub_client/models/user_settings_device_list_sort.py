@@ -6,27 +6,23 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
-    from ..models.user_response_user_settings_device_list_sort_fixed_item import (
-        UserResponseUserSettingsDeviceListSortFixedItem,
-    )
-    from ..models.user_response_user_settings_device_list_sort_user_item import (
-        UserResponseUserSettingsDeviceListSortUserItem,
-    )
+    from ..models.user_settings_device_list_sort_fixed_item import UserSettingsDeviceListSortFixedItem
+    from ..models.user_settings_device_list_sort_user_item import UserSettingsDeviceListSortUserItem
 
 
-T = TypeVar("T", bound="UserResponseUserSettingsDeviceListSort")
+T = TypeVar("T", bound="UserSettingsDeviceListSort")
 
 
 @_attrs_define
-class UserResponseUserSettingsDeviceListSort:
+class UserSettingsDeviceListSort:
     """
     Attributes:
-        fixed (Union[Unset, List['UserResponseUserSettingsDeviceListSortFixedItem']]):
-        user (Union[Unset, List['UserResponseUserSettingsDeviceListSortUserItem']]):
+        fixed (Union[Unset, List['UserSettingsDeviceListSortFixedItem']]):
+        user (Union[Unset, List['UserSettingsDeviceListSortUserItem']]):
     """
 
-    fixed: Union[Unset, List["UserResponseUserSettingsDeviceListSortFixedItem"]] = UNSET
-    user: Union[Unset, List["UserResponseUserSettingsDeviceListSortUserItem"]] = UNSET
+    fixed: Union[Unset, List["UserSettingsDeviceListSortFixedItem"]] = UNSET
+    user: Union[Unset, List["UserSettingsDeviceListSortUserItem"]] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -56,35 +52,31 @@ class UserResponseUserSettingsDeviceListSort:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user_response_user_settings_device_list_sort_fixed_item import (
-            UserResponseUserSettingsDeviceListSortFixedItem,
-        )
-        from ..models.user_response_user_settings_device_list_sort_user_item import (
-            UserResponseUserSettingsDeviceListSortUserItem,
-        )
+        from ..models.user_settings_device_list_sort_fixed_item import UserSettingsDeviceListSortFixedItem
+        from ..models.user_settings_device_list_sort_user_item import UserSettingsDeviceListSortUserItem
 
         d = src_dict.copy()
         fixed = []
         _fixed = d.pop("fixed", UNSET)
         for fixed_item_data in _fixed or []:
-            fixed_item = UserResponseUserSettingsDeviceListSortFixedItem.from_dict(fixed_item_data)
+            fixed_item = UserSettingsDeviceListSortFixedItem.from_dict(fixed_item_data)
 
             fixed.append(fixed_item)
 
         user = []
         _user = d.pop("user", UNSET)
         for user_item_data in _user or []:
-            user_item = UserResponseUserSettingsDeviceListSortUserItem.from_dict(user_item_data)
+            user_item = UserSettingsDeviceListSortUserItem.from_dict(user_item_data)
 
             user.append(user_item)
 
-        user_response_user_settings_device_list_sort = cls(
+        user_settings_device_list_sort = cls(
             fixed=fixed,
             user=user,
         )
 
-        user_response_user_settings_device_list_sort.additional_properties = d
-        return user_response_user_settings_device_list_sort
+        user_settings_device_list_sort.additional_properties = d
+        return user_settings_device_list_sort
 
     @property
     def additional_keys(self) -> List[str]:

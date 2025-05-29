@@ -5,59 +5,50 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="DeviceService")
+T = TypeVar("T", bound="UserAdbKeysItem")
 
 
 @_attrs_define
-class DeviceService:
+class UserAdbKeysItem:
     """
     Attributes:
-        has_hms (Union[Unset, bool]):
-        has_gms (Union[Unset, bool]):
-        has_apns (Union[Unset, bool]):
+        fingerprint (Union[Unset, str]):
+        title (Union[Unset, str]):
     """
 
-    has_hms: Union[Unset, bool] = UNSET
-    has_gms: Union[Unset, bool] = UNSET
-    has_apns: Union[Unset, bool] = UNSET
+    fingerprint: Union[Unset, str] = UNSET
+    title: Union[Unset, str] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        has_hms = self.has_hms
+        fingerprint = self.fingerprint
 
-        has_gms = self.has_gms
-
-        has_apns = self.has_apns
+        title = self.title
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({})
-        if has_hms is not UNSET:
-            field_dict["hasHMS"] = has_hms
-        if has_gms is not UNSET:
-            field_dict["hasGMS"] = has_gms
-        if has_apns is not UNSET:
-            field_dict["hasAPNS"] = has_apns
+        if fingerprint is not UNSET:
+            field_dict["fingerprint"] = fingerprint
+        if title is not UNSET:
+            field_dict["title"] = title
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         d = src_dict.copy()
-        has_hms = d.pop("hasHMS", UNSET)
+        fingerprint = d.pop("fingerprint", UNSET)
 
-        has_gms = d.pop("hasGMS", UNSET)
+        title = d.pop("title", UNSET)
 
-        has_apns = d.pop("hasAPNS", UNSET)
-
-        device_service = cls(
-            has_hms=has_hms,
-            has_gms=has_gms,
-            has_apns=has_apns,
+        user_adb_keys_item = cls(
+            fingerprint=fingerprint,
+            title=title,
         )
 
-        device_service.additional_properties = d
-        return device_service
+        user_adb_keys_item.additional_properties = d
+        return user_adb_keys_item
 
     @property
     def additional_keys(self) -> List[str]:

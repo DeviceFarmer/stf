@@ -48,7 +48,7 @@ def sync_detailed(
 ) -> Response[UserAccessTokensResponse]:
     """Gets your access tokens
 
-     Gets your access tokens; note that all fields are returned in reponse including the 'id' one
+     Gets your access tokens; note that all fields are returned in response including the 'id' one
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -73,7 +73,7 @@ def sync(
 ) -> Optional[UserAccessTokensResponse]:
     """Gets your access tokens
 
-     Gets your access tokens; note that all fields are returned in reponse including the 'id' one
+     Gets your access tokens; note that all fields are returned in response including the 'id' one
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -94,7 +94,7 @@ async def asyncio_detailed(
 ) -> Response[UserAccessTokensResponse]:
     """Gets your access tokens
 
-     Gets your access tokens; note that all fields are returned in reponse including the 'id' one
+     Gets your access tokens; note that all fields are returned in response including the 'id' one
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -117,7 +117,7 @@ async def asyncio(
 ) -> Optional[UserAccessTokensResponse]:
     """Gets your access tokens
 
-     Gets your access tokens; note that all fields are returned in reponse including the 'id' one
+     Gets your access tokens; note that all fields are returned in response including the 'id' one
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

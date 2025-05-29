@@ -10,8 +10,8 @@ from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
+    id: str,
     *,
-    timeout: int,
     amount: int,
     need_amount: Union[Unset, bool] = UNSET,
     abi: Union[Unset, str] = UNSET,
@@ -19,11 +19,8 @@ def _get_kwargs(
     model: Union[Unset, str] = UNSET,
     type: Union[Unset, str] = UNSET,
     version: Union[Unset, str] = UNSET,
-    run: str,
 ) -> Dict[str, Any]:
     params: Dict[str, Any] = {}
-
-    params["timeout"] = timeout
 
     params["amount"] = amount
 
@@ -39,13 +36,11 @@ def _get_kwargs(
 
     params["version"] = version
 
-    params["run"] = run
-
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: Dict[str, Any] = {
         "method": "get",
-        "url": "/autotests",
+        "url": f"/autotests/{id}/addDevices/",
         "params": params,
     }
 
@@ -77,9 +72,9 @@ def _build_response(
 
 
 def sync_detailed(
+    id: str,
     *,
     client: Union[AuthenticatedClient, Client],
-    timeout: int,
     amount: int,
     need_amount: Union[Unset, bool] = UNSET,
     abi: Union[Unset, str] = UNSET,
@@ -87,14 +82,13 @@ def sync_detailed(
     model: Union[Unset, str] = UNSET,
     type: Union[Unset, str] = UNSET,
     version: Union[Unset, str] = UNSET,
-    run: str,
 ) -> Response[AutoTestResponse]:
-    """Get devices for autotests run
+    """Add devices for autotests group
 
-     Create group and return serials of captured devices
+     Filter and add devices to autotests group
 
     Args:
-        timeout (int):
+        id (str):
         amount (int):
         need_amount (Union[Unset, bool]):
         abi (Union[Unset, str]):
@@ -102,7 +96,6 @@ def sync_detailed(
         model (Union[Unset, str]):
         type (Union[Unset, str]):
         version (Union[Unset, str]):
-        run (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -113,7 +106,7 @@ def sync_detailed(
     """
 
     kwargs = _get_kwargs(
-        timeout=timeout,
+        id=id,
         amount=amount,
         need_amount=need_amount,
         abi=abi,
@@ -121,7 +114,6 @@ def sync_detailed(
         model=model,
         type=type,
         version=version,
-        run=run,
     )
 
     response = client.get_httpx_client().request(
@@ -132,9 +124,9 @@ def sync_detailed(
 
 
 def sync(
+    id: str,
     *,
     client: Union[AuthenticatedClient, Client],
-    timeout: int,
     amount: int,
     need_amount: Union[Unset, bool] = UNSET,
     abi: Union[Unset, str] = UNSET,
@@ -142,14 +134,13 @@ def sync(
     model: Union[Unset, str] = UNSET,
     type: Union[Unset, str] = UNSET,
     version: Union[Unset, str] = UNSET,
-    run: str,
 ) -> Optional[AutoTestResponse]:
-    """Get devices for autotests run
+    """Add devices for autotests group
 
-     Create group and return serials of captured devices
+     Filter and add devices to autotests group
 
     Args:
-        timeout (int):
+        id (str):
         amount (int):
         need_amount (Union[Unset, bool]):
         abi (Union[Unset, str]):
@@ -157,7 +148,6 @@ def sync(
         model (Union[Unset, str]):
         type (Union[Unset, str]):
         version (Union[Unset, str]):
-        run (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -168,8 +158,8 @@ def sync(
     """
 
     return sync_detailed(
+        id=id,
         client=client,
-        timeout=timeout,
         amount=amount,
         need_amount=need_amount,
         abi=abi,
@@ -177,14 +167,13 @@ def sync(
         model=model,
         type=type,
         version=version,
-        run=run,
     ).parsed
 
 
 async def asyncio_detailed(
+    id: str,
     *,
     client: Union[AuthenticatedClient, Client],
-    timeout: int,
     amount: int,
     need_amount: Union[Unset, bool] = UNSET,
     abi: Union[Unset, str] = UNSET,
@@ -192,14 +181,13 @@ async def asyncio_detailed(
     model: Union[Unset, str] = UNSET,
     type: Union[Unset, str] = UNSET,
     version: Union[Unset, str] = UNSET,
-    run: str,
 ) -> Response[AutoTestResponse]:
-    """Get devices for autotests run
+    """Add devices for autotests group
 
-     Create group and return serials of captured devices
+     Filter and add devices to autotests group
 
     Args:
-        timeout (int):
+        id (str):
         amount (int):
         need_amount (Union[Unset, bool]):
         abi (Union[Unset, str]):
@@ -207,7 +195,6 @@ async def asyncio_detailed(
         model (Union[Unset, str]):
         type (Union[Unset, str]):
         version (Union[Unset, str]):
-        run (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -218,7 +205,7 @@ async def asyncio_detailed(
     """
 
     kwargs = _get_kwargs(
-        timeout=timeout,
+        id=id,
         amount=amount,
         need_amount=need_amount,
         abi=abi,
@@ -226,7 +213,6 @@ async def asyncio_detailed(
         model=model,
         type=type,
         version=version,
-        run=run,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -235,9 +221,9 @@ async def asyncio_detailed(
 
 
 async def asyncio(
+    id: str,
     *,
     client: Union[AuthenticatedClient, Client],
-    timeout: int,
     amount: int,
     need_amount: Union[Unset, bool] = UNSET,
     abi: Union[Unset, str] = UNSET,
@@ -245,14 +231,13 @@ async def asyncio(
     model: Union[Unset, str] = UNSET,
     type: Union[Unset, str] = UNSET,
     version: Union[Unset, str] = UNSET,
-    run: str,
 ) -> Optional[AutoTestResponse]:
-    """Get devices for autotests run
+    """Add devices for autotests group
 
-     Create group and return serials of captured devices
+     Filter and add devices to autotests group
 
     Args:
-        timeout (int):
+        id (str):
         amount (int):
         need_amount (Union[Unset, bool]):
         abi (Union[Unset, str]):
@@ -260,7 +245,6 @@ async def asyncio(
         model (Union[Unset, str]):
         type (Union[Unset, str]):
         version (Union[Unset, str]):
-        run (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -272,8 +256,8 @@ async def asyncio(
 
     return (
         await asyncio_detailed(
+            id=id,
             client=client,
-            timeout=timeout,
             amount=amount,
             need_amount=need_amount,
             abi=abi,
@@ -281,6 +265,5 @@ async def asyncio(
             model=model,
             type=type,
             version=version,
-            run=run,
         )
     ).parsed

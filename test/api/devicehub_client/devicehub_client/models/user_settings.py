@@ -6,41 +6,39 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
-    from ..models.user_response_user_settings_alert_message import UserResponseUserSettingsAlertMessage
-    from ..models.user_response_user_settings_device_list_columns_item import (
-        UserResponseUserSettingsDeviceListColumnsItem,
-    )
-    from ..models.user_response_user_settings_device_list_sort import UserResponseUserSettingsDeviceListSort
-    from ..models.user_response_user_settings_group_items_per_page import UserResponseUserSettingsGroupItemsPerPage
+    from ..models.user_settings_alert_message import UserSettingsAlertMessage
+    from ..models.user_settings_device_list_columns_item import UserSettingsDeviceListColumnsItem
+    from ..models.user_settings_device_list_sort import UserSettingsDeviceListSort
+    from ..models.user_settings_group_items_per_page import UserSettingsGroupItemsPerPage
 
 
-T = TypeVar("T", bound="UserResponseUserSettings")
+T = TypeVar("T", bound="UserSettings")
 
 
 @_attrs_define
-class UserResponseUserSettings:
+class UserSettings:
     """
     Attributes:
         last_used_device (Union[Unset, str]):
         date_format (Union[Unset, str]):
         email_address_separator (Union[Unset, str]):
-        alert_message (Union[Unset, UserResponseUserSettingsAlertMessage]):
+        alert_message (Union[Unset, UserSettingsAlertMessage]):
         platform (Union[Unset, str]):
-        group_items_per_page (Union[Unset, UserResponseUserSettingsGroupItemsPerPage]):
-        device_list_columns (Union[Unset, List['UserResponseUserSettingsDeviceListColumnsItem']]):
+        group_items_per_page (Union[Unset, UserSettingsGroupItemsPerPage]):
+        device_list_columns (Union[Unset, List['UserSettingsDeviceListColumnsItem']]):
         selected_language (Union[Unset, str]):
-        device_list_sort (Union[Unset, UserResponseUserSettingsDeviceListSort]):
+        device_list_sort (Union[Unset, UserSettingsDeviceListSort]):
     """
 
     last_used_device: Union[Unset, str] = UNSET
     date_format: Union[Unset, str] = UNSET
     email_address_separator: Union[Unset, str] = UNSET
-    alert_message: Union[Unset, "UserResponseUserSettingsAlertMessage"] = UNSET
+    alert_message: Union[Unset, "UserSettingsAlertMessage"] = UNSET
     platform: Union[Unset, str] = UNSET
-    group_items_per_page: Union[Unset, "UserResponseUserSettingsGroupItemsPerPage"] = UNSET
-    device_list_columns: Union[Unset, List["UserResponseUserSettingsDeviceListColumnsItem"]] = UNSET
+    group_items_per_page: Union[Unset, "UserSettingsGroupItemsPerPage"] = UNSET
+    device_list_columns: Union[Unset, List["UserSettingsDeviceListColumnsItem"]] = UNSET
     selected_language: Union[Unset, str] = UNSET
-    device_list_sort: Union[Unset, "UserResponseUserSettingsDeviceListSort"] = UNSET
+    device_list_sort: Union[Unset, "UserSettingsDeviceListSort"] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -99,12 +97,10 @@ class UserResponseUserSettings:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user_response_user_settings_alert_message import UserResponseUserSettingsAlertMessage
-        from ..models.user_response_user_settings_device_list_columns_item import (
-            UserResponseUserSettingsDeviceListColumnsItem,
-        )
-        from ..models.user_response_user_settings_device_list_sort import UserResponseUserSettingsDeviceListSort
-        from ..models.user_response_user_settings_group_items_per_page import UserResponseUserSettingsGroupItemsPerPage
+        from ..models.user_settings_alert_message import UserSettingsAlertMessage
+        from ..models.user_settings_device_list_columns_item import UserSettingsDeviceListColumnsItem
+        from ..models.user_settings_device_list_sort import UserSettingsDeviceListSort
+        from ..models.user_settings_group_items_per_page import UserSettingsGroupItemsPerPage
 
         d = src_dict.copy()
         last_used_device = d.pop("lastUsedDevice", UNSET)
@@ -114,40 +110,38 @@ class UserResponseUserSettings:
         email_address_separator = d.pop("emailAddressSeparator", UNSET)
 
         _alert_message = d.pop("alertMessage", UNSET)
-        alert_message: Union[Unset, UserResponseUserSettingsAlertMessage]
+        alert_message: Union[Unset, UserSettingsAlertMessage]
         if isinstance(_alert_message, Unset):
             alert_message = UNSET
         else:
-            alert_message = UserResponseUserSettingsAlertMessage.from_dict(_alert_message)
+            alert_message = UserSettingsAlertMessage.from_dict(_alert_message)
 
         platform = d.pop("platform", UNSET)
 
         _group_items_per_page = d.pop("groupItemsPerPage", UNSET)
-        group_items_per_page: Union[Unset, UserResponseUserSettingsGroupItemsPerPage]
+        group_items_per_page: Union[Unset, UserSettingsGroupItemsPerPage]
         if isinstance(_group_items_per_page, Unset):
             group_items_per_page = UNSET
         else:
-            group_items_per_page = UserResponseUserSettingsGroupItemsPerPage.from_dict(_group_items_per_page)
+            group_items_per_page = UserSettingsGroupItemsPerPage.from_dict(_group_items_per_page)
 
         device_list_columns = []
         _device_list_columns = d.pop("deviceListColumns", UNSET)
         for device_list_columns_item_data in _device_list_columns or []:
-            device_list_columns_item = UserResponseUserSettingsDeviceListColumnsItem.from_dict(
-                device_list_columns_item_data
-            )
+            device_list_columns_item = UserSettingsDeviceListColumnsItem.from_dict(device_list_columns_item_data)
 
             device_list_columns.append(device_list_columns_item)
 
         selected_language = d.pop("selectedLanguage", UNSET)
 
         _device_list_sort = d.pop("deviceListSort", UNSET)
-        device_list_sort: Union[Unset, UserResponseUserSettingsDeviceListSort]
+        device_list_sort: Union[Unset, UserSettingsDeviceListSort]
         if isinstance(_device_list_sort, Unset):
             device_list_sort = UNSET
         else:
-            device_list_sort = UserResponseUserSettingsDeviceListSort.from_dict(_device_list_sort)
+            device_list_sort = UserSettingsDeviceListSort.from_dict(_device_list_sort)
 
-        user_response_user_settings = cls(
+        user_settings = cls(
             last_used_device=last_used_device,
             date_format=date_format,
             email_address_separator=email_address_separator,
@@ -159,8 +153,8 @@ class UserResponseUserSettings:
             device_list_sort=device_list_sort,
         )
 
-        user_response_user_settings.additional_properties = d
-        return user_response_user_settings
+        user_settings.additional_properties = d
+        return user_settings
 
     @property
     def additional_keys(self) -> List[str]:

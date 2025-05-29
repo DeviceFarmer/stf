@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Type, TypeVar, Union
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -17,7 +17,7 @@ class DeviceBattery:
         source (Union[Unset, str]):
         level (Union[Unset, int]):
         scale (Union[Unset, int]):
-        temp (Union[Unset, float, str]):
+        temp (Union[Unset, int]):
         voltage (Union[Unset, int]):
     """
 
@@ -26,7 +26,7 @@ class DeviceBattery:
     source: Union[Unset, str] = UNSET
     level: Union[Unset, int] = UNSET
     scale: Union[Unset, int] = UNSET
-    temp: Union[Unset, float, str] = UNSET
+    temp: Union[Unset, int] = UNSET
     voltage: Union[Unset, int] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -41,11 +41,7 @@ class DeviceBattery:
 
         scale = self.scale
 
-        temp: Union[Unset, float, str]
-        if isinstance(self.temp, Unset):
-            temp = UNSET
-        else:
-            temp = self.temp
+        temp = self.temp
 
         voltage = self.voltage
 
@@ -82,12 +78,7 @@ class DeviceBattery:
 
         scale = d.pop("scale", UNSET)
 
-        def _parse_temp(data: object) -> Union[Unset, float, str]:
-            if isinstance(data, Unset):
-                return data
-            return cast(Union[Unset, float, str], data)
-
-        temp = _parse_temp(d.pop("temp", UNSET))
+        temp = d.pop("temp", UNSET)
 
         voltage = d.pop("voltage", UNSET)
 

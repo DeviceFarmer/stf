@@ -1,27 +1,29 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Type, TypeVar, Union
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
+from ..types import UNSET, Unset
+
 if TYPE_CHECKING:
-    from ..models.user import User
+    from ..models.auto_test_response_group import AutoTestResponseGroup
 
 
-T = TypeVar("T", bound="UserListResponse")
+T = TypeVar("T", bound="AutoTestResponse")
 
 
 @_attrs_define
-class UserListResponse:
+class AutoTestResponse:
     """
     Attributes:
         success (bool):
         description (str):
-        users (List['User']):
+        group (Union[Unset, AutoTestResponseGroup]):
     """
 
     success: bool
     description: str
-    users: List["User"]
+    group: Union[Unset, "AutoTestResponseGroup"] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -29,10 +31,9 @@ class UserListResponse:
 
         description = self.description
 
-        users = []
-        for users_item_data in self.users:
-            users_item = users_item_data.to_dict()
-            users.append(users_item)
+        group: Union[Unset, Dict[str, Any]] = UNSET
+        if not isinstance(self.group, Unset):
+            group = self.group.to_dict()
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -40,36 +41,37 @@ class UserListResponse:
             {
                 "success": success,
                 "description": description,
-                "users": users,
             }
         )
+        if group is not UNSET:
+            field_dict["group"] = group
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user import User
+        from ..models.auto_test_response_group import AutoTestResponseGroup
 
         d = src_dict.copy()
         success = d.pop("success")
 
         description = d.pop("description")
 
-        users = []
-        _users = d.pop("users")
-        for users_item_data in _users:
-            users_item = User.from_dict(users_item_data)
+        _group = d.pop("group", UNSET)
+        group: Union[Unset, AutoTestResponseGroup]
+        if isinstance(_group, Unset):
+            group = UNSET
+        else:
+            group = AutoTestResponseGroup.from_dict(_group)
 
-            users.append(users_item)
-
-        user_list_response = cls(
+        auto_test_response = cls(
             success=success,
             description=description,
-            users=users,
+            group=group,
         )
 
-        user_list_response.additional_properties = d
-        return user_list_response
+        auto_test_response.additional_properties = d
+        return auto_test_response
 
     @property
     def additional_keys(self) -> List[str]:

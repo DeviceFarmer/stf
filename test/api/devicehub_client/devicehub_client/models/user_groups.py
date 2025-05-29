@@ -6,24 +6,24 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
-    from ..models.user_response_user_groups_quotas import UserResponseUserGroupsQuotas
+    from ..models.user_groups_quotas import UserGroupsQuotas
 
 
-T = TypeVar("T", bound="UserResponseUserGroups")
+T = TypeVar("T", bound="UserGroups")
 
 
 @_attrs_define
-class UserResponseUserGroups:
+class UserGroups:
     """
     Attributes:
         subscribed (Union[Unset, List[str]]):
         lock (Union[Unset, bool]):
-        quotas (Union[Unset, UserResponseUserGroupsQuotas]):
+        quotas (Union[Unset, UserGroupsQuotas]):
     """
 
     subscribed: Union[Unset, List[str]] = UNSET
     lock: Union[Unset, bool] = UNSET
-    quotas: Union[Unset, "UserResponseUserGroupsQuotas"] = UNSET
+    quotas: Union[Unset, "UserGroupsQuotas"] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -51,7 +51,7 @@ class UserResponseUserGroups:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.user_response_user_groups_quotas import UserResponseUserGroupsQuotas
+        from ..models.user_groups_quotas import UserGroupsQuotas
 
         d = src_dict.copy()
         subscribed = cast(List[str], d.pop("subscribed", UNSET))
@@ -59,20 +59,20 @@ class UserResponseUserGroups:
         lock = d.pop("lock", UNSET)
 
         _quotas = d.pop("quotas", UNSET)
-        quotas: Union[Unset, UserResponseUserGroupsQuotas]
+        quotas: Union[Unset, UserGroupsQuotas]
         if isinstance(_quotas, Unset):
             quotas = UNSET
         else:
-            quotas = UserResponseUserGroupsQuotas.from_dict(_quotas)
+            quotas = UserGroupsQuotas.from_dict(_quotas)
 
-        user_response_user_groups = cls(
+        user_groups = cls(
             subscribed=subscribed,
             lock=lock,
             quotas=quotas,
         )
 
-        user_response_user_groups.additional_properties = d
-        return user_response_user_groups
+        user_groups.additional_properties = d
+        return user_groups
 
     @property
     def additional_keys(self) -> List[str]:
