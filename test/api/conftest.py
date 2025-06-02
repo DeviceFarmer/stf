@@ -273,9 +273,9 @@ def common_group_id(api_client):
     response = get_groups.sync_detailed(client=api_client)
     equal(response.status_code, 200)
     is_true(response.parsed.success)
-    common_group = next(filter(lambda x: x['name'] == 'Common', response.parsed.groups), None)
+    common_group = next(filter(lambda x: x.to_dict()['name'] == 'Common', response.parsed.groups), None)
     is_not_none(common_group)
-    return common_group['id']
+    return common_group.to_dict()['id']
 
 
 @pytest.fixture()

@@ -7,9 +7,9 @@ from devicehub_client.models import GetDevicesTarget
 
 # TODO: add param: GetDevicesTarget.STANDARD, when generator of devices will be ready(add device with standard group)
 # api/v1/devices - list of devices
-@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, GetDevicesTarget.NONE])
+@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, 'NONE'])
 def test_get_devices(api_client, target, fake_device_field_check, successful_response_check):
-    if target == GetDevicesTarget.NONE:
+    if target == 'NONE':
         response = get_devices.sync_detailed(client=api_client)
     else:
         response = get_devices.sync_detailed(client=api_client, target=target)
@@ -21,9 +21,9 @@ def test_get_devices(api_client, target, fake_device_field_check, successful_res
         fake_device_field_check(device_dict)
 
 
-@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, GetDevicesTarget.NONE])
+@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, 'NONE'])
 def test_get_devices_empty_fields(api_client, target, fake_device_field_check, successful_response_check):
-    if target == GetDevicesTarget.NONE:
+    if target == 'NONE':
         response = get_devices.sync_detailed(client=api_client, fields='')
     else:
         response = get_devices.sync_detailed(client=api_client, target=target, fields='')
@@ -35,9 +35,9 @@ def test_get_devices_empty_fields(api_client, target, fake_device_field_check, s
         fake_device_field_check(device_dict)
 
 
-@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, GetDevicesTarget.NONE])
+@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, 'NONE'])
 def test_get_devices_with_fields(api_client, target, successful_response_check, fake_device_certain_field_check):
-    if target == GetDevicesTarget.NONE:
+    if target == 'NONE':
         response = get_devices.sync_detailed(
             client=api_client,
             fields='present,present,status,serial,group.owner.name,using,somefields'
@@ -56,9 +56,9 @@ def test_get_devices_with_fields(api_client, target, successful_response_check, 
         fake_device_certain_field_check(device_dict)
 
 
-@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, GetDevicesTarget.NONE])
+@pytest.mark.parametrize("target", [GetDevicesTarget.BOOKABLE, GetDevicesTarget.ORIGIN, 'NONE'])
 def test_get_devices_with_wrong_fields(api_client, target, successful_response_check):
-    if target == GetDevicesTarget.NONE:
+    if target == 'NONE':
         response = get_devices.sync_detailed(
             client=api_client,
             fields='wrong,111,!@!$!$, ,'
@@ -83,7 +83,7 @@ def test_get_devices_with_wrong_target(api_client):
     response = get_devices.sync_detailed(
         client=api_client,
         fields='present,',
-        target=GetDevicesTarget.NONE
+        target='NONE'
     )
     equal(response.status_code, 400)
     is_none(response.parsed)
