@@ -3470,9 +3470,6 @@ components:
               type: string
           description: Owner of the group in conflict
     Device:
-      required:
-      - serial
-      - group
       type: object
       properties:
         _id:
@@ -4212,7 +4209,7 @@ components:
     DeviceListResponse:
       required:
       - description
-      - devices
+#      - devices
       - success
       type: object
       properties:
