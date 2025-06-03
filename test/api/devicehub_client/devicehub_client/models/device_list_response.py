@@ -1,7 +1,9 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Type, TypeVar, Union
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
     from ..models.device import Device
@@ -16,12 +18,12 @@ class DeviceListResponse:
     Attributes:
         success (bool):
         description (str):
-        devices (List['Device']):
+        devices (Union[Unset, List['Device']]):
     """
 
     success: bool
     description: str
-    devices: List["Device"]
+    devices: Union[Unset, List["Device"]] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -29,10 +31,12 @@ class DeviceListResponse:
 
         description = self.description
 
-        devices = []
-        for devices_item_data in self.devices:
-            devices_item = devices_item_data.to_dict()
-            devices.append(devices_item)
+        devices: Union[Unset, List[Dict[str, Any]]] = UNSET
+        if not isinstance(self.devices, Unset):
+            devices = []
+            for devices_item_data in self.devices:
+                devices_item = devices_item_data.to_dict()
+                devices.append(devices_item)
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -40,9 +44,10 @@ class DeviceListResponse:
             {
                 "success": success,
                 "description": description,
-                "devices": devices,
             }
         )
+        if devices is not UNSET:
+            field_dict["devices"] = devices
 
         return field_dict
 
@@ -56,8 +61,8 @@ class DeviceListResponse:
         description = d.pop("description")
 
         devices = []
-        _devices = d.pop("devices")
-        for devices_item_data in _devices:
+        _devices = d.pop("devices", UNSET)
+        for devices_item_data in _devices or []:
             devices_item = Device.from_dict(devices_item_data)
 
             devices.append(devices_item)

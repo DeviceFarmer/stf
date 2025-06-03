@@ -78,7 +78,7 @@ def test_get_devices_with_wrong_fields(api_client, target, successful_response_c
         is_not_none(device_dict.get('reverseForwards'))
         equal(device_dict.get('reverseForwards'), [])
 
-
+@pytest.mark.skip(reason="can't sent wrong request because strong definition in api-client")
 def test_get_devices_with_wrong_target(api_client):
     response = get_devices.sync_detailed(
         client=api_client,

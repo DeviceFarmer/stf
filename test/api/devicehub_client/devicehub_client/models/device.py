@@ -30,8 +30,6 @@ T = TypeVar("T", bound="Device")
 class Device:
     """
     Attributes:
-        serial (str):
-        group (DeviceGroup):
         field_id (Union[Unset, str]):
         present (Union[Unset, bool]):
         presence_changed_at (Union[Unset, datetime.datetime]):
@@ -46,7 +44,9 @@ class Device:
         remote_connect_url (Union[None, Unset, str]):
         usage (Union[None, Unset, str]):
         logs_enabled (Union[Unset, bool]):
+        serial (Union[Unset, str]):
         created_at (Union[Unset, datetime.datetime]):
+        group (Union[Unset, DeviceGroup]):
         adb_port (Union[Unset, int]):
         network (Union[Unset, DeviceNetwork]):
         display (Union[Unset, DeviceDisplay]):
@@ -88,8 +88,6 @@ class Device:
         capabilities (Union[Unset, DeviceCapabilities]):
     """
 
-    serial: str
-    group: "DeviceGroup"
     field_id: Union[Unset, str] = UNSET
     present: Union[Unset, bool] = UNSET
     presence_changed_at: Union[Unset, datetime.datetime] = UNSET
@@ -104,7 +102,9 @@ class Device:
     remote_connect_url: Union[None, Unset, str] = UNSET
     usage: Union[None, Unset, str] = UNSET
     logs_enabled: Union[Unset, bool] = UNSET
+    serial: Union[Unset, str] = UNSET
     created_at: Union[Unset, datetime.datetime] = UNSET
+    group: Union[Unset, "DeviceGroup"] = UNSET
     adb_port: Union[Unset, int] = UNSET
     network: Union[Unset, "DeviceNetwork"] = UNSET
     display: Union[Unset, "DeviceDisplay"] = UNSET
@@ -148,10 +148,6 @@ class Device:
 
     def to_dict(self) -> Dict[str, Any]:
         from ..models.device_owner_type_0 import DeviceOwnerType0
-
-        serial = self.serial
-
-        group = self.group.to_dict()
 
         field_id = self.field_id
 
@@ -206,9 +202,15 @@ class Device:
 
         logs_enabled = self.logs_enabled
 
+        serial = self.serial
+
         created_at: Union[Unset, str] = UNSET
         if not isinstance(self.created_at, Unset):
             created_at = self.created_at.isoformat()
+
+        group: Union[Unset, Dict[str, Any]] = UNSET
+        if not isinstance(self.group, Unset):
+            group = self.group.to_dict()
 
         adb_port = self.adb_port
 
@@ -316,12 +318,7 @@ class Device:
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update(
-            {
-                "serial": serial,
-                "group": group,
-            }
-        )
+        field_dict.update({})
         if field_id is not UNSET:
             field_dict["_id"] = field_id
         if present is not UNSET:
@@ -350,8 +347,12 @@ class Device:
             field_dict["usage"] = usage
         if logs_enabled is not UNSET:
             field_dict["logs_enabled"] = logs_enabled
+        if serial is not UNSET:
+            field_dict["serial"] = serial
         if created_at is not UNSET:
             field_dict["createdAt"] = created_at
+        if group is not UNSET:
+            field_dict["group"] = group
         if adb_port is not UNSET:
             field_dict["adbPort"] = adb_port
         if network is not UNSET:
@@ -450,10 +451,6 @@ class Device:
         from ..models.device_service import DeviceService
 
         d = src_dict.copy()
-        serial = d.pop("serial")
-
-        group = DeviceGroup.from_dict(d.pop("group"))
-
         field_id = d.pop("_id", UNSET)
 
         present = d.pop("present", UNSET)
@@ -531,12 +528,21 @@ class Device:
 
         logs_enabled = d.pop("logs_enabled", UNSET)
 
+        serial = d.pop("serial", UNSET)
+
         _created_at = d.pop("createdAt", UNSET)
         created_at: Union[Unset, datetime.datetime]
         if isinstance(_created_at, Unset):
             created_at = UNSET
         else:
             created_at = isoparse(_created_at)
+
+        _group = d.pop("group", UNSET)
+        group: Union[Unset, DeviceGroup]
+        if isinstance(_group, Unset):
+            group = UNSET
+        else:
+            group = DeviceGroup.from_dict(_group)
 
         adb_port = d.pop("adbPort", UNSET)
 
@@ -679,8 +685,6 @@ class Device:
             capabilities = DeviceCapabilities.from_dict(_capabilities)
 
         device = cls(
-            serial=serial,
-            group=group,
             field_id=field_id,
             present=present,
             presence_changed_at=presence_changed_at,
@@ -695,7 +699,9 @@ class Device:
             remote_connect_url=remote_connect_url,
             usage=usage,
             logs_enabled=logs_enabled,
+            serial=serial,
             created_at=created_at,
+            group=group,
             adb_port=adb_port,
             network=network,
             display=display,

@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+import json
 import random
 
 import pytest
@@ -32,7 +33,7 @@ async def test_get_groups(api_client):
             assert devices.status_code in range(200, 300), devices.content
             assert devices.parsed
             assert devices.parsed.group
-            group_id = devices.parsed.group.additional_properties["id"]
+            group_id = devices.parsed.group.to_dict()["id"]
             await asyncio.sleep(random.uniform(0.2, 0.5))
             freed = await free_devices.asyncio_detailed(client=api_client, group=group_id)
             assert freed.status_code in range(200, 300), devices.content
@@ -69,15 +70,16 @@ def test_create_connect_delete_autotest_group(api_client, random_str):
         type=UNSET,
         version=UNSET
     )
-    equal(response.status_code, 200)
+    equal(response.status_code, 200, json.loads(response.content))
     is_not_none(response.parsed)
     is_(response.parsed.success, True)
     equal(response.parsed.description, 'Added (group devices)')
     is_not_none(response.parsed.group)
-    equal(len(response.parsed.group.additional_properties['devices']), devices_amount)
-    autotests_group_id = response.parsed.group.additional_properties['id']
+    group_dict = response.parsed.group.to_dict()
+    equal(len(group_dict['devices']), devices_amount)
+    autotests_group_id = group_dict['id']
 
-    for device in response.parsed.group.additional_properties['devices']:
+    for device in group_dict['devices']:
         is_(device['present'], True)
         is_none(device['owner'])
         equal(device['status'], 3)
