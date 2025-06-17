@@ -3437,9 +3437,7 @@ components:
         description:
           type: string
         group:
-          type: object
-          properties: {}
-          description: A null value means the group is unchanged
+          $ref: '#/components/schemas/Group'
     Conflict:
       type: object
       properties:
@@ -3804,89 +3802,92 @@ components:
         groups:
           type: array
           items:
+            $ref: '#/components/schemas/Group'
+
+    Group:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        owner:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+            name:
+              type: string
+        users:
+          type: array
+          items:
+            type: string
+        privilege:
+          type: string
+        class:
+          type: string
+          description: "Group class; privileged value => debug, bookable, standard"
+          enum:
+            - once
+            - bookable
+            - hourly
+            - daily
+            - weekly
+            - monthly
+            - quaterly
+            - halfyearly
+            - yearly
+            - debug
+            - standard
+        repetitions:
+          type: integer
+          minimum: 0
+          description: "Group repetitions; default value => 0"
+        duration:
+          type: integer
+        isActive:
+          type: boolean
+        state:
+          type: string
+          description: "Group state; default value => pending or ready for bookable/standard classes"
+          enum:
+            - pending
+            - ready
+        dates:
+          type: array
+          items:
             type: object
             properties:
-              _id:
+              start:
                 type: string
-              name:
+                format: date-time
+              stop:
                 type: string
-              owner:
-                type: object
-                properties:
-                  email:
-                    type: string
-                    format: email
-                  name:
-                    type: string
-              users:
-                type: array
-                items:
-                  type: string
-              privilege:
-                type: string
-              class:
-                type: string
-                description: "Group class; privileged value => debug, bookable, standard"
-                enum:
-                - once
-                - bookable
-                - hourly
-                - daily
-                - weekly
-                - monthly
-                - quaterly
-                - halfyearly
-                - yearly
-                - debug
-                - standard
-              repetitions:
-                type: integer
-                minimum: 0
-                description: "Group repetitions; default value => 0"
-              duration:
-                type: integer
-              isActive:
-                type: boolean
-              state:
-                type: string
-                description: "Group state; default value => pending or ready for bookable/standard classes"
-                enum:
-                - pending
-                - ready
-              dates:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    start:
-                      type: string
-                      format: date-time
-                    stop:
-                      type: string
-                      format: date-time
-              envUserGroupsNumber:
-                type: integer
-              envUserGroupsDuration:
-                type: integer
-              envUserGroupsRepetitions:
-                type: integer
-              id:
-                type: string
-              devices:
-                type: array
-                items:
-                  type: string
-              lock:
-                type: object
-                properties:
-                  user:
-                    type: boolean
-                  admin:
-                    type: boolean
-              runUrl:
-                type: string
-                nullable: true
-
+                format: date-time
+        envUserGroupsNumber:
+          type: integer
+        envUserGroupsDuration:
+          type: integer
+        envUserGroupsRepetitions:
+          type: integer
+        id:
+          type: string
+        devices:
+          type: array
+          items:
+            type: string
+        lock:
+          type: object
+          properties:
+            user:
+              type: boolean
+            admin:
+              type: boolean
+        runUrl:
+          type: string
+          nullable: true
+      description: A null value means the group is unchanged
     User:
       type: object
       properties:
