@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class GroupListResponseGroupsItemClass(str, Enum):
+class GroupClass(str, Enum):
     BOOKABLE = "bookable"
     DAILY = "daily"
     DEBUG = "debug"

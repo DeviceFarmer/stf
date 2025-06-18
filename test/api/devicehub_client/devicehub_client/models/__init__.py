@@ -47,18 +47,17 @@ from .finger_print_payload import FingerPrintPayload
 from .generate_fake_device_response_200 import GenerateFakeDeviceResponse200
 from .get_access_token_by_title_body import GetAccessTokenByTitleBody
 from .get_devices_target import GetDevicesTarget
+from .group import Group
+from .group_class import GroupClass
+from .group_dates_item import GroupDatesItem
 from .group_list_response import GroupListResponse
-from .group_list_response_groups_item import GroupListResponseGroupsItem
-from .group_list_response_groups_item_class import GroupListResponseGroupsItemClass
-from .group_list_response_groups_item_dates_item import GroupListResponseGroupsItemDatesItem
-from .group_list_response_groups_item_lock import GroupListResponseGroupsItemLock
-from .group_list_response_groups_item_owner import GroupListResponseGroupsItemOwner
-from .group_list_response_groups_item_state import GroupListResponseGroupsItemState
+from .group_lock import GroupLock
+from .group_owner import GroupOwner
 from .group_payload import GroupPayload
 from .group_payload_class import GroupPayloadClass
 from .group_payload_state import GroupPayloadState
 from .group_response import GroupResponse
-from .group_response_group import GroupResponseGroup
+from .group_state import GroupState
 from .groups_payload import GroupsPayload
 from .owner_response import OwnerResponse
 from .remote_connect_user_device_response import RemoteConnectUserDeviceResponse
@@ -142,19 +141,18 @@ __all__ = (
     "GenerateFakeDeviceResponse200",
     "GetAccessTokenByTitleBody",
     "GetDevicesTarget",
+    "Group",
+    "GroupClass",
+    "GroupDatesItem",
     "GroupListResponse",
-    "GroupListResponseGroupsItem",
-    "GroupListResponseGroupsItemClass",
-    "GroupListResponseGroupsItemDatesItem",
-    "GroupListResponseGroupsItemLock",
-    "GroupListResponseGroupsItemOwner",
-    "GroupListResponseGroupsItemState",
+    "GroupLock",
+    "GroupOwner",
     "GroupPayload",
     "GroupPayloadClass",
     "GroupPayloadState",
     "GroupResponse",
-    "GroupResponseGroup",
     "GroupsPayload",
+    "GroupState",
     "OwnerResponse",
     "RemoteConnectUserDeviceResponse",
     "ServiceUserResponse",

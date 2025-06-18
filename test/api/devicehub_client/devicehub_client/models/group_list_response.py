@@ -4,7 +4,7 @@ from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 if TYPE_CHECKING:
-    from ..models.group_list_response_groups_item import GroupListResponseGroupsItem
+    from ..models.group import Group
 
 
 T = TypeVar("T", bound="GroupListResponse")
@@ -16,12 +16,12 @@ class GroupListResponse:
     Attributes:
         success (bool):
         description (str):
-        groups (List['GroupListResponseGroupsItem']):
+        groups (List['Group']):
     """
 
     success: bool
     description: str
-    groups: List["GroupListResponseGroupsItem"]
+    groups: List["Group"]
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -48,7 +48,7 @@ class GroupListResponse:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.group_list_response_groups_item import GroupListResponseGroupsItem
+        from ..models.group import Group
 
         d = src_dict.copy()
         success = d.pop("success")
@@ -58,7 +58,7 @@ class GroupListResponse:
         groups = []
         _groups = d.pop("groups")
         for groups_item_data in _groups:
-            groups_item = GroupListResponseGroupsItem.from_dict(groups_item_data)
+            groups_item = Group.from_dict(groups_item_data)
 
             groups.append(groups_item)
 

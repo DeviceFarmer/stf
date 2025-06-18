@@ -1,10 +1,12 @@
+from datetime import datetime, timezone, timedelta
 from time import sleep
 
-from pytest_check import greater, equal, is_not_none, is_not_in, is_none
+from pytest_check import greater, equal, is_not_none, is_not_in, is_none, between_equal
 
 from devicehub_client.api.admin import add_origin_group_devices
 from devicehub_client.api.groups import get_groups, get_group_device, get_group_devices, create_group, delete_group, \
-    add_group_device, add_group_user, add_group_devices, remove_group_device, update_group, remove_group_devices
+    add_group_device, add_group_user, add_group_devices, remove_group_device, update_group, remove_group_devices, \
+    get_group
 from devicehub_client.models import GroupPayload, GroupPayloadClass, DevicesPayload, GroupPayloadState
 
 
@@ -146,10 +148,10 @@ def test_create_and_delete_once_group(api_client, random_str, successful_respons
     response = create_group.sync_detailed(client=api_client, body=new_group)
     successful_response_check(response, status_code=201, description='Created')
     is_not_none(response.parsed.group)
-    equal(response.parsed.group.additional_properties.get('name'), name)
-    equal(response.parsed.group.additional_properties.get('class'), 'once')
-
-    group_id = response.parsed.group.additional_properties.get('id')
+    group_dict = response.parsed.group.to_dict()
+    equal(group_dict.get('name'), name)
+    equal(group_dict.get('class'), 'once')
+    group_id = group_dict.get('id')
     response = delete_group.sync_detailed(client=api_client, id=group_id)
     successful_response_check(response, description='Deleted (groups)')
 
@@ -359,3 +361,100 @@ def test_remove_devices_from_once_group(
     # delete once group by user
     response = delete_group.sync_detailed(id=once_group_id, client=user_api_client)
     successful_response_check(response, description='Deleted (groups)')
+
+def test_scheduler_update_bookable_group_lifetime(
+    api_client,
+    random_str,
+    successful_response_check,
+devices_serial, devices_in_group_check, common_group_id):
+    # create group
+    bookable_group_name = f'Group_expired_bookable-{random_str()}'
+    response = create_group.sync_detailed(
+        client=api_client,
+        body=GroupPayload(
+            name=bookable_group_name,
+            class_=GroupPayloadClass.ONCE,
+            state=GroupPayloadState.PENDING
+        )
+    )
+    successful_response_check(response, status_code=201, description='Created')
+    group_id = response.parsed.group.to_dict()['id']
+
+    # update group to bookable with passed lifetime
+    response = update_group.sync_detailed(
+        id=group_id,
+        client=api_client,
+        body=GroupPayload(
+            class_=GroupPayloadClass.BOOKABLE,
+            start_time= datetime.now(timezone.utc) - timedelta(minutes=15),
+            stop_time= datetime.now(timezone.utc) - timedelta(minutes=5),
+        )
+    )
+    successful_response_check(response, description='Updated (group)')
+
+    # add devices to bookable group
+    response = add_origin_group_devices.sync_detailed(
+        id=group_id,
+        client=api_client,
+        body=DevicesPayload(serials=','.join(devices_serial))
+    )
+    successful_response_check(response, description='Updated (devices)')
+
+    # waiting for the scheduler has worked
+    sleep(3)
+
+    # check that scheduler update group lifetime
+    response = get_group.sync_detailed(client=api_client, id=group_id)
+    successful_response_check(response, description='Group Information')
+    group_dict = response.parsed.group.to_dict()
+    date_now = datetime.now(timezone.utc)
+    date_now_plus_10 = date_now + timedelta(minutes=10)
+    delta = timedelta(seconds=4)
+    group_start_time = datetime.fromisoformat(group_dict.get('dates')[0].get('start').replace("Z", "+00:00"))
+    group_stop_time = datetime.fromisoformat(group_dict.get('dates')[0].get('stop').replace("Z", "+00:00"))
+    between_equal(group_start_time, date_now - delta, date_now + delta)
+    between_equal(group_stop_time, date_now_plus_10 - delta, date_now_plus_10 + delta)
+
+    # delete group
+    response = delete_group.sync_detailed(id=group_id, client=api_client)
+    successful_response_check(response, description='Deleted (groups)')
+
+    # check device return to common group
+    devices_in_group_check(serials=devices_serial, group_id=common_group_id, group_name='Common')
+
+def test_scheduler_del_expired_once_group(
+    api_client,
+    random_str,
+    successful_response_check,
+devices_serial, devices_in_group_check, common_group_id, failure_response_check):
+    # create group
+    bookable_group_name = f'Group_expired_once-{random_str()}'
+    response = create_group.sync_detailed(
+        client=api_client,
+        body=GroupPayload(
+            name=bookable_group_name,
+            class_=GroupPayloadClass.ONCE,
+            state=GroupPayloadState.PENDING
+        )
+    )
+    successful_response_check(response, status_code=201, description='Created')
+    group_id = response.parsed.group.to_dict()['id']
+
+    # update group to passed lifetime
+    response = update_group.sync_detailed(
+        id=group_id,
+        client=api_client,
+        body=GroupPayload(
+            state=GroupPayloadState.READY,
+            start_time= datetime.now(timezone.utc) - timedelta(minutes=15),
+            stop_time= datetime.now(timezone.utc) - timedelta(minutes=5),
+        )
+    )
+    successful_response_check(response, description='Updated (group)')
+
+    # waiting for the scheduler has worked
+    sleep(3)
+
+    # check that scheduler del group
+    response = get_group.sync_detailed(client=api_client, id=group_id)
+    failure_response_check(response, status_code=404, description='Not Found (group)')

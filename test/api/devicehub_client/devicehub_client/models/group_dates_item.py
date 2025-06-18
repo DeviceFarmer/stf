@@ -7,11 +7,11 @@ from dateutil.parser import isoparse
 
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="GroupListResponseGroupsItemDatesItem")
+T = TypeVar("T", bound="GroupDatesItem")
 
 
 @_attrs_define
-class GroupListResponseGroupsItemDatesItem:
+class GroupDatesItem:
     """
     Attributes:
         start (Union[Unset, datetime.datetime]):
@@ -58,13 +58,13 @@ class GroupListResponseGroupsItemDatesItem:
         else:
             stop = isoparse(_stop)
 
-        group_list_response_groups_item_dates_item = cls(
+        group_dates_item = cls(
             start=start,
             stop=stop,
         )
 
-        group_list_response_groups_item_dates_item.additional_properties = d
-        return group_list_response_groups_item_dates_item
+        group_dates_item.additional_properties = d
+        return group_dates_item
 
     @property
     def additional_keys(self) -> List[str]:

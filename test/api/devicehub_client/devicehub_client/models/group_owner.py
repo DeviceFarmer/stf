@@ -5,50 +5,50 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-T = TypeVar("T", bound="GroupListResponseGroupsItemLock")
+T = TypeVar("T", bound="GroupOwner")
 
 
 @_attrs_define
-class GroupListResponseGroupsItemLock:
+class GroupOwner:
     """
     Attributes:
-        user (Union[Unset, bool]):
-        admin (Union[Unset, bool]):
+        email (Union[Unset, str]):
+        name (Union[Unset, str]):
     """
 
-    user: Union[Unset, bool] = UNSET
-    admin: Union[Unset, bool] = UNSET
+    email: Union[Unset, str] = UNSET
+    name: Union[Unset, str] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
-        user = self.user
+        email = self.email
 
-        admin = self.admin
+        name = self.name
 
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({})
-        if user is not UNSET:
-            field_dict["user"] = user
-        if admin is not UNSET:
-            field_dict["admin"] = admin
+        if email is not UNSET:
+            field_dict["email"] = email
+        if name is not UNSET:
+            field_dict["name"] = name
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         d = src_dict.copy()
-        user = d.pop("user", UNSET)
+        email = d.pop("email", UNSET)
 
-        admin = d.pop("admin", UNSET)
+        name = d.pop("name", UNSET)
 
-        group_list_response_groups_item_lock = cls(
-            user=user,
-            admin=admin,
+        group_owner = cls(
+            email=email,
+            name=name,
         )
 
-        group_list_response_groups_item_lock.additional_properties = d
-        return group_list_response_groups_item_lock
+        group_owner.additional_properties = d
+        return group_owner
 
     @property
     def additional_keys(self) -> List[str]:

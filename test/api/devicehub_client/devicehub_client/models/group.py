@@ -3,62 +3,61 @@ from typing import TYPE_CHECKING, Any, Dict, List, Type, TypeVar, Union, cast
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-from ..models.group_list_response_groups_item_class import GroupListResponseGroupsItemClass
-from ..models.group_list_response_groups_item_state import GroupListResponseGroupsItemState
+from ..models.group_class import GroupClass
+from ..models.group_state import GroupState
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
-    from ..models.group_list_response_groups_item_dates_item import GroupListResponseGroupsItemDatesItem
-    from ..models.group_list_response_groups_item_lock import GroupListResponseGroupsItemLock
-    from ..models.group_list_response_groups_item_owner import GroupListResponseGroupsItemOwner
+    from ..models.group_dates_item import GroupDatesItem
+    from ..models.group_lock import GroupLock
+    from ..models.group_owner import GroupOwner
 
 
-T = TypeVar("T", bound="GroupListResponseGroupsItem")
+T = TypeVar("T", bound="Group")
 
 
 @_attrs_define
-class GroupListResponseGroupsItem:
-    """
+class Group:
+    """A null value means the group is unchanged
+
     Attributes:
         field_id (Union[Unset, str]):
         name (Union[Unset, str]):
-        owner (Union[Unset, GroupListResponseGroupsItemOwner]):
+        owner (Union[Unset, GroupOwner]):
         users (Union[Unset, List[str]]):
         privilege (Union[Unset, str]):
-        class_ (Union[Unset, GroupListResponseGroupsItemClass]): Group class; privileged value => debug, bookable,
-            standard
+        class_ (Union[Unset, GroupClass]): Group class; privileged value => debug, bookable, standard
         repetitions (Union[Unset, int]): Group repetitions; default value => 0
         duration (Union[Unset, int]):
         is_active (Union[Unset, bool]):
-        state (Union[Unset, GroupListResponseGroupsItemState]): Group state; default value => pending or ready for
-            bookable/standard classes
-        dates (Union[Unset, List['GroupListResponseGroupsItemDatesItem']]):
+        state (Union[Unset, GroupState]): Group state; default value => pending or ready for bookable/standard classes
+        dates (Union[Unset, List['GroupDatesItem']]):
         env_user_groups_number (Union[Unset, int]):
         env_user_groups_duration (Union[Unset, int]):
         env_user_groups_repetitions (Union[Unset, int]):
         id (Union[Unset, str]):
         devices (Union[Unset, List[str]]):
-        lock (Union[Unset, GroupListResponseGroupsItemLock]):
+        lock (Union[Unset, GroupLock]):
         run_url (Union[None, Unset, str]):
     """
 
     field_id: Union[Unset, str] = UNSET
     name: Union[Unset, str] = UNSET
-    owner: Union[Unset, "GroupListResponseGroupsItemOwner"] = UNSET
+    owner: Union[Unset, "GroupOwner"] = UNSET
     users: Union[Unset, List[str]] = UNSET
     privilege: Union[Unset, str] = UNSET
-    class_: Union[Unset, GroupListResponseGroupsItemClass] = UNSET
+    class_: Union[Unset, GroupClass] = UNSET
     repetitions: Union[Unset, int] = UNSET
     duration: Union[Unset, int] = UNSET
     is_active: Union[Unset, bool] = UNSET
-    state: Union[Unset, GroupListResponseGroupsItemState] = UNSET
-    dates: Union[Unset, List["GroupListResponseGroupsItemDatesItem"]] = UNSET
+    state: Union[Unset, GroupState] = UNSET
+    dates: Union[Unset, List["GroupDatesItem"]] = UNSET
     env_user_groups_number: Union[Unset, int] = UNSET
     env_user_groups_duration: Union[Unset, int] = UNSET
     env_user_groups_repetitions: Union[Unset, int] = UNSET
     id: Union[Unset, str] = UNSET
     devices: Union[Unset, List[str]] = UNSET
-    lock: Union[Unset, "GroupListResponseGroupsItemLock"] = UNSET
+    lock: Union[Unset, "GroupLock"] = UNSET
     run_url: Union[None, Unset, str] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -164,9 +163,9 @@ class GroupListResponseGroupsItem:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.group_list_response_groups_item_dates_item import GroupListResponseGroupsItemDatesItem
-        from ..models.group_list_response_groups_item_lock import GroupListResponseGroupsItemLock
-        from ..models.group_list_response_groups_item_owner import GroupListResponseGroupsItemOwner
+        from ..models.group_dates_item import GroupDatesItem
+        from ..models.group_lock import GroupLock
+        from ..models.group_owner import GroupOwner
 
         d = src_dict.copy()
         field_id = d.pop("_id", UNSET)
@@ -174,22 +173,22 @@ class GroupListResponseGroupsItem:
         name = d.pop("name", UNSET)
 
         _owner = d.pop("owner", UNSET)
-        owner: Union[Unset, GroupListResponseGroupsItemOwner]
+        owner: Union[Unset, GroupOwner]
         if isinstance(_owner, Unset):
             owner = UNSET
         else:
-            owner = GroupListResponseGroupsItemOwner.from_dict(_owner)
+            owner = GroupOwner.from_dict(_owner)
 
         users = cast(List[str], d.pop("users", UNSET))
 
         privilege = d.pop("privilege", UNSET)
 
         _class_ = d.pop("class", UNSET)
-        class_: Union[Unset, GroupListResponseGroupsItemClass]
+        class_: Union[Unset, GroupClass]
         if isinstance(_class_, Unset):
             class_ = UNSET
         else:
-            class_ = GroupListResponseGroupsItemClass(_class_)
+            class_ = GroupClass(_class_)
 
         repetitions = d.pop("repetitions", UNSET)
 
@@ -198,16 +197,16 @@ class GroupListResponseGroupsItem:
         is_active = d.pop("isActive", UNSET)
 
         _state = d.pop("state", UNSET)
-        state: Union[Unset, GroupListResponseGroupsItemState]
+        state: Union[Unset, GroupState]
         if isinstance(_state, Unset):
             state = UNSET
         else:
-            state = GroupListResponseGroupsItemState(_state)
+            state = GroupState(_state)
 
         dates = []
         _dates = d.pop("dates", UNSET)
         for dates_item_data in _dates or []:
-            dates_item = GroupListResponseGroupsItemDatesItem.from_dict(dates_item_data)
+            dates_item = GroupDatesItem.from_dict(dates_item_data)
 
             dates.append(dates_item)
 
@@ -222,11 +221,11 @@ class GroupListResponseGroupsItem:
         devices = cast(List[str], d.pop("devices", UNSET))
 
         _lock = d.pop("lock", UNSET)
-        lock: Union[Unset, GroupListResponseGroupsItemLock]
+        lock: Union[Unset, GroupLock]
         if isinstance(_lock, Unset):
             lock = UNSET
         else:
-            lock = GroupListResponseGroupsItemLock.from_dict(_lock)
+            lock = GroupLock.from_dict(_lock)
 
         def _parse_run_url(data: object) -> Union[None, Unset, str]:
             if data is None:
@@ -237,7 +236,7 @@ class GroupListResponseGroupsItem:
 
         run_url = _parse_run_url(d.pop("runUrl", UNSET))
 
-        group_list_response_groups_item = cls(
+        group = cls(
             field_id=field_id,
             name=name,
             owner=owner,
@@ -258,8 +257,8 @@ class GroupListResponseGroupsItem:
             run_url=run_url,
         )
 
-        group_list_response_groups_item.additional_properties = d
-        return group_list_response_groups_item
+        group.additional_properties = d
+        return group
 
     @property
     def additional_keys(self) -> List[str]:

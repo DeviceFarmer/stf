@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class GroupListResponseGroupsItemState(str, Enum):
+class GroupState(str, Enum):
     PENDING = "pending"
     READY = "ready"
 

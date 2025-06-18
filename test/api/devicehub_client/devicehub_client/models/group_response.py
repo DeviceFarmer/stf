@@ -4,7 +4,7 @@ from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 if TYPE_CHECKING:
-    from ..models.group_response_group import GroupResponseGroup
+    from ..models.group import Group
 
 
 T = TypeVar("T", bound="GroupResponse")
@@ -16,12 +16,12 @@ class GroupResponse:
     Attributes:
         success (bool):
         description (str):
-        group (GroupResponseGroup): A null value means the group is unchanged
+        group (Group): A null value means the group is unchanged
     """
 
     success: bool
     description: str
-    group: "GroupResponseGroup"
+    group: "Group"
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -45,14 +45,14 @@ class GroupResponse:
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
-        from ..models.group_response_group import GroupResponseGroup
+        from ..models.group import Group
 
         d = src_dict.copy()
         success = d.pop("success")
 
         description = d.pop("description")
 
-        group = GroupResponseGroup.from_dict(d.pop("group"))
+        group = Group.from_dict(d.pop("group"))
 
         group_response = cls(
             success=success,

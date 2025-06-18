@@ -1,30 +1,54 @@
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Type, TypeVar, Union
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
-T = TypeVar("T", bound="GroupResponseGroup")
+from ..types import UNSET, Unset
+
+T = TypeVar("T", bound="GroupLock")
 
 
 @_attrs_define
-class GroupResponseGroup:
-    """A null value means the group is unchanged"""
+class GroupLock:
+    """
+    Attributes:
+        user (Union[Unset, bool]):
+        admin (Union[Unset, bool]):
+    """
 
+    user: Union[Unset, bool] = UNSET
+    admin: Union[Unset, bool] = UNSET
     additional_properties: Dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
+        user = self.user
+
+        admin = self.admin
+
         field_dict: Dict[str, Any] = {}
         field_dict.update(self.additional_properties)
+        field_dict.update({})
+        if user is not UNSET:
+            field_dict["user"] = user
+        if admin is not UNSET:
+            field_dict["admin"] = admin
 
         return field_dict
 
     @classmethod
     def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
         d = src_dict.copy()
-        group_response_group = cls()
+        user = d.pop("user", UNSET)
 
-        group_response_group.additional_properties = d
-        return group_response_group
+        admin = d.pop("admin", UNSET)
+
+        group_lock = cls(
+            user=user,
+            admin=admin,
+        )
+
+        group_lock.additional_properties = d
+        return group_lock
 
     @property
     def additional_keys(self) -> List[str]:
