@@ -1213,7 +1213,7 @@ paths:
           required: true
           type: string
       responses:
-        "200":
+        "201":
           description: Access token information
           schema:
             $ref: "#/definitions/UserAccessTokenResponse"
