@@ -7,6 +7,7 @@ const _ = require('lodash')
 module.exports = function GroupListCtrl(
   $scope
 , $filter
+, $window
 , GroupsService
 , UserService
 , UsersService
@@ -63,6 +64,15 @@ module.exports = function GroupListCtrl(
       else if (newGroup.state === 'ready' && oldGroup.state === 'pending') {
         incrStateStats(oldGroup, -1)
       }
+    }
+    // Send group metrics to backend if available (for metrics collection)
+    if (typeof $window !== 'undefined' && $window.stfMetrics) {
+      $window.stfMetrics.updateGroupMetrics({
+        total: $scope.groups.length,
+        active: $scope.activeGroups,
+        ready: $scope.readyGroups,
+        pending: $scope.pendingGroups
+      })
     }
   }
 
