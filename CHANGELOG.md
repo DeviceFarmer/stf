@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.7.8 (2026-06-30)
+
+* fix response status code of the createUserAccessToken API in swagger file. by @cpascal in https://github.com/DeviceFarmer/stf/pull/872
+* fix: Promise.settle's parameter in stream.js by @chujDK in https://github.com/DeviceFarmer/stf/pull/875
+* Update OS image from ubuntu2204 to ubuntu2404 by @koral-- in https://github.com/DeviceFarmer/stf/pull/886
+* Update OS image from Ubuntu 20.04 to 22.04 by @koral-- in https://github.com/DeviceFarmer/stf/pull/885
+* fix: recover devices stuck after losing the registration ack by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/888
+
+## 3.7.7 (2025-07-23)
+
+* Update APK to 2.5.4 by @koral-- in https://github.com/DeviceFarmer/stf/pull/861
+* fix security issues by @denis99999 in https://github.com/DeviceFarmer/stf/pull/863
+* Update STFService APK to 2.5.5 by @koral-- in https://github.com/DeviceFarmer/stf/pull/870
+
+## 3.7.6 (2025-05-23)
+
+* add saml audience option and manage required options by @denis99999 in https://github.com/DeviceFarmer/stf/pull/843
+* update built-in objects in the database by @denis99999 in https://github.com/DeviceFarmer/stf/pull/846
+* Update supported versions by @denis99999 in https://github.com/DeviceFarmer/stf/pull/849
+* Add update option to install-packages on npmjs CI by @koral-- in https://github.com/DeviceFarmer/stf/pull/856
+* Update minicap from 2.7.2 to 2.7.3 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/857
+* update Dockerfile for arm64 by @denis99999 in https://github.com/DeviceFarmer/stf/pull/855
+* feat: Display STF version in Web UI by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/858
+
 ## 3.7.5 (2025-02-28)
 
 * Update changelog, fix version number consistency by @koral-- in https://github.com/DeviceFarmer/stf/pull/842
