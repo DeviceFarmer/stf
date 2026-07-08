@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@cypress/request": "^3.0.6",
-    "@devicefarmer/adbkit": "^3.3.8",
+    "@devicefarmer/adbkit": "^3.3.9",
     "@devicefarmer/adbkit-apkreader": "^3.2.4",
     "@devicefarmer/adbkit-monkey": "^1.2.1",
     "@devicefarmer/minicap-prebuilt": "^2.7.3",
