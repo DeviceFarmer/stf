@@ -34,7 +34,28 @@ tags:
     description: Groups Operations
   - name: admin 
     description: Privileged Operations
+  - name: metrics
+    description: Prometheus Metrics Operations
 paths:
+  /metrics:
+    x-swagger-router-controller: metrics
+    get:
+      summary: Get Prometheus metrics
+      description: Returns metrics in Prometheus format for monitoring STF system health and usage
+      operationId: getMetrics
+      tags:
+        - metrics
+      responses:
+        "200":
+          description: Prometheus metrics
+          schema:
+            type: string
+        default:
+          description: >
+            Unexpected Error:
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
   /groups:
     x-swagger-router-controller: groups
     get:
