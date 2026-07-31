@@ -86,6 +86,7 @@ Thank you to all the people who have already contributed to STF!
   - Set the default groups quotas applicable to all users
   - Set the groups quotas applicable to a specific user
 * Simple REST [API](doc/API.md)
+* Prometheus [metrics](doc/METRICS.md)
 
 ## Status
 
