@@ -1,0 +1,14 @@
+{
+  "name": "stf-playwright-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright UI and device-touch tests for a running stf local",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test ui.spec.js",
+    "test:device": "playwright test device.spec.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}
