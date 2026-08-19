@@ -4,8 +4,15 @@ describe('FsCtrl', function() {
 
   var scope, ctrl
 
-  beforeEach(inject(function($rootScope, $controller) {
+  beforeEach(inject(function($rootScope, $controller, $q) {
     scope = $rootScope.$new()
+    // ExplorerCtrl lists the device root on construction, which in the app
+    // comes from the parent control pane.
+    scope.control = {
+      fslist: function() {
+        return $q.resolve({body: []})
+      }
+    }
     ctrl = $controller('ExplorerCtrl', {$scope: scope})
   }))
 
