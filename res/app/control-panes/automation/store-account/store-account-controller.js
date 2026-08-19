@@ -1,4 +1,4 @@
-module.exports = function StoreAccountCtrl($scope, ngTableParams, $timeout) {
+module.exports = function StoreAccountCtrl($scope, $timeout) {
   // TODO: This should come from the DB
   $scope.currentAppStore = 'google-play-store'
   $scope.deviceAppStores = {
