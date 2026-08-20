@@ -1,0 +1,689 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Bump to invalidate the dependency cache without touching package.json.
+  CACHE_EPOCH: v2
+
+jobs:
+  # Reads .github/android-matrix.json so the matrix and the report's coverage
+  # check cannot drift apart.
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Read the Android matrix
+        id: plan
+        run: node .github/scripts/plan-matrix.js
+
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      cache-key: ${{ steps.cachekey.outputs.key }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install system dependencies
+        timeout-minutes: 12
+        run: |
+          bash .github/scripts/apt-install.sh \
+            build-essential cmake ninja-build pkg-config python3 \
+            libzmq3-dev libprotobuf-dev protobuf-compiler \
+            graphicsmagick yasm nasm git curl zip unzip wget
+
+      - name: Allow bower git:// dependencies over https
+        run: |
+          git config --global url."https://github.com/".insteadOf git://github.com/
+          git config --global url."https://".insteadOf git://
+          # A bower dependency that has since been deleted prompts for a
+          # GitHub password and hangs the job forever otherwise.
+          echo "GIT_TERMINAL_PROMPT=0" >> "$GITHUB_ENV"
+
+      - name: Compute dependency cache key
+        id: cachekey
+        run: |
+          echo "key=stf-deps-${CACHE_EPOCH}-${{ runner.os }}-${{ hashFiles('package.json', 'bower.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore dependency cache
+        id: deps
+        uses: actions/cache@v5
+        with:
+          path: |
+            node_modules
+            res/bower_components
+          key: ${{ steps.cachekey.outputs.key }}
+
+      - name: Install npm dependencies
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: npm install --no-audit --no-fund --omit=optional --loglevel=http
+
+      - name: Install bower dependencies
+        run: npx bower install --config.interactive=false
+
+      # gulp's own `build` task races clean against webpack:build, so run the
+      # two halves in order instead.
+      - name: Build front-end bundle
+        run: |
+          npx gulp clean
+          npx gulp webpack:build
+
+      - name: Smoke check the CLI
+        run: ./bin/stf -V
+
+      - name: Verify the bundle exists
+        run: |
+          test -f res/build/entry/app.entry.js
+          test -f res/build/entry/authmock.entry.js
+          du -sh res/build
+
+      - name: Upload front-end bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: stf-bundle
+          path: res/build
+          retention-days: 3
+          if-no-files-found: error
+
+      - name: Record verdict
+        if: always()
+        run: |
+          bash .github/scripts/verdict.sh build 'Build (npm + bower + webpack)' \
+            '${{ job.status }}' "deps cache ${{ steps.deps.outputs.cache-hit == 'true' && 'hit' || 'miss' }}"
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: verdict-build
+          path: verdict.json
+          retention-days: 3
+          if-no-files-found: warn
+
+  lint:
+    name: Lint
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            res/bower_components
+          key: ${{ needs.build.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: eslint + jsonlint
+        id: lint
+        run: npm run lint
+
+      # A `node -e '...'` step is a single-quoted shell string, so an apostrophe
+      # inside the program ends it and hands the rest to bash. The YAML stays
+      # valid, so only running the step finds it. bash -n finds it here instead.
+      - name: 'Shell-parse every run: block'
+        id: runblocks
+        if: always()
+        run: node .github/scripts/check-run-blocks.js
+
+      - name: Record verdict
+        if: always()
+        run: |
+          bash .github/scripts/verdict.sh lint \
+            'Lint (eslint + jsonlint + workflow shell)' \
+            '${{ job.status }}' \
+            'lib/, res/ and root JS + JSON, and every workflow run: block'
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: verdict-lint
+          path: verdict.json
+          retention-days: 3
+          if-no-files-found: warn
+
+  unit:
+    name: Unit tests
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            res/bower_components
+          key: ${{ needs.build.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: mocha (lib/util, lib/wire)
+        id: unit
+        run: npm run test:unit
+
+      - name: Record verdict
+        if: always()
+        run: |
+          bash .github/scripts/verdict.sh unit 'Unit tests (mocha)' \
+            '${{ steps.unit.outcome || job.status }}' 'lib/util + lib/wire specs'
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: verdict-unit
+          path: verdict.json
+          retention-days: 3
+          if-no-files-found: warn
+
+  component:
+    name: Component tests
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            res/bower_components
+          key: ${{ needs.build.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: Locate Chrome
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable \
+            || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME" ]; then
+            echo "::error::no Chrome binary on the runner"
+            exit 1
+          fi
+          echo "CHROME_BIN=$CHROME" >> "$GITHUB_ENV"
+          "$CHROME" --version
+
+      - name: karma (res/app AngularJS specs)
+        id: component
+        run: npm run test:component
+
+      - name: Summarise karma results
+        if: always()
+        id: karma
+        run: |
+          if [ -f test-results/karma/junit.xml ]; then
+            node -e '
+              var fs = require("fs")
+              var xml = fs.readFileSync("test-results/karma/junit.xml", "utf8")
+              var pick = function(name) {
+                var m = new RegExp(name + "=\"(\\d+)\"").exec(xml)
+                return m ? Number(m[1]) : 0
+              }
+              // karma counts what ran. The second half says how much of it
+              // asserts anything, because most specs under res/app are the
+              // unmodified AngularJS generator stub and reporting the executed
+              // count alone reads as coverage this tier does not have.
+              // No apostrophes in here: this program is inside a single-quoted
+              // shell string, so one would end it and hand the rest to bash.
+              var counted = require("./.github/scripts/count-assertions.js")
+                .count(["res/app"])
+              var line = pick("tests") + " specs, " + pick("failures") +
+                " failed, " + pick("errors") + " errored (" + counted.asserting +
+                " assert, " + (counted.tautology + counted.empty) +
+                " are upstream stubs)"
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, "summary=" + line + "\n")
+            '
+          else
+            echo "summary=no junit output produced" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload karma results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: karma-results
+          path: test-results/karma
+          retention-days: 3
+          if-no-files-found: warn
+
+      - name: Record verdict
+        if: always()
+        run: |
+          bash .github/scripts/verdict.sh component 'Component tests (karma + AngularJS)' \
+            '${{ steps.component.outcome || job.status }}' '${{ steps.karma.outputs.summary }}'
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: verdict-component
+          path: verdict.json
+          retention-days: 3
+          if-no-files-found: warn
+
+  integration:
+    name: Integration + device-less E2E
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      rethinkdb:
+        image: rethinkdb:2.4.2
+        ports:
+          - 28015:28015
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install runtime dependencies
+        timeout-minutes: 12
+        run: bash .github/scripts/apt-install.sh graphicsmagick libzmq5
+
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            res/bower_components
+          key: ${{ needs.build.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: Download front-end bundle
+        uses: actions/download-artifact@v7
+        with:
+          name: stf-bundle
+          path: res/build
+
+      - name: Put adb on PATH
+        run: |
+          if [ -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}/platform-tools" ]; then
+            echo "${ANDROID_HOME:-/usr/local/lib/android/sdk}/platform-tools" >> "$GITHUB_PATH"
+          else
+            bash .github/scripts/apt-install.sh adb
+          fi
+
+      - name: Wait for RethinkDB
+        run: bash .github/scripts/wait-for-port.sh 28015 60 rethinkdb
+
+      - name: stf doctor
+        run: node lib/cli/index.js doctor || true
+
+      - name: Start stf local
+        id: start
+        env:
+          STF_LOG_DIR: stf-logs
+        run: bash .github/scripts/start-stf.sh
+
+      - name: Create fake devices and read them back through STF's db layer
+        id: fakedevice
+        run: |
+          node lib/cli/index.js generate-fake-device 'Nexus 5' -n 2
+          node .github/scripts/stf-devices.js wait-count 2 120
+          node .github/scripts/stf-devices.js list
+
+      - name: Install Playwright
+        run: |
+          cd test/playwright
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Playwright web UI suite (no device)
+        id: e2e
+        env:
+          STF_URL: http://127.0.0.1:7100
+        run: |
+          cd test/playwright
+          npx playwright test ui.spec.js
+
+      - name: Derive checks from the Playwright report
+        if: always()
+        id: checks
+        run: |
+          node .github/scripts/playwright-checks.js \
+            test-results/playwright/report.json playwright-checks.json
+
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p stf-logs
+          node .github/scripts/stf-devices.js list > stf-logs/stf-devices.json \
+            2> stf-logs/stf-devices.err || true
+          if [ -f stf-logs/stf.pid ]; then
+            kill "$(cat stf-logs/stf.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload logs and Playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: integration-logs
+          path: |
+            stf-logs
+            test-results/playwright
+            playwright-checks.json
+          retention-days: 5
+          if-no-files-found: warn
+
+      - name: Record verdict
+        if: always()
+        env:
+          STF_UP: ${{ steps.start.outcome }}
+          FAKE: ${{ steps.fakedevice.outcome }}
+          E2E: ${{ steps.e2e.outcome }}
+          VERDICT_EXTRA: ${{ steps.checks.outputs.extra }}
+        run: |
+          DETAILS="stf local $STF_UP, fake devices $FAKE, web UI suite $E2E"
+          bash .github/scripts/verdict.sh integration \
+            'Integration + device-less E2E (stf local + RethinkDB + Playwright)' \
+            '${{ job.status }}' "$DETAILS"
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: verdict-integration
+          path: verdict.json
+          retention-days: 3
+          if-no-files-found: warn
+
+  android:
+    name: Android ${{ matrix.android }} (API ${{ matrix.api }})
+    needs: [plan, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    services:
+      rethinkdb:
+        image: rethinkdb:2.4.2
+        ports:
+          - 28015:28015
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Free disk space
+        run: |
+          # A system image plus node_modules plus a 6G userdata partition does
+          # not fit next to the preinstalled toolchains.
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/share/swift /opt/ghc \
+            /usr/local/share/boost /usr/local/lib/android/sdk/ndk \
+            /usr/local/share/powershell 2>/dev/null || true
+          docker image prune -af 2>/dev/null || true
+          df -h /
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+          test -w /dev/kvm
+
+      - name: Install runtime dependencies
+        timeout-minutes: 12
+        run: bash .github/scripts/apt-install.sh graphicsmagick libzmq5
+
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            node_modules
+            res/bower_components
+          key: ${{ needs.build.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: Download front-end bundle
+        uses: actions/download-artifact@v7
+        with:
+          name: stf-bundle
+          path: res/build
+
+      - name: Install Playwright
+        run: |
+          cd test/playwright
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Wait for RethinkDB
+        run: bash .github/scripts/wait-for-port.sh 28015 60 rethinkdb
+
+      # Fresh Android releases are not always published as an x86_64 image yet,
+      # so probe instead of hardcoding a matrix that rots.
+      - name: Probe for the system image
+        id: probe
+        run: |
+          IMAGE="system-images;android-${{ matrix.api }};${{ matrix.target }};${{ matrix.arch }}"
+          echo "looking for $IMAGE"
+          SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::warning::no sdkmanager found, assuming the image exists"
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          "$SDKMANAGER" --list > sdk-packages.txt 2>sdk-packages.err || true
+          # Fail open. An sdkmanager that errors out produces an empty listing,
+          # and treating that as "image not published" would let every leg
+          # self-skip and the whole matrix report green with zero coverage.
+          if ! grep -q "system-images;" sdk-packages.txt; then
+            echo "::warning::sdkmanager listed no system images at all, assuming the image exists"
+            head -20 sdk-packages.err || true
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -qF "$IMAGE" sdk-packages.txt; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::$IMAGE is not published"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Record a skip when the image is unpublished
+        if: steps.probe.outputs.available != 'true'
+        run: echo '{"image":"skip"}' > checks.json
+
+      - name: Boot the emulator and run STF against it
+        id: emulator
+        if: steps.probe.outputs.available == 'true'
+        continue-on-error: true
+        # Cap the step, not just the job: a leg whose image will not boot can
+        # otherwise sit here until the job timeout and never reach the verdict
+        # and log-upload steps below.
+        timeout-minutes: 50
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          STF_LOG_DIR: stf-logs
+          STF_PUBLIC_IP: 127.0.0.1
+          CHECKS_FILE: checks.json
+          BOOT_TIMEOUT: ${{ matrix.boot }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          # Without a device profile avdmanager builds a 320x640 160dpi screen,
+          # which is smaller than the browser's device pane, so minicap has to
+          # scale up and the picture ends up letterboxed in the STF UI. pixel_2
+          # is 1080x1920 420dpi and ships with the SDK for every api level here.
+          profile: pixel_2
+          cores: 2
+          ram-size: 4096M
+          disk-size: 6G
+          emulator-boot-timeout: ${{ matrix.boot }}
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
+            -no-boot-anim -camera-back none -camera-front none
+          script: bash .github/scripts/android-leg.sh
+
+      - name: Derive the verdict
+        if: always()
+        id: leg
+        env:
+          CHECKS_FILE: checks.json
+          ANDROID_VERSION: ${{ matrix.android }}
+          ANDROID_API: ${{ matrix.api }}
+          ANDROID_TARGET: ${{ matrix.target }}
+          ANDROID_ARCH: ${{ matrix.arch }}
+          EMULATOR_OUTCOME: ${{ steps.emulator.outcome }}
+        run: node .github/scripts/android-verdict.js
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-logs-api-${{ matrix.api }}-${{ matrix.target }}
+          path: |
+            stf-logs
+            checks.json
+            test-results/playwright
+          retention-days: 5
+          if-no-files-found: warn
+
+      - name: Record verdict
+        if: always()
+        env:
+          VERDICT_GROUP: android
+          VERDICT_EXTRA: ${{ steps.leg.outputs.extra }}
+        run: |
+          bash .github/scripts/verdict.sh 'android-${{ matrix.api }}' \
+            'Android ${{ matrix.android }} (API ${{ matrix.api }})' \
+            '${{ steps.leg.outputs.status }}' '${{ steps.leg.outputs.details }}'
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: verdict-android-${{ matrix.api }}-${{ matrix.target }}
+          path: verdict.json
+          retention-days: 3
+          if-no-files-found: warn
+
+  report:
+    name: Report
+    needs: [plan, build, lint, unit, component, integration, android]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Download verdicts
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          path: verdicts
+          pattern: verdict-*
+          merge-multiple: false
+
+      - name: Render report
+        id: render
+        env:
+          # Any tier or leg expected here that produced no verdict is reported
+          # as a failure rather than quietly vanishing from the table. The
+          # Android side comes from the same file the matrix is built from, so
+          # adding a leg cannot leave it unenforced.
+          EXPECTED_TIERS: build lint unit component integration
+          EXPECTED_ANDROID_FILE: .github/android-matrix.json
+        run: node .github/scripts/render-report.js verdicts report.md
+
+      - name: Job summary
+        if: always()
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # A fork PR gets a read-only token, so commenting 403s. Never let that
+      # swallow the tier gate below; the report is in the job summary anyway.
+      - name: Upsert PR comment
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs')
+            const body = fs.readFileSync('report.md', 'utf8')
+            const marker = '<!-- stf-ci-report -->'
+            const {owner, repo} = context.repo
+            const issue_number = context.payload.pull_request.number
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {owner, repo, issue_number, per_page: 100}
+            )
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body && c.body.includes(marker))
+
+            if (existing) {
+              await github.rest.issues.updateComment(
+                {owner, repo, comment_id: existing.id, body})
+              core.info(`updated comment ${existing.id}`)
+            }
+            else {
+              await github.rest.issues.createComment(
+                {owner, repo, issue_number, body})
+              core.info('created report comment')
+            }
+
+      - name: Fail if any tier failed
+        run: |
+          if [ "${{ steps.render.outputs.failed }}" != "0" ]; then
+            echo "::error::${{ steps.render.outputs.failed }} CI tier(s) failed"
+            exit 1
+          fi
