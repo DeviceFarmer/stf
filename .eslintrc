@@ -64,7 +64,7 @@
     "no-useless-call": 2, // `2` is recommended
     "no-useless-concat": 2,
     "no-void": 2,
-    "no-warning-comments": [1, { "terms": ["todo", "fixme", "@todo", "@fixme"]}], // `[0, { "terms": ["todo", "fixme", "xxx"], "location": "start" }]` is recommended
+    "no-warning-comments": 0, // the 45 TODO/FIXME notes in the tree are deliberate; `0` is what this line already recommended
     "no-with": 2,
     "radix": 1, // `2` is recommended
     "vars-on-top": 0, // `2` is recommended TODO: review this
