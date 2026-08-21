@@ -33,6 +33,7 @@ module.exports = angular.module('stf.explorer', [])
         }
         return res.join('')
       }
+      return ''
     }
   })
   .filter('fileIsDir', function() {
@@ -42,6 +43,7 @@ module.exports = angular.module('stf.explorer', [])
         mode = parseInt(mode, 10)
         return ((mode & S_IFMT) === S_IFDIR) || ((mode & S_IFMT) === S_IFLNK)
       }
+      return false
     }
   })
   .filter('formatFileSize', function() {

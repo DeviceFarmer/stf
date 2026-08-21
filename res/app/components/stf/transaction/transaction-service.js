@@ -116,7 +116,7 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
       var foundAny = false
 
       while (seq <= last && (message = unplaced[seq])) {
-        unplaced[seq] = undefined
+        unplaced[seq] = null
 
         if (seq === last) {
           result.success = message.success

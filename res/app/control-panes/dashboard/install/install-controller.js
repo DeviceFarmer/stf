@@ -22,6 +22,7 @@ module.exports = function InstallCtrl(
     if ($files.length) {
       return InstallService.installFile($scope.control, $files)
     }
+    return null
   }
 
   $scope.uninstall = function(packageName) {

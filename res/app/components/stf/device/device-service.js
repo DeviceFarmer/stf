@@ -83,6 +83,8 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
     }.bind(this)
 
     var modify = function modify(data, newData) {
+      // returning undefined is how lodash is told to merge normally
+      // eslint-disable-next-line consistent-return
       _.merge(data, newData, function(a, b) {
         // New Arrays overwrite old Arrays
         if (_.isArray(b)) {

@@ -715,7 +715,7 @@ module.exports = function DeviceScreenDirective(
           stopMousing()
         }
 
-        /**
+        /*
          * Do NOT remove under any circumstances. Currently, in the latest
          * Safari (Version 8.0 (10600.1.25)), if an input field is focused
          * while we do a tap click on an MBP trackpad ("Tap to click" in
@@ -893,16 +893,15 @@ module.exports = function DeviceScreenDirective(
           for (var i = 0, l = e.changedTouches.length; i < l; ++i) {
             var touch = e.changedTouches[i]
             var slot = slotted[touch.identifier]
-            if (typeof slot === 'undefined') {
-              // We've already disposed of the contact. We may have gotten a
-              // touchend event for the same contact twice.
-              continue
+            // A missing slot means we already disposed of the contact. We may
+            // have gotten a touchend event for the same contact twice.
+            if (typeof slot !== 'undefined') {
+              delete slotted[touch.identifier]
+              slots.push(slot)
+              control.touchUp(nextSeq(), slot)
+              deactivateFinger(slot)
+              foundAny = true
             }
-            delete slotted[touch.identifier]
-            slots.push(slot)
-            control.touchUp(nextSeq(), slot)
-            deactivateFinger(slot)
-            foundAny = true
           }
 
           if (foundAny) {
