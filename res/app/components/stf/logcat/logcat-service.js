@@ -5,13 +5,6 @@ module.exports = function LogcatServiceFactory(socket, FilterStringService) {
   var service = {}
   service.started = false
 
-  service.serverFilters = [
-    {
-      tag: '',
-      priority: 2
-    }
-  ]
-
   service.filters = {
     entries: [
     ],
@@ -28,7 +21,6 @@ module.exports = function LogcatServiceFactory(socket, FilterStringService) {
         },
         set: function(value) {
           _filters[prop] = value || null
-          service.serverFilters[0][prop] = value || undefined
           service.filters.filterLines()
         }
       })
