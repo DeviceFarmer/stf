@@ -162,27 +162,27 @@ module.exports =
            * -... combinations
            *  in other case colour will be set to default.
            *
-           * @param {event} event object
+           * @param {event} e object
            * @returns {None} NaN
            */
         scope.validateDate = function(e) {
           var pattern = ['^(?:(?:([0-1]?\\d|2[0-3]):)?(:[0-5]\\d|[0-5]\\d):|\\d)',
             '?(:[0-5]\\d|[0-5]\\d{1,2})?(\\.[0-9]?\\d{0,2}|:[0-5]?\\d{0,1})|(\\d{0,2})'].join([])
           var regex = new RegExp(pattern, 'g')
-          var inputValue = event.srcElement.value
+          var inputValue = e.target.value
           var matchArray = inputValue.match(regex)
           var isTextValid = false
           if (matchArray) {
             matchArray.forEach(function(item, index) {
               if (item === inputValue) {
                 isTextValid = true
-                event.srcElement.style.borderColor = ''
+                e.target.style.borderColor = ''
               }
             })
           }
 
           if (isTextValid === false) {
-            event.srcElement.style.borderColor = 'red'
+            e.target.style.borderColor = 'red'
           }
         }
 
