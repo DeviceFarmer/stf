@@ -26,13 +26,11 @@ module.exports = function SettingsServiceFactory(
   function applyDelta(delta) {
     // TODO: This causes chaos
     $rootScope.safeApply(function() {
-      // returning undefined is how lodash is told to merge normally
-      // eslint-disable-next-line consistent-return
+      var undefinedValue
+
       _.merge(settings, delta, function(a, b) {
         // New Arrays overwrite old Arrays
-        if (_.isArray(b)) {
-          return b
-        }
+        return _.isArray(b) ? b : undefinedValue
       })
 
       for (var i = 0, l = syncListeners.length; i < l; ++i) {
