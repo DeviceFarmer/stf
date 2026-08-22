@@ -5,14 +5,14 @@
 require('./settings.css')
 
 module.exports = angular.module('ui-settings', [
-  require('./general').name,
-  require('./keys').name,
-  require('./groups').name,
-  require('./devices').name,
-  require('./users').name,
-  require('stf/app-state').name,
-  require('stf/common-ui/nice-tabs').name
-  //require('./notifications').name
+  require('./general').name
+  , require('./keys').name
+  , require('./groups').name
+  , require('./devices').name
+  , require('./users').name
+  , require('stf/app-state').name
+  , require('stf/common-ui/nice-tabs').name
+  // require('./notifications').name
 ])
   .config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/settings', {

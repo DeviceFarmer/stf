@@ -13,14 +13,13 @@ module.exports =
       $scope.cancel = function() {
         $uibModalInstance.dismiss('cancel')
       }
-
     }
 
     service.open = function(message) {
       var modalInstance = $uibModal.open({
-        template: require('./socket-disconnected.pug'),
-        controller: ModalInstanceCtrl,
-        resolve: {
+        template: require('./socket-disconnected.pug')
+        , controller: ModalInstanceCtrl
+        , resolve: {
           message: function() {
             return message
           }

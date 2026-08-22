@@ -1,5 +1,4 @@
 describe('navMenu', function() {
-
   beforeEach(angular.mock.module(require('./').name))
 
   var scope, compile

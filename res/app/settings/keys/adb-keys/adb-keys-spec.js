@@ -1,5 +1,4 @@
 describe('AdbKeysCtrl', function() {
-
   beforeEach(angular.mock.module(require('./index').name))
 
   var scope, ctrl
@@ -11,7 +10,5 @@ describe('AdbKeysCtrl', function() {
 
   it('should ...', inject(function() {
     expect(1).toEqual(1)
-
   }))
-
 })

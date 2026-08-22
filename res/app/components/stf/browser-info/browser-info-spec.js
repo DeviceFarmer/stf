@@ -1,5 +1,4 @@
 describe('BrowserInfo', function() {
-
   beforeEach(angular.mock.module(require('./').name))
 
   it('should ...', inject(function() {
@@ -7,5 +6,4 @@ describe('BrowserInfo', function() {
 	// expect(BrowserInfo.doSomething()).toEqual('something')
 
   }))
-
 })

@@ -3,9 +3,9 @@ module.exports = function StoreAccountCtrl($scope, $timeout) {
   $scope.currentAppStore = 'google-play-store'
   $scope.deviceAppStores = {
     'google-play-store': {
-      type: 'google-play-store',
-      name: 'Google Play Store',
-      package: 'com.google'
+      type: 'google-play-store'
+      , name: 'Google Play Store'
+      , package: 'com.google'
     }
   }
 

@@ -9,7 +9,8 @@ module.exports = angular.module('stf.safe-apply', [])
               if (fn && typeof fn === 'function') {
                 fn()
               }
-            } else {
+            }
+ else {
               $delegate.$apply(fn)
             }
           }

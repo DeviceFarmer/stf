@@ -1,5 +1,4 @@
 module.exports = function($scope, gettext, $filter) {
-
   $scope.reboot = function() {
     var config = {
       rebootEnabled: true
@@ -18,5 +17,4 @@ module.exports = function($scope, gettext, $filter) {
       }
     }
   }
-
 }

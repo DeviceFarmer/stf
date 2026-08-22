@@ -1,8 +1,8 @@
 module.exports = function counterDirective($timeout) {
   return {
-    replace: false,
-    scope: true,
-    link: function(scope, element, attrs) {
+    replace: false
+    , scope: true
+    , link: function(scope, element, attrs) {
       var el = element[0]
       var num, refreshInterval, duration, steps, step, countTo, increment
 
@@ -34,7 +34,6 @@ module.exports = function counterDirective($timeout) {
             tick()
           }
         }, refreshInterval)
-
       }
 
       var start = function() {
@@ -58,5 +57,4 @@ module.exports = function counterDirective($timeout) {
       return true
     }
   }
-
 }

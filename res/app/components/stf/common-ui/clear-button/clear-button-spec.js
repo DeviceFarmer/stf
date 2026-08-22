@@ -1,5 +1,4 @@
 describe('clearButton', function() {
-
   beforeEach(angular.mock.module(require('./').name))
 
   var scope, compile
@@ -18,5 +17,4 @@ describe('clearButton', function() {
     var element = compile('<clear-button />')(scope)
     expect(element.find('i')[0].getAttribute('class')).toMatch('fa-trash-o')
   })
-
 })

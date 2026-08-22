@@ -1,10 +1,10 @@
 require('./access-tokens.css')
 
 module.exports = angular.module('stf.settings.keys.access-tokens', [
-  require('stf/socket').name,
-  require('stf/common-ui').name,
-  require('stf/tokens').name,
-  require('stf/tokens/generate-access-token').name
+  require('stf/socket').name
+  , require('stf/common-ui').name
+  , require('stf/tokens').name
+  , require('stf/tokens/generate-access-token').name
 ])
   .run(['$templateCache', function($templateCache) {
     $templateCache.put(

@@ -3,10 +3,10 @@ var _ = require('lodash')
 module.exports =
   function logcatTableDirective($rootScope, $timeout, LogcatService, SaveLogService) {
     return {
-      restrict: 'E',
-      replace: true,
-      template: require('./logcat-table.pug'),
-      link: function(scope, element) {
+      restrict: 'E'
+      , replace: true
+      , template: require('./logcat-table.pug')
+      , link: function(scope, element) {
         var autoScroll = true
         var autoScrollDependingOnScrollPosition = true
         var scrollPosition = 0
@@ -50,7 +50,8 @@ module.exports =
           var limiter = ''
           if (maxVisibleEntries > maxEntriesBuffer) {
             limiter = maxEntriesBuffer
-          } else {
+          }
+ else {
             limiter = maxVisibleEntries
           }
 
@@ -80,7 +81,8 @@ module.exports =
         function shouldAutoScroll() {
           if (autoScrollDependingOnScrollPosition) {
             return scrollPosition === scrollHeight
-          } else {
+          }
+ else {
             return true
           }
         }
@@ -166,8 +168,8 @@ module.exports =
            * @returns {None} NaN
            */
         scope.validateDate = function(e) {
-          var pattern = ['^(?:(?:([0-1]?\\d|2[0-3]):)?(:[0-5]\\d|[0-5]\\d):|\\d)',
-            '?(:[0-5]\\d|[0-5]\\d{1,2})?(\\.[0-9]?\\d{0,2}|:[0-5]?\\d{0,1})|(\\d{0,2})'].join([])
+          var pattern = ['^(?:(?:([0-1]?\\d|2[0-3]):)?(:[0-5]\\d|[0-5]\\d):|\\d)'
+            , '?(:[0-5]\\d|[0-5]\\d{1,2})?(\\.[0-9]?\\d{0,2}|:[0-5]?\\d{0,1})|(\\d{0,2})'].join([])
           var regex = new RegExp(pattern, 'g')
           var inputValue = e.target.value
           var matchArray = inputValue.match(regex)

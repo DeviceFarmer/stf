@@ -406,7 +406,7 @@ module.exports = function DeviceScreenDirective(
       ;(function() {
         function isChangeCharsetKey(e) {
           // Add any special key here for changing charset
-          //console.log('e', e)
+          // console.log('e', e)
 
           // Chrome/Safari/Opera
           if (
@@ -787,7 +787,7 @@ module.exports = function DeviceScreenDirective(
           var e = event
           e.preventDefault()
 
-          //Make it jQuery compatible also
+          // Make it jQuery compatible also
           if (e.originalEvent) {
             e = e.originalEvent
           }

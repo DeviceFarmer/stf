@@ -1,5 +1,4 @@
 describe('Widget Container Page', function() {
-
   var DeviceListPage = require('../devices')
   var deviceListPage = new DeviceListPage()
 

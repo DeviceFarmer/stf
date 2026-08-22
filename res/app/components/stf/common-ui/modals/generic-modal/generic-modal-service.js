@@ -20,11 +20,11 @@ module.exports =
 
     service.open = function(data) {
       var modalInstance = $uibModal.open({
-        template: require('./generic-modal.pug'),
-        controller: ModalInstanceCtrl,
-        size: data.size,
-        animation: true,
-        resolve: {
+        template: require('./generic-modal.pug')
+        , controller: ModalInstanceCtrl
+        , size: data.size
+        , animation: true
+        , resolve: {
           data: function() {
             return data
           }

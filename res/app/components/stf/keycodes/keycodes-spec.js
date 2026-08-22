@@ -1,4 +1,4 @@
-//describe('KeycodesService', function() {
+// describe('KeycodesService', function() {
 //
 //  beforeEach(angular.mock.module(require('./').name));
 //
@@ -8,4 +8,4 @@
 //
 //  }));
 //
-//})
+// })

@@ -3,7 +3,6 @@
 **/
 
 module.exports = function AccessTokensCtrl($scope, AccessTokenService) {
-
     $scope.accessTokenTitles = []
     $scope.newToken = null
 

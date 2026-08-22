@@ -16,14 +16,14 @@ module.exports = function ServiceFactory($uibModal) {
 
   service.open = function(title, imageUrl) {
     var modalInstance = $uibModal.open({
-      template: require('./lightbox-image.pug'),
-      controller: ModalInstanceCtrl,
-      windowClass: 'modal-size-xl',
-      resolve: {
+      template: require('./lightbox-image.pug')
+      , controller: ModalInstanceCtrl
+      , windowClass: 'modal-size-xl'
+      , resolve: {
         title: function() {
           return title
-        },
-        imageUrl: function() {
+        }
+        , imageUrl: function() {
           return imageUrl
         }
       }

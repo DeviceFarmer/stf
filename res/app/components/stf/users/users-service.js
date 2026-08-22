@@ -46,12 +46,12 @@ module.exports = function UsersServiceFactory(
 
   UsersService.removeUsers = function(filters, emails) {
     return $http({
-      method: 'DELETE',
-      url: '/api/v1/users' + buildQueryParameters(filters),
-      headers: {
+      method: 'DELETE'
+      , url: '/api/v1/users' + buildQueryParameters(filters)
+      , headers: {
         'Content-Type': 'application/json;charset=utf-8'
-      },
-      data: typeof emails === 'undefined' ? emails : JSON.stringify({emails: emails})
+      }
+      , data: typeof emails === 'undefined' ? emails : JSON.stringify({emails: emails})
     })
   }
 

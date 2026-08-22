@@ -12,9 +12,9 @@ module.exports =
     }
 
     function browserToSupportedLang(lang) {
-      //supportedLanguages.
+      // supportedLanguages.
 
-      //return lang.replace(/([A-Za-z]{2})(-|_)?([A-Za-z]{0,4})/gm, '$1')
+      // return lang.replace(/([A-Za-z]{2})(-|_)?([A-Za-z]{0,4})/gm, '$1')
     }
 
     function isSupported(lang) {
@@ -33,9 +33,9 @@ module.exports =
 
     SettingsService.sync(
       LanguageService, {
-        target: LanguageService.settingKey,
-        source: LanguageService.settingKey,
-        defaultValue: LanguageService.detectedLanguage
+        target: LanguageService.settingKey
+        , source: LanguageService.settingKey
+        , defaultValue: LanguageService.detectedLanguage
       }, updateLanguage
     )
 

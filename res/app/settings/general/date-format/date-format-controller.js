@@ -6,7 +6,6 @@ module.exports = function DateFormatCtrl(
   $scope
 , SettingsService
 ) {
-
   $scope.defaultDateFormat = 'M/d/yy h:mm:ss a'
   SettingsService.bind($scope, {
     target: 'dateFormat'

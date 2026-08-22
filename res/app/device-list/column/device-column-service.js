@@ -197,17 +197,17 @@ module.exports = function DeviceColumnService($filter, gettext, SettingsService,
       title: gettext('Screen')
     , defaultOrder: 'desc'
     , value: function(device) {
-        return device.display && device.display.width
-          ? device.display.width + 'x' + device.display.height
-          : ''
+        return device.display && device.display.width ?
+          device.display.width + 'x' + device.display.height :
+          ''
       }
     , compare: function(deviceA, deviceB) {
-        var va = deviceA.display && deviceA.display.width
-          ? deviceA.display.width * deviceA.display.height
-          : 0
-        var vb = deviceB.display && deviceB.display.width
-          ? deviceB.display.width * deviceB.display.height
-          : 0
+        var va = deviceA.display && deviceA.display.width ?
+          deviceA.display.width * deviceA.display.height :
+          0
+        var vb = deviceB.display && deviceB.display.width ?
+          deviceB.display.width * deviceB.display.height :
+          0
         return va - vb
       }
     })
@@ -290,33 +290,33 @@ module.exports = function DeviceColumnService($filter, gettext, SettingsService,
   , batteryHealth: TextCell({
       title: gettext('Battery Health')
     , value: function(device) {
-        return device.battery
-          ? $filter('translate')(device.enhancedBatteryHealth)
-          : ''
+        return device.battery ?
+          $filter('translate')(device.enhancedBatteryHealth) :
+          ''
       }
     })
   , batterySource: TextCell({
       title: gettext('Battery Source')
     , value: function(device) {
-        return device.battery
-          ? $filter('translate')(device.enhancedBatterySource)
-          : ''
+        return device.battery ?
+          $filter('translate')(device.enhancedBatterySource) :
+          ''
       }
     })
   , batteryStatus: TextCell({
       title: gettext('Battery Status')
     , value: function(device) {
-        return device.battery
-          ? $filter('translate')(device.enhancedBatteryStatus)
-          : ''
+        return device.battery ?
+          $filter('translate')(device.enhancedBatteryStatus) :
+          ''
       }
     })
   , batteryLevel: NumberCell({
       title: gettext('Battery Level')
     , value: function(device) {
-        return device.battery
-          ? Math.floor(device.battery.level / device.battery.scale * 100)
-          : null
+        return device.battery ?
+          Math.floor(device.battery.level / device.battery.scale * 100) :
+          null
       }
     , format: function(value) {
         return value === null ? '' : value + '%'
@@ -361,7 +361,7 @@ function zeroPadTwoDigit(digit) {
 }
 
 function compareIgnoreCase(a, b) {
-/***** fix bug: cast to String for Safari compatibility ****/
+/* **** fix bug: cast to String for Safari compatibility **** */
   var la = (String(a) || '').toLowerCase()
   var lb = (String(b) || '').toLowerCase()
 /***********************************************************/
@@ -374,7 +374,7 @@ function compareIgnoreCase(a, b) {
 }
 
 function filterIgnoreCase(a, filterValue) {
-/***** fix bug: cast to String for Safari compatibility ****/
+/* **** fix bug: cast to String for Safari compatibility **** */
   var va = (String(a) || '').toLowerCase()
   var vb = String(filterValue).toLowerCase()
 /***********************************************************/
@@ -457,11 +457,11 @@ function DateCell(options) {
       var t = td.firstChild
       var date = options.value(item)
       if (date) {
-        t.nodeValue = date.getFullYear()
-          + '-'
-          + zeroPadTwoDigit(date.getMonth() + 1)
-          + '-'
-          + zeroPadTwoDigit(date.getDate())
+        t.nodeValue = date.getFullYear() +
+          '-' +
+          zeroPadTwoDigit(date.getMonth() + 1) +
+          '-' +
+          zeroPadTwoDigit(date.getDate())
       }
       else {
         t.nodeValue = ''
@@ -475,9 +475,9 @@ function DateCell(options) {
     }
   , filter: (function() {
       function dateNumber(d) {
-        return d
-          ? d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate()
-          : 0
+        return d ?
+          d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate() :
+          0
       }
       return function(item, filter) {
         var filterDate = new Date(filter.query)

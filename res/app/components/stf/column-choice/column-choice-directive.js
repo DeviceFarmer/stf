@@ -4,12 +4,12 @@
 
 module.exports = function() {
   return {
-    restrict: 'E',
-    scope: {
-      buttonStyle: '@?',
-      columnData: '=',
-      resetData: '&'
-    },
-    template: require('./column-choice.pug'),
+    restrict: 'E'
+    , scope: {
+      buttonStyle: '@?'
+      , columnData: '='
+      , resetData: '&'
+    }
+    , template: require('./column-choice.pug'),
   }
 }

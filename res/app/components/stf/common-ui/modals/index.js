@@ -3,10 +3,10 @@
 **/
 
 module.exports = angular.module('stf.modals', [
-  require('./generic-modal').name,
-  require('./fatal-message').name,
-  require('./socket-disconnected').name,
-  require('./version-update').name,
-  require('./add-adb-key-modal').name,
-  require('./save-log-modal').name
+  require('./generic-modal').name
+  , require('./fatal-message').name
+  , require('./socket-disconnected').name
+  , require('./version-update').name
+  , require('./add-adb-key-modal').name
+  , require('./save-log-modal').name
 ])

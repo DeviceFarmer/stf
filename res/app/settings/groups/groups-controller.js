@@ -594,7 +594,9 @@ module.exports = function GroupsCtrl(
         DevicesService.addOriginGroupDevices :
         GroupsService.addGroupDevices
     , deviceSearch ?
-        [group.id, filteredDevices.map(function(device) { return device.serial }).join()] :
+        [group.id, filteredDevices.map(function(device) {
+ return device.serial
+}).join()] :
         [group.id])
   }
 
@@ -612,7 +614,9 @@ module.exports = function GroupsCtrl(
         DevicesService.removeOriginGroupDevices :
         GroupsService.removeGroupDevices
     , deviceSearch ?
-        [group.id, filteredDevices.map(function(device) { return device.serial }).join()] :
+        [group.id, filteredDevices.map(function(device) {
+ return device.serial
+}).join()] :
         [group.id])
   }
 
@@ -626,7 +630,9 @@ module.exports = function GroupsCtrl(
     CommonService.errorWrapper(
       GroupsService.addGroupUsers
     , userSearch ?
-        [group.id, filteredUsers.map(function(user) { return user.email }).join()] :
+        [group.id, filteredUsers.map(function(user) {
+ return user.email
+}).join()] :
         [group.id])
   }
 
@@ -640,7 +646,9 @@ module.exports = function GroupsCtrl(
     CommonService.errorWrapper(
       GroupsService.removeGroupUsers
     , userSearch ?
-        [group.id, filteredUsers.map(function(user) { return user.email }).join()] :
+        [group.id, filteredUsers.map(function(user) {
+ return user.email
+}).join()] :
         [group.id])
   }
 
@@ -673,7 +681,9 @@ module.exports = function GroupsCtrl(
       else {
         CommonService.errorWrapper(
           GroupsService.removeGroups
-        , [filteredGroups.map(function(group) { return group.id }).join()])
+        , [filteredGroups.map(function(group) {
+ return group.id
+}).join()])
       }
     }
 
@@ -703,10 +713,10 @@ module.exports = function GroupsCtrl(
 
   $scope.updateGroupSchedule = function(group) {
     CommonService.errorWrapper(GroupsService.updateGroup, [group.id, {
-      'class': $scope.groupsEnv[group.id].tmpClass
-    , 'repetitions': parseInt($scope.groupsEnv[group.id].tmpRepetitions, 10)
-    , 'startTime': $scope.groupsEnv[group.id].tmpStartDate
-    , 'stopTime': $scope.groupsEnv[group.id].tmpStopDate
+      class: $scope.groupsEnv[group.id].tmpClass
+    , repetitions: parseInt($scope.groupsEnv[group.id].tmpRepetitions, 10)
+    , startTime: $scope.groupsEnv[group.id].tmpStartDate
+    , stopTime: $scope.groupsEnv[group.id].tmpStopDate
     }])
     .then(function(response) {
       if (!response.success &&
@@ -733,13 +743,13 @@ module.exports = function GroupsCtrl(
   $scope.updateGroupState = function(group) {
     CommonService.errorWrapper(
       GroupsService.updateGroup
-    , [group.id, {'state': 'ready'}])
+    , [group.id, {state: 'ready'}])
   }
 
   $scope.updateGroupName = function(group) {
     CommonService.errorWrapper(
       GroupsService.updateGroup
-    , [group.id, {'name': $scope.groupsEnv[group.id].tmpName}])
+    , [group.id, {name: $scope.groupsEnv[group.id].tmpName}])
   }
 
   $scope.$on('user.settings.groups.updated', function(event, message) {
@@ -835,7 +845,6 @@ module.exports = function GroupsCtrl(
         ) &&
         updateUser(message.user, message.timeStamp) &&
         message.groups.length) {
-
       Promise.map(message.groups, function(groupId) {
         return getGroupClass(groupId).then(function(_class) {
           return !_class || _class === 'bookable'

@@ -1,8 +1,8 @@
 require('./keys.css')
 
 module.exports = angular.module('stf.settings.keys', [
-  require('./adb-keys').name,
-  require('./access-tokens').name
+  require('./adb-keys').name
+  , require('./access-tokens').name
 ])
   .run(['$templateCache', function($templateCache) {
     $templateCache.put(

@@ -17,17 +17,17 @@ module.exports = function ServiceFactory($uibModal, $sce) {
 
   service.open = function(url, title, icon) {
     var modalInstance = $uibModal.open({
-      template: require('./external-url-modal.pug'),
-      controller: ModalInstanceCtrl,
-      windowClass: 'modal-size-80p',
-      resolve: {
+      template: require('./external-url-modal.pug')
+      , controller: ModalInstanceCtrl
+      , windowClass: 'modal-size-80p'
+      , resolve: {
         title: function() {
           return title
-        },
-        url: function() {
+        }
+        , url: function() {
           return url
-        },
-        icon: function() {
+        }
+        , icon: function() {
           return icon
         }
       }

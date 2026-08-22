@@ -6,16 +6,16 @@ require('./menu.css')
 require('angular-cookies')
 
 module.exports = angular.module('stf.menu', [
-  'ngCookies',
-  require('stf/users').name,
-  require('stf/app-state').name,
-  require('stf/socket').name,
-  require('stf/util/common').name,
-  require('stf/nav-menu').name,
-  require('stf/settings').name,
-  require('stf/common-ui/modals/external-url-modal').name,
-  require('stf/native-url').name,
-  require('stf/logcat').name
+  'ngCookies'
+  , require('stf/users').name
+  , require('stf/app-state').name
+  , require('stf/socket').name
+  , require('stf/util/common').name
+  , require('stf/nav-menu').name
+  , require('stf/settings').name
+  , require('stf/common-ui/modals/external-url-modal').name
+  , require('stf/native-url').name
+  , require('stf/logcat').name
 ])
   .controller('MenuCtrl', require('./menu-controller'))
   .run(['$templateCache', function($templateCache) {
