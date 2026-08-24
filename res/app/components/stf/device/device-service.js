@@ -83,11 +83,11 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
     }.bind(this)
 
     var modify = function modify(data, newData) {
+      var undefinedValue
+
       _.merge(data, newData, function(a, b) {
         // New Arrays overwrite old Arrays
-        if (_.isArray(b)) {
-          return b
-        }
+        return _.isArray(b) ? b : undefinedValue
       })
       sync(data)
       this.emit('change', data)

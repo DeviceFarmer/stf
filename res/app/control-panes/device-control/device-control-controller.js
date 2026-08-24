@@ -23,6 +23,7 @@ module.exports = function DeviceControlCtrl($scope, DeviceService, GroupService,
     $rootScope.LogcatService = LogcatService
 
     if (!device || !$scope.device) {
+      // eslint-disable-next-line no-alert
       alert('No device found')
       return
     }
@@ -57,6 +58,7 @@ module.exports = function DeviceControlCtrl($scope, DeviceService, GroupService,
         })
       }
     } catch (e) {
+      // eslint-disable-next-line no-alert
       alert(e.message)
     }
   }

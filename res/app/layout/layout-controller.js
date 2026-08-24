@@ -8,6 +8,7 @@ module.exports =
 
       $rootScope.adminMode = !$rootScope.adminMode
 
+      // eslint-disable-next-line no-alert
       alert($rootScope.adminMode ? enabled : disabled)
     }
 
