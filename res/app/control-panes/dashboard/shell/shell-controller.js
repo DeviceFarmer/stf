@@ -4,7 +4,7 @@ module.exports = function ShellCtrl($scope) {
   $scope.run = function(command) {
     if (command === 'clear') {
       $scope.clear()
-      return
+      return null
     }
 
     $scope.command = ''

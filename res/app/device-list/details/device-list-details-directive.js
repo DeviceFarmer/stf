@@ -41,6 +41,7 @@ module.exports = function DeviceListDetailsDirective(
         }
         $rootScope.LogcatService = LogcatService
         return GroupService.kick(device, force).catch(function(e) {
+          // eslint-disable-next-line no-alert
           alert($filter('translate')(gettext('Device cannot get kicked from the group')))
           throw new Error(e)
         })

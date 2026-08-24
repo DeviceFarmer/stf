@@ -50,7 +50,8 @@ QueryParser.prototype.consume = function(input) {
     }
     this.terms.push(this.currentTerm)
     this.state = State.QUERY_START
-    return this.consume(input)
+    this.consume(input)
+    return
   case State.QUERY_START:
     if (this.isWhitespace(input)) {
       // Preceding whitespace, ignore.
@@ -65,7 +66,8 @@ QueryParser.prototype.consume = function(input) {
       return
     }
     this.state = State.QUERY_VALUE_START
-    return this.consume(input)
+    this.consume(input)
+    return
   case State.OP_LT:
     if (input === '=') {
       this.currentTerm.op = '<='
@@ -74,7 +76,8 @@ QueryParser.prototype.consume = function(input) {
     }
     this.currentTerm.op = '<'
     this.state = State.QUERY_VALUE_START
-    return this.consume(input)
+    this.consume(input)
+    return
   case State.OP_GT:
     if (input === '=') {
       this.currentTerm.op = '>='
@@ -83,7 +86,8 @@ QueryParser.prototype.consume = function(input) {
     }
     this.currentTerm.op = '>'
     this.state = State.QUERY_VALUE_START
-    return this.consume(input)
+    this.consume(input)
+    return
   case State.QUERY_VALUE_START:
     if (this.isWhitespace(input)) {
       // Preceding whitespace, ignore.
@@ -94,10 +98,12 @@ QueryParser.prototype.consume = function(input) {
       return
     }
     this.state = State.QUERY_VALUE
-    return this.consume(input)
+    this.consume(input)
+    return
   case State.QUERY_VALUE:
     if (this.isWhitespace(input)) {
-      return this.concludeTerm()
+      this.concludeTerm()
+      return
     }
     if (input === ':') {
       this.currentTerm.field = this.currentTerm.query
@@ -112,7 +118,8 @@ QueryParser.prototype.consume = function(input) {
       return
     }
     if (input === '"') {
-      return this.concludeTerm()
+      this.concludeTerm()
+      return
     }
     this.currentTerm.append(input)
     return
