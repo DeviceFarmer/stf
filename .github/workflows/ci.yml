@@ -469,6 +469,14 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+          # trigger queues the event and returns, so the rule may not have been
+          # applied yet. Wait for the queue to drain, then set the mode directly
+          # if the node is still not writable.
+          sudo udevadm settle --timeout=30 || true
+          test -w /dev/kvm || {
+            echo "::warning::udev kvm rule did not apply, falling back to chmod"
+            sudo chmod 666 /dev/kvm
+          }
           ls -l /dev/kvm
           test -w /dev/kvm
 
