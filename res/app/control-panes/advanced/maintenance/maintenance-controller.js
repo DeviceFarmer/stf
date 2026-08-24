@@ -9,6 +9,8 @@ module.exports = function($scope, gettext, $filter) {
     if (config.rebootEnabled) {
       var line1 = $filter('translate')(gettext('Are you sure you want to reboot this device?'))
       var line2 = $filter('translate')(gettext('The device will be unavailable for a moment.'))
+      // a native confirm is deliberate for a destructive action
+      // eslint-disable-next-line no-alert
       if (confirm(line1 + '\n' + line2)) {
         $scope.control.reboot().then(function(result) {
           console.error(result)
