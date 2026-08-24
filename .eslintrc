@@ -50,7 +50,7 @@
     "no-new-wrappers": 2,
     "no-new": 2,
     "no-octal-escape": 2,
-    "no-octal": 1, // TODO: accept until we use ES6 0o755 notation
+    "no-octal": 2,
     "no-param-reassign": 2,
     "no-process-env": 0, // `2` is recommended
     "no-proto": 2,
@@ -64,7 +64,7 @@
     "no-useless-call": 2, // `2` is recommended
     "no-useless-concat": 2,
     "no-void": 2,
-    "no-warning-comments": [1, { "terms": ["todo", "fixme", "@todo", "@fixme"]}], // `[0, { "terms": ["todo", "fixme", "xxx"], "location": "start" }]` is recommended
+    "no-warning-comments": 0, // off: the 45 TODO/FIXME in the tree are tracked work, not lint debt
     "no-with": 2,
     "radix": 1, // `2` is recommended
     "vars-on-top": 0, // `2` is recommended TODO: review this

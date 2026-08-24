@@ -56,6 +56,8 @@ module.exports.config = {
     }))
 
     var fs = require('fs-extra')
+    // one-shot setup while the e2e run boots
+    // eslint-disable-next-line no-sync
     if (!fs.existsSync(dashboardReportDirectory)) {
       fs.mkdirs(dashboardReportDirectory)
     }

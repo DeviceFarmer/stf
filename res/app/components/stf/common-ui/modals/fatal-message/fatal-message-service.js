@@ -44,9 +44,9 @@ module.exports =
       }
 
       var destroyInterval = function() {
-        if (angular.isDefined(intervalDeviceInfo)) {
+        if (intervalDeviceInfo) {
           $interval.cancel(intervalDeviceInfo)
-          intervalDeviceInfo = undefined
+          intervalDeviceInfo = null
         }
       }
 
