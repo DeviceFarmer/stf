@@ -333,7 +333,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Download front-end bundle
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: stf-bundle
           path: res/build
@@ -494,7 +494,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Download front-end bundle
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: stf-bundle
           path: res/build
@@ -636,7 +636,7 @@ jobs:
 
       - name: Download verdicts
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: verdicts
           pattern: verdict-*
