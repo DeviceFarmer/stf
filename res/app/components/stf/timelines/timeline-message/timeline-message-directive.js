@@ -1,25 +1,23 @@
 module.exports = function timelineMessageDirective(Timelines, $sce, $interpolate) {
-
   var defaults = {
-    message: '',
-    type: 'info',
-    ttl: 5000
+    message: ''
+    , type: 'info'
+    , ttl: 5000
   }
 
   return {
-    restrict: 'AE',
-    replace: true,
-    template: '',
-    transclude: true,
-    link: function(scope, iElem, iAttrs, ctrls, transcludeFn) {
-
+    restrict: 'AE'
+    , replace: true
+    , template: ''
+    , transclude: true
+    , link: function(scope, iElem, iAttrs, ctrls, transcludeFn) {
       var options = angular.extend({}, defaults, scope.$eval(iAttrs.timelineMessage))
 
       transcludeFn(function(elem, scope) {
-        var e,
-          html,
-          interpolateFn,
-          safeHtml
+        var e
+          , html
+          , interpolateFn
+          , safeHtml
 
         // Create temporary wrapper element so we can grab the inner html
         e = angular.element(document.createElement('div'))

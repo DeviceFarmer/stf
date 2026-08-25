@@ -4,20 +4,20 @@
 
 module.exports = function() {
   return {
-    restrict: 'E',
-    scope: {
-      tooltipLabel: '@',
-      iconStyle: '@?',
-      itemsSearchStyle: '@?',
-      itemsSearch: '=',
-      itemsPerPageOptions: '<',
-      itemsPerPage: '=',
-      totalItems: '<',
-      totalItemsStyle: '@?',
-      currentPage: '='
-    },
-    template: require('./pagination.pug'),
-    link: function(scope, element, attrs) {
+    restrict: 'E'
+    , scope: {
+      tooltipLabel: '@'
+      , iconStyle: '@?'
+      , itemsSearchStyle: '@?'
+      , itemsSearch: '='
+      , itemsPerPageOptions: '<'
+      , itemsPerPage: '='
+      , totalItems: '<'
+      , totalItemsStyle: '@?'
+      , currentPage: '='
+    }
+    , template: require('./pagination.pug')
+    , link: function(scope, element, attrs) {
       scope.currentPage = 1
     }
   }

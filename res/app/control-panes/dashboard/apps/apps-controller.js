@@ -26,7 +26,7 @@ module.exports = function ShellCtrl($scope) {
   }
 
   $scope.openWiFiSettings = function() {
-    //openSetting('WifiSettingsActivity')
+    // openSetting('WifiSettingsActivity')
     run('am start -a android.settings.WIFI_SETTINGS')
   }
 
@@ -47,7 +47,7 @@ module.exports = function ShellCtrl($scope) {
   }
 
   $scope.openManageApps = function() {
-    //openSetting('ManageApplicationsActivity')
+    // openSetting('ManageApplicationsActivity')
     run('am start -a android.settings.APPLICATION_SETTINGS')
   }
 

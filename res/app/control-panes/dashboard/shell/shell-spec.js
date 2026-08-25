@@ -1,5 +1,4 @@
 describe('ShellCtrl', function() {
-
   beforeEach(angular.mock.module(require('./').name))
 
   var scope, ctrl
@@ -16,5 +15,4 @@ describe('ShellCtrl', function() {
     expect(scope.data).toBe('')
     expect(scope.command).toBe('')
   }))
-
 })

@@ -3,15 +3,15 @@ module.exports = function StateClassesService() {
 
   service.stateButton = function(state) {
     var stateClasses = {
-      using: 'state-using btn-primary',
-      busy: 'state-busy btn-warning',
-      available: 'state-available btn-primary-outline',
-      ready: 'state-ready btn-primary-outline',
-      present: 'state-present btn-primary-outline',
-      preparing: 'state-preparing btn-primary-outline btn-success-outline',
-      unauthorized: 'state-unauthorized btn-danger-outline',
-      offline: 'state-offline btn-warning-outline',
-      automation: 'state-automation btn-info'
+      using: 'state-using btn-primary'
+      , busy: 'state-busy btn-warning'
+      , available: 'state-available btn-primary-outline'
+      , ready: 'state-ready btn-primary-outline'
+      , present: 'state-present btn-primary-outline'
+      , preparing: 'state-preparing btn-primary-outline btn-success-outline'
+      , unauthorized: 'state-unauthorized btn-danger-outline'
+      , offline: 'state-offline btn-warning-outline'
+      , automation: 'state-automation btn-info'
     }[state]
     if (typeof stateClasses === 'undefined') {
       stateClasses = 'btn-default-outline'
@@ -21,15 +21,15 @@ module.exports = function StateClassesService() {
 
   service.stateColor = function(state) {
     var stateClasses = {
-      using: 'state-using',
-      busy: 'state-busy',
-      available: 'state-available',
-      ready: 'state-ready',
-      present: 'state-present',
-      preparing: 'state-preparing',
-      unauthorized: 'state-unauthorized',
-      offline: 'state-offline',
-      automation: 'state-automation'
+      using: 'state-using'
+      , busy: 'state-busy'
+      , available: 'state-available'
+      , ready: 'state-ready'
+      , present: 'state-present'
+      , preparing: 'state-preparing'
+      , unauthorized: 'state-unauthorized'
+      , offline: 'state-offline'
+      , automation: 'state-automation'
     }[state]
     if (typeof stateClasses === 'undefined') {
       stateClasses = ''

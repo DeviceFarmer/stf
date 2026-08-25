@@ -5,11 +5,11 @@ module.exports = function TimelineServiceFactory() {
 
   function addLine(line, type) {
     TimelineService.lines.push({
-      type: type,
-      title: line.title,
-      message: line.message,
-      serial: angular.copy(line.serial),
-      time: Date.now()
+      type: type
+      , title: line.title
+      , message: line.message
+      , serial: angular.copy(line.serial)
+      , time: Date.now()
     })
   }
 

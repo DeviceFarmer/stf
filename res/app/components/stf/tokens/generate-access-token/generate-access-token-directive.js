@@ -1,12 +1,12 @@
 module.exports = function generateAccessTokenDirective() {
   return {
-    restrict: 'EA',
-    replace: true,
-    scope: {
+    restrict: 'EA'
+    , replace: true
+    , scope: {
       showGenerate: '='
-    },
-    template: require('./generate-access-token.pug'),
-    controller: function($scope, AccessTokenService) {
+    }
+    , template: require('./generate-access-token.pug')
+    , controller: function($scope, AccessTokenService) {
       $scope.generateForm = {
         title: ''
       }

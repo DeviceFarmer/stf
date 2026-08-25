@@ -6,7 +6,6 @@ module.exports = function EmailAddressSeparatorCtrl(
   $scope
 , SettingsService
 ) {
-
   $scope.defaultEmailAddressSeparator = ','
   SettingsService.bind($scope, {
     target: 'emailAddressSeparator'

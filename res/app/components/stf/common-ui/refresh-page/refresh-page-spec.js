@@ -1,5 +1,4 @@
 describe('refreshPage', function() {
-
   beforeEach(angular.mock.module(require('./').name))
 
   var scope, compile

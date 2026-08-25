@@ -30,13 +30,12 @@ module.exports = angular.module('stf.help.docs', [
           return '/static/wiki/[' + lang + ']-Help'
         }
       })
-      //.when('/docs/:lang/:document*', {
+      // .when('/docs/:lang/:document*', {
       //  templateUrl: function (params) {
       //    var lang = params.lang
       //    var document = params.document.replace('.md', '')
       //    return '/static/docs/' + lang + '/' + document
       //  }
-      //})
-
+      // })
   })
   .controller('DocsCtrl', require('./docs-controller'))

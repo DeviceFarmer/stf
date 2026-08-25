@@ -5,8 +5,8 @@
 require('./signin.css')
 
 module.exports = angular.module('stf.signin', [
-  require('stf/util/common').name,
-  require('stf/common-ui').name
+  require('stf/util/common').name
+  , require('stf/common-ui').name
 ])
   .config(function($routeProvider) {
     $routeProvider

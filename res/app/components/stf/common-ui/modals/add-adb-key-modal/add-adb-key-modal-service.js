@@ -25,9 +25,9 @@ module.exports =
 
     service.open = function(data) {
       var modalInstance = $uibModal.open({
-        template: require('./add-adb-key-modal.pug'),
-        controller: ModalInstanceCtrl,
-        resolve: {
+        template: require('./add-adb-key-modal.pug')
+        , controller: ModalInstanceCtrl
+        , resolve: {
           data: function() {
             return data
           }

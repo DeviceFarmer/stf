@@ -5,8 +5,8 @@ var frameNumberElement = document.querySelector('#frame-number')
 var totalTimeElement = document.querySelector('#total-time')
 
 var frame = {
-  total: 100,
-  current: 0
+  total: 100
+  , current: 0
 }
 
 function FastImageRender() {
@@ -47,7 +47,8 @@ imageRender.onLoad = function(image) {
 
   if (frame.current++ < frame.total) {
     loadNext()
-  } else {
+  }
+ else {
     var endTime = new Date().getTime()
     var totalTime = endTime - startTime
     totalTimeElement.innerHTML = totalTime / 1000 + ' seconds'

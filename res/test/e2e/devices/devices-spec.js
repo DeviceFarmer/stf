@@ -1,6 +1,5 @@
 describe('Device Page', function() {
   describe('Icon View', function() {
-
     var DeviceListPage = require('./')
     var deviceListPage = new DeviceListPage()
 

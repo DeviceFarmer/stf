@@ -31,8 +31,8 @@ module.exports = function DevicesServiceFactory(
   }
 
   DevicesService.getOboeDevices = function(target, fields, addDevice) {
-    return oboe(CommonService.getBaseUrl()
-    + '/api/v1/devices?target=' + target + '&fields=' + fields)
+    return oboe(CommonService.getBaseUrl() +
+    '/api/v1/devices?target=' + target + '&fields=' + fields)
       .node('devices[*]', function(device) {
         addDevice(device)
       })
@@ -52,12 +52,12 @@ module.exports = function DevicesServiceFactory(
 
   DevicesService.removeDevices = function(filters, serials) {
     return $http({
-      method: 'DELETE',
-      url: '/api/v1/devices' + buildQueryParameters(filters),
-      headers: {
+      method: 'DELETE'
+      , url: '/api/v1/devices' + buildQueryParameters(filters)
+      , headers: {
         'Content-Type': 'application/json;charset=utf-8'
-      },
-      data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
+      }
+      , data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
     })
   }
 
@@ -67,9 +67,9 @@ module.exports = function DevicesServiceFactory(
 
   DevicesService.addOriginGroupDevices = function(id, serials) {
     return $http({
-      method: 'PUT',
-      url: '/api/v1/devices/groups/' + id + '?fields=""',
-      data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
+      method: 'PUT'
+      , url: '/api/v1/devices/groups/' + id + '?fields=""'
+      , data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
     })
   }
 
@@ -79,12 +79,12 @@ module.exports = function DevicesServiceFactory(
 
   DevicesService.removeOriginGroupDevices = function(id, serials) {
     return $http({
-      method: 'DELETE',
-      url: '/api/v1/devices/groups/' + id + '?fields=""',
-      headers: {
+      method: 'DELETE'
+      , url: '/api/v1/devices/groups/' + id + '?fields=""'
+      , headers: {
         'Content-Type': 'application/json;charset=utf-8'
-      },
-      data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
+      }
+      , data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
     })
   }
 

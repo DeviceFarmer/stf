@@ -1,4 +1,4 @@
-//var supportedLanguages = require('./../../../../common/lang/langs.json')
+// var supportedLanguages = require('./../../../../common/lang/langs.json')
 
 module.exports = function LanguageProvider(AppStateProvider) {
   var provider = {
@@ -18,7 +18,7 @@ module.exports = function LanguageProvider(AppStateProvider) {
   }
 }
 
-//module.exports = function LanguageProvider() {
+// module.exports = function LanguageProvider() {
 //  var LanguageService = {}
 //
 //  function detectLanguage() {
@@ -62,4 +62,4 @@ module.exports = function LanguageProvider(AppStateProvider) {
 //      return LanguageService
 //    }
 //  }
-//}
+// }

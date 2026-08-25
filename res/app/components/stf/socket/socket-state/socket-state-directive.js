@@ -7,9 +7,9 @@ module.exports = function SocketStateDirectiveFactory(
 , $window
 ) {
   return {
-    restrict: 'EA',
-    template: require('./socket-state.pug'),
-    link: function(scope) {
+    restrict: 'EA'
+    , template: require('./socket-state.pug')
+    , link: function(scope) {
       var hasFailedOnce = false
 
       function setState(state) {

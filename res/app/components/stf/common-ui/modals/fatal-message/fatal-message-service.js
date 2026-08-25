@@ -57,13 +57,13 @@ module.exports =
 
     FatalMessageService.open = function(device, tryToReconnect) {
       var modalInstance = $uibModal.open({
-        template: require('./fatal-message.pug'),
-        controller: ModalInstanceCtrl,
-        resolve: {
+        template: require('./fatal-message.pug')
+        , controller: ModalInstanceCtrl
+        , resolve: {
           device: function() {
             return device
-          },
-          tryToReconnect: function() {
+          }
+          , tryToReconnect: function() {
             return tryToReconnect
           }
         }

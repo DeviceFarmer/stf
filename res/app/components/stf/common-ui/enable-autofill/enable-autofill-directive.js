@@ -1,8 +1,7 @@
 module.exports = function enableAutofillDirective($rootElement, $cookies) {
   return {
-    restrict: 'A',
-    compile: function compile(tElement, tAttrs) {
-
+    restrict: 'A'
+    , compile: function compile(tElement, tAttrs) {
       // Creates hidden iFrame for auto-fill forms if there isn't one already
       if ($rootElement.find('iframe').attr('name') !== '_autofill') {
         $rootElement.append(angular.element(
@@ -13,7 +12,8 @@ module.exports = function enableAutofillDirective($rootElement, $cookies) {
       // Add attribute method POST to the current form
       if (!tAttrs.method) {
         tElement.attr('method', 'post')
-      } else {
+      }
+ else {
         if (!tAttrs.method.match(/post/i)) {
           throw new Error('Auto-fill only works with form POST method')
         }
@@ -26,7 +26,6 @@ module.exports = function enableAutofillDirective($rootElement, $cookies) {
 
       // Add action attribute if not present
       if (!tAttrs.action) {
-
         // Use a dummy url because 'about:blank' trick doesn't work with HTTPS
         // Also 'javascript: void(0)' doesn't work neither
         var dummyUrl = '/app/api/v1/dummy'

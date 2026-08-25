@@ -1,5 +1,4 @@
 describe('StoreAccountCtrl', function() {
-
   beforeEach(angular.mock.module(require('./').name))
 
   var scope, ctrl
@@ -11,6 +10,5 @@ describe('StoreAccountCtrl', function() {
 
   it('should ...', inject(function() {
     expect(1).toEqual(1)
-
   }))
 })

@@ -3,7 +3,6 @@
 **/
 
 describe('UsersCtrl', function() {
-
   beforeEach(angular.mock.module(require('./index').name))
 
   var scope, ctrl
@@ -15,7 +14,5 @@ describe('UsersCtrl', function() {
 
   it('should ...', inject(function() {
     expect(1).toEqual(1)
-
   }))
-
 })

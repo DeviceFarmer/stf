@@ -1,12 +1,12 @@
 // Declarative syntax not implemented yet
 module.exports = function niceTabDirective() {
   return {
-    restrict: 'E',
-    replace: true,
-    scope: {
-    },
-    template: require('./nice-tab.pug'),
-    link: function() {
+    restrict: 'E'
+    , replace: true
+    , scope: {
+    }
+    , template: require('./nice-tab.pug')
+    , link: function() {
     }
   }
 }

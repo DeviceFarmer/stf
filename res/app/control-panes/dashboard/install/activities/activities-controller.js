@@ -28,7 +28,6 @@ module.exports = function ActivitiesCtrl($scope) {
         }
 
         _.forEach(activity.intentFilters, function(intentFilter) {
-
           _.forEach(intentFilter.actions, function(action) {
             if (action.name) {
               activityActions.push(action.name)
@@ -52,9 +51,11 @@ module.exports = function ActivitiesCtrl($scope) {
               }
               if (data.path) {
                 uri += '/' + data.path
-              } else if (data.pathPrefix) {
+              }
+ else if (data.pathPrefix) {
                 uri += '/' + data.pathPrefix
-              } else if (data.pathPattern) {
+              }
+ else if (data.pathPattern) {
                 uri += '/' + data.pathPattern
               }
               activityData.push(uri)

@@ -19,16 +19,19 @@ module.exports = angular.module('stf.explorer', [])
           for (var j = 0; j < 3; j++) {
             if ((mode >> (i * 3 + j)) & 1 !== 0) {
               res.unshift(s[j])
-            } else {
+            }
+ else {
               res.unshift('-')
             }
           }
         }
         if ((mode & S_IFMT) === S_IFDIR) {
           res.unshift('d')
-        } else if ((mode & S_IFMT) === S_IFLNK) {
+        }
+ else if ((mode & S_IFMT) === S_IFLNK) {
           res.unshift('l')
-        } else {
+        }
+ else {
           res.unshift('-')
         }
         return res.join('')
@@ -51,9 +54,11 @@ module.exports = angular.module('stf.explorer', [])
       var formattedSize
       if (size < 1024) {
         formattedSize = size + ' B'
-      } else if (size >= 1024 && size < 1024 * 1024) {
+      }
+ else if (size >= 1024 && size < 1024 * 1024) {
         formattedSize = Math.round(size / 1024, 1) + ' Kb'
-      } else {
+      }
+ else {
         formattedSize = Math.round(size / (1024 * 1024), 1) + ' Mb'
       }
       return formattedSize

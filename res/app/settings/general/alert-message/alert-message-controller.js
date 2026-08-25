@@ -6,7 +6,6 @@ module.exports = function AlertMessageCtrl(
   $scope
 , SettingsService
 ) {
-
   $scope.defaultAlertMessage = {
     data: '*** This site is currently under maintenance, please wait ***'
   , activation: 'False'

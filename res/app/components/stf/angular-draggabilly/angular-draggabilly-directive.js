@@ -1,8 +1,8 @@
 module.exports =
   function angularDraggabillyDirective(DraggabillyService, $parse) {
     return {
-      restrict: 'AE',
-      link: function(scope, element, attrs) {
+      restrict: 'AE'
+      , link: function(scope, element, attrs) {
         var parsedAttrs = $parse(attrs.angularDraggabilly)()
         if (typeof parsedAttrs !== 'object') {
           parsedAttrs = {}

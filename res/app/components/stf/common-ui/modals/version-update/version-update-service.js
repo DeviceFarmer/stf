@@ -14,11 +14,11 @@ module.exports = function ServiceFactory($uibModal, $location) {
 
   service.open = function() {
     var modalInstance = $uibModal.open({
-      template: require('./version-update.pug'),
-      controller: ModalInstanceCtrl
+      template: require('./version-update.pug')
+      , controller: ModalInstanceCtrl
     })
 
-    modalInstance.result.then(function(/*selectedItem*/) {
+    modalInstance.result.then(function(/* selectedItem*/) {
     }, function() {
     })
   }

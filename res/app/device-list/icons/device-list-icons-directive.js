@@ -61,15 +61,15 @@ module.exports = function DeviceListIconsDirective(
 
         function getStateClasses(state) {
           var stateClasses = {
-            using: 'state-using btn-primary',
-            busy: 'state-busy btn-warning',
-            available: 'state-available btn-primary-outline',
-            ready: 'state-ready btn-primary-outline',
-            present: 'state-present btn-primary-outline',
-            preparing: 'state-preparing btn-primary-outline btn-success-outline',
-            unauthorized: 'state-unauthorized btn-danger-outline',
-            offline: 'state-offline btn-warning-outline',
-            automation: 'state-automation btn-info'
+            using: 'state-using btn-primary'
+            , busy: 'state-busy btn-warning'
+            , available: 'state-available btn-primary-outline'
+            , ready: 'state-ready btn-primary-outline'
+            , present: 'state-present btn-primary-outline'
+            , preparing: 'state-preparing btn-primary-outline btn-success-outline'
+            , unauthorized: 'state-unauthorized btn-danger-outline'
+            , offline: 'state-offline btn-warning-outline'
+            , automation: 'state-automation btn-info'
           }[state]
           if (typeof stateClasses === 'undefined') {
             stateClasses = 'btn-default-outline'
@@ -81,7 +81,8 @@ module.exports = function DeviceListIconsDirective(
 
         if (device.state === 'available') {
           name.classList.add('state-available')
-        } else {
+        }
+ else {
           name.classList.remove('state-available')
         }
 
@@ -142,16 +143,17 @@ module.exports = function DeviceListIconsDirective(
       }
 
       element.on('click', function(e) {
-
         var id
 
         if (e.target.classList.contains('thumbnail')) {
           id = e.target.id
-        } else if (e.target.classList.contains('device-status') ||
+        }
+ else if (e.target.classList.contains('device-status') ||
           e.target.classList.contains('device-photo-small') ||
           e.target.classList.contains('device-name')) {
           id = e.target.parentNode.parentNode.id
-        } else if (e.target.parentNode.classList.contains('device-photo-small')) {
+        }
+ else if (e.target.parentNode.classList.contains('device-photo-small')) {
           id = e.target.parentNode.parentNode.parentNode.id
         }
 
@@ -390,7 +392,7 @@ module.exports = function DeviceListIconsDirective(
       // Patches the given item by running the given patch operations in
       // order. The operations must take into account index changes caused
       // by previous operations.
-      function patchItem(/*item, device, patch*/) {
+      function patchItem(/* item, device, patch*/) {
         // Currently no-op
       }
 
