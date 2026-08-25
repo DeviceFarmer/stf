@@ -1,16 +1,16 @@
 module.exports = function deviceContextMenuDirective($window) {
   return {
-    restrict: 'EA',
-    replace: false,
-    //scope: {
+    restrict: 'EA'
+    , replace: false
+    // scope: {
     //  control: '&',
     //  device: '&'
-    //},
-    transclude: true,
-    template: require('./device-context-menu.pug'),
-    link: function(scope) {
-      //var device = scope.device()
-      //var control = scope.control()
+    // },
+    , transclude: true
+    , template: require('./device-context-menu.pug')
+    , link: function(scope) {
+      // var device = scope.device()
+      // var control = scope.control()
       scope.windowClose = function() {
         $window.close()
       }
@@ -20,7 +20,6 @@ module.exports = function deviceContextMenuDirective($window) {
           location.href = result.body.href + '?download'
         })
       }
-
     }
   }
 }

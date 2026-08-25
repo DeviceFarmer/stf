@@ -39,16 +39,14 @@ function FastImageRender(canvasElement, options) {
   if (this.options.render === 'webgl') {
     var WebGLRender = require('./webgl-render').WebGLRender
     this.render = new WebGLRender(canvasElement, options)
-  } else {
+  }
+ else {
     var CanvasRender = require('./canvas-render').CanvasRender
     this.render = new CanvasRender(canvasElement, options)
   }
-
-
 }
 
 FastImageRender.prototype.destroy = function() {
-
   window.cancelAnimationFrame(this.raf)
 
   // delete onLoad & onError
@@ -77,16 +75,16 @@ FastImageRender.prototype.load = function(url, type) {
           that.onLoad(texture)
         }
       }, type)
-    } else {
+    }
+ else {
       this.textureLoader.load(url, function(texture) {
         if (typeof (that.onLoad) === 'function') {
           that.onLoad(texture)
         }
       })
     }
-
-  } else {
-
+  }
+ else {
     this.loader.src = url
   }
 }
@@ -102,8 +100,8 @@ FastImageRender.prototype.clear = function() {
 Object.defineProperty(FastImageRender.prototype, 'canvasWidth', {
   get: function() {
     return this.canvasElement.width
-  },
-  set: function(width) {
+  }
+  , set: function(width) {
     if (width) {
       if (width !== this.canvasElement.width) {
         this.canvasElement.width = width
@@ -115,8 +113,8 @@ Object.defineProperty(FastImageRender.prototype, 'canvasWidth', {
 Object.defineProperty(FastImageRender.prototype, 'canvasHeight', {
   get: function() {
     return this.canvasElement.height
-  },
-  set: function(height) {
+  }
+  , set: function(height) {
     if (height) {
       if (height !== this.canvasElement.height) {
         this.canvasElement.height = height
@@ -128,8 +126,8 @@ Object.defineProperty(FastImageRender.prototype, 'canvasHeight', {
 Object.defineProperty(FastImageRender.prototype, 'displayWidth', {
   get: function() {
     return this.canvasElement.width
-  },
-  set: function(width) {
+  }
+  , set: function(width) {
     if (width) {
       if (width !== this.canvasElement.width) {
         this.canvasElement.width = width
@@ -141,8 +139,8 @@ Object.defineProperty(FastImageRender.prototype, 'displayWidth', {
 Object.defineProperty(FastImageRender.prototype, 'displayHeight', {
   get: function() {
     return this.canvasElement.height
-  },
-  set: function(height) {
+  }
+  , set: function(height) {
     if (height) {
       if (height !== this.canvasElement.height) {
         this.canvasElement.height = height
@@ -154,8 +152,8 @@ Object.defineProperty(FastImageRender.prototype, 'displayHeight', {
 Object.defineProperty(FastImageRender.prototype, 'canvasStyleWidth', {
   get: function() {
     return parseInt(this.canvasElement.style.width, 10)
-  },
-  set: function(width) {
+  }
+  , set: function(width) {
     if (width) {
       var styleWidth = width + 'px'
       if (styleWidth !== this.canvasElement.style.width) {
@@ -168,8 +166,8 @@ Object.defineProperty(FastImageRender.prototype, 'canvasStyleWidth', {
 Object.defineProperty(FastImageRender.prototype, 'canvasStyleHeight', {
   get: function() {
     return parseInt(this.canvasElement.style.height, 10)
-  },
-  set: function(height) {
+  }
+  , set: function(height) {
     if (height) {
       var styleHeight = height + 'px'
       if (styleHeight !== this.canvasElement.style.height) {

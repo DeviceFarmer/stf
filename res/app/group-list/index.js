@@ -5,20 +5,20 @@
 require('./group-list.css')
 
 module.exports = angular.module('group-list', [
-  require('stf/column-choice').name,
-  require('stf/groups').name,
-  require('stf/user').name,
-  require('stf/users').name,
-  require('stf/devices').name,
-  require('stf/settings').name,
-  require('stf/util/common').name,
-  require('stf/common-ui').name
+  require('stf/column-choice').name
+  , require('stf/groups').name
+  , require('stf/user').name
+  , require('stf/users').name
+  , require('stf/devices').name
+  , require('stf/settings').name
+  , require('stf/util/common').name
+  , require('stf/common-ui').name
 ])
   .config(['$routeProvider', function($routeProvider) {
     $routeProvider
       .when('/groups', {
-        template: require('./group-list.pug'),
-        controller: 'GroupListCtrl'
+        template: require('./group-list.pug')
+        , controller: 'GroupListCtrl'
       })
   }])
   .run(['$templateCache', function($templateCache) {

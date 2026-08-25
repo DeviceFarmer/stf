@@ -4,7 +4,8 @@ module.exports =
 
     if (lastUsedDevice) {
       $location.path('/control/' + lastUsedDevice)
-    } else {
+    }
+ else {
       $location.path('/')
     }
   }

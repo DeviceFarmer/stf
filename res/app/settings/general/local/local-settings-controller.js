@@ -4,5 +4,4 @@ module.exports = function($scope, SettingsService) {
     // eslint-disable-next-line no-alert
     alert('Settings cleared')
   }
-
 }

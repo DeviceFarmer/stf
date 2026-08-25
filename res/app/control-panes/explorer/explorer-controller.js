@@ -4,9 +4,9 @@
 
 module.exports = function ExplorerCtrl($scope) {
   $scope.explorer = {
-    search: '',
-    files: [],
-    paths: []
+    search: ''
+    , files: []
+    , paths: []
   }
 
   $scope.getAbsolutePath = function() {

@@ -27,7 +27,8 @@ module.exports = function BrowserLogs(opts) {
         browserLogs.forEach(function(log) {
           if (log.level.value > 900) {
             console.error(browserStyled + chalk.white.bold(log.message))
-          } else {
+          }
+ else {
             console.log(browserStyled + chalk.white.bold(log.message))
           }
         })

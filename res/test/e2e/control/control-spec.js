@@ -44,9 +44,9 @@ describe('Control Page', function() {
   })
 
   describe('Remote Control', function() {
-    //var RemoteCtrl = function () {
+    // var RemoteCtrl = function () {
     //  this.paneHandleHorizontal = element(by.css('.fa-pane-handle.horizontal'))
-    //}
+    // }
     it('should resize panel to the right', function() {
 
     })
@@ -57,7 +57,6 @@ describe('Control Page', function() {
 
 
   describe('Dashboard Tab', function() {
-
     describe('Shell', function() {
       var ShellCtrl = function() {
         this.commandInput = element(by.model('command'))
@@ -91,7 +90,6 @@ describe('Control Page', function() {
         shell.execute(shell.openMenuCommand)
         shell.execute(shell.openMenuCommand)
       })
-
     })
 
     describe('Navigation', function() {
@@ -121,7 +119,6 @@ describe('Control Page', function() {
         navigation.resetButton.click()
       })
     })
-
   })
 
   describe('Screenshots Tab', function() {
@@ -149,6 +146,4 @@ describe('Control Page', function() {
       expect(newUrl).toBe(localhost + 'devices')
     })
   })
-
-
 })

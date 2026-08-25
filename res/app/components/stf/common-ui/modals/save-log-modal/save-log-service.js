@@ -12,20 +12,21 @@ module.exports =
       if (device.length > 0) {
         if (logExtension === 'log') {
           for (let line = 0; line < lineLimiter; line++) {
-            output += [device[line].date, device[line].pid,
-                      device[line].tag, device[line].priorityLabel,
-                      device[line].message].join('\t') + '\n'
+            output += [device[line].date, device[line].pid
+                      , device[line].tag, device[line].priorityLabel
+                      , device[line].message].join('\t') + '\n'
           }
-        } else {
-          output = {'deviceOS': device[0].deviceLabel,
-                    'serial': device[0].serial,
-                    'logs': []}
+        }
+ else {
+          output = {deviceOS: device[0].deviceLabel
+                    , serial: device[0].serial
+                    , logs: []}
           for (let line = 0; line < lineLimiter; line++) {
-            output.logs.push({'date': device[line].date,
-                              'pid': device[line].pid,
-                              'tag': device[line].tag,
-                              'priorityLabel': device[line].priorityLabel,
-                              'message': device[line].message})
+            output.logs.push({date: device[line].date
+                              , pid: device[line].pid
+                              , tag: device[line].tag
+                              , priorityLabel: device[line].priorityLabel
+                              , message: device[line].message})
           }
         }
       }
@@ -116,13 +117,13 @@ module.exports =
 
     SaveLogService.open = function(device, tryToReconnect) {
       var modalInstance = $uibModal.open({
-        template: require('./save-log.pug'),
-        controller: ModalInstanceCtrl,
-        resolve: {
+        template: require('./save-log.pug')
+        , controller: ModalInstanceCtrl
+        , resolve: {
           device: function() {
             return device
-          },
-          tryToReconnect: function() {
+          }
+          , tryToReconnect: function() {
             return tryToReconnect
           }
         }

@@ -5,10 +5,10 @@
 require('./users.css')
 
 module.exports = angular.module('stf.settings.users', [
-  require('stf/app-state').name,
-  require('stf/settings').name,
-  require('stf/util/common').name,
-  require('stf/users').name
+  require('stf/app-state').name
+  , require('stf/settings').name
+  , require('stf/util/common').name
+  , require('stf/users').name
 ])
   .run(['$templateCache', function($templateCache) {
     $templateCache.put(

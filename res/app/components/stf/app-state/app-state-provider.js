@@ -2,11 +2,11 @@ module.exports = function AppStateProvider() {
   var values = {
     config: {
       websocketUrl: ''
-    },
-    user: {
+    }
+    , user: {
       settings: {}
-    },
-    device: {
+    }
+    , device: {
       platform: ''
     }
   }
@@ -19,8 +19,8 @@ module.exports = function AppStateProvider() {
   return {
     set: function(constants) {
       angular.extend(values, constants)
-    },
-    $get: function() {
+    }
+    , $get: function() {
       return values
     }
   }

@@ -1,9 +1,9 @@
 module.exports = angular.module('stf/socket/socket-state', [
-  require('stf/socket').name,
-  require('stf/common-ui/safe-apply').name,
-  require('stf/common-ui/notifications').name,
-  require('stf/common-ui/refresh-page').name,
-  require('stf/common-ui/modals/socket-disconnected').name
+  require('stf/socket').name
+  , require('stf/common-ui/safe-apply').name
+  , require('stf/common-ui/notifications').name
+  , require('stf/common-ui/refresh-page').name
+  , require('stf/common-ui/modals/socket-disconnected').name
 ])
   .directive('socketState', require('./socket-state-directive'))
   .config([
@@ -16,7 +16,8 @@ module.exports = angular.module('stf/socket/socket-state', [
               if (fn && typeof fn === 'function') {
                 fn()
               }
-            } else {
+            }
+ else {
               $delegate.$apply(fn)
             }
           }

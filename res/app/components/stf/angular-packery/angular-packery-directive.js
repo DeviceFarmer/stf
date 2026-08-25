@@ -2,10 +2,9 @@ var _ = require('lodash')
 
 module.exports = function angularPackeryDirective(PackeryService,
   DraggabillyService, $timeout, $parse) {
-
   return {
-    restrict: 'AE',
-    link: function(scope, element, attrs) {
+    restrict: 'AE'
+    , link: function(scope, element, attrs) {
       var container = element[0]
       var parsedAttrs = $parse(attrs.angularPackery)()
       if (typeof parsedAttrs !== 'object') {
@@ -13,10 +12,10 @@ module.exports = function angularPackeryDirective(PackeryService,
       }
 
       var options = angular.extend({
-        isInitLayout: false,
-        itemSelector: '.packery-item',
-        columnWidth: '.packery-item',
-        transitionDuration: '300ms'
+        isInitLayout: false
+        , itemSelector: '.packery-item'
+        , columnWidth: '.packery-item'
+        , transitionDuration: '300ms'
       }, parsedAttrs)
 
       var pckry = new PackeryService(container, options)

@@ -5,13 +5,13 @@
 require('./groups.css')
 
 module.exports = angular.module('stf.settings.groups', [
-  require('stf/users').name,
-  require('stf/devices').name,
-  require('stf/user').name,
-  require('stf/groups').name,
-  require('stf/settings').name,
-  require('stf/util/common').name,
-  require('stf/common-ui').name
+  require('stf/users').name
+  , require('stf/devices').name
+  , require('stf/user').name
+  , require('stf/groups').name
+  , require('stf/settings').name
+  , require('stf/util/common').name
+  , require('stf/common-ui').name
 ])
   .run(['$templateCache', function($templateCache) {
     $templateCache.put(

@@ -30,17 +30,17 @@ module.exports = function CommonServiceFactory(
   }
 
   service.classOptions = [
-    {name: 'Once', id: 'once', privilege: 'user', duration: Infinity},
-    {name: 'Hourly', id: 'hourly', privilege: 'user', duration: ONE_HOUR},
-    {name: 'Daily', id: 'daily', privilege: 'user', duration: ONE_DAY},
-    {name: 'Weekly', id: 'weekly', privilege: 'user', duration: ONE_WEEK},
-    {name: 'Monthly', id: 'monthly', privilege: 'user', duration: ONE_MONTH},
-    {name: 'Quaterly', id: 'quaterly', privilege: 'user', duration: ONE_QUATER},
-    {name: 'Halfyearly', id: 'halfyearly', privilege: 'user', duration: ONE_HALF_YEAR},
-    {name: 'Yearly', id: 'yearly', privilege: 'user', duration: ONE_YEAR},
-    {name: 'Debug', id: 'debug', privilege: 'admin', duration: FIVE_MN},
-    {name: 'Bookable', id: 'bookable', privilege: 'admin', duration: Infinity},
-    {name: 'Standard', id: 'standard', privilege: 'admin', duration: Infinity}
+    {name: 'Once', id: 'once', privilege: 'user', duration: Infinity}
+    , {name: 'Hourly', id: 'hourly', privilege: 'user', duration: ONE_HOUR}
+    , {name: 'Daily', id: 'daily', privilege: 'user', duration: ONE_DAY}
+    , {name: 'Weekly', id: 'weekly', privilege: 'user', duration: ONE_WEEK}
+    , {name: 'Monthly', id: 'monthly', privilege: 'user', duration: ONE_MONTH}
+    , {name: 'Quaterly', id: 'quaterly', privilege: 'user', duration: ONE_QUATER}
+    , {name: 'Halfyearly', id: 'halfyearly', privilege: 'user', duration: ONE_HALF_YEAR}
+    , {name: 'Yearly', id: 'yearly', privilege: 'user', duration: ONE_YEAR}
+    , {name: 'Debug', id: 'debug', privilege: 'admin', duration: FIVE_MN}
+    , {name: 'Bookable', id: 'bookable', privilege: 'admin', duration: Infinity}
+    , {name: 'Standard', id: 'standard', privilege: 'admin', duration: Infinity}
   ]
 
   service.getClassName = function(id) {
@@ -211,11 +211,11 @@ module.exports = function CommonServiceFactory(
   }
 
   service.getBaseUrl = function() {
-    return $location.protocol()
-    + '://'
-    + $location.host()
-    + ':'
-    + $location.port()
+    return $location.protocol() +
+    '://' +
+    $location.host() +
+    ':' +
+    $location.port()
   }
 
   return service

@@ -1,5 +1,4 @@
 describe('errorMessage', function() {
-
   beforeEach(angular.mock.module(require('./index').name))
 
   var scope, compile

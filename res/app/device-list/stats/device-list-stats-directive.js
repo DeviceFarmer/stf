@@ -80,8 +80,8 @@ module.exports = function DeviceListStatsDirective(
         scope.counter.usable -= newStats.usable
         scope.counter.busy -= newStats.busy
         scope.counter.using -= newStats.using
-        //scope.counter.busy += newStats.busy - oldStats.busy
-        //scope.counter.using += newStats.using - oldStats.using
+        // scope.counter.busy += newStats.busy - oldStats.busy
+        // scope.counter.using += newStats.using - oldStats.using
 
         delete mapping[device.serial]
 

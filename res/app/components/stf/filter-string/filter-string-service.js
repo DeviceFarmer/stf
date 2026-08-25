@@ -36,7 +36,8 @@ module.exports = function FilterStringServiceFactory() {
           var flags = searchContent.substring(lastSlash + 1)
           var regex = new RegExp(pattern, flags)
           matched = !_.isNull(str.match(regex))
-        } else {
+        }
+ else {
           matched = true // Regex is not complete, don't filter yet
         }
         break
