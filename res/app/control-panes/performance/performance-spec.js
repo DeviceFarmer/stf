@@ -1,5 +1,4 @@
 describe('PerformanceCtrl', function() {
-
   beforeEach(angular.mock.module(require('./index').name))
 
   var scope, ctrl
@@ -11,7 +10,5 @@ describe('PerformanceCtrl', function() {
 
   it('should ...', inject(function() {
     expect(1).toEqual(1)
-
   }))
-
 })

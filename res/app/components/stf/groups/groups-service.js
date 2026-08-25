@@ -17,8 +17,8 @@ module.exports = function GroupsServiceFactory(
   }
 
   GroupsService.getOboeGroupUsers = function(id, fields, addGroupUser) {
-    return oboe(CommonService.getBaseUrl()
-    + '/api/v1/groups/' + id + '/users?fields=' + fields)
+    return oboe(CommonService.getBaseUrl() +
+    '/api/v1/groups/' + id + '/users?fields=' + fields)
       .node('users[*]', function(user) {
         addGroupUser(user)
       })
@@ -29,8 +29,8 @@ module.exports = function GroupsServiceFactory(
   }
 
   GroupsService.getOboeGroupDevices = function(id, bookable, fields, addGroupDevice) {
-    return oboe(CommonService.getBaseUrl()
-    + '/api/v1/groups/' + id + '/devices?bookable=' + bookable + '&fields=' + fields)
+    return oboe(CommonService.getBaseUrl() +
+    '/api/v1/groups/' + id + '/devices?bookable=' + bookable + '&fields=' + fields)
       .node('devices[*]', function(device) {
         addGroupDevice(device)
       })
@@ -46,9 +46,9 @@ module.exports = function GroupsServiceFactory(
 
   GroupsService.addGroupDevices = function(id, serials) {
     return $http({
-      method: 'PUT',
-      url: '/api/v1/groups/' + id + '/devices',
-      data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
+      method: 'PUT'
+      , url: '/api/v1/groups/' + id + '/devices'
+      , data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
     })
   }
 
@@ -58,12 +58,12 @@ module.exports = function GroupsServiceFactory(
 
   GroupsService.removeGroupDevices = function(id, serials) {
     return $http({
-      method: 'DELETE',
-      url: '/api/v1/groups/' + id + '/devices',
-      headers: {
+      method: 'DELETE'
+      , url: '/api/v1/groups/' + id + '/devices'
+      , headers: {
         'Content-Type': 'application/json;charset=utf-8'
-      },
-      data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
+      }
+      , data: typeof serials === 'undefined' ? serials : JSON.stringify({serials: serials})
     })
   }
 
@@ -73,9 +73,9 @@ module.exports = function GroupsServiceFactory(
 
   GroupsService.addGroupUsers = function(id, emails) {
     return $http({
-      method: 'PUT',
-      url: '/api/v1/groups/' + id + '/users',
-      data: typeof emails === 'undefined' ? emails : JSON.stringify({emails: emails})
+      method: 'PUT'
+      , url: '/api/v1/groups/' + id + '/users'
+      , data: typeof emails === 'undefined' ? emails : JSON.stringify({emails: emails})
     })
   }
 
@@ -85,12 +85,12 @@ module.exports = function GroupsServiceFactory(
 
   GroupsService.removeGroupUsers = function(id, emails) {
     return $http({
-      method: 'DELETE',
-      url: '/api/v1/groups/' + id + '/users',
-      headers: {
+      method: 'DELETE'
+      , url: '/api/v1/groups/' + id + '/users'
+      , headers: {
         'Content-Type': 'application/json;charset=utf-8'
-      },
-      data: typeof emails === 'undefined' ? emails : JSON.stringify({emails: emails})
+      }
+      , data: typeof emails === 'undefined' ? emails : JSON.stringify({emails: emails})
     })
   }
 
@@ -126,28 +126,28 @@ module.exports = function GroupsServiceFactory(
 
   GroupsService.removeGroups = function(ids) {
     return $http({
-      method: 'DELETE',
-      url: '/api/v1/groups?_=' + Date.now(),
-      headers: {
+      method: 'DELETE'
+      , url: '/api/v1/groups?_=' + Date.now()
+      , headers: {
         'Content-Type': 'application/json;charset=utf-8'
-      },
-      data: typeof ids === 'undefined' ? ids : JSON.stringify({ids: ids})
+      }
+      , data: typeof ids === 'undefined' ? ids : JSON.stringify({ids: ids})
     })
   }
 
   GroupsService.createGroup = function() {
     return $http({
-      method: 'POST',
-      url: '/api/v1/groups',
-      data: JSON.stringify({'state': 'pending'})
+      method: 'POST'
+      , url: '/api/v1/groups'
+      , data: JSON.stringify({state: 'pending'})
     })
   }
 
   GroupsService.updateGroup = function(id, data) {
     return $http({
-      method: 'PUT',
-      url: '/api/v1/groups/' + id,
-      data: JSON.stringify(data)
+      method: 'PUT'
+      , url: '/api/v1/groups/' + id
+      , data: JSON.stringify(data)
     })
   }
   socket.on('user.settings.groups.created', function(group) {

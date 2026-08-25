@@ -100,7 +100,6 @@ module.exports = function DeviceListDetailsDirective(
       // Childscope will be destroyed when the editing will be over
       function checkDeviceNote(e) {
         if (e.target.classList.contains('device-note-edit')) {
-
           var i = e.target
           var id = i.parentNode.parentNode.id
           var device = mapping[id]
@@ -133,7 +132,6 @@ module.exports = function DeviceListDetailsDirective(
           if (col.firstChild &&
               col.firstChild.nodeName.toLowerCase() === 'span' &&
               col.firstChild.classList.contains('xeditable-wrapper')) {
-
             var xeditableWrapper = col.firstChild
             var children = xeditableWrapper.children
 

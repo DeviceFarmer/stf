@@ -3,12 +3,12 @@ module.exports =
     ScalingService, GroupService, $timeout) {
     var service = {}
 
-    //SettingsService.sync($scope, 'ControlWindow', {
+    // SettingsService.sync($scope, 'ControlWindow', {
     //  controlWindowWidth: 600,
     //  controlWindowHeight: 900,
     //  controlWindowTop: 50,
     //  controlWindowLeft: 50
-    //})
+    // })
 
     var screenWidth = $window.screen.availWidth || $window.screen.width || 1024
     var screenHeight = $window.screen.availHeight || $window.screen.height ||
@@ -16,15 +16,15 @@ module.exports =
     var windowSizeRatio = 0.5
 
     function fitDeviceInGuestScreen(device) {
-      //console.log('device.width', device.width)
-      //console.log('device', device)
+      // console.log('device.width', device.width)
+      // console.log('device', device)
 
       var screen = {
         scaler: ScalingService.coordinator(
           device.display.width, device.display.height
-        ),
-        rotation: device.display.rotation,
-        bounds: {
+        )
+        , rotation: device.display.rotation
+        , bounds: {
           x: 0, y: 0, w: screenWidth, h: screenHeight
         }
       }
@@ -45,20 +45,20 @@ module.exports =
       var projected = fitDeviceInGuestScreen(device)
 
       var features = [
-        'width=' + projected.width,
-        'height=' + projected.height,
-        'top=' + (screenHeight / 4),
-        'left=' + (screenWidth / 5),
-        'toolbar=no',
-        'location=no',
-        'dialog=yes',
-        'personalbar=no',
-        'directories=no',
-        'status=no',
-        'menubar=no',
-        'scrollbars=no',
-        'copyhistory=no',
-        'resizable=yes'
+        'width=' + projected.width
+        , 'height=' + projected.height
+        , 'top=' + (screenHeight / 4)
+        , 'left=' + (screenWidth / 5)
+        , 'toolbar=no'
+        , 'location=no'
+        , 'dialog=yes'
+        , 'personalbar=no'
+        , 'directories=no'
+        , 'status=no'
+        , 'menubar=no'
+        , 'scrollbars=no'
+        , 'copyhistory=no'
+        , 'resizable=yes'
       ].join(',')
 
       var newWindow = $window.open(url, 'STF-' + device.serial, features)
@@ -68,7 +68,7 @@ module.exports =
         if (device.name !== device.model) {
           windowTitle += ' (' + device.model + ')'
         }
-        //windowTitle += ' (' + device.serial + ')'
+        // windowTitle += ' (' + device.serial + ')'
 
         if (newWindow.document) {
           newWindow.document.title = windowTitle
@@ -85,7 +85,6 @@ module.exports =
 
 
       newWindow.onbeforeunload = function() {
-
         // TODO: check for usage
         GroupService.kick(device).then(function() {
           $rootScope.$digest()
@@ -99,7 +98,7 @@ module.exports =
       }
 
       // TODO: Resize on-demand
-      //newWindow.onresize = function (e) {
+      // newWindow.onresize = function (e) {
       //  var windowWidth =  e.target.outerWidth
       //  var windowHeight =  e.target.outerHeight
       //
@@ -108,7 +107,7 @@ module.exports =
       //  console.log('windowWidth', windowWidth)
       //
       //  newWindow.resizeTo(newWindowWidth, windowHeight)
-      //}
+      // }
     }
 
 

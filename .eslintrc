@@ -141,7 +141,7 @@
     "space-in-parens": [2, "never"], // optionally set `[2, "always", {"exceptions": ["empty"]}]`
     "space-infix-ops": 2,
     "space-unary-ops": [2, {"words": true, "nonwords": false}],
-    "spaced-comment": [1, "always", {"exceptions": ["/"]}], // optionally set `[2, "always", {"exceptions": ["-", "+"], "markers": ["/"]}]`
+    "spaced-comment": [1, "always", {"exceptions": ["/", "*"]}], // "*" keeps all-asterisk divider comments legal; without it --fix rewrites them into `/** ***`
     "wrap-regex": 0, // TODO: 2 is ok but the division edge case is too edgy
 
     // Node.js / Common.js

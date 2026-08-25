@@ -1,5 +1,4 @@
 describe('FsCtrl', function() {
-
   beforeEach(angular.mock.module(require('./').name))
 
   var scope, ctrl
@@ -18,7 +17,5 @@ describe('FsCtrl', function() {
 
   it('should ...', inject(function() {
     expect(1).toEqual(1)
-
   }))
-
 })

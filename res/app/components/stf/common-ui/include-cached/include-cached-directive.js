@@ -1,8 +1,8 @@
 module.exports = function includeCachedDirective(CompileCacheService) {
   return {
-    restrict: 'ECA',
-    terminal: true,
-    compile: function(element, attrs) {
+    restrict: 'ECA'
+    , terminal: true
+    , compile: function(element, attrs) {
       var srcExp = attrs.ngIncludeCached || attrs.src
 
       return function(scope, element) {

@@ -1,7 +1,7 @@
 module.exports = function focusElementDirective($parse, $timeout) {
   return {
-    restrict: 'A',
-    link: function(scope, element, attrs) {
+    restrict: 'A'
+    , link: function(scope, element, attrs) {
       var model = $parse(attrs.focusElement)
 
       scope.$watch(model, function(value) {

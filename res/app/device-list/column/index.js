@@ -3,8 +3,8 @@
 **/
 
 module.exports = angular.module('stf.device-list.column', [
-  require('gettext').name,
-  require('stf/settings').name,
-  require('stf/app-state').name
+  require('gettext').name
+  , require('stf/settings').name
+  , require('stf/app-state').name
 ])
   .service('DeviceColumnService', require('./device-column-service'))

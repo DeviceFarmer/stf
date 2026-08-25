@@ -1,25 +1,25 @@
 require('./device-list.css')
 
 module.exports = angular.module('device-list', [
-  require('angular-xeditable').name,
-  require('stf/device').name,
-  require('stf/user/group').name,
-  require('stf/control').name,
-  require('stf/common-ui').name,
-  require('stf/settings').name,
-  require('./column').name,
-  require('./details').name,
-  require('./empty').name,
-  require('./icons').name,
-  require('./stats').name,
-  require('./customize').name,
-  require('./search').name
+  require('angular-xeditable').name
+  , require('stf/device').name
+  , require('stf/user/group').name
+  , require('stf/control').name
+  , require('stf/common-ui').name
+  , require('stf/settings').name
+  , require('./column').name
+  , require('./details').name
+  , require('./empty').name
+  , require('./icons').name
+  , require('./stats').name
+  , require('./customize').name
+  , require('./search').name
 ])
   .config(['$routeProvider', function($routeProvider) {
     $routeProvider
       .when('/devices', {
-        template: require('./device-list.pug'),
-        controller: 'DeviceListCtrl'
+        template: require('./device-list.pug')
+        , controller: 'DeviceListCtrl'
       })
   }])
   .run(function(editableOptions) {

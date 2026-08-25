@@ -1,6 +1,6 @@
 module.exports = angular.module('stf-ui-language', [
-  require('stf/settings').name,
-  require('stf/language').name
+  require('stf/settings').name
+  , require('stf/language').name
 ])
   .run(['$templateCache', function($templateCache) {
     $templateCache.put(

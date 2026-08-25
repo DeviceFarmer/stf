@@ -1,5 +1,4 @@
 module.exports = function WidgetContainerPage() {
-
   this.get = function() {
     browser.get(browser.baseUrl + 'devices')
     browser.wait(waitUrl(/devices/), 5000)

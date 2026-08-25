@@ -74,5 +74,4 @@ module.exports = function DeviceSettingsCtrl($scope, $timeout) {
     }
   }
   getRingerMode()
-
 }

@@ -72,7 +72,6 @@ module.exports = function GroupListCtrl(
     group.status = group.isActive ? 'Active' : status[group.state]
     group.startTime = $filter('date')(group.dates[0].start, SettingsService.get('dateFormat'))
     group.stopTime = $filter('date')(group.dates[0].stop, SettingsService.get('dateFormat'))
-
   }
 
   function updateQuotaBar(bar, consumed, allocated) {

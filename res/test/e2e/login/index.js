@@ -9,7 +9,8 @@ module.exports = function LoginPage() {
 
   if (this.login.method === 'ldap') {
     this.password = element(by.model('password'))
-  } else {
+  }
+ else {
     this.email = element(by.model('email'))
   }
 
@@ -46,7 +47,8 @@ module.exports = function LoginPage() {
     this.setName(loginName)
     if (this.login.method === 'ldap') {
       this.setPassword(loginPassword)
-    } else {
+    }
+ else {
       this.setEmail(loginEmail)
     }
 

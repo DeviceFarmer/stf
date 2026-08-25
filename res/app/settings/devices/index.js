@@ -5,10 +5,10 @@
 require('./devices.css')
 
 module.exports = angular.module('stf.settings.devices', [
-  require('stf/common-ui').name,
-  require('stf/settings').name,
-  require('stf/util/common').name,
-  require('stf/devices').name
+  require('stf/common-ui').name
+  , require('stf/settings').name
+  , require('stf/util/common').name
+  , require('stf/devices').name
 ])
   .run(['$templateCache', function($templateCache) {
     $templateCache.put(

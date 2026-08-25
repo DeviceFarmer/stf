@@ -71,8 +71,8 @@ var protractor = function(opts) {
     child =
       childProcess.spawn(path.resolve(getProtractorDir() + '/protractor' +
       winExt), args, {
-        stdio: 'inherit',
-        env: process.env
+        stdio: 'inherit'
+        , env: process.env
       }).on('exit', function(code) {
         if (child) {
           child.kill()
@@ -155,9 +155,9 @@ function getProtractorExplorerDir() {
 var isWebDriverRunning = function() {
   return new Promise(function(resolve) {
     var options = {
-      hostname: 'localhost',
-      port: 4444,
-      path: '/wd/hub/status'
+      hostname: 'localhost'
+      , port: 4444
+      , path: '/wd/hub/status'
     }
 
     var req = http.request(options, function(res) {
@@ -176,7 +176,7 @@ var isWebDriverRunning = function() {
   })
 }
 
-//var ensureWebDriverRunning = function () {
+// var ensureWebDriverRunning = function () {
 //  return new Promise(function (resolve) {
 //    isWebDriverRunning().then(function (running) {
 //      if (running) {
@@ -184,7 +184,7 @@ var isWebDriverRunning = function() {
 //      }
 //    })
 //  })
-//}
+// }
 
 
 var protractorExplorer = function(opts, cb) {
@@ -222,7 +222,8 @@ var protractorExplorer = function(opts, cb) {
     isWebDriverRunning().then(function(running) {
       if (running) {
         runElementExplorer(callback)
-      } else {
+      }
+ else {
         webdriverStandalone({stdio: ['pipe', 'pipe', process.stderr]},
           function() {
 
@@ -238,11 +239,11 @@ var protractorExplorer = function(opts, cb) {
 }
 
 module.exports = {
-  getProtractorDir: getProtractorDir,
-  protractor: protractor,
-  webdriverStandalone: webdriverStandalone,
-  webdriverUpdate: webdriverUpdate,
-  webdriverUpdateSpecific: webdriverUpdateSpecific,
-  protractorExplorer: protractorExplorer,
-  isWebDriverRunning: isWebDriverRunning
+  getProtractorDir: getProtractorDir
+  , protractor: protractor
+  , webdriverStandalone: webdriverStandalone
+  , webdriverUpdate: webdriverUpdate
+  , webdriverUpdateSpecific: webdriverUpdateSpecific
+  , protractorExplorer: protractorExplorer
+  , isWebDriverRunning: isWebDriverRunning
 }

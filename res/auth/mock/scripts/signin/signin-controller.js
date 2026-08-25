@@ -3,7 +3,6 @@
 **/
 
 module.exports = function SignInCtrl($window, $scope, $http, CommonService) {
-
   $window.angular.version = {}
 
   $scope.error = null

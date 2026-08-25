@@ -2,7 +2,7 @@
  Based on http://www-cs-students.stanford.edu/~eparker/files/crunch/renderer.js
  */
 
-/*global Float32Array */
+/* global Float32Array */
 
 /**
  * Constructs a renderer object.
@@ -60,10 +60,10 @@ var Renderer = function(gl) {
   this.quadVertexBuffer_ = gl.createBuffer()
   gl.bindBuffer(gl.ARRAY_BUFFER, this.quadVertexBuffer_)
   var vertices = new Float32Array(
-    [-1.0, -1.0, 0.0, 1.0,
-      +1.0, -1.0, 1.0, 1.0,
-      -1.0, +1.0, 0.0, 0.0,
-      1.0, +1.0, 1.0, 0.0])
+    [-1.0, -1.0, 0.0, 1.0
+      , +1.0, -1.0, 1.0, 1.0
+      , -1.0, +1.0, 0.0, 0.0
+      , 1.0, +1.0, 1.0, 0.0])
   gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
 
 
@@ -116,7 +116,7 @@ Renderer.prototype.createDxtTexture =
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    //gl.generateMipmap(gl.TEXTURE_2D)
+    // gl.generateMipmap(gl.TEXTURE_2D)
     gl.bindTexture(gl.TEXTURE_2D, null)
     return tex
   }
@@ -140,7 +140,7 @@ Renderer.prototype.createRgb565Texture = function(rgb565Data, width, height) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-  //gl.generateMipmap(gl.TEXTURE_2D)
+  // gl.generateMipmap(gl.TEXTURE_2D)
   gl.bindTexture(gl.TEXTURE_2D, null)
   return tex
 }
@@ -187,12 +187,12 @@ Renderer.prototype.compileShader_ = function(shaderSource, type) {
  * @private
  */
 Renderer.vertexShaderSource_ = [
-  'attribute vec4 vert;',
-  'varying vec2 v_texCoord;',
-  'void main() {',
-  '  gl_Position = vec4(vert.xy, 0.0, 1.0);',
-  '  v_texCoord = vert.zw;',
-  '}'
+  'attribute vec4 vert;'
+  , 'varying vec2 v_texCoord;'
+  , 'void main() {'
+  , '  gl_Position = vec4(vert.xy, 0.0, 1.0);'
+  , '  v_texCoord = vert.zw;'
+  , '}'
 ].join('\n')
 
 
@@ -201,12 +201,12 @@ Renderer.vertexShaderSource_ = [
  * @private
  */
 Renderer.fragmentShaderSource_ = [
-  'precision highp float;',
-  'uniform sampler2D texSampler;',
-  'varying vec2 v_texCoord;',
-  'void main() {',
-  '  gl_FragColor = texture2D(texSampler, v_texCoord);',
-  '}'
+  'precision highp float;'
+  , 'uniform sampler2D texSampler;'
+  , 'varying vec2 v_texCoord;'
+  , 'void main() {'
+  , '  gl_FragColor = texture2D(texSampler, v_texCoord);'
+  , '}'
 ].join('\n')
 
 // -------------------------------------------------------------------------------------------------
@@ -222,10 +222,12 @@ function WebGLRender(canvasElement) {
 
   try {
     this.ctx = canvasElement.getContext('experimental-webgl', this.options)
-  } catch (e) {
+  }
+ catch (e) {
     try {
       this.ctx = canvasElement.getContext('webgl', this.options)
-    } catch (e2) {
+    }
+ catch (e2) {
       // fail, not able to get a context
       throw new Error('This browser does not support webGL. Try using the' +
       'canvas renderer' + this)
@@ -243,10 +245,10 @@ function WebGLRender(canvasElement) {
 
 //  gl.useProgram(this.shaderManager.defaultShader.program)
 
-  //this.ctx.disable(this.ctx.DEPTH_TEST)
-  //this.ctx.disable(this.ctx.CULL_FACE)
+  // this.ctx.disable(this.ctx.DEPTH_TEST)
+  // this.ctx.disable(this.ctx.CULL_FACE)
 
-  //this.setup()
+  // this.setup()
 }
 
 WebGLRender.prototype.setup = function() {
@@ -304,7 +306,6 @@ WebGLRender.prototype.setup = function() {
 
   this.vloc = this.ctx.getAttribLocation(progObj, 'aVertex')
   this.tloc = this.ctx.getAttribLocation(progObj, 'aUV')
-
 }
 
 WebGLRender.prototype.draw = function(image) {

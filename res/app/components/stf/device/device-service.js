@@ -37,7 +37,7 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
 
       if (event.important) {
         // Handle important updates immediately.
-        //digest()
+        // digest()
         window.requestAnimationFrame(digest)
       }
       else {
@@ -268,8 +268,8 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
 
   deviceService.updateNote = function(serial, note) {
     socket.emit('device.note', {
-      serial: serial,
-      note: note
+      serial: serial
+      , note: note
     })
   }
 

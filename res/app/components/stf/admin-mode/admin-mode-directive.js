@@ -1,10 +1,10 @@
 module.exports = function adminModeDirective($rootScope, SettingsService) {
   return {
-    restrict: 'AE',
-    link: function() {
+    restrict: 'AE'
+    , link: function() {
       SettingsService.bind($rootScope, {
-        target: 'adminMode',
-        defaultValue: false
+        target: 'adminMode'
+        , defaultValue: false
       })
     }
   }
