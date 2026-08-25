@@ -223,11 +223,11 @@ function WebGLRender(canvasElement) {
   try {
     this.ctx = canvasElement.getContext('experimental-webgl', this.options)
   }
- catch (e) {
+  catch (e) {
     try {
       this.ctx = canvasElement.getContext('webgl', this.options)
     }
- catch (e2) {
+    catch (e2) {
       // fail, not able to get a context
       throw new Error('This browser does not support webGL. Try using the' +
       'canvas renderer' + this)
@@ -323,6 +323,7 @@ WebGLRender.prototype.drawOld = function(image) {
   this.ctx.texParameteri(
     this.ctx.TEXTURE_2D, this.ctx.TEXTURE_MAG_FILTER, this.ctx.NEAREST
   )
+
   /*
    this.ctx.texParameteri(
    this.ctx.TEXTURE_2D

@@ -101,11 +101,11 @@
     "indent": [0, 2, {"SwitchCase": 0, "VariableDeclarator": 2}], // TODO: optionally set `[2, 2, {"SwitchCase": 1, "VariableDeclarator": {"var": 2, "let": 2, "const": 3}}]` this gives too many errors
     "jsx-quotes": [2, "prefer-single"],
     "key-spacing": [2, {"beforeColon": false, "afterColon": true, "mode": "strict"}], // optionally set `[2, {"beforeColon": false, "afterColon": true, "mode": "strict", "align": "colon"}]`
-    "lines-around-comment": 2, // optionally set `[2, {"beforeBlockComment": true, "beforeLineComment": true, "allowBlockStart": true}]`
+    "lines-around-comment": [2, {"beforeBlockComment": true, "allowBlockStart": true}], // allowBlockStart because the blank line it would want at a block start is a padded-blocks error
     "linebreak-style": 0, // optionally set `[1, "unix"]`
     "max-len": [2, 100, 2, {"ignoreComments": true, "ignoreUrls": true}], // NOTE: Our limit is 80 however ESLint does not have an ignoreStrings so lets have more buffer
     "max-nested-callbacks": [1, 5],
-    "new-cap": 2, // optionally set `[2, {"capIsNewExceptions": ["Person"]}]`
+    "new-cap": [2, {"capIsNewExceptionPattern": "Service$"}], // angular services are injected under their registered PascalCase name and called as plain functions
     "new-parens": 2,
     "newline-after-var": [0, "always"], // TODO: 1 may be ok
     "no-array-constructor": 2,

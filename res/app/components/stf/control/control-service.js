@@ -124,11 +124,11 @@ module.exports = function ControlServiceFactory(
             if (result.lastData) {
               that.clipboardContent = result.lastData
             }
- else {
+            else {
               that.clipboardContent = gettext('No clipboard data')
             }
           }
- else {
+          else {
             that.clipboardContent = gettext('Error while getting data')
           }
         })

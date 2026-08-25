@@ -25,7 +25,7 @@ module.exports =
         if (angle === 0) {
           angle = 270
         }
- else {
+        else {
           angle -= 90
         }
         $scope.control.rotate(angle)
@@ -42,7 +42,7 @@ module.exports =
         if (angle === 270) {
           angle = 0
         }
- else {
+        else {
           angle += 90
         }
         $scope.control.rotate(angle)
@@ -78,7 +78,7 @@ module.exports =
         if ($rootScope.platform === 'web') {
           $rootScope.platform = 'native'
         }
- else {
+        else {
           $rootScope.platform = 'web'
         }
       }

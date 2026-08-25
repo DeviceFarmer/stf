@@ -1,11 +1,11 @@
 describe('ClipboardCtrl', function() {
   beforeEach(angular.mock.module(require('./').name))
 
-  var scope, ctrl
+  var scope
 
   beforeEach(inject(function($rootScope, $controller) {
     scope = $rootScope.$new()
-    ctrl = $controller('ClipboardCtrl', {$scope: scope})
+    $controller('ClipboardCtrl', {$scope: scope})
   }))
 
   it('should ...', inject(function() {

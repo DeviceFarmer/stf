@@ -129,7 +129,7 @@ var webdriverStandalone = function(opts, cb) {
     stdio: stdio
   })
     .once('close', callback)
-    .on('exit', function(code) {
+    .on('exit', function() {
       if (child) {
         child.kill()
       }
@@ -223,7 +223,7 @@ var protractorExplorer = function(opts, cb) {
       if (running) {
         runElementExplorer(callback)
       }
- else {
+      else {
         webdriverStandalone({stdio: ['pipe', 'pipe', process.stderr]},
           function() {
 

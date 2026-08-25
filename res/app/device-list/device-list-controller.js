@@ -206,7 +206,7 @@ module.exports = function DeviceListCtrl(
     if (device.using) {
       $scope.kick(device)
     }
- else {
+    else {
       $location.path('/control/' + device.serial)
     }
   }

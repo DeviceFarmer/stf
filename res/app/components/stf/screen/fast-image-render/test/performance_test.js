@@ -48,7 +48,7 @@ imageRender.onLoad = function(image) {
   if (frame.current++ < frame.total) {
     loadNext()
   }
- else {
+  else {
     var endTime = new Date().getTime()
     var totalTime = endTime - startTime
     totalTimeElement.innerHTML = totalTime / 1000 + ' seconds'
