@@ -27,7 +27,7 @@ module.exports = function ScreenshotsCtrl($scope) {
     if (param.min && newValue < param.min) {
       newValue = param.min
     }
- else if (param.max && newValue > param.max) {
+    else if (param.max && newValue > param.max) {
       newValue = param.max
     }
     $scope.screenShotSize = newValue

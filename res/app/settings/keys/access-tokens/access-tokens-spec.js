@@ -1,11 +1,11 @@
 describe('AccessTokensCtrl', function() {
   beforeEach(angular.mock.module(require('./index').name))
 
-  var scope, ctrl
+  var scope
 
   beforeEach(inject(function($rootScope, $controller) {
     scope = $rootScope.$new()
-    ctrl = $controller('AccessTokensCtrl', {$scope: scope})
+    $controller('AccessTokensCtrl', {$scope: scope})
   }))
 
   it('should ...', inject(function() {

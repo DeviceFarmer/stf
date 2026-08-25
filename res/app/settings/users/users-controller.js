@@ -116,8 +116,8 @@ module.exports = function UsersCtrl(
         UsersService.removeUsers
       , search ?
           [$scope.removingFilters, filteredUsers.map(function(user) {
- return user.email
-}).join()] :
+            return user.email
+          }).join()] :
           [$scope.removingFilters]
       )
     }

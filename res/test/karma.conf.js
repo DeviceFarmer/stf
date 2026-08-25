@@ -4,7 +4,6 @@
 
 var webpackConfig = require('./../../webpack.config')
 
-var webpack = require('webpack')
 
 module.exports = function(config) {
   config.set({

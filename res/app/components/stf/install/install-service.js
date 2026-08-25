@@ -116,7 +116,7 @@ module.exports = function InstallService(
               installation.update(50 + result.progress / 2, result.lastData)
             })
         }
- else {
+        else {
           return $http.get(installation.href + '/manifest')
             .then(function(res) {
               if (res.data.success) {

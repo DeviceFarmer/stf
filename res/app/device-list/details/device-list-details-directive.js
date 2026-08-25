@@ -202,39 +202,35 @@ module.exports = function DeviceListDetailsDirective(
         }
       }
 
-      // Watch for sorting changes
-      scope.$watch(
-        function() {
-          return scope.sort
-        }
-      , function(newValue) {
-          activeSorting = newValue.fixed.concat(newValue.user)
-          scope.sortedColumns = Object.create(null)
-          activeSorting.forEach(function(sort) {
-            scope.sortedColumns[sort.name] = sort
-          })
-          sortAll()
-        }
-      , true
-      )
-
-      // Watch for column updates
-      scope.$watch(
-        function() {
-          return scope.columns()
-        }
-      , function(newValue) {
-          updateColumns(newValue)
-        }
-      , true
-      )
-
-      // Update now so that we don't have to wait for the scope watcher to
-      // trigger.
-      updateColumns(scope.columns())
-
       // Updates visible columns. This method doesn't necessarily have to be
       // the fastest because it shouldn't get called all the time.
+      function patchRow(tr, device, patch) {
+        for (var i = 0, l = patch.length; i < l; ++i) {
+          var op = patch[i]
+          switch (op[0]) {
+          case 'insert':
+            var col = scope.columnDefinitions[op[2]]
+            tr.insertBefore(col.update(col.build(), device), tr.cells[op[1]])
+            break
+          case 'remove':
+            tr.deleteCell(op[1])
+            break
+          case 'swap':
+            tr.insertBefore(tr.cells[op[1]], tr.cells[op[2]])
+            tr.insertBefore(tr.cells[op[2]], tr.cells[op[1]])
+            break
+          }
+        }
+
+        return tr
+      }
+
+      function patchAll(patch) {
+        for (var i = 0, l = rows.length; i < l; ++i) {
+          patchRow(rows[i], mapping[rows[i].id], patch)
+        }
+      }
+
       function updateColumns(columnSettings) {
         var newActiveColumns = []
 
@@ -255,29 +251,6 @@ module.exports = function DeviceListDetailsDirective(
       }
 
       // Updates filters on visible items.
-      function updateFilters(filters) {
-        activeFilters = filters
-        return filterAll()
-      }
-
-      // Applies filterRow() to all rows.
-      function filterAll() {
-        for (var i = 0, l = rows.length; i < l; ++i) {
-          filterRow(rows[i], mapping[rows[i].id])
-        }
-      }
-
-      // Filters a row, perhaps removing it from view.
-      function filterRow(row, device) {
-        if (match(device)) {
-          row.classList.remove('filter-out')
-        }
-        else {
-          row.classList.add('filter-out')
-        }
-      }
-
-      // Checks whether the device matches the currently active filters.
       function match(device) {
         for (var i = 0, l = activeFilters.length; i < l; ++i) {
           var filter = activeFilters[i]
@@ -304,6 +277,32 @@ module.exports = function DeviceListDetailsDirective(
         }
         return true
       }
+
+      function filterRow(row, device) {
+        if (match(device)) {
+          row.classList.remove('filter-out')
+        }
+        else {
+          row.classList.add('filter-out')
+        }
+      }
+
+      function filterAll() {
+        for (var i = 0, l = rows.length; i < l; ++i) {
+          filterRow(rows[i], mapping[rows[i].id])
+        }
+      }
+
+      function updateFilters(filters) {
+        activeFilters = filters
+        return filterAll()
+      }
+
+      // Applies filterRow() to all rows.
+
+      // Filters a row, perhaps removing it from view.
+
+      // Checks whether the device matches the currently active filters.
 
       // Update now so we're up to date.
       updateFilters(scope.filter())
@@ -374,35 +373,10 @@ module.exports = function DeviceListDetailsDirective(
       }
 
       // Patches all rows.
-      function patchAll(patch) {
-        for (var i = 0, l = rows.length; i < l; ++i) {
-          patchRow(rows[i], mapping[rows[i].id], patch)
-        }
-      }
 
       // Patches the given row by running the given patch operations in
       // order. The operations must take into account index changes caused
       // by previous operations.
-      function patchRow(tr, device, patch) {
-        for (var i = 0, l = patch.length; i < l; ++i) {
-          var op = patch[i]
-          switch (op[0]) {
-          case 'insert':
-            var col = scope.columnDefinitions[op[2]]
-            tr.insertBefore(col.update(col.build(), device), tr.cells[op[1]])
-            break
-          case 'remove':
-            tr.deleteCell(op[1])
-            break
-          case 'swap':
-            tr.insertBefore(tr.cells[op[1]], tr.cells[op[2]])
-            tr.insertBefore(tr.cells[op[2]], tr.cells[op[1]])
-            break
-          }
-        }
-
-        return tr
-      }
 
       // Updates all the columns in the row. Note that the row must be in
       // the right format already (built with createRow() and patched with
@@ -428,14 +402,6 @@ module.exports = function DeviceListDetailsDirective(
 
       // Inserts a row into the table into its correct position according to
       // current sorting.
-      function insertRow(tr, deviceA) {
-        return insertRowToSegment(tr, deviceA, 0, rows.length - 1)
-      }
-
-      // Inserts a row into a segment of the table into its correct position
-      // according to current sorting. The value of `hi` is the index
-      // of the last item in the segment, or -1 if none. The value of `lo`
-      // is the index of the first item in the segment, or 0 if none.
       function insertRowToSegment(tr, deviceA, low, high) {
         var total = rows.length
         var lo = low
@@ -481,6 +447,15 @@ module.exports = function DeviceListDetailsDirective(
           }
         }
       }
+
+      function insertRow(tr, deviceA) {
+        return insertRowToSegment(tr, deviceA, 0, rows.length - 1)
+      }
+
+      // Inserts a row into a segment of the table into its correct position
+      // according to current sorting. The value of `hi` is the index
+      // of the last item in the segment, or -1 if none. The value of `lo`
+      // is the index of the first item in the segment, or 0 if none.
 
       // Compares a row to its siblings to see if it's still in the correct
       // position. Returns <0 if the device should actually go somewhere
@@ -564,6 +539,37 @@ module.exports = function DeviceListDetailsDirective(
 
         delete mapping[id]
       }
+
+      // Watch for sorting changes
+      scope.$watch(
+        function() {
+          return scope.sort
+        }
+      , function(newValue) {
+          activeSorting = newValue.fixed.concat(newValue.user)
+          scope.sortedColumns = Object.create(null)
+          activeSorting.forEach(function(sort) {
+            scope.sortedColumns[sort.name] = sort
+          })
+          sortAll()
+        }
+      , true
+      )
+
+      // Watch for column updates
+      scope.$watch(
+        function() {
+          return scope.columns()
+        }
+      , function(newValue) {
+          updateColumns(newValue)
+        }
+      , true
+      )
+
+      // Update now so that we don't have to wait for the scope watcher to
+      // trigger.
+      updateColumns(scope.columns())
 
       tracker.on('add', addListener)
       tracker.on('change', changeListener)

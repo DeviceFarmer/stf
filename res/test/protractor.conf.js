@@ -1,6 +1,6 @@
 // Reference: https://github.com/angular/protractor/blob/master/referenceConf.js
 var LoginPage = require('./e2e/login')
-var BrowserLogs = require('./e2e/helpers/browser-logs')
+var browserLogs = require('./e2e/helpers/browser-logs')
 // var FailFast = require('./e2e/helpers/fail-fast')
 var jasmineReporters = require('jasmine-reporters')
 var WaitUrl = require('./e2e/helpers/wait-url')
@@ -80,7 +80,7 @@ module.exports.config = {
     })
 
     afterEach(function() {
-      BrowserLogs({expectNoLogs: true})
+      browserLogs({expectNoLogs: true})
       // FailFast()
     })
   }

@@ -17,7 +17,7 @@ module.exports = function() {
       , currentPage: '='
     }
     , template: require('./pagination.pug')
-    , link: function(scope, element, attrs) {
+    , link: function(scope) {
       scope.currentPage = 1
     }
   }

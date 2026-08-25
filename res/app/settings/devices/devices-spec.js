@@ -5,11 +5,11 @@
 describe('DevicesCtrl', function() {
   beforeEach(angular.mock.module(require('./index').name))
 
-  var scope, ctrl
+  var scope
 
   beforeEach(inject(function($rootScope, $controller) {
     scope = $rootScope.$new()
-    ctrl = $controller('DevicesCtrl', {$scope: scope})
+    $controller('DevicesCtrl', {$scope: scope})
   }))
 
   it('should ...', inject(function() {

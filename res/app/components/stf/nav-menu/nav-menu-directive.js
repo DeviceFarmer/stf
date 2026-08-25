@@ -25,7 +25,7 @@ module.exports = function($location) {
         if ($location.$$html5) {
           urlMap.push({url: url, link: link})
         }
- else {
+        else {
           urlMap.push({url: url.replace(routePattern, ''), link: link})
         }
       }

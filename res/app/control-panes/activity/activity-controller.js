@@ -10,7 +10,7 @@ module.exports = function ActivityCtrl($scope, gettext, TimelineService) {
         title = newValue
         message = 'Device is now ' + newValue
       }
- else {
+      else {
         title = newValue
         message = '!Device is now ' + newValue
       }

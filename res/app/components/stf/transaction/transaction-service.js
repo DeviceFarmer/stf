@@ -8,103 +8,6 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     return 'tx.' + uuid.v4()
   }
 
-  function MultiTargetTransaction(targets, options) {
-    var pending = Object.create(null)
-    var results = []
-    var channel = createChannel()
-
-    function doneListener(someChannel, data) {
-      if (someChannel === channel) {
-        pending[data.source].done(data)
-      }
-    }
-
-    function progressListener(someChannel, data) {
-      if (someChannel === channel) {
-        pending[data.source].progress(data)
-      }
-    }
-
-    function cancelListener(someChannel, data) {
-      if (someChannel === channel) {
-        Object.keys(pending).forEach(function(source) {
-          pending[source].cancel(data)
-        })
-      }
-    }
-
-    socket.on('tx.done', doneListener)
-    socket.on('tx.progress', progressListener)
-    socket.on('tx.cancel', cancelListener)
-
-    this.channel = channel
-    this.results = results
-    this.promise = Promise.settle(targets.map(function(target) {
-        var result = new options.result(target)
-        var pendingResult = new PendingTransactionResult(result)
-        pending[options.id ? target[options.id] : target.id] = pendingResult
-        results.push(result)
-        return pendingResult.promise
-      }))
-      .finally(function() {
-        socket.removeListener('tx.done', doneListener)
-        socket.removeListener('tx.progress', progressListener)
-        socket.removeListener('tx.cancel', cancelListener)
-        socket.emit('tx.cleanup', channel)
-      })
-      .progressed(function() {
-        return results
-      })
-      .then(function() {
-        return results
-      })
-  }
-
-  function SingleTargetTransaction(target, options) {
-    var result = new options.result(target)
-    var pending = new PendingTransactionResult(result)
-    var channel = createChannel()
-
-    function doneListener(someChannel, data) {
-      if (someChannel === channel) {
-        pending.done(data)
-      }
-    }
-
-    function progressListener(someChannel, data) {
-      if (someChannel === channel) {
-        pending.progress(data)
-      }
-    }
-
-    function cancelListener(someChannel, data) {
-      if (someChannel === channel) {
-        pending.cancel(data)
-      }
-    }
-
-    socket.on('tx.done', doneListener)
-    socket.on('tx.progress', progressListener)
-    socket.on('tx.cancel', cancelListener)
-
-    this.channel = channel
-    this.result = result
-    this.results = [result]
-    this.promise = pending.promise
-      .finally(function() {
-        socket.removeListener('tx.done', doneListener)
-        socket.removeListener('tx.progress', progressListener)
-        socket.removeListener('tx.cancel', cancelListener)
-        socket.emit('tx.cleanup', channel)
-      })
-      .progressed(function() {
-        return result
-      })
-      .then(function() {
-        return result
-      })
-  }
-
   function PendingTransactionResult(result) {
     var resolver = Promise.defer()
     var seq = 0
@@ -179,6 +82,103 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     })
   }
 
+  function MultiTargetTransaction(targets, options) {
+    var pending = Object.create(null)
+    var results = []
+    var channel = createChannel()
+
+    function doneListener(someChannel, data) {
+      if (someChannel === channel) {
+        pending[data.source].done(data)
+      }
+    }
+
+    function progressListener(someChannel, data) {
+      if (someChannel === channel) {
+        pending[data.source].progress(data)
+      }
+    }
+
+    function cancelListener(someChannel, data) {
+      if (someChannel === channel) {
+        Object.keys(pending).forEach(function(source) {
+          pending[source].cancel(data)
+        })
+      }
+    }
+
+    socket.on('tx.done', doneListener)
+    socket.on('tx.progress', progressListener)
+    socket.on('tx.cancel', cancelListener)
+
+    this.channel = channel
+    this.results = results
+    this.promise = Promise.settle(targets.map(function(target) {
+        var result = new options.Result(target)
+        var pendingResult = new PendingTransactionResult(result)
+        pending[options.id ? target[options.id] : target.id] = pendingResult
+        results.push(result)
+        return pendingResult.promise
+      }))
+      .finally(function() {
+        socket.removeListener('tx.done', doneListener)
+        socket.removeListener('tx.progress', progressListener)
+        socket.removeListener('tx.cancel', cancelListener)
+        socket.emit('tx.cleanup', channel)
+      })
+      .progressed(function() {
+        return results
+      })
+      .then(function() {
+        return results
+      })
+  }
+
+  function SingleTargetTransaction(target, options) {
+    var result = new options.Result(target)
+    var pending = new PendingTransactionResult(result)
+    var channel = createChannel()
+
+    function doneListener(someChannel, data) {
+      if (someChannel === channel) {
+        pending.done(data)
+      }
+    }
+
+    function progressListener(someChannel, data) {
+      if (someChannel === channel) {
+        pending.progress(data)
+      }
+    }
+
+    function cancelListener(someChannel, data) {
+      if (someChannel === channel) {
+        pending.cancel(data)
+      }
+    }
+
+    socket.on('tx.done', doneListener)
+    socket.on('tx.progress', progressListener)
+    socket.on('tx.cancel', cancelListener)
+
+    this.channel = channel
+    this.result = result
+    this.results = [result]
+    this.promise = pending.promise
+      .finally(function() {
+        socket.removeListener('tx.done', doneListener)
+        socket.removeListener('tx.progress', progressListener)
+        socket.removeListener('tx.cancel', cancelListener)
+        socket.emit('tx.cleanup', channel)
+      })
+      .progressed(function() {
+        return result
+      })
+      .then(function() {
+        return result
+      })
+  }
+
   function TransactionResult(source) {
     this.source = source
     this.settled = false
@@ -199,19 +199,19 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
   DeviceTransactionResult.constructor = DeviceTransactionResult
 
   transactionService.create = function(target, options) {
-    if (options && !options.result) {
-      options.result = TransactionResult
+    if (options && !options.Result) {
+      options.Result = TransactionResult
     }
 
     if (Array.isArray(target)) {
       return new MultiTargetTransaction(target, options || {
-        result: DeviceTransactionResult
+        Result: DeviceTransactionResult
       , id: 'serial'
       })
     }
     else {
       return new SingleTargetTransaction(target, options || {
-        result: DeviceTransactionResult
+        Result: DeviceTransactionResult
       , id: 'serial'
       })
     }

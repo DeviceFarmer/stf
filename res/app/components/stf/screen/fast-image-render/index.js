@@ -40,7 +40,7 @@ function FastImageRender(canvasElement, options) {
     var WebGLRender = require('./webgl-render').WebGLRender
     this.render = new WebGLRender(canvasElement, options)
   }
- else {
+  else {
     var CanvasRender = require('./canvas-render').CanvasRender
     this.render = new CanvasRender(canvasElement, options)
   }
@@ -76,7 +76,7 @@ FastImageRender.prototype.load = function(url, type) {
         }
       }, type)
     }
- else {
+    else {
       this.textureLoader.load(url, function(texture) {
         if (typeof (that.onLoad) === 'function') {
           that.onLoad(texture)
@@ -84,7 +84,7 @@ FastImageRender.prototype.load = function(url, type) {
       })
     }
   }
- else {
+  else {
     this.loader.src = url
   }
 }

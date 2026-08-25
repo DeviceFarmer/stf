@@ -10,7 +10,7 @@ module.exports = angular.module('stf.safe-apply', [])
                 fn()
               }
             }
- else {
+            else {
               $delegate.$apply(fn)
             }
           }

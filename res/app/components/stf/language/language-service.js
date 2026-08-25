@@ -11,12 +11,6 @@ module.exports =
       return navigator.language || navigator.userLanguage
     }
 
-    function browserToSupportedLang(lang) {
-      // supportedLanguages.
-
-      // return lang.replace(/([A-Za-z]{2})(-|_)?([A-Za-z]{0,4})/gm, '$1')
-    }
-
     function isSupported(lang) {
       return !!supportedLanguages[lang]
     }
@@ -31,6 +25,10 @@ module.exports =
     LanguageService.detectedLanguage =
       onlySupported(detectLanguage(), LanguageService.defaultLanguage)
 
+    function updateLanguage() {
+      gettextCatalog.setCurrentLanguage(LanguageService.selectedLanguage)
+    }
+
     SettingsService.sync(
       LanguageService, {
         target: LanguageService.settingKey
@@ -38,10 +36,6 @@ module.exports =
         , defaultValue: LanguageService.detectedLanguage
       }, updateLanguage
     )
-
-    function updateLanguage() {
-      gettextCatalog.setCurrentLanguage(LanguageService.selectedLanguage)
-    }
 
     LanguageService.updateLanguage = updateLanguage
 

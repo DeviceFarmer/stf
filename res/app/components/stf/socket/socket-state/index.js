@@ -17,7 +17,7 @@ module.exports = angular.module('stf/socket/socket-state', [
                 fn()
               }
             }
- else {
+            else {
               $delegate.$apply(fn)
             }
           }

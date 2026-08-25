@@ -1,13 +1,6 @@
 describe('ngEnter', function() {
   beforeEach(angular.mock.module(require('./').name))
 
-  var scope, compile
-
-  beforeEach(inject(function($rootScope, $compile) {
-    scope = $rootScope.$new()
-    compile = $compile
-  }))
-
   it('should ...', function() {
 
     /*

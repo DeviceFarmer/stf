@@ -9,7 +9,7 @@ module.exports = function DeviceListIconsDirective(
 , LogcatService
 , $rootScope
 ) {
-  function DeviceItem() {
+  function deviceItem() {
     return {
       build: function() {
         var li = document.createElement('li')
@@ -82,7 +82,7 @@ module.exports = function DeviceListIconsDirective(
         if (device.state === 'available') {
           name.classList.add('state-available')
         }
- else {
+        else {
           name.classList.remove('state-available')
         }
 
@@ -120,7 +120,7 @@ module.exports = function DeviceListIconsDirective(
       var items = list.childNodes
       var prefix = 'd' + Math.floor(Math.random() * 1000000) + '-'
       var mapping = Object.create(null)
-      var builder = DeviceItem()
+      var builder = deviceItem()
 
 
       function kickDevice(device, force) {
@@ -148,12 +148,12 @@ module.exports = function DeviceListIconsDirective(
         if (e.target.classList.contains('thumbnail')) {
           id = e.target.id
         }
- else if (e.target.classList.contains('device-status') ||
+        else if (e.target.classList.contains('device-status') ||
           e.target.classList.contains('device-photo-small') ||
           e.target.classList.contains('device-name')) {
           id = e.target.parentNode.parentNode.id
         }
- else if (e.target.parentNode.classList.contains('device-photo-small')) {
+        else if (e.target.parentNode.classList.contains('device-photo-small')) {
           id = e.target.parentNode.parentNode.parentNode.id
         }
 
@@ -222,39 +222,18 @@ module.exports = function DeviceListIconsDirective(
         }
       }
 
-      // Watch for sorting changes
-      scope.$watch(
-        function() {
-          return scope.sort
-        }
-      , function(newValue) {
-          activeSorting = newValue.fixed.concat(newValue.user)
-          scope.sortedColumns = Object.create(null)
-          activeSorting.forEach(function(sort) {
-            scope.sortedColumns[sort.name] = sort
-          })
-          sortAll()
-        }
-      , true
-      )
-
-      // Watch for column updates
-      scope.$watch(
-        function() {
-          return scope.columns()
-        }
-      , function(newValue) {
-          updateColumns(newValue)
-        }
-      , true
-      )
-
-      // Update now so that we don't have to wait for the scope watcher to
-      // trigger.
-      updateColumns(scope.columns())
-
       // Updates visible columns. This method doesn't necessarily have to be
       // the fastest because it shouldn't get called all the time.
+      function patchItem(/* item, device, patch*/) {
+        // Currently no-op
+      }
+
+      function patchAll(patch) {
+        for (var i = 0, l = items.length; i < l; ++i) {
+          patchItem(items[i], mapping[items[i].id], patch)
+        }
+      }
+
       function updateColumns(columnSettings) {
         var newActiveColumns = []
 
@@ -275,29 +254,6 @@ module.exports = function DeviceListIconsDirective(
       }
 
       // Updates filters on visible items.
-      function updateFilters(filters) {
-        activeFilters = filters
-        return filterAll()
-      }
-
-      // Applies filteItem() to all items.
-      function filterAll() {
-        for (var i = 0, l = items.length; i < l; ++i) {
-          filterItem(items[i], mapping[items[i].id])
-        }
-      }
-
-      // Filters an item, perhaps removing it from view.
-      function filterItem(item, device) {
-        if (match(device)) {
-          item.classList.remove('filter-out')
-        }
-        else {
-          item.classList.add('filter-out')
-        }
-      }
-
-      // Checks whether the device matches the currently active filters.
       function match(device) {
         for (var i = 0, l = activeFilters.length; i < l; ++i) {
           var filter = activeFilters[i]
@@ -324,6 +280,32 @@ module.exports = function DeviceListIconsDirective(
         }
         return true
       }
+
+      function filterItem(item, device) {
+        if (match(device)) {
+          item.classList.remove('filter-out')
+        }
+        else {
+          item.classList.add('filter-out')
+        }
+      }
+
+      function filterAll() {
+        for (var i = 0, l = items.length; i < l; ++i) {
+          filterItem(items[i], mapping[items[i].id])
+        }
+      }
+
+      function updateFilters(filters) {
+        activeFilters = filters
+        return filterAll()
+      }
+
+      // Applies filteItem() to all items.
+
+      // Filters an item, perhaps removing it from view.
+
+      // Checks whether the device matches the currently active filters.
 
       // Update now so we're up to date.
       updateFilters(scope.filter())
@@ -383,18 +365,10 @@ module.exports = function DeviceListIconsDirective(
       }
 
       // Patches all items.
-      function patchAll(patch) {
-        for (var i = 0, l = items.length; i < l; ++i) {
-          patchItem(items[i], mapping[items[i].id], patch)
-        }
-      }
 
       // Patches the given item by running the given patch operations in
       // order. The operations must take into account index changes caused
       // by previous operations.
-      function patchItem(/* item, device, patch*/) {
-        // Currently no-op
-      }
 
       // Updates all the columns in the item. Note that the item must be in
       // the right format already (built with createItem() and patched with
@@ -410,14 +384,6 @@ module.exports = function DeviceListIconsDirective(
 
       // Inserts an item into the table into its correct position according to
       // current sorting.
-      function insertItem(item, deviceA) {
-        return insertItemToSegment(item, deviceA, 0, items.length - 1)
-      }
-
-      // Inserts an item into a segment of the table into its correct position
-      // according to current sorting. The value of `hi` is the index
-      // of the last item in the segment, or -1 if none. The value of `lo`
-      // is the index of the first item in the segment, or 0 if none.
       function insertItemToSegment(item, deviceA, low, high) {
         var total = items.length
         var lo = low
@@ -463,6 +429,15 @@ module.exports = function DeviceListIconsDirective(
           }
         }
       }
+
+      function insertItem(item, deviceA) {
+        return insertItemToSegment(item, deviceA, 0, items.length - 1)
+      }
+
+      // Inserts an item into a segment of the table into its correct position
+      // according to current sorting. The value of `hi` is the index
+      // of the last item in the segment, or -1 if none. The value of `lo`
+      // is the index of the first item in the segment, or 0 if none.
 
       // Compares an item to its siblings to see if it's still in the correct
       // position. Returns <0 if the device should actually go somewhere
@@ -544,6 +519,37 @@ module.exports = function DeviceListIconsDirective(
 
         delete mapping[id]
       }
+
+      // Watch for sorting changes
+      scope.$watch(
+        function() {
+          return scope.sort
+        }
+      , function(newValue) {
+          activeSorting = newValue.fixed.concat(newValue.user)
+          scope.sortedColumns = Object.create(null)
+          activeSorting.forEach(function(sort) {
+            scope.sortedColumns[sort.name] = sort
+          })
+          sortAll()
+        }
+      , true
+      )
+
+      // Watch for column updates
+      scope.$watch(
+        function() {
+          return scope.columns()
+        }
+      , function(newValue) {
+          updateColumns(newValue)
+        }
+      , true
+      )
+
+      // Update now so that we don't have to wait for the scope watcher to
+      // trigger.
+      updateColumns(scope.columns())
 
       tracker.on('add', addListener)
       tracker.on('change', changeListener)
