@@ -48,7 +48,6 @@ module.exports = function GroupsCtrl(
     'groups.subscribed,' +
     'groups.quotas.allocated,' +
     'groups.quotas.consumed'
-  var rootGroupId
 
   function publishDevice(device) {
     if (!device.model) {
@@ -67,6 +66,22 @@ module.exports = function GroupsCtrl(
     $scope.groupsEnv[group.id].availableDevices.forEach(function(device) {
       publishDevice(device)
     })
+  }
+
+  function addStandardizableDevice(device, timeStamp) {
+    return CommonService.add(
+      standardizableDevices, standardizableDevicesBySerial, device, 'serial', timeStamp)
+  }
+
+  function updateStandardizableDevice(device, timeStamp) {
+    return CommonService.update(
+      standardizableDevices, standardizableDevicesBySerial, device, 'serial', timeStamp)
+  }
+
+  function addAvailableGroupDevice(id, device, timeStamp) {
+    return CommonService.add(
+      $scope.groupsEnv[id].availableDevices
+    , $scope.groupsEnv[id].availableDevicesBySerial, device, 'serial', timeStamp)
   }
 
   function getAvailableGroupDevices(group) {
@@ -146,9 +161,6 @@ module.exports = function GroupsCtrl(
     if (typeof $scope.groupsEnv[group.id] === 'undefined') {
       $scope.groupsEnv[group.id] = {}
       initAvailableGroupDevices(group, [], {})
-      if (group.privilege === 'root') {
-        rootGroupId = group.id
-      }
     }
     return group
   }
@@ -188,25 +200,9 @@ module.exports = function GroupsCtrl(
     return CommonService.delete(originDevices, originDevicesBySerial, serial, timeStamp)
   }
 
-  function addStandardizableDevice(device, timeStamp) {
-    return CommonService.add(
-      standardizableDevices, standardizableDevicesBySerial, device, 'serial', timeStamp)
-  }
-
-  function updateStandardizableDevice(device, timeStamp) {
-    return CommonService.update(
-      standardizableDevices, standardizableDevicesBySerial, device, 'serial', timeStamp)
-  }
-
   function deleteStandardizableDevice(serial, timeStamp) {
     return CommonService.delete(
       standardizableDevices, standardizableDevicesBySerial, serial, timeStamp)
-  }
-
-  function addAvailableGroupDevice(id, device, timeStamp) {
-    return CommonService.add(
-      $scope.groupsEnv[id].availableDevices
-    , $scope.groupsEnv[id].availableDevicesBySerial, device, 'serial', timeStamp)
   }
 
   function updateAvailableGroupDevice(id, device, timeStamp, noAdding) {
@@ -595,8 +591,8 @@ module.exports = function GroupsCtrl(
         GroupsService.addGroupDevices
     , deviceSearch ?
         [group.id, filteredDevices.map(function(device) {
- return device.serial
-}).join()] :
+          return device.serial
+        }).join()] :
         [group.id])
   }
 
@@ -615,8 +611,8 @@ module.exports = function GroupsCtrl(
         GroupsService.removeGroupDevices
     , deviceSearch ?
         [group.id, filteredDevices.map(function(device) {
- return device.serial
-}).join()] :
+          return device.serial
+        }).join()] :
         [group.id])
   }
 
@@ -631,8 +627,8 @@ module.exports = function GroupsCtrl(
       GroupsService.addGroupUsers
     , userSearch ?
         [group.id, filteredUsers.map(function(user) {
- return user.email
-}).join()] :
+          return user.email
+        }).join()] :
         [group.id])
   }
 
@@ -647,8 +643,8 @@ module.exports = function GroupsCtrl(
       GroupsService.removeGroupUsers
     , userSearch ?
         [group.id, filteredUsers.map(function(user) {
- return user.email
-}).join()] :
+          return user.email
+        }).join()] :
         [group.id])
   }
 
@@ -682,8 +678,8 @@ module.exports = function GroupsCtrl(
         CommonService.errorWrapper(
           GroupsService.removeGroups
         , [filteredGroups.map(function(group) {
- return group.id
-}).join()])
+          return group.id
+        }).join()])
       }
     }
 
@@ -833,7 +829,7 @@ module.exports = function GroupsCtrl(
           cachedGroupsClass[id] = response.data.group.class
           return cachedGroupsClass[id]
         })
-        .catch(function(error) {
+        .catch(function() {
           return false
         })
       }

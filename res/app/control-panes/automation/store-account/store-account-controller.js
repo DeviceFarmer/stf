@@ -11,6 +11,17 @@ module.exports = function StoreAccountCtrl($scope, $timeout) {
 
   $scope.addingAccount = false
 
+  function getAccounts() {
+    var storeAccountType = $scope.deviceAppStores[$scope.currentAppStore].package
+    if ($scope.control) {
+      $scope.control.getAccounts(storeAccountType).then(function(result) {
+        $scope.$apply(function() {
+          $scope.accountsList = result.body
+        })
+      })
+    }
+  }
+
   $scope.addAccount = function() {
     $scope.addingAccount = true
     var user = $scope.storeLogin.username.$modelValue
@@ -36,17 +47,6 @@ module.exports = function StoreAccountCtrl($scope, $timeout) {
       .catch(function(result) {
         throw new Error('Removing account failed', result)
       })
-  }
-
-  function getAccounts() {
-    var storeAccountType = $scope.deviceAppStores[$scope.currentAppStore].package
-    if ($scope.control) {
-      $scope.control.getAccounts(storeAccountType).then(function(result) {
-        $scope.$apply(function() {
-          $scope.accountsList = result.body
-        })
-      })
-    }
   }
 
   getAccounts()

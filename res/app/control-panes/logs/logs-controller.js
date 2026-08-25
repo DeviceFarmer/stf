@@ -1,18 +1,5 @@
 module.exports = function LogsCtrl($scope, $rootScope, $routeParams, LogcatService) {
   var deviceSerial = $routeParams.serial
-  var cleanDevice = (window.location.href).split('/').pop()
-  cleanDeviceSettings()
-
-  $scope.started = checkLogBtnStatus() === null ? false : checkLogBtnStatus()
-  $scope.filters = {}
-
-  $scope.filters.levelNumbers = LogcatService.filters.levelNumbers
-
-  LogcatService.filters.filterLines()
-
-  restoreFilters()
-  setFiltersPriority()
-
   function cleanDeviceSettings() {
     if (Object.keys($rootScope).includes('LogcatService')) {
       LogcatService.deviceEntries = $rootScope.LogcatService.deviceEntries
@@ -33,7 +20,7 @@ module.exports = function LogsCtrl($scope, $rootScope, $routeParams, LogcatServi
       $scope.filters.priority = $scope.filters.levelNumbers[
         LogcatService.deviceEntries[deviceSerial].selectedLogLevel - 2]
     }
- else {
+    else {
       if ($scope.started) {
         $scope.filters.priority = $scope.filters.levelNumbers[0]
       }
@@ -46,7 +33,7 @@ module.exports = function LogsCtrl($scope, $rootScope, $routeParams, LogcatServi
         if ('filter.' + entry !== 'filter.priority') {
           $scope.filters[entry] = LogcatService.deviceEntries[deviceSerial].filters[entry]
         }
- else {
+        else {
           setFiltersPriority()
         }
       })
@@ -63,6 +50,18 @@ module.exports = function LogsCtrl($scope, $rootScope, $routeParams, LogcatServi
     }
     return null
   }
+
+  cleanDeviceSettings()
+
+  $scope.started = checkLogBtnStatus() === null ? false : checkLogBtnStatus()
+  $scope.filters = {}
+
+  $scope.filters.levelNumbers = LogcatService.filters.levelNumbers
+
+  LogcatService.filters.filterLines()
+
+  restoreFilters()
+  setFiltersPriority()
 
   $scope.$watch('started', function(newValue, oldValue) {
     if (!Object.keys(LogcatService.deviceEntries).includes(deviceSerial)) {
@@ -90,7 +89,7 @@ module.exports = function LogsCtrl($scope, $rootScope, $routeParams, LogcatServi
         $scope.device.logs_enabled = true
         setFiltersPriority()
       }
- else {
+      else {
         if (Object.keys(LogcatService.deviceEntries).includes(deviceSerial)) {
           LogcatService.deviceEntries[deviceSerial].started = false
         }

@@ -7,13 +7,6 @@
     "node": false,
     "jasmine": true
   },
-  "rules": {
-    // TODO: these four need code changes rather than a --fix pass
-    "no-unused-vars": 0,
-    "lines-around-comment": 0,
-    "no-use-before-define": 0,
-    "new-cap": 0
-  },
   "globals": {
     "angular": 1,
     "inject": 1,

@@ -1,11 +1,11 @@
 describe('RunJsCtrl', function() {
   beforeEach(angular.mock.module(require('./').name))
 
-  var scope, ctrl
+  var scope
 
   beforeEach(inject(function($rootScope, $controller) {
     scope = $rootScope.$new()
-    ctrl = $controller('RunJsCtrl', {$scope: scope})
+    $controller('RunJsCtrl', {$scope: scope})
   }))
 
   it('should ...', inject(function() {

@@ -149,6 +149,20 @@ module.exports = function GroupListCtrl(
     return group
   }
 
+  function addGroupUser(id, email, timeStamp) {
+    if (CommonService.isExisting(usersByEmail[email])) {
+      CommonService.add(
+        $scope.groupsEnv[id].users
+      , groupsEnv[id].usersByEmail
+      , users[usersByEmail[email].index]
+      , 'email'
+      , timeStamp)
+    }
+    else {
+      groupUserToAdd[email] = {id: id, timeStamp: timeStamp}
+    }
+  }
+
   function addUser(user, timeStamp) {
     if (CommonService.add(
           users
@@ -197,20 +211,6 @@ module.exports = function GroupListCtrl(
     , devicesBySerial
     , serial
     , timeStamp)
-  }
-
-  function addGroupUser(id, email, timeStamp) {
-    if (CommonService.isExisting(usersByEmail[email])) {
-      CommonService.add(
-        $scope.groupsEnv[id].users
-      , groupsEnv[id].usersByEmail
-      , users[usersByEmail[email].index]
-      , 'email'
-      , timeStamp)
-    }
-    else {
-      groupUserToAdd[email] = {id: id, timeStamp: timeStamp}
-    }
   }
 
   function deleteGroupUser(id, email, timeStamp) {

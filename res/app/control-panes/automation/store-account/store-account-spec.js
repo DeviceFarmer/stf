@@ -1,11 +1,11 @@
 describe('StoreAccountCtrl', function() {
   beforeEach(angular.mock.module(require('./').name))
 
-  var scope, ctrl
+  var scope
 
   beforeEach(inject(function($rootScope, $controller) {
     scope = $rootScope.$new()
-    ctrl = $controller('StoreAccountCtrl', {$scope: scope})
+    $controller('StoreAccountCtrl', {$scope: scope})
   }))
 
   it('should ...', inject(function() {

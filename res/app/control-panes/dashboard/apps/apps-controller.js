@@ -8,7 +8,7 @@ module.exports = function ShellCtrl($scope) {
     // Force run activity
     command += ' --activity-clear-top'
     return $scope.control.shell(command)
-      .then(function(result) {
+      .then(function() {
         // console.log(result)
       })
   }
