@@ -33,8 +33,7 @@ module.exports = function addAdbKeyDirective(AdbKeysService) {
       $scope.closeAddKey = function() {
         $scope.addForm.title = ''
         $scope.addForm.key = ''
-        // TODO: cannot access to the form by name inside a directive?
-        // $scope.adbkeyform.$setPristine()
+        $scope.adbkeyform.$setPristine()
         $scope.showAdd = false
         $scope.error = ''
       }
