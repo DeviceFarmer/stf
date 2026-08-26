@@ -48,7 +48,8 @@
                   span  {{installation.manifest.package || "App" }}
 
                   button.btn.btn-xs.btn-danger-outline.pull-right(
-                  ng-click='uninstall(installation.manifest.package)', ng-show='installation.success')
+                  ng-click='uninstall(installation.manifest.package, $event)',
+                  ng-show='installation.success')
                     i.fa.fa-trash-o
                     span(translate) Uninstall
                 div(ng-include='"control-panes/dashboard/install/activities/activities.pug"')
