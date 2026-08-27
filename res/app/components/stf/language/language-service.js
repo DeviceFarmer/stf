@@ -3,8 +3,6 @@ var _ = require('lodash')
 
 module.exports =
   function LanguageServiceFactory(SettingsService, gettextCatalog) {
-    // TODO: make this LanguageProvider so it can be used on config
-
     var LanguageService = {}
 
     function detectLanguage() {
