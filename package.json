@@ -149,7 +149,7 @@
     "consolidate": "^0.14.5",
     "css-loader": "^3.6.0",
     "del": "^2.0.1",
-    "eslint": "^4.19.1",
+    "eslint": "^10.9.0",
     "event-stream": "^3.3.2",
     "exports-loader": "^4.0.0",
     "file-loader": "^6.2.0",
