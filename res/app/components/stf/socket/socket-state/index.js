@@ -4,6 +4,7 @@ module.exports = angular.module('stf/socket/socket-state', [
   , require('stf/common-ui/notifications').name
   , require('stf/common-ui/refresh-page').name
   , require('stf/common-ui/modals/socket-disconnected').name
+  , require('stf/common-ui/modals/version-update').name
 ])
   .directive('socketState', require('./socket-state-directive'))
   .config([

@@ -4,6 +4,7 @@ module.exports = function SocketStateDirectiveFactory(
 , gettext
 , $filter
 , SocketDisconnectedService
+, VersionUpdateService
 , $window
 ) {
   return {
@@ -72,6 +73,9 @@ module.exports = function SocketStateDirectiveFactory(
       , reconnect: function() {
           setState('reconnect')
           hasFailedOnce = true
+        }
+      , outdated: function() {
+          VersionUpdateService.open()
         }
       }
 
