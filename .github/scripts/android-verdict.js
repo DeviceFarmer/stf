@@ -21,37 +21,48 @@ function main() {
 
   var status
   var details
+  var outcome = process.env.EMULATOR_OUTCOME || ''
+  var gating = layers.LAYERS.filter(function(layer) {
+    return layer.gating
+  })
+  var failed = gating.filter(function(layer) {
+    return checks[layer.key] === 'fail'
+  })
+  // Anything that is not an explicit pass counts as unreached, not just "skip".
+  // A gating key that is missing entirely means the seed never landed, and
+  // treating that as satisfied would report a leg green having done nothing.
+  var unreached = gating.filter(function(layer) {
+    return checks[layer.key] !== 'pass' && checks[layer.key] !== 'fail'
+  })
+  // Read before the teardown write below, which would otherwise make an empty
+  // checks.json look populated.
+  var nothingRan = !Object.keys(checks).length
+
+  // Teardown is the one layer the leg cannot record, because it happens after
+  // the script exits. A step that did not exit cleanly having already passed
+  // everything hung on the way out; anything else is named by the verdict below,
+  // and blaming teardown too would misattribute the same failure twice.
+  checks.teardown = outcome === 'success' ? 'pass' :
+    (!failed.length && !unreached.length &&
+      (outcome === 'failure' || outcome === 'cancelled')) ? 'warn' : 'skip'
 
   if (checks.image === 'skip') {
     status = 'skip'
     details = 'no published system image for API ' +
       (process.env.ANDROID_API || '?') + ' ' + (process.env.ANDROID_ARCH || '')
   }
-  else if (!Object.keys(checks).length) {
+  else if (nothingRan) {
     // The leg script seeds every check before it does anything, so no checks at
     // all means the emulator step never handed control over: AVD creation or
     // boot ran out the clock.
     status = 'fail'
     details = 'the emulator never finished booting, so nothing ran against it' +
-      (process.env.EMULATOR_OUTCOME
-        ? ' (emulator step: ' + process.env.EMULATOR_OUTCOME + ')'
-        : '')
+      (outcome ? ' (emulator step: ' + outcome + ')' : '')
   }
   else {
-    var gating = layers.LAYERS.filter(function(layer) {
-      return layer.gating
-    })
-    var failed = gating.filter(function(layer) {
-      return checks[layer.key] === 'fail'
-    })
-    // Anything that is not an explicit pass counts as unreached, not just
-    // "skip". A gating key that is missing entirely means the seed never landed,
-    // and treating that as satisfied would report a leg green having done nothing.
-    var unreached = gating.filter(function(layer) {
-      return checks[layer.key] !== 'pass' && checks[layer.key] !== 'fail'
-    })
     var softFailed = layers.LAYERS.filter(function(layer) {
-      return !layer.gating && checks[layer.key] === 'fail'
+      return !layer.gating &&
+        (checks[layer.key] === 'fail' || checks[layer.key] === 'warn')
     })
 
     if (failed.length) {
@@ -90,6 +101,11 @@ function main() {
   , 'details=' + details.replace(/\r?\n/g, ' ')
   , 'extra=' + JSON.stringify(extra)
   ].join('\n') + '\n'
+
+  if (checks.teardown === 'warn') {
+    process.stdout.write('::warning::Android ' + extra.android + ' (API ' +
+      extra.api + ') passed every check, then hung in emulator teardown\n')
+  }
 
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, out)
