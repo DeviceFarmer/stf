@@ -145,9 +145,9 @@ STF's own prebuilts rather than from CI:
   `android.hardware.display.DisplayManagerGlobal` was added in API 17, so no
   amount of fixing minitouch reaches this one. It needs a rebuilt STFService.
 
-For the record on the floor below that: `vendor/STFService/STFService.apk`
-declares `minSdkVersion 16` (decoded from its manifest, version 2.5.5, targetSdk
-30) and STF only uses PIE binaries from sdk 16 up (`pie: sdk.level >= 16` in
+For the record on the floor below that: the STFService APK shipped by
+`@devicefarmer/stfservice-prebuilt` declares `minSdkVersion 16` (decoded from its
+manifest, version 2.5.6, targetSdk 30) and STF only uses PIE binaries from sdk 16 up (`pie: sdk.level >= 16` in
 `lib/units/device/support/abi.js`), so API 15 and API 10 cannot even install the
 service, although they do have published x86 images that boot. API 20 is 4.4W
 and only ever shipped for wearables.

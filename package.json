@@ -50,6 +50,7 @@
     "@devicefarmer/stf-device-db": "^1.4.0",
     "@devicefarmer/stf-syrup": "^1.0.3",
     "@devicefarmer/stf-wiki": "^1.0.0",
+    "@devicefarmer/stfservice-prebuilt": "^2.5.6",
     "@dr.pogodin/csurf": "^1.14.1",
     "@julusian/jpeg-turbo": "^2.2.0",
     "@node-saml/passport-saml": "^5.0.1",
