@@ -19,6 +19,7 @@ var ICON = {
 var CHECK_ICON = {
   pass: ':white_check_mark:'
 , fail: ':x:'
+, warn: ':warning:'
 , skip: ':heavy_minus_sign:'
 , 'n/a': ':heavy_minus_sign:'
 }
