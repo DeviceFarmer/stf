@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.7.9 (2026-07-08)
+
+* Update OS image from ubuntu2204 to ubuntu2404 by @koral-- in https://github.com/DeviceFarmer/stf/pull/891
+* Update @devicefarmer/adbkit dependency version to 3.3.9 by @koral-- in https://github.com/DeviceFarmer/stf/pull/890
+
 ## 3.7.8 (2026-06-30)
 
 * fix response status code of the createUserAccessToken API in swagger file. by @cpascal in https://github.com/DeviceFarmer/stf/pull/872
@@ -244,7 +249,7 @@
 - Added opening device view via reselecting device from device view [#1077](https://github.com/openstf/stf/pull/1077). Thanks @lukzeg!
  - Added device logs separation [#1095](https://github.com/openstf/stf/pull/1095). Thanks @lukzeg!
  - Updated NodeJS to 8.9.3 [#1169](https://github.com/openstf/stf/pull/1169).
- - Added alternative dockerfiles for armhf and x86_64 architectures [#1174](https://github.com/openstf/stf/pull/1174), [#1191](https://github.com/openstf/stf/pull/1191). Thanks @denis99999 and @petemyron!
+ - Added alternative dockerfiles for armhf and x86_64 architectures [#1174](https://github.com/openstf/stf/pull/1174), [#1191](https://github.com/openstf/stf/pull/1191). Thanks @denis99999 and @petemy[...]
  - Added touchMove error handling [#1189](https://github.com/openstf/stf/pull/1189). Thanks @att55!
  
 
@@ -252,7 +257,7 @@
 
 ### Fixes
 
-- Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to fix an APK manifest parsing issue on applications processed by 360 encryption services, which changes the `application` key to `com.stub.StubApp`. Thanks @JChord!
+- Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to fix an APK manifest parsing issue on applications processed by 360 encryption services, which changes the `application` key[...]
 - Updated [adbkit](https://github.com/openstf/adbkit) to public key parsing on recent versions of ADB. Thanks @codeskyblue!
 
 ### Enhancements
@@ -265,7 +270,7 @@
 
 - Android 9.0 is now supported. This feature was sponsored by [HeadSpin](https://headspin.io/).
 - The OAuth2 unit now supports state tokens. Thanks @quangola!
-- [STFService.apk](https://github.com/openstf/STFService.apk) can now display the identity activity (red screen) automatically if a device gets disconnected from USB (or ADB), which can make maintenance easier. This feature is in beta, please enable it by running `adb shell pm grant jp.co.cyberagent.stf android.permission.DUMP` on the devices you want to try it on. Thanks @Malinskiy!
+- [STFService.apk](https://github.com/openstf/STFService.apk) can now display the identity activity (red screen) automatically if a device gets disconnected from USB (or ADB), which can make maintenan[...]
 
 ### Fixes
 
@@ -277,7 +282,7 @@
 
 - Fixed ADB's new device states (`connecting`, `authorizing`) not being recognized by STF. Thanks @obrie!
 - Updated [STFService.apk](https://github.com/openstf/STFService.apk) to fix an issue on high aspect ratio devices like the Mi Mix 2 where a portion of the screen may not have been visible.
-- Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to resolve issues with certain APK files that were unparseable and therefore could not be installed. The issue was with long strings in the manifest file.
+- Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to resolve issues with certain APK files that were unparseable and therefore could not be installed. The issue was with long s[...]
 - Updated [minitouch](https://github.com/openstf/minitouch) to fix touch detection issues on Meizu Pro7 Plus.
 
 ## 3.3.0 (2018-03-25)
@@ -292,7 +297,7 @@
 
 - Fixed a setup issue with TPS650.
 - Fixed an issue where most uploads would fail due to a breaking configuration change in a dependency.
-- Updated [minitouch](https://github.com/openstf/minitouch) to fix multitouch issues on some devices that require the `BTN_TOUCH` kernel event. Lifting a contact while having and keeping one held down may have prevented any events from being processed until a new touchdown event.
+- Updated [minitouch](https://github.com/openstf/minitouch) to fix multitouch issues on some devices that require the `BTN_TOUCH` kernel event. Lifting a contact while having and keeping one held down[...]
 
 ## 3.2.0 (2017-12-06)
 
@@ -300,7 +305,7 @@
 
 - Android 8.1 is now supported.
 - The network column in the device list is now based on a value that gets updated in real time. The format of the column has changed slightly due to this change.
-- The `--mute-master` option now accepts the values `never` (default), `inuse` (only when a device is being used), and `always` (mute pre-emptively during setup phase). For backwards compatibility, `--mute-master` with no value maps to `inuse`, and `--no-mute-master` to `never`.
+- The `--mute-master` option now accepts the values `never` (default), `inuse` (only when a device is being used), and `always` (mute pre-emptively during setup phase). For backwards compatibility, `-[...]
 - The battery level and battery temperature columns are now filterable with comparison operators.
 - Log output now includes a timestamp.
 
@@ -337,7 +342,7 @@
 
 - Fixed Lenovo A806 and most likely other cheap Lenovo devices as well by updating [adbkit](https://github.com/openstf/adbkit).
 - Fixed ZUK Z1, Z2 and others by adding an alternate install location for our binaries, since `/data/local/tmp` is mounted as noexec on those devices. Thanks @dkw72n!
-- Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to resolve issues with certain APK files that were unparseable and therefore failed installation. We've only seen a single a single APK with this issue, but there could be more.
+- Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to resolve issues with certain APK files that were unparseable and therefore failed installation. We've only seen a single a s[...]
 - Updated [adbkit-apkreader](https://github.com/openstf/adbkit-apkreader) to resolve another unrelated parsing issue with slightly malformed manifest files.
 - Updated [adbkit](https://github.com/openstf/adbkit) to resolve an issue where trailing spaces in an adb public key would cause an error during adb connect.
 - Updated [adbkit](https://github.com/openstf/adbkit) to resolve issues with log parsing on Android 7.0 and later, caused by Android no longer transforming `\n` to `\r\n`.
@@ -346,13 +351,13 @@
 
 ### Misc
 
-- We now use [please-update-dependencies](https://github.com/sorccu/please-update-dependencies) to check for outdated dependencies when running from source. It's a super quick local check that compares `package.json` with installed dependencies. Should help avoid unnecessary issues caused by forgetting to run `npm install` after `git pull`.
+- We now use [please-update-dependencies](https://github.com/sorccu/please-update-dependencies) to check for outdated dependencies when running from source. It's a super quick local check that compare[...]
 
 ### Breaking changes
 
-- Node v6.9.x or later is now required. Earlier versions will not work. To avoid a sudden flood of issues about this change, [please-update-dependencies](https://github.com/sorccu/please-update-dependencies) enforces the minimum version and tells you if you need to update.
+- Node v6.9.x or later is now required. Earlier versions will not work. To avoid a sudden flood of issues about this change, [please-update-dependencies](https://github.com/sorccu/please-update-depend[...]
 - The `-C` shortcut for the `--no-cleanup` option has been removed due to the switch to [yargs](http://yargs.js.org). Please use the full `--no-cleanup` option instead.
-- Although likely not used by anyone, it was possible to give multiple ZeroMQ endpoints to options such as `--connect-push` by separating them with commas. This is still possible but now works in a different way due to the switch to [yargs](http://yargs.js.org). Comma-separated hosts in a single value are no longer accepted. If you need to specify multiple hosts, simply use the option as many times as you like. This change is unlikely to have any impact whatsoever on most users.
+- Although likely not used by anyone, it was possible to give multiple ZeroMQ endpoints to options such as `--connect-push` by separating them with commas. This is still possible but now works in a di[...]
 - The `--devices` option of `stf doctor` has been removed due to unnecessary complexity.
 
 ## 2.3.0 (2016-11-09)
@@ -361,7 +366,7 @@ Minor release addressing the following:
 
 ### Fixes
 
-- Fixed [minicap](https://github.com/openstf/minicap) on various devices running Android 4.2, incl. Qumo Quest 405, Yoga Tablet 8 etc. There may still be some that do not work, as 4.2 was customized pretty heavily by some makers. Thanks to @dkw72n for tracking down the issue and coming up with a fix! And as always, please let us know if you find any device (running any Android version) that does not work.
+- Fixed [minicap](https://github.com/openstf/minicap) on various devices running Android 4.2, incl. Qumo Quest 405, Yoga Tablet 8 etc. There may still be some that do not work, as 4.2 was customized p[...]
 
 ## 2.2.0 (2016-11-09)
 
@@ -369,11 +374,11 @@ Minor release addressing the following:
 
 ### Fixes
 
-- Fixed [minicap](https://github.com/openstf/minicap) on some/all Samsung devices running Android 5.1.1, which did not work previously. Thanks to @dkw72n for tracking down the issue and coming up with a fix!
+- Fixed [minicap](https://github.com/openstf/minicap) on some/all Samsung devices running Android 5.1.1, which did not work previously. Thanks to @dkw72n for tracking down the issue and coming up with[...]
 
 ### Misc
 
-- The [openstf/stf-armv7l](https://hub.docker.com/r/openstf/stf-armv7l/) Docker image is being built again. Our previous armv7l build server died and [Scaleway](https://www.scaleway.com/) did not have more available until recently.
+- The [openstf/stf-armv7l](https://hub.docker.com/r/openstf/stf-armv7l/) Docker image is being built again. Our previous armv7l build server died and [Scaleway](https://www.scaleway.com/) did not have[...]
 
 ## 2.1.0 (2016-10-24)
 
@@ -422,7 +427,7 @@ Minor release addressing the following:
 * Added an `stf doctor` command to check and output external dependencies. Very useful for issues.
 * Added an OpenID auth unit. Thanks [@codeskyblue](https://github.com/codeskyblue)!
 * Added optional HTTP Basic auth to the mock auth unit, for when you can't set up a proper auth adapter but still want at least a tiny bit of added security.
-* Considerably smaller and up to date official [Docker image for armv7l](https://hub.docker.com/r/openstf/stf-armv7l/) with automated nightly builds on [Scaleway](https://www.scaleway.com/). May occasionally break for a while but we aim to always keep it fully up to date.
+* Considerably smaller and up to date official [Docker image for armv7l](https://hub.docker.com/r/openstf/stf-armv7l/) with automated nightly builds on [Scaleway](https://www.scaleway.com/). May occas[...]
 * Added instructions for using [Google OAuth 2.0](https://developers.google.com/identity/protocols/OAuth2) login to the deployment guide, making it possible to sign in using your Google account.
 * Added a configurable username field to the LDAP auth unit. Thanks [@bananayong](https://github.com/bananayong)!
 * Updated and added various translations.
