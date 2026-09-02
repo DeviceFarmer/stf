@@ -508,6 +508,24 @@ jobs:
       - name: Wait for RethinkDB
         run: bash .github/scripts/wait-for-port.sh 28015 60 rethinkdb
 
+      # The image ships cmdline-tools 12.0, which cannot parse a dotted API level
+      # and writes target=android-0 into the AVD. That mis-configures gfxstream
+      # and SurfaceFlinger aborts in mapper.ranchu, so every Android 17 leg
+      # fails. A no-op for integer levels. See doc/ci.md.
+      # Only the dotted levels need it, and the archive is 173 MiB, so the 16
+      # integer legs skip the download entirely. API 36 resolves to
+      # target=android-36 under both the shipped and the updated revision.
+      - name: Cache the Android cmdline-tools
+        if: contains(matrix.api, '.')
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/android-cmdline-tools
+          key: cmdline-tools-16111833-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Update the Android cmdline-tools
+        if: contains(matrix.api, '.')
+        run: bash .github/scripts/update-cmdline-tools.sh
+
       # Fresh Android releases are not always published as an x86_64 image yet,
       # so probe instead of hardcoding a matrix that rots.
       - name: Probe for the system image
@@ -515,13 +533,17 @@ jobs:
         run: |
           IMAGE="system-images;android-${{ matrix.api }};${{ matrix.target }};${{ matrix.arch }}"
           echo "looking for $IMAGE"
-          SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)"
+          SDKMANAGER="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER=""
           if [ -z "$SDKMANAGER" ]; then
             echo "::warning::no sdkmanager found, assuming the image exists"
             echo "available=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          "$SDKMANAGER" --list > sdk-packages.txt 2>sdk-packages.err || true
+          # Revision 23 prints package paths slash-separated, so normalise before
+          # matching or every grep below misses and the leg fails open.
+          "$SDKMANAGER" --list --channel=${{ matrix.channel == 'dev' && '2' || '0' }} 2>sdk-packages.err \
+            | tr '/' ';' > sdk-packages.txt || true
           # Fail open. An sdkmanager that errors out produces an empty listing,
           # and treating that as "image not published" would let every leg
           # self-skip and the whole matrix report green with zero coverage.
@@ -559,6 +581,7 @@ jobs:
         with:
           api-level: ${{ matrix.api }}
           target: ${{ matrix.target }}
+          channel: ${{ matrix.channel || 'stable' }}
           arch: ${{ matrix.arch }}
           # Without a device profile avdmanager builds a 320x640 160dpi screen,
           # which is smaller than the browser's device pane, so minicap has to

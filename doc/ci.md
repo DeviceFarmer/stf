@@ -152,25 +152,58 @@ manifest, version 2.5.6, targetSdk 30) and STF only uses PIE binaries from sdk 1
 service, although they do have published x86 images that boot. API 20 is 4.4W
 and only ever shipped for wearables.
 
-### Android 17 (API 37) is parked
+### Minor-versioned levels need current cmdline-tools
 
-Not in the matrix for now. It is an STF limitation, not a CI one: the image
-exists, the emulator boots, the provider registers the device and STF marks it
-present and ready, then the device worker dies in a loop on
-`Service had an error: "Error: Not found; no service started."` plus a
-`PackageManagerInternal.freeStorage` NPE. STFService installs and gets its
-permissions granted, so the on-device service fails to start on API 37 rather
-than failing to install.
+API 36.1 and all three published API 37 levels, 37.0, 37.1 and 37.2, are in the
+matrix. API 37 was parked for a while, and the cause turned out to be the CI
+image rather than STF or the emulator.
 
-To bring it back once STFService supports API 37, add one line to
-`.github/android-matrix.json`:
+`ubuntu-24.04` ships Android cmdline-tools 12.0, which cannot parse a dotted API
+level. `avdmanager create avd --package 'system-images;android-37.1;...'` exits 0
+and writes the correct `image.sysdir.1`, but sets `target=android-0` instead of
+`target=android-37.1`. That mis-configures gfxstream, the guest is offered
+`ReadColorBufferDma`, and `mapper.ranchu.so` aborts:
 
-```json
-{"android": "17", "api": "37.0", "target": "google_apis", "arch": "x86_64", "boot": 900}
+```
+Abort message: 'Assertion failed: !rcEnc->featureInfo()->hasReadColorBufferDma'
+  #03 /vendor/lib64/hw/mapper.ranchu.so  GoldfishMapper::readFromHost(cb_handle_t const&)
+tid: RegionSampling  >>> /system/bin/surfaceflinger <<<  signal 6 (SIGABRT)
 ```
 
-API 37 is published only under the minor-versioned path `37.0` and has no AOSP
-image, so it has to be `google_apis`. Plain `android-37` does not exist.
+SurfaceFlinger then crashloops, `DisplayEventReceiver.nativeInit` fails with
+`status=-32`, `DisplayManagerGlobal.getInstance()` throws, and STFService dies
+reflecting on it. The symptom therefore reads as an STF or STFService bug and is
+not one. Measured before and after, same images, same `-gpu swiftshader_indirect`:
+
+| image | cmdline-tools 12.0 | cmdline-tools 23.0 |
+|---|---|---|
+| `android-37.0;google_apis` | 8 aborts, SF started 4x | 0 aborts, SF started once |
+| `android-37.1;google_apis_ps16k` | 11 aborts, SF started 5x | 0 aborts, SF started once |
+| `android-37.2;google_apis_ps16k` | 11 aborts, SF started 5x | 0 aborts, SF started once |
+
+`.github/scripts/update-cmdline-tools.sh` replaces
+`$ANDROID_HOME/cmdline-tools/latest` in place. It has to be in place:
+android-emulator-runner puts that exact directory on `PATH` and invokes a bare
+`avdmanager`, and `sdkmanager --install "cmdline-tools;latest"` cannot overwrite
+the directory it is running from, so it silently installs to a sibling
+`cmdline-tools/latest-2` that nothing then uses. The update is a no-op for the
+integer levels: API 36 gets `target=android-36` under both 12.0 and 23.0.
+
+On image paths, the AOSP repo stops at `android-36;default`, so neither 36.1 nor
+any API 37 level has a `default` image. 36.1 and 37.0 publish a plain
+`google_apis` one; from `37.1` on Google publishes only the 16 KB page size
+variant, so those legs use `google_apis_ps16k`. Plain `android-37` does not
+exist. No `playstore` variant is usable here, because they block `adb root`,
+which minitouch needs to open `/dev/input`. `37.2` is additionally published only
+on the `dev` SDK channel, which is why its leg carries `channel`/`channelId`;
+`--channel` is cumulative, so the stable legs are unaffected. The 37.2 beta
+images are deliberately left out: GA supersedes them, and Google prunes beta
+images after GA, which would make the leg self-skip and report green with no
+coverage.
+
+Upstream: https://issuetracker.google.com/issues/546200928 (resolved) and
+https://github.com/actions/runner-images/issues/14484 (open, so the update is
+still needed on current images).
 
 ### Rotation control is dead on API 29 and up, and no check catches it
 
