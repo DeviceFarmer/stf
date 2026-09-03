@@ -69,7 +69,7 @@ jobs:
 
       - name: Restore dependency cache
         id: deps
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             node_modules
@@ -135,7 +135,7 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -185,7 +185,7 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -225,7 +225,7 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -324,7 +324,7 @@ jobs:
         run: bash .github/scripts/apt-install.sh graphicsmagick libzmq5
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -485,7 +485,7 @@ jobs:
         run: bash .github/scripts/apt-install.sh graphicsmagick libzmq5
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -517,7 +517,7 @@ jobs:
       # target=android-36 under both the shipped and the updated revision.
       - name: Cache the Android cmdline-tools
         if: contains(matrix.api, '.')
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/android-cmdline-tools
           key: cmdline-tools-16111833-${{ runner.os }}-${{ runner.arch }}
