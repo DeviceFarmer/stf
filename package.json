@@ -33,7 +33,7 @@
     "prepare": "bower install && not-in-install && gulp build || in-install",
     "local": "node lib/cli/index.js local",
     "lint": "gulp lint",
-    "test:unit": "mocha --reporter spec --recursive test/util test/wire",
+    "test:unit": "mocha --reporter spec --recursive test/util test/wire test/db",
     "test:component": "karma start res/test/karma.ci.conf.js --single-run"
   },
   "dependencies": {

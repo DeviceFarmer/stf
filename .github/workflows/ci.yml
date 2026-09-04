@@ -193,7 +193,7 @@ jobs:
           key: ${{ needs.build.outputs.cache-key }}
           fail-on-cache-miss: true
 
-      - name: mocha (lib/util, lib/wire)
+      - name: mocha unit specs
         id: unit
         run: npm run test:unit
 
@@ -201,7 +201,7 @@ jobs:
         if: always()
         run: |
           bash .github/scripts/verdict.sh unit 'Unit tests (mocha)' \
-            '${{ steps.unit.outcome || job.status }}' 'lib/util + lib/wire specs'
+            '${{ steps.unit.outcome || job.status }}' 'lib/util, lib/wire and lib/db specs'
 
       - name: Upload verdict
         if: always()
