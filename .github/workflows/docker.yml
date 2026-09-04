@@ -1,0 +1,39 @@
+name: Docker
+
+on:
+  pull_request:
+    paths-ignore: ['**.md', 'doc/**']
+  push:
+    branches: [master]
+    paths-ignore: ['**.md', 'doc/**']
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  standard:
+    uses: ./.github/workflows/docker-build.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      tag: latest
+      push: ${{ github.event_name == 'push' }}
+
+  debian:
+    name: Debian image
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile-debian-x86_64
+          platforms: linux/amd64

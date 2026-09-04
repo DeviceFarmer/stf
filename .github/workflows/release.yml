@@ -1,0 +1,137 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version already bumped on the default branch, without the v prefix (e.g. 3.8.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Check the version is releasable
+        env:
+          VERSION: ${{ inputs.version }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          # release/v* satisfies the version check below by construction, so
+          # without this the branch could be tagged and published unmerged.
+          if [ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]; then
+            echo "::error::run this on $DEFAULT_BRANCH, not $GITHUB_REF_NAME"
+            exit 1
+          fi
+
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::$VERSION is not a three part version like 3.8.0, with no v prefix"
+            exit 1
+          fi
+
+          # Prepare release bumps package.json and Release tags what it produced,
+          # so equality is the precondition here rather than an increase.
+          CURRENT=$(node -p 'require("./package.json").version')
+          if [ "$CURRENT" != "$VERSION" ]; then
+            echo "::error::package.json is at $CURRENT, so the $VERSION bump has not merged yet"
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::tag v$VERSION already exists"
+            exit 1
+          fi
+
+          if npm view "@devicefarmer/stf@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::@devicefarmer/stf@$VERSION is already published to npm"
+            exit 1
+          fi
+
+      - name: Read the release notes back out of the changelog
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          node .github/scripts/changelog.js --extract CHANGELOG.md "$VERSION" > notes.md
+          cat notes.md
+
+      - name: Tag and publish
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+          gh release create "v$VERSION" --title "v$VERSION" --notes-file notes.md
+
+  npm:
+    name: Publish to npm
+    needs: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: v${{ inputs.version }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Take npm to a version that can publish with OIDC
+        run: npm install -g npm@^11.5.1
+
+      - name: Install system dependencies
+        timeout-minutes: 12
+        run: |
+          bash .github/scripts/apt-install.sh \
+            build-essential cmake ninja-build pkg-config python3 \
+            libzmq3-dev libprotobuf-dev protobuf-compiler \
+            graphicsmagick yasm nasm git curl zip unzip wget
+
+      - name: Allow bower git:// dependencies over https
+        run: |
+          git config --global url."https://github.com/".insteadOf git://github.com/
+          git config --global url."https://".insteadOf git://
+          echo "GIT_TERMINAL_PROMPT=0" >> "$GITHUB_ENV"
+
+      - name: Install
+        run: npm install --omit=optional --loglevel http
+
+      - name: Publish
+        run: npm publish --access public
+
+  docker:
+    needs: release
+    uses: ./.github/workflows/docker-build.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      ref: v${{ inputs.version }}
+      tag: ${{ inputs.version }}
+      push: true
