@@ -4,6 +4,11 @@
 `master`. Everything runs on `ubuntu-24.04` and needs no secrets: the only
 token involved is the automatic `GITHUB_TOKEN`, used to post the report.
 
+`.github/workflows/docker.yml` builds the images on the same events, and
+`prepare-release.yml` and `release.yml` cut a release between them. Neither
+holds a stored credential either: both registries are reached over OIDC,
+described under Releasing below.
+
 ## What runs
 
 | Job | What it proves |
@@ -272,6 +277,12 @@ Every job reads its Node version from `.nvmrc` (22.11.0), which is also what the
 `Dockerfile` and `.semaphore/semaphore.yml` use, so CI tests the runtime the
 project actually ships rather than a second version pinned in the workflow.
 
+The npm publish job in `release.yml` is the exception: it pins Node 24, because
+npm trusted publishing needs Node 22.14.0 or later and npm 11.5.1 or later, and
+22.11.0 ships npm 10.x. The tarball's bundle is therefore built on a runtime no
+test tier exercises. Nothing else in the release path needs it, so the rest
+reads `.nvmrc` like every other job.
+
 If you bump past Node 22, the karma tier needs an `overrides` entry for log4js.
 karma 2.0.5 pulls log4js 2.11.0, whose layout formatter calls `util.isError` on
 every log argument, and Node 23 removed it. The first line karma logs throws,
@@ -356,3 +367,57 @@ resolved fractions are what tie a capture to the leg that produced it.
 
 Traces and screenshots are still failure only, since the trace viewer already
 carries per action screenshots and traces are large.
+
+## Releasing
+
+Releasing takes two dispatches with a pull request between them.
+
+1. Run `Prepare release` with the version as input, for example `3.8.0`. It
+   bumps `package.json`, writes the `CHANGELOG.md` section from GitHub's
+   generated notes, and pushes `release/v3.8.0`. It writes nothing to `master`.
+2. Open the pull request it links to in the job summary, label it
+   `ignore-for-release`, and merge it once the checks pass.
+3. Run `Release` with the same version. It tags `v3.8.0`, publishes the GitHub
+   release, then publishes to npm and pushes the Docker image.
+
+The bump lands through a pull request because `master` is protected. A workflow
+holding only `GITHUB_TOKEN` cannot push to it, and having the workflow open the
+pull request itself would not help: a pull request opened with `GITHUB_TOKEN`
+starts no workflow run, so it would arrive with no checks and could never
+satisfy a required check.
+
+The split is also why the two guards differ. `Prepare release` requires the
+input to be greater than `package.json`, since it is about to do the bump.
+`Release` requires it to be equal, since by then the bump has merged. `Release`
+additionally refuses to run anywhere but the default branch: `release/v3.8.0`
+satisfies the equality check by construction, so without that guard the
+unmerged branch could be tagged and published.
+
+`Release` reads the release body back out of `CHANGELOG.md` rather than
+regenerating it. The changelog and the release then cannot drift, and a
+correction made while reviewing the release pull request reaches both.
+
+The publish jobs live in `release.yml` alongside the tag rather than in a
+separate workflow keyed on the tag, because a tag pushed with `GITHUB_TOKEN`
+does not start another workflow run. Jobs in the same run are not subject to
+that.
+
+Renaming `release.yml` breaks npm publishing. npm trusted publishing matches on
+the exact workflow filename, so the name is part of the configuration held on
+npmjs.com. `prepare-release.yml` publishes nothing and can be renamed freely.
+
+Neither registry uses a stored credential:
+
+- npm authenticates with a trusted publisher, configured on npmjs.com against
+  this repository and `release.yml`. The job needs `id-token: write` and no
+  `.npmrc`.
+- Docker Hub authenticates with an OIDC connection created by an organization
+  admin. `docker/login-action` picks it up from the `DOCKERHUB_OIDC_CONNECTIONID`
+  repository variable.
+
+`.semaphore/` still builds and tests, but no longer publishes. Both systems
+publishing the same tag would race, and only one can win.
+
+To keep a pull request out of the release notes and the changelog, label it
+`ignore-for-release`. The release pull request itself should carry that label,
+or the next release's notes open with the previous version bump.

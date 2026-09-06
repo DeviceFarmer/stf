@@ -1,0 +1,122 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, without the v prefix (e.g. 3.8.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Check the version is releasable
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::$VERSION is not a three part version like 3.8.0, with no v prefix"
+            exit 1
+          fi
+
+          CURRENT=$(node -p 'require("./package.json").version')
+          echo "current=$CURRENT requested=$VERSION"
+          echo "CURRENT=$CURRENT" >> "$GITHUB_ENV"
+          if [ "$CURRENT" = "$VERSION" ] ||
+             [ "$(printf '%s\n%s\n' "$CURRENT" "$VERSION" | sort -V | head -1)" != "$CURRENT" ]
+          then
+            echo "::error::$VERSION is not greater than $CURRENT"
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::tag v$VERSION already exists"
+            exit 1
+          fi
+
+          if npm view "@devicefarmer/stf@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::@devicefarmer/stf@$VERSION is already published to npm"
+            exit 1
+          fi
+
+      - name: Generate the release notes
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PREVIOUS=$(git tag --sort=-creatordate | head -1)
+          echo "previous tag: ${PREVIOUS:-none}"
+
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -X POST \
+            -f tag_name="v$VERSION" \
+            -f target_commitish="$GITHUB_SHA" \
+            -f previous_tag_name="$PREVIOUS" \
+            --jq .body > notes.md
+          cat notes.md
+
+      - name: Bump the version and the changelog
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          node -e '
+            var fs = require("fs")
+            var file = "package.json"
+            var raw = fs.readFileSync(file, "utf8")
+            var next = raw.replace(/"version": "[^"]+"/, "\"version\": \"" + process.argv[1] + "\"")
+            if (next === raw) {
+              console.error("::error::could not rewrite the version field")
+              process.exit(1)
+            }
+            fs.writeFileSync(file, next)
+          ' "$VERSION"
+          node .github/scripts/changelog.js CHANGELOG.md "$VERSION" notes.md
+          git diff --stat
+
+      - name: Push the release branch
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json CHANGELOG.md
+          # Signed off because the pull request this branch becomes is subject to
+          # the DCO check like any other.
+          git commit -s -m "Bump version from $CURRENT to $VERSION"
+          # Force because the branch is generated: re-running for the same version
+          # after an aborted attempt would otherwise fail non-fast-forward.
+          git push --force origin "HEAD:refs/heads/release/v$VERSION"
+
+      - name: Say what to do next
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release $VERSION prepared"
+            echo
+            echo "1. [Open the pull request](https://github.com/$GITHUB_REPOSITORY/compare/$GITHUB_REF_NAME...release/v$VERSION?expand=1) for \`release/v$VERSION\`."
+            echo "2. Label it \`ignore-for-release\`, so the bump does not appear in the next release's notes."
+            echo "3. Merge it once the checks pass."
+            echo "4. Run the \`Release\` workflow on \`$GITHUB_REF_NAME\` with version \`$VERSION\`."
+          } >> "$GITHUB_STEP_SUMMARY"
