@@ -2,7 +2,8 @@
 # Copyright © 2020-2024 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM debian:bookworm-slim
+# mirror.gcr.io is a pull-through cache for Docker Hub, used so CI's Docker Hub OIDC push token is not sent to pull the base. See #926.
+FROM mirror.gcr.io/library/debian:bookworm-slim
 
 LABEL Maintainer="Denis Barbaron <denis.barbaron@orange.com>"
 LABEL Name="STF"

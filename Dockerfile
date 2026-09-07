@@ -2,7 +2,8 @@
 # Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM ubuntu:22.04
+# mirror.gcr.io is a pull-through cache for Docker Hub, used so CI's Docker Hub OIDC push token is not sent to pull the base. See #926.
+FROM mirror.gcr.io/library/ubuntu:22.04
 
 # Sneak the stf executable into $PATH.
 ENV PATH=/app/bin:$PATH
