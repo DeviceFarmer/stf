@@ -2,7 +2,7 @@
 # Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM ubuntu:22.04
+FROM mirror.gcr.io/library/ubuntu:22.04
 
 # Sneak the stf executable into $PATH.
 ENV PATH=/app/bin:$PATH
