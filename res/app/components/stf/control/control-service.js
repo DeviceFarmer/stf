@@ -160,6 +160,14 @@ module.exports = function ControlServiceFactory(
       return sendTwoWay('device.reboot')
     }
 
+    // Holding the device has to be refused unless the caller is the one using it, and the socket
+    // has no serial of its own to check that against, so this one goes through the API instead
+    this.rebootAndKeep = function() {
+      return $http.post(
+        '/api/v1/user/devices/' + target.serial + '/reboot?keepOwnership=true'
+      )
+    }
+
     this.rotate = function(rotation, lock) {
       return sendOneWay('display.rotate', {
         rotation: rotation
