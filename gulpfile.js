@@ -7,8 +7,7 @@ var path = require('path')
 var gulp = require('gulp')
 var gutil = require('gulp-util')
 var jsonlint = require('gulp-jsonlint')
-var eslint = require('gulp-eslint')
-var EslintCLIEngine = require('eslint').CLIEngine
+var ESLint = require('eslint').ESLint
 var webpack = require('webpack')
 var webpackStatusConfig = require('./res/common/status/webpack.config')
 var gettext = require('gulp-angular-gettext')
@@ -32,33 +31,13 @@ gulp.task('jsonlint', function() {
     .pipe(jsonlint.reporter())
 })
 
-// Try to use eslint-cli directly instead of eslint-gulp
-// since it doesn't support cache yet
-gulp.task('eslint', function() {
-  return gulp.src([
-      'lib/**/*.js'
-    , 'res/**/*.js'
-    , '!res/bower_components/**'
-    , '*.js'
-  ])
-    // eslint() attaches the lint output to the "eslint" property
-    // of the file object so it can be used by other modules.
-    .pipe(eslint())
-    // eslint.format() outputs the lint results to the console.
-    // Alternatively use eslint.formatEach() (see Docs).
-    .pipe(eslint.format())
-    // To have the process exit with an error code (1) on
-    // lint error, return the stream and pipe to failAfterError last.
-    .pipe(eslint.failAfterError())
-})
-
-gulp.task('eslint-cli', function(done) {
-  var cli = new EslintCLIEngine({
+gulp.task('eslint-cli', function() {
+  var cli = new ESLint({
     cache: true
   , fix: false
   })
 
-  var report = cli.executeOnFiles([
+  return cli.lintFiles([
     'lib/**/*.js'
     , 'res/app/**/*.js'
     , 'res/auth/**/*.js'
@@ -67,15 +46,23 @@ gulp.task('eslint-cli', function(done) {
     , 'res/web_modules/**/*.js'
     , '*.js'
   ])
-  var formatter = cli.getFormatter()
-  console.log(formatter(report.results))
+    .then(function(results) {
+      return Promise.all([results, cli.loadFormatter('stylish')])
+    })
+    .then(function(both) {
+      return Promise.all([both[0], both[1].format(both[0])])
+    })
+    .then(function(both) {
+      console.log(both[1])
 
-  if (report.errorCount > 0) {
-    done(new gutil.PluginError('eslint-cli', new Error('ESLint error')))
-  }
-  else {
-    done()
-  }
+      var errorCount = both[0].reduce(function(total, result) {
+        return total + result.errorCount
+      }, 0)
+
+      if (errorCount > 0) {
+        throw new gutil.PluginError('eslint-cli', new Error('ESLint error'))
+      }
+    })
 })
 
 gulp.task('run:checkversion', function() {
