@@ -157,5 +157,13 @@
 
     // eslint v2
     //"keyword-spacing": 2
-  }
+  },
+  "overrides": [
+    {
+      "files": ["lib/wire/protobuf.js"],
+      "rules": {
+        "no-sync": 0
+      }
+    }
+  ]
 }
