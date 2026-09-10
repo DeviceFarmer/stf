@@ -28,7 +28,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install pkg-config curl zip unzip wget python3 build-essential cmake ninja-build && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-arm64.tar.xz && \
+      https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-arm64.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     useradd --system \
