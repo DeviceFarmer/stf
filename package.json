@@ -151,7 +151,7 @@
     "del": "^2.0.1",
     "eslint": "^10.10.0",
     "event-stream": "^3.3.2",
-    "exports-loader": "^4.0.0",
+    "exports-loader": "^5.0.0",
     "file-loader": "^6.2.0",
     "fs-extra": "^8.1.0",
     "globals": "^17.12.0",
