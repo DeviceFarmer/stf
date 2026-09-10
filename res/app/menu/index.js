@@ -14,7 +14,6 @@ module.exports = angular.module('stf.menu', [
   , require('stf/nav-menu').name
   , require('stf/settings').name
   , require('stf/common-ui/modals/external-url-modal').name
-  , require('stf/native-url').name
   , require('stf/logcat').name
 ])
   .controller('MenuCtrl', require('./menu-controller'))
