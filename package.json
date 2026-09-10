@@ -52,7 +52,7 @@
     "@devicefarmer/stf-wiki": "^1.0.0",
     "@devicefarmer/stfservice-prebuilt": "^2.5.6",
     "@dr.pogodin/csurf": "^1.14.1",
-    "@julusian/jpeg-turbo": "^2.2.0",
+    "@julusian/jpeg-turbo": "^3.0.1",
     "@node-saml/passport-saml": "^5.0.1",
     "@slack/web-api": "^7.9.2",
     "@targetprocess/swagger-tools": "^1.0.1",
