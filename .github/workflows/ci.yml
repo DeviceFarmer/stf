@@ -27,7 +27,7 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Read the Android matrix
         id: plan
@@ -40,9 +40,9 @@ jobs:
     outputs:
       cache-key: ${{ steps.cachekey.outputs.key }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
 
@@ -69,7 +69,7 @@ jobs:
 
       - name: Restore dependency cache
         id: deps
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             node_modules
@@ -100,7 +100,7 @@ jobs:
           du -sh res/build
 
       - name: Upload front-end bundle
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: stf-bundle
           path: res/build
@@ -115,7 +115,7 @@ jobs:
 
       - name: Upload verdict
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: verdict-build
           path: verdict.json
@@ -128,14 +128,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -165,7 +165,7 @@ jobs:
 
       - name: Upload verdict
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: verdict-lint
           path: verdict.json
@@ -178,14 +178,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -205,7 +205,7 @@ jobs:
 
       - name: Upload verdict
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: verdict-unit
           path: verdict.json
@@ -218,14 +218,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -280,7 +280,7 @@ jobs:
 
       - name: Upload karma results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: karma-results
           path: test-results/karma
@@ -295,7 +295,7 @@ jobs:
 
       - name: Upload verdict
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: verdict-component
           path: verdict.json
@@ -313,9 +313,9 @@ jobs:
         ports:
           - 28015:28015
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
 
@@ -324,7 +324,7 @@ jobs:
         run: bash .github/scripts/apt-install.sh graphicsmagick libzmq5
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -333,7 +333,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Download front-end bundle
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: stf-bundle
           path: res/build
@@ -398,7 +398,7 @@ jobs:
 
       - name: Upload logs and Playwright report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-logs
           path: |
@@ -423,7 +423,7 @@ jobs:
 
       - name: Upload verdict
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: verdict-integration
           path: verdict.json
@@ -446,7 +446,7 @@ jobs:
         ports:
           - 28015:28015
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Free disk space
         run: |
@@ -459,7 +459,7 @@ jobs:
           docker image prune -af 2>/dev/null || true
           df -h /
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
 
@@ -485,7 +485,7 @@ jobs:
         run: bash .github/scripts/apt-install.sh graphicsmagick libzmq5
 
       - name: Restore dependency cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             node_modules
@@ -494,7 +494,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Download front-end bundle
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: stf-bundle
           path: res/build
@@ -517,7 +517,7 @@ jobs:
       # target=android-36 under both the shipped and the updated revision.
       - name: Cache the Android cmdline-tools
         if: contains(matrix.api, '.')
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/android-cmdline-tools
           key: cmdline-tools-16111833-${{ runner.os }}-${{ runner.arch }}
@@ -612,7 +612,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: android-logs-api-${{ matrix.api }}-${{ matrix.target }}
           path: |
@@ -634,7 +634,7 @@ jobs:
 
       - name: Upload verdict
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: verdict-android-${{ matrix.api }}-${{ matrix.target }}
           path: verdict.json
@@ -651,15 +651,15 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
 
       - name: Download verdicts
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: verdicts
           pattern: verdict-*
@@ -685,7 +685,7 @@ jobs:
       - name: Upsert PR comment
         if: github.event_name == 'pull_request'
         continue-on-error: true
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs')
