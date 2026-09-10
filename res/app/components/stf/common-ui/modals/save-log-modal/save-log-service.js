@@ -4,7 +4,6 @@ module.exports =
   function SaveLogsServiceFactory($uibModal, $location, $route) {
     var SaveLogService = {}
     var logExtentension = ['json', 'log']
-    var selectedExtension = logExtentension[0]
 
     function parseLogsToDefinedExtenstion(device, logExtension, lineLimitation) {
       var lineLimiter = ((isNaN(lineLimitation)) ? device.length : lineLimitation)
@@ -72,27 +71,17 @@ module.exports =
       }
 
       $scope.saveLogs = function() {
-        var parsedOutput = NaN
+        var selectedExtension = $scope.selectedExtension
+        var parsedLogs = parseLogsToDefinedExtenstion(device, selectedExtension)
+        var parsedOutput
 
-        switch(selectedExtension) {
-          case 'json':
-              parsedOutput = new Blob(
-                [JSON.stringify(parseLogsToDefinedExtenstion(device, selectedExtension))],
-                {type: 'application/json;charset=utf-8'})
-              break
-          case 'log':
-              parsedOutput = new Blob(
-                [parseLogsToDefinedExtenstion(device, selectedExtension)],
-                {type: 'text/plain;charset=utf-8'})
-              break
-          default:
-              // ToDo
-              // Add support for other types
-              // Ad-hoc save file as plain text
-              parsedOutput = new Blob(
-                [parseLogsToDefinedExtenstion(device, selectedExtension)],
-                {type: 'text/plain;charset=utf-8'})
-              break
+        if (selectedExtension === 'json') {
+          parsedOutput = new Blob([JSON.stringify(parsedLogs)],
+            {type: 'application/json;charset=utf-8'})
+        }
+        else {
+          parsedOutput = new Blob([parsedLogs],
+            {type: 'text/plain;charset=utf-8'})
         }
 
         if (typeof $scope.saveLogFileName === 'undefined' ||
@@ -109,7 +98,6 @@ module.exports =
 
       $scope.$watch('selectedExtension', function(newValue, oldValue) {
         if (newValue !== oldValue) {
-          selectedExtension = newValue
           createSamplePresentation(device, newValue, $scope)
         }
       })
