@@ -1,7 +1,7 @@
 var chai = require('chai')
 var sinon = require('sinon')
 var expect = chai.expect
-chai.use(require('sinon-chai'))
+chai.use(require('sinon-chai').default)
 
 var TtlSet = require('../../lib/util/ttlset')
 
