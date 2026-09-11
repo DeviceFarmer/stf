@@ -3,9 +3,9 @@
 **/
 
 module.exports =
-  function ControlPanesController($scope, $http, gettext, $routeParams,
-    $timeout, $location, DeviceService, GroupService, ControlService,
-    StorageService, FatalMessageService, SettingsService) {
+  function ControlPanesController($scope, $rootScope, $http, gettext,
+    $routeParams, $timeout, $location, DeviceService, GroupService,
+    ControlService, StorageService, FatalMessageService, SettingsService) {
     var sharedTabs = [
       {
         title: gettext('Screenshots')
@@ -60,6 +60,13 @@ module.exports =
     $scope.device = null
     $scope.control = null
 
+    var paneClosed = false
+
+    $scope.$on('$destroy', function() {
+      paneClosed = true
+      $rootScope.pageTitle = null
+    })
+
     // TODO: Move this out to Ctrl.resolve
     function getDevice(serial) {
       DeviceService.get(serial, $scope)
@@ -70,8 +77,9 @@ module.exports =
           $scope.device = device
           $scope.control = ControlService.create(device, device.channel)
 
-          // TODO: Change title, flickers too much on Chrome
-          // $rootScope.pageTitle = device.name
+          if (!paneClosed) {
+            $rootScope.pageTitle = device.enhancedName
+          }
 
           SettingsService.set('lastUsedDevice', serial)
 
