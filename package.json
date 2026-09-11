@@ -145,7 +145,7 @@
   "devDependencies": {
     "async": "^3.2.6",
     "bower": "^1.8.14",
-    "chai": "^3.4.1",
+    "chai": "^6.2.2",
     "consolidate": "^0.14.5",
     "css-loader": "^3.6.0",
     "del": "^2.0.1",
