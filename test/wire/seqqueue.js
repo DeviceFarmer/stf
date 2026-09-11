@@ -1,6 +1,6 @@
 var sinon = require('sinon')
 var chai = require('chai')
-chai.use(require('sinon-chai'))
+chai.use(require('sinon-chai').default)
 var expect = chai.expect
 
 var SeqQueue = require('../../lib/wire/seqqueue')
