@@ -6,7 +6,8 @@ module.exports =
     var logExtentension = ['json', 'log']
 
     function parseLogsToDefinedExtenstion(device, logExtension, lineLimitation) {
-      var lineLimiter = ((isNaN(lineLimitation)) ? device.length : lineLimitation)
+      var requestedLines = isNaN(lineLimitation) ? device.length : lineLimitation
+      var lineLimiter = Math.min(requestedLines, device.length)
       var output = ''
       if (device.length > 0) {
         if (logExtension === 'log') {

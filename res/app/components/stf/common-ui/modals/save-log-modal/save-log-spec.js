@@ -51,7 +51,7 @@ describe('SaveLogService', function() {
     capturedCtrl = modal.open.calls.mostRecent().args[0].controller
   }))
 
-  function openModal() {
+  function openModal(device) {
     var scope = rootScope.$new()
     controller(capturedCtrl, {
       $scope: scope
@@ -59,7 +59,7 @@ describe('SaveLogService', function() {
         close: jasmine.createSpy('close')
         , dismiss: jasmine.createSpy('dismiss')
       }
-      , device: fakeDevice
+      , device: device || fakeDevice
     })
     scope.$digest()
     return scope
@@ -91,6 +91,17 @@ describe('SaveLogService', function() {
 
     expect(lastSave()[0].type).toEqual('text/plain;charset=utf-8')
     expect(lastSave()[1]).toMatch(/\.log$/)
+  })
+
+  it('should preview a log shorter than the sample line count', function() {
+    var scope = openModal(fakeDevice.slice(0, 2))
+
+    expect(JSON.parse(scope.samplePresentation).logs.length).toEqual(2)
+
+    scope.selectedExtension = 'log'
+    scope.$digest()
+
+    expect(scope.samplePresentation.split('\n').filter(Boolean).length).toEqual(2)
   })
 
   it('should append the chosen extension to a custom file name', function() {
