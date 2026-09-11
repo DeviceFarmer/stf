@@ -12,4 +12,12 @@ describe('niceTabs', function() {
      */
 
   })
+
+  it('should not register a singular niceTab directive', inject(function($injector) {
+    expect($injector.has('niceTabDirective')).toBe(false)
+  }))
+
+  it('should register the niceTabs directive', inject(function($injector) {
+    expect($injector.has('niceTabsDirective')).toBe(true)
+  }))
 })
