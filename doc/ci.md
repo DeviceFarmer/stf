@@ -273,13 +273,13 @@ making `npm test` depend on one.
 There is no committed `package-lock.json`: `.gitignore` excludes it, so CI uses
 `npm install` and keys its dependency cache on `package.json` and `bower.json`.
 
-Every job reads its Node version from `.nvmrc` (22.11.0), which is also what the
+Every job reads its Node version from `.nvmrc` (22.23.2), which is also what the
 `Dockerfile` and `.semaphore/semaphore.yml` use, so CI tests the runtime the
 project actually ships rather than a second version pinned in the workflow.
 
 The npm publish job in `release.yml` is the exception: it pins Node 24, because
 npm trusted publishing needs Node 22.14.0 or later and npm 11.5.1 or later, and
-22.11.0 ships npm 10.x. The tarball's bundle is therefore built on a runtime no
+22.23.2 ships npm 10.x. The tarball's bundle is therefore built on a runtime no
 test tier exercises. Nothing else in the release path needs it, so the rest
 reads `.nvmrc` like every other job.
 
