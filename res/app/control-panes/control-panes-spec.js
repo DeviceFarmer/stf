@@ -38,10 +38,20 @@ describe('ControlPanesCtrl', function() {
     return device
   }
 
+  function nexus() {
+    return enhancedDevice({name: 'Nexus 5', model: 'Nexus5', marketName: 'Nexus 5'})
+  }
+
   function deviceChange(device, payload) {
     _.merge(device, payload)
     enhanceDevice.enhance(device)
     rootScope.$digest()
+  }
+
+  function renameUnderThePane(device) {
+    deviceChange(device, {marketName: 'Nexus 5 LTE'})
+    deviceChange(device, {battery: {level: 50, scale: 100}})
+    deviceChange(device, {marketName: 'Nexus 5 LTE (Hammerhead)'})
   }
 
   function start(serial) {
@@ -80,7 +90,7 @@ describe('ControlPanesCtrl', function() {
   }
 
   it('should take the page title from the resolved device', function() {
-    var device = enhancedDevice({name: 'Nexus 5', model: 'Nexus5', marketName: 'Nexus 5'})
+    var device = nexus()
 
     start(device.serial)
     resolveWith(device)
@@ -89,22 +99,28 @@ describe('ControlPanesCtrl', function() {
   })
 
   it('should write the page title once whatever the device does afterwards', function() {
-    var device = enhancedDevice({name: 'Nexus 5', model: 'Nexus5', marketName: 'Nexus 5'})
+    var device = nexus()
 
     start(device.serial)
     resolveWith(device)
+    renameUnderThePane(device)
 
-    deviceChange(device, {marketName: 'Nexus 5 LTE'})
-    deviceChange(device, {battery: {level: 50, scale: 100}})
-    deviceChange(device, {marketName: 'Nexus 5 LTE (Hammerhead)'})
-
-    expect(device.enhancedName).toEqual('Nexus 5 LTE (Hammerhead)')
-    expect(rootScope.pageTitle).toEqual('Nexus 5')
     expect(titleWrites).toBe(1)
   })
 
+  it('should hold the first name when the device is renamed under the pane', function() {
+    var device = nexus()
+
+    start(device.serial)
+    resolveWith(device)
+    renameUnderThePane(device)
+
+    expect(device.enhancedName).toEqual('Nexus 5 LTE (Hammerhead)')
+    expect(rootScope.pageTitle).toEqual('Nexus 5')
+  })
+
   it('should keep the page title still across plain digests', function() {
-    var device = enhancedDevice({name: 'Nexus 5', model: 'Nexus5', marketName: 'Nexus 5'})
+    var device = nexus()
 
     start(device.serial)
     resolveWith(device)
@@ -137,7 +153,7 @@ describe('ControlPanesCtrl', function() {
   })
 
   it('should restore the plain title when the pane goes away', function() {
-    var device = enhancedDevice({name: 'Nexus 5', model: 'Nexus5', marketName: 'Nexus 5'})
+    var device = nexus()
 
     start(device.serial)
     resolveWith(device)
@@ -149,7 +165,7 @@ describe('ControlPanesCtrl', function() {
   })
 
   it('should not title a pane the user left before the device arrived', function() {
-    var device = enhancedDevice({name: 'Nexus 5', model: 'Nexus5', marketName: 'Nexus 5'})
+    var device = nexus()
 
     start(device.serial)
     scope.$destroy()
