@@ -248,6 +248,21 @@ function main() {
     lines.push('')
   }
 
+  // A leg that only went green on its second attempt is still a flake, and a
+  // silent retry would turn a degrading emulator or test into a tick nobody
+  // ever looks at. Name them so the trend stays visible.
+  var retried = android.filter(function(v) {
+    return Number(v.attempt || 1) > 1
+  })
+  if (retried.length) {
+    lines.push('> :repeat: Retried once after failing: ' +
+      retried.map(function(v) {
+        return 'Android ' + v.android + ' (API ' + v.api + ', now ' +
+          v.status + ')'
+      }).join(', ') + '.')
+    lines.push('')
+  }
+
   var skipped = android.filter(function(v) {
     return v.checks && v.checks.image === 'skip'
   })

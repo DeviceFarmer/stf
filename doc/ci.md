@@ -324,6 +324,44 @@ A job that dies before writing its verdict is reported as failed rather than
 disappearing from the table, which is what `EXPECTED_TIERS` and
 `EXPECTED_ANDROID_FILE` in the `report` job are for.
 
+## Flakes
+
+Every leg gates the run and the matrix is twenty legs wide, so per-leg flake
+rates multiply: a leg that fails one time in a hundred reds about one run in
+five no matter how healthy STF is. Two different mechanisms deal with that, and
+which one applies depends on whether the emulator was ever reached.
+
+**Before the emulator**, the setup steps retry in place. `apt-install.sh` skips
+packages that are already on the image, caps `apt-get update` at
+`APT_UPDATE_TIMEOUT` seconds (120 by default) because a stalling mirror will
+otherwise spend the whole step budget inside apt's own retries, and then retries
+the install three times, refreshing the indexes between the tries. The Playwright
+install is wrapped in `retry.sh`, since `playwright install --with-deps` shells
+out to apt as well and reports a failure there as a bare
+`Installation process exited with code: 100`.
+
+**From the emulator on**, the leg itself is retried once. The verdict is derived,
+and if it failed the leg runs a second time from a fresh AVD and the second
+verdict is the one recorded. The gate is the verdict rather than the emulator
+step's exit status on purpose: `android-leg.sh` never exits non-zero for a test
+failure, so a leg that booted and then lost its minicap stream leaves the step
+green and only the verdict knows it failed.
+
+A retry is never silent. The leg gets a warning annotation, its verdict details
+end in `(attempt 2)`, and the report prints a `Retried once after failing` line
+naming the leg and how it ended, so a leg that is quietly degrading still shows
+up instead of hiding behind a tick. The first attempt's logs are kept alongside
+the second's in the same artifact, as `stf-logs-attempt-1` and
+`checks-attempt-1.json`.
+
+The retry deliberately does not fire when a step before the emulator failed.
+There is nothing to retry in that case, and the in-step retries above are the
+fix. That case is also worth recognising in the report: an emulator step that
+was **skipped** cannot have timed out booting, so the verdict says the leg never
+got as far as the emulator rather than blaming the boot. Before that distinction
+existed, three runs' worth of apt timeouts were reported as emulator boot
+failures, which is a good way to spend an afternoon debugging the wrong thing.
+
 ## Debugging a failed leg
 
 Every leg uploads `android-logs-api-<api>-<target>` containing `stf local`'s
