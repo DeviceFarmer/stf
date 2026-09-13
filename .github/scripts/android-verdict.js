@@ -51,6 +51,17 @@ function main() {
     details = 'no published system image for API ' +
       (process.env.ANDROID_API || '?') + ' ' + (process.env.ANDROID_ARCH || '')
   }
+  else if (nothingRan && outcome === 'skipped') {
+    // A skipped emulator step did not run at all, so it cannot have timed out
+    // booting. Either the image probe said the image is unpublished -- handled
+    // above, because that path writes checks.json -- or a setup step earlier in
+    // the job failed and GitHub skipped everything after it. Blaming the
+    // emulator here sent three runs' worth of apt timeouts to the report as
+    // boot failures, so name the real shape of it instead.
+    status = 'fail'
+    details = 'the leg never got as far as the emulator: a setup step before ' +
+      'it failed, so the emulator step was skipped'
+  }
   else if (nothingRan) {
     // The leg script seeds every check before it does anything, so no checks at
     // all means the emulator step never handed control over: AVD creation or
@@ -88,8 +99,24 @@ function main() {
     }
   }
 
+  // A leg that only goes green the second time round is not the same signal as
+  // one that goes green the first time, so say which attempt this verdict is
+  // rather than letting the retry hide behind an ordinary tick.
+  var attempt = Number(process.env.LEG_ATTEMPT || 1)
+
+  if (attempt > 1) {
+    details += ' (attempt ' + attempt + ')'
+    if (status === 'pass') {
+      process.stdout.write('::warning::Android ' +
+        (process.env.ANDROID_VERSION || '?') + ' (API ' +
+        (process.env.ANDROID_API || '?') + ') failed once and passed on ' +
+        'attempt ' + attempt + '\n')
+    }
+  }
+
   var extra = {
     checks: checks
+  , attempt: attempt
   , android: process.env.ANDROID_VERSION || ''
   , api: process.env.ANDROID_API || ''
   , target: process.env.ANDROID_TARGET || ''

@@ -6,6 +6,12 @@ on:
     branches: [master]
   workflow_dispatch:
 
+# Every job that needs more than this says so itself. The report job already
+# scopes pull-requests: write to itself; widening it here would hand write
+# access to the seven job types that only ever read, the Android legs included.
+# It would not fix the 403 it looks like it fixes either: that one only happens
+# on pull requests from forks, where GitHub hands out a read-only token whatever
+# this block says.
 permissions:
   contents: read
 
@@ -373,11 +379,16 @@ jobs:
           node .github/scripts/stf-devices.js wait-count 2 120
           node .github/scripts/stf-devices.js list
 
+      # `playwright install --with-deps` shells out to apt for the browser
+      # libraries, so it inherits every apt flake the runtime steps have and
+      # reports it as a bare "Installation process exited with code: 100".
+      # Both halves are pure network, so retry rather than red the run.
       - name: Install Playwright
+        timeout-minutes: 15
         run: |
           cd test/playwright
-          npm install --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          bash ../../.github/scripts/retry.sh 3 npm install --no-audit --no-fund
+          bash ../../.github/scripts/retry.sh 3 npx playwright install --with-deps chromium
 
       - name: Playwright web UI suite (no device)
         id: e2e
@@ -442,7 +453,10 @@ jobs:
     name: Android ${{ matrix.android }} (API ${{ matrix.api }})
     needs: [plan, build]
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    # Room for two 50 minute emulator attempts plus the setup around them. A
+    # healthy leg spends under three minutes in the emulator step and never
+    # retries, so this ceiling is only ever paid by a leg that already failed.
+    timeout-minutes: 115
     continue-on-error: true
     strategy:
       fail-fast: false
@@ -511,11 +525,16 @@ jobs:
           name: stf-bundle
           path: res/build
 
+      # `playwright install --with-deps` shells out to apt for the browser
+      # libraries, so it inherits every apt flake the runtime steps have and
+      # reports it as a bare "Installation process exited with code: 100".
+      # Both halves are pure network, so retry rather than red the run.
       - name: Install Playwright
+        timeout-minutes: 15
         run: |
           cd test/playwright
-          npm install --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          bash ../../.github/scripts/retry.sh 3 npm install --no-audit --no-fund
+          bash ../../.github/scripts/retry.sh 3 npx playwright install --with-deps chromium
 
       - name: Wait for RethinkDB
         run: bash .github/scripts/wait-for-port.sh 28015 60 rethinkdb
@@ -622,6 +641,82 @@ jobs:
           EMULATOR_OUTCOME: ${{ steps.emulator.outcome }}
         run: node .github/scripts/android-verdict.js
 
+      # The matrix is 20 legs wide and every one of them gates the run, so a 1%
+      # per-leg flake rate reds one run in five however healthy STF is. Each
+      # failure mode seen so far -- a boot that ran out the clock, minicap
+      # frames that never reached the browser, a device STF never registered --
+      # passed on the next run of the same commit, so give the leg a second go
+      # and let that verdict stand.
+      #
+      # Gating on the verdict rather than on the emulator step's own outcome is
+      # deliberate: android-leg.sh never exits non-zero for a test failure, so
+      # the layer flakes all leave the step green. The plain `if` (no always())
+      # is deliberate too -- it keeps the retry from firing when a setup step
+      # earlier in the job failed, where there is nothing to retry and the
+      # apt-install and Playwright retries are the fix instead.
+      - name: Keep the first attempt before retrying
+        id: keep
+        if: steps.leg.outputs.status == 'fail'
+        # Through the environment, not interpolated into the shell string: the
+        # details come from a failing leg and end up inside double quotes.
+        env:
+          LEG_DETAILS: ${{ steps.leg.outputs.details }}
+        run: |
+          rm -rf stf-logs-attempt-1 checks-attempt-1.json
+          mv stf-logs stf-logs-attempt-1 2>/dev/null || true
+          mv checks.json checks-attempt-1.json 2>/dev/null || true
+          # A leg killed by the step timeout can leave the emulator alive, and a
+          # second one cannot bind the ports it is still holding.
+          adb kill-server 2>/dev/null || true
+          pkill -f qemu-system 2>/dev/null || true
+          # The retry costs no extra disk: the action creates the AVD as
+          # `avdmanager create --force -n test`, so the second attempt replaces
+          # the first one's 6G userdata rather than adding to it, and the system
+          # image is already downloaded. Print it anyway, because a retry that
+          # dies of a full disk would read as a leg that failed twice.
+          df -h /
+          echo "::warning::Android ${{ matrix.android }} (API ${{ matrix.api }}) failed: ${LEG_DETAILS}. Retrying once."
+
+      - name: Retry the leg once
+        id: emulator_retry
+        if: steps.keep.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 50
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          STF_LOG_DIR: stf-logs
+          STF_PUBLIC_IP: 127.0.0.1
+          CHECKS_FILE: checks.json
+          BOOT_TIMEOUT: ${{ matrix.boot }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          channel: ${{ matrix.channel || 'stable' }}
+          arch: ${{ matrix.arch }}
+          profile: pixel_2
+          cores: 2
+          ram-size: 4096M
+          disk-size: 6G
+          emulator-boot-timeout: ${{ matrix.boot }}
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
+            -no-boot-anim -camera-back none -camera-front none
+          script: bash .github/scripts/android-leg.sh
+
+      - name: Derive the verdict again
+        if: always() && steps.emulator_retry.outcome != 'skipped'
+        id: leg2
+        env:
+          CHECKS_FILE: checks.json
+          ANDROID_VERSION: ${{ matrix.android }}
+          ANDROID_API: ${{ matrix.api }}
+          ANDROID_TARGET: ${{ matrix.target }}
+          ANDROID_ARCH: ${{ matrix.arch }}
+          EMULATOR_OUTCOME: ${{ steps.emulator_retry.outcome }}
+          LEG_ATTEMPT: '2'
+        run: node .github/scripts/android-verdict.js
+
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v7
@@ -629,20 +724,25 @@ jobs:
           name: android-logs-api-${{ matrix.api }}-${{ matrix.target }}
           path: |
             stf-logs
+            stf-logs-attempt-1
             checks.json
+            checks-attempt-1.json
             test-results/playwright
           retention-days: 5
           if-no-files-found: warn
 
+      # The retried verdict wins when there is one. GitHub's `||` falls through
+      # on an empty string, so a leg that never retried reads its first verdict.
       - name: Record verdict
         if: always()
         env:
           VERDICT_GROUP: android
-          VERDICT_EXTRA: ${{ steps.leg.outputs.extra }}
+          VERDICT_EXTRA: ${{ steps.leg2.outputs.extra || steps.leg.outputs.extra }}
         run: |
           bash .github/scripts/verdict.sh 'android-${{ matrix.api }}' \
             'Android ${{ matrix.android }} (API ${{ matrix.api }})' \
-            '${{ steps.leg.outputs.status }}' '${{ steps.leg.outputs.details }}'
+            '${{ steps.leg2.outputs.status || steps.leg.outputs.status }}' \
+            '${{ steps.leg2.outputs.details || steps.leg.outputs.details }}'
 
       - name: Upload verdict
         if: always()
