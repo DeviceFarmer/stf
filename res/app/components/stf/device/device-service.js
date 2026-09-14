@@ -11,6 +11,7 @@ module.exports = function DeviceServiceFactory($http, socket, EnhanceDeviceServi
   var deviceService = {}
 
   function Tracker($scope, options) {
+    EventEmitter.call(this)
     var devices = []
     var devicesBySerial = Object.create(null)
     var scopedSocket = socket.scoped($scope)
