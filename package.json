@@ -74,7 +74,7 @@
     "file-saver": "2.0.5",
     "formidable": "^1.2.6",
     "gm": "^1.25.0",
-    "hipchatter": "^0.3.1",
+    "hipchatter": "^1.0.0",
     "http-proxy": "^1.18.1",
     "in-publish": "^2.0.0",
     "jws": "^3.1.0",
