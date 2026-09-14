@@ -398,6 +398,20 @@ jobs:
           cd test/playwright
           npx playwright test ui.spec.js
 
+      - name: Start SeaweedFS for the s3 storage backend
+        if: always()
+        run: |
+          docker run -d --name seaweedfs -p 8333:8333 \
+            chrislusf/seaweedfs:4.47 server -s3
+          bash .github/scripts/wait-for-s3.sh http://127.0.0.1:8333 90
+
+      - name: Round-trip an apk through both storage backends
+        id: storage
+        if: always()
+        env:
+          STF_LOG_DIR: stf-logs
+        run: bash .github/scripts/storage-leg.sh
+
       - name: Derive checks from the Playwright report
         if: always()
         id: checks
@@ -433,11 +447,12 @@ jobs:
           STF_UP: ${{ steps.start.outcome }}
           FAKE: ${{ steps.fakedevice.outcome }}
           E2E: ${{ steps.e2e.outcome }}
+          STORAGE: ${{ steps.storage.outcome }}
           VERDICT_EXTRA: ${{ steps.checks.outputs.extra }}
         run: |
-          DETAILS="stf local $STF_UP, fake devices $FAKE, web UI suite $E2E"
+          DETAILS="stf local $STF_UP, fake devices $FAKE, web UI suite $E2E, storage $STORAGE"
           bash .github/scripts/verdict.sh integration \
-            'Integration + device-less E2E (stf local + RethinkDB + Playwright)' \
+            'Integration + device-less E2E (stf local + RethinkDB + Playwright + SeaweedFS)' \
             '${{ job.status }}' "$DETAILS"
 
       - name: Upload verdict

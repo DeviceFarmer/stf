@@ -65,20 +65,26 @@ module.exports = function InstallService(
   installService.installUrl = function(control, url) {
     var installation = new Installation('downloading')
     $rootScope.$broadcast('installation', installation)
-    return control.uploadUrl(url)
-      .progressed(function(uploadResult) {
-        installation.update(uploadResult.progress / 2, uploadResult.lastData)
-      })
-      .then(function(uploadResult) {
-        installation.update(uploadResult.progress / 2, uploadResult.lastData)
-        installation.manifest = uploadResult.body
-        return control.install({
-            href: installation.href
-            , manifest: installation.manifest
-            , launch: installation.launch
-          })
-          .progressed(function(result) {
-            installation.update(50 + result.progress / 2, result.lastData)
+    return StorageService.storeUrl('apk', url)
+      .then(function(res) {
+        installation.update(100 / 2, 'processing')
+        installation.href = res.data.resource.href
+        return $http.get(installation.href + '/manifest')
+          .then(function(res) {
+            if (res.data.success) {
+              installation.manifest = res.data.manifest
+              return control.install({
+                href: installation.href
+                , manifest: installation.manifest
+                , launch: installation.launch
+              })
+                .progressed(function(result) {
+                  installation.update(50 + result.progress / 2, result.lastData)
+                })
+            }
+            else {
+              throw new Error('Unable to retrieve manifest')
+            }
           })
       })
       .then(function() {
