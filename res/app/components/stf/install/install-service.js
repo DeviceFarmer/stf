@@ -12,6 +12,7 @@ module.exports = function InstallService(
   var installService = Object.create(null)
 
   function Installation(state) {
+    EventEmitter.call(this)
     this.progress = 0
     this.state = state
     this.settled = false
