@@ -104,7 +104,7 @@
     "swagger-router": "^0.7.4",
     "temp": "^0.8.1",
     "transliteration": "^2.2.0",
-    "url-join": "1.1.0",
+    "url-join": "5.0.0",
     "utf-8-validate": "^5.0.0",
     "uuid": "^8.3.2",
     "ws": "^8.21.3",
