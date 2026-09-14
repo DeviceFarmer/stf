@@ -61,7 +61,7 @@
     "aws-sdk": "^2.4.13",
     "basic-auth": "^2.0.1",
     "bluebird": "^2.11.0",
-    "body-parser": "^1.20.3",
+    "body-parser": "^2.3.0",
     "bufferutil": "^4.0.8",
     "chalk": "^4.1.2",
     "compression": "^1.7.5",
