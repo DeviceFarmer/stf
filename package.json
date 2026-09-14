@@ -97,7 +97,7 @@
     "rethinkdb": "^2.0.2",
     "semver": "^7.3.5",
     "serve-favicon": "^2.5.0",
-    "serve-static": "^1.15.0",
+    "serve-static": "^2.2.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "split": "^1.0.0",
