@@ -8,7 +8,7 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     return 'tx.' + uuid.v4()
   }
 
-  function PendingTransactionResult(result) {
+  function PendingTransactionResult(result, onProgress) {
     var resolver = Promise.defer()
     var seq = 0
     var last = Infinity
@@ -52,7 +52,7 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
       }
 
       if (foundAny) {
-        resolver.progress(result)
+        onProgress(result)
       }
     }
 
@@ -86,6 +86,7 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     var pending = Object.create(null)
     var results = []
     var channel = createChannel()
+    var notify = null
 
     function doneListener(someChannel, data) {
       if (someChannel === channel) {
@@ -113,9 +114,14 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
 
     this.channel = channel
     this.results = results
-    this.promise = Promise.settle(targets.map(function(target) {
+
+    var promise = Promise.settle(targets.map(function(target) {
         var result = new options.Result(target)
-        var pendingResult = new PendingTransactionResult(result)
+        var pendingResult = new PendingTransactionResult(result, function() {
+          if (notify) {
+            notify(results)
+          }
+        })
         pending[options.id ? target[options.id] : target.id] = pendingResult
         results.push(result)
         return pendingResult.promise
@@ -126,17 +132,26 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
         socket.removeListener('tx.cancel', cancelListener)
         socket.emit('tx.cleanup', channel)
       })
-      .progressed(function() {
-        return results
-      })
       .then(function() {
         return results
       })
+
+    promise.progressed = function(listener) {
+      notify = listener
+      return promise
+    }
+
+    this.promise = promise
   }
 
   function SingleTargetTransaction(target, options) {
+    var notify = null
     var result = new options.Result(target)
-    var pending = new PendingTransactionResult(result)
+    var pending = new PendingTransactionResult(result, function() {
+      if (notify) {
+        notify(result)
+      }
+    })
     var channel = createChannel()
 
     function doneListener(someChannel, data) {
@@ -164,19 +179,24 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     this.channel = channel
     this.result = result
     this.results = [result]
-    this.promise = pending.promise
+
+    var promise = pending.promise
       .finally(function() {
         socket.removeListener('tx.done', doneListener)
         socket.removeListener('tx.progress', progressListener)
         socket.removeListener('tx.cancel', cancelListener)
         socket.emit('tx.cleanup', channel)
       })
-      .progressed(function() {
-        return result
-      })
       .then(function() {
         return result
       })
+
+    promise.progressed = function(listener) {
+      notify = listener
+      return promise
+    }
+
+    this.promise = promise
   }
 
   function TransactionResult(source) {
@@ -195,8 +215,8 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     this.device = this.source
   }
 
-  DeviceTransactionResult.prototype = Object.create(TransactionResult)
-  DeviceTransactionResult.constructor = DeviceTransactionResult
+  DeviceTransactionResult.prototype = Object.create(TransactionResult.prototype)
+  DeviceTransactionResult.prototype.constructor = DeviceTransactionResult
 
   transactionService.create = function(target, options) {
     if (options && !options.Result) {
