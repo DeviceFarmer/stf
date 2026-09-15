@@ -1,0 +1,81 @@
+name: CI report
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-report-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    name: Comment
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Download the staged report
+        id: fetch
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: ci-report
+          path: ci-report
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Upsert PR comment
+        if: steps.fetch.outcome == 'success'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs')
+            const body = fs.readFileSync('ci-report/report.md', 'utf8')
+            const issue_number = Number(
+              fs.readFileSync('ci-report/pr-number', 'utf8').trim())
+            const marker = '<!-- stf-ci-report -->'
+            const {owner, repo} = context.repo
+
+            if (!Number.isInteger(issue_number) || issue_number <= 0) {
+              core.setFailed(`staged pr-number is not a PR number`)
+              return
+            }
+            if (!body.includes(marker)) {
+              core.setFailed('staged report is missing the report marker')
+              return
+            }
+
+            const head_sha = context.payload.workflow_run.head_sha
+            const {data: pr} = await github.rest.pulls.get(
+              {owner, repo, pull_number: issue_number})
+            if (pr.head.sha !== head_sha) {
+              core.setFailed(
+                `PR #${issue_number} is at ${pr.head.sha}, run is at ${head_sha}`)
+              return
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {owner, repo, issue_number, per_page: 100}
+            )
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body && c.body.includes(marker))
+
+            if (existing) {
+              await github.rest.issues.updateComment(
+                {owner, repo, comment_id: existing.id, body})
+              core.info(`updated comment ${existing.id}`)
+            }
+            else {
+              await github.rest.issues.createComment(
+                {owner, repo, issue_number, body})
+              core.info('created report comment')
+            }
