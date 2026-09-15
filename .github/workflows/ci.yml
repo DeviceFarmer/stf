@@ -776,7 +776,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@v7
 
@@ -807,37 +806,23 @@ jobs:
         if: always()
         run: cat report.md >> "$GITHUB_STEP_SUMMARY"
 
-      # A fork PR gets a read-only token, so commenting 403s. Never let that
-      # swallow the tier gate below; the report is in the job summary anyway.
-      - name: Upsert PR comment
+      - name: Stage the report for the commenter
         if: github.event_name == 'pull_request'
-        continue-on-error: true
-        uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p ci-report
+          cp report.md ci-report/report.md
+          echo "$PR_NUMBER" > ci-report/pr-number
+
+      - name: Upload the staged report
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
         with:
-          script: |
-            const fs = require('fs')
-            const body = fs.readFileSync('report.md', 'utf8')
-            const marker = '<!-- stf-ci-report -->'
-            const {owner, repo} = context.repo
-            const issue_number = context.payload.pull_request.number
-
-            const comments = await github.paginate(
-              github.rest.issues.listComments,
-              {owner, repo, issue_number, per_page: 100}
-            )
-            const existing = comments.find(c =>
-              c.user.type === 'Bot' && c.body && c.body.includes(marker))
-
-            if (existing) {
-              await github.rest.issues.updateComment(
-                {owner, repo, comment_id: existing.id, body})
-              core.info(`updated comment ${existing.id}`)
-            }
-            else {
-              await github.rest.issues.createComment(
-                {owner, repo, issue_number, body})
-              core.info('created report comment')
-            }
+          name: ci-report
+          path: ci-report
+          retention-days: 3
+          if-no-files-found: error
 
       - name: Fail if any tier failed
         run: |
