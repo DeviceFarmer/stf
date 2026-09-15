@@ -25,9 +25,6 @@
   "bin": {
     "stf": "./bin/stf"
   },
-  "yargs": {
-    "duplicate-arguments-array": false
-  },
   "scripts": {
     "test": "gulp test && npm run test:unit",
     "prepare": "bower install && not-in-install && gulp build || in-install",
@@ -109,7 +106,7 @@
     "utf-8-validate": "^5.0.0",
     "uuid": "^14.0.2",
     "ws": "^8.21.3",
-    "yargs": "7.1.2",
+    "yargs": "^18.1.0",
     "yauzl": "^2.10.0",
     "zeromq": "^6.1.2"
   },
