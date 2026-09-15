@@ -190,7 +190,7 @@
     "script-loader": "^0.7.2",
     "sinon": "^22.1.0",
     "sinon-chai": "^4.0.1",
-    "style-loader": "^3.3.3",
+    "style-loader": "^4.0.0",
     "template-html-loader": "^1.0.0",
     "then-jade": "^2.4.4",
     "url-loader": "^4.1.1",
