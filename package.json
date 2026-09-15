@@ -94,7 +94,7 @@
     "protobufjs": "^8.8.0",
     "proxy-addr": "^2.0.7",
     "pug": "^3.0.3",
-    "request-progress": "^2.0.1",
+    "request-progress": "^3.0.0",
     "rethinkdb": "^2.0.2",
     "semver": "^7.3.5",
     "serve-favicon": "^2.5.0",
