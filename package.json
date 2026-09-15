@@ -103,7 +103,7 @@
     "socket.io-client": "^4.8.1",
     "split": "^1.0.0",
     "swagger-router": "^0.7.4",
-    "temp": "^0.8.1",
+    "temp": "^0.9.4",
     "transliteration": "^2.2.0",
     "url-join": "5.0.0",
     "utf-8-validate": "^5.0.0",
