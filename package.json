@@ -78,7 +78,7 @@
     "hipchatter": "^1.0.0",
     "http-proxy": "^1.18.1",
     "in-publish": "^2.0.0",
-    "jws": "^3.1.0",
+    "jws": "^4.0.1",
     "ldapts": "^9.0.0",
     "lodash": "^4.17.21",
     "machinepack-http": "^9.0.0",
