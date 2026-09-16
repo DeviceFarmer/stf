@@ -143,7 +143,7 @@
     "async": "^3.2.6",
     "bower": "^1.8.14",
     "chai": "^6.2.2",
-    "consolidate": "^0.14.5",
+    "consolidate": "^1.0.4",
     "css-loader": "^7.1.5",
     "del": "^2.0.1",
     "eslint": "^10.10.0",
