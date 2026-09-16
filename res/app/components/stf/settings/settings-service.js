@@ -28,7 +28,7 @@ module.exports = function SettingsServiceFactory(
     $rootScope.safeApply(function() {
       var undefinedValue
 
-      _.merge(settings, delta, function(a, b) {
+      _.mergeWith(settings, delta, function(a, b) {
         // New Arrays overwrite old Arrays
         return _.isArray(b) ? b : undefinedValue
       })
