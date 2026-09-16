@@ -146,6 +146,13 @@ roundtrip() {
   " "$LOG_DIR/$label-upload.out")
   if [ -n "$uphref" ]; then
     echo "  upload href: $uphref"
+    local uploaded_blob="${uphref/\/s\/apk\//\/s\/blob\/}"
+    got=$(curl -sS "http://127.0.0.1:$port$uploaded_blob" | md5sum | cut -d' ' -f1)
+    if [ "$got" = "$EXPECTED" ]; then
+      echo "  uploaded md5 matches: $got"
+    else
+      fail "$label: uploaded blob differs, expected $EXPECTED got $got"
+    fi
   else
     fail "$label: upload did not return a resource href"
     echo "  got: $(head -c 120 "$LOG_DIR/$label-upload.out" | tr -d '\0' | cat -v)"
