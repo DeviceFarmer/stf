@@ -80,7 +80,7 @@
     "lodash": "^4.17.21",
     "machinepack-http": "^9.0.0",
     "markdown-serve": "^0.9.0",
-    "mime": "^1.6.0",
+    "mime": "^4.1.0",
     "minimatch": "^10.2.6",
     "my-local-ip": "^1.0.0",
     "oboe": "^2.1.7",
