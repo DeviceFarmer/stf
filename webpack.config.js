@@ -56,7 +56,7 @@ module.exports = {
           , {test: /\.(woff|otf|ttf)/i
             , use: [{loader: 'url-loader', options: {limit: '1', mimetype: 'vnd.ms-fontobject'}}]}
           , {test: /\.pug$/i
-            , use: [{loader: 'template-html-loader', options: {engine: 'jade'}}]}
+            , use: [{loader: 'template-html-loader', options: {engine: 'pug'}}]}
           , {test: /\.html$/i, loader: 'html-loader'}
           , {test: /angular\.js$/i
             , use: [{loader: 'exports-loader', options: {type: 'commonjs', exports: 'angular'}}]}
