@@ -25,16 +25,14 @@ describe('dbapi device presence', function() {
   })
 
   describe('setDeviceAbsent', function() {
-    it('should clear ready so a departed device stops reporting itself as ready', function() {
+    it('should not touch ready', function() {
       dbapi.setDeviceAbsent('serial')
       expect(lastUpdate.present).to.equal(false)
-      expect(lastUpdate.ready).to.equal(false)
+      expect(lastUpdate).to.not.have.property('ready')
     })
   })
 
   describe('setDevicePresent', function() {
-    // Deliberately asymmetric: only a device worker reaching "Fully operational" may set ready,
-    // so marking a device present must not guess at it.
     it('should not touch ready', function() {
       dbapi.setDevicePresent('serial')
       expect(lastUpdate.present).to.equal(true)
