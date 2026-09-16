@@ -5,6 +5,7 @@
 //   node stf-devices.js list
 //   node stf-devices.js wait-ready [serial] [timeoutSeconds]
 //   node stf-devices.js wait-count <n> [timeoutSeconds]
+//   node stf-devices.js subscriber <serial>
 //
 // Exits 0 when the condition holds, 1 otherwise. Used by the integration and
 // Android jobs so "is the device usable" is answered by STF's own state rather
@@ -37,8 +38,11 @@ function summarize(device) {
       ? {width: device.display.width, height: device.display.height}
       : null
   , usable: !!(device.present && device.ready)
+  , phone: device.phone || null
   }
 }
+
+var SUBSCRIBER_PROPERTIES = ['imei', 'imsi', 'phoneNumber', 'iccid']
 
 function poll(predicate, timeoutSeconds) {
   var deadline = Date.now() + (timeoutSeconds || 240) * 1000
@@ -123,6 +127,38 @@ function main() {
     return poll(function(devices) {
       return devices.length >= wanted
     }, countTimeout).then(finish)
+  }
+
+  if (command === 'subscriber') {
+    var subscriberSerial = process.argv[3]
+
+    return loadDevices()
+      .then(function(devices) {
+        var device = devices.filter(function(candidate) {
+          return !subscriberSerial || candidate.serial === subscriberSerial
+        })[0]
+
+        if (!device) {
+          console.error('no device %s in the devices table', subscriberSerial || '')
+          return finish(false)
+        }
+
+        var phone = device.phone || {}
+        var missing = SUBSCRIBER_PROPERTIES.filter(function(name) {
+          return !phone[name]
+        })
+
+        console.log(JSON.stringify(phone, null, 2))
+
+        if (missing.length) {
+          console.error('missing: %s', missing.join(', '))
+        }
+        return finish(!missing.length)
+      })
+      .catch(function(err) {
+        console.error(err.stack || err.message)
+        return finish(false)
+      })
   }
 
   console.error('unknown command: %s', command)
