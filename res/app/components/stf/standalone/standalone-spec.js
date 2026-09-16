@@ -5,7 +5,7 @@ describe('StandaloneService', function() {
 
   var deviceA = {
     serial: 'serial-a'
-    , name: 'Device A'
+    , enhancedName: 'Device A'
     , model: 'Model A'
     , display: {
       width: 1080, height: 1920, rotation: 0
@@ -14,7 +14,7 @@ describe('StandaloneService', function() {
 
   var deviceB = {
     serial: 'serial-b'
-    , name: 'Device B'
+    , enhancedName: 'Device B'
     , model: 'Model B'
     , display: {
       width: 800, height: 1280, rotation: 0
@@ -23,7 +23,7 @@ describe('StandaloneService', function() {
 
   var rotatedDevice = {
     serial: 'serial-rotated'
-    , name: 'Device R'
+    , enhancedName: 'Device R'
     , model: 'Model R'
     , display: {
       width: 1080, height: 1920, rotation: 90
@@ -122,6 +122,23 @@ describe('StandaloneService', function() {
     popup.onresize()
 
     expect(popup.resizeTo).not.toHaveBeenCalled()
+  })
+
+  it('should title the window with the name the device list shows', function() {
+    service.open(deviceA)
+
+    expect(popup.document.title).toEqual('STF - Device A (Model A)')
+  })
+
+  it('should not repeat the model when it is the name', function() {
+    service.open({
+      serial: 'serial-c'
+      , enhancedName: 'Model C'
+      , model: 'Model C'
+      , display: {width: 1080, height: 1920, rotation: 0}
+    })
+
+    expect(popup.document.title).toEqual('STF - Model C')
   })
 
   it('should leave a resized window of a rotated device that fits', function() {
