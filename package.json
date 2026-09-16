@@ -61,7 +61,7 @@
     "bluebird": "^3.7.2",
     "body-parser": "^2.3.0",
     "bufferutil": "^4.0.8",
-    "chalk": "^4.1.2",
+    "chalk": "^6.0.0",
     "compression": "^1.7.5",
     "cookie-session": "^2.0.0-alpha.1",
     "cross-spawn": "^7.0.5",
