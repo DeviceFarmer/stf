@@ -5,6 +5,7 @@ const results = path.resolve(__dirname, '../../test-results/playwright')
 
 module.exports = defineConfig({
   testDir: __dirname,
+  testIgnore: process.env.STF_COMPOSE ? [] : ['**/compose.spec.js'],
   timeout: 180000,
   expect: {timeout: 45000},
   fullyParallel: false,

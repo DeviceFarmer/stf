@@ -1,36 +1,192 @@
-version: "3"
+x-stf: &stf
+  image: ${STF_IMAGE:-devicefarmer/stf:latest}
+  restart: ${STF_RESTART_POLICY:-unless-stopped}
+  environment:
+    TZ: ${TZ:-UTC}
+    PORT: 7100
+    RETHINKDB_PORT_28015_TCP: tcp://rethinkdb:28015
+    SECRET: ${STF_SECRET:?Set STF_SECRET to a shared session secret}
+    STF_ADMIN_EMAIL: ${STF_ADMIN_EMAIL:-administrator@fakedomain.com}
+    STF_ADMIN_NAME: ${STF_ADMIN_NAME:-administrator}
+  depends_on: &database-ready
+    migrate:
+      condition: service_completed_successfully
+
+x-http: &http
+  <<: *stf
+  healthcheck:
+    test: [CMD, node, -e, "require('net').connect(7100, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+    interval: 5s
+    timeout: 5s
+    retries: 36
+
+x-triproxy: &triproxy
+  <<: *stf
+  healthcheck:
+    test: [CMD, node, -e, "require('net').connect(7112, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+    interval: 5s
+    timeout: 5s
+    retries: 36
+
+x-messaging-ready: &messaging-ready
+  <<: *database-ready
+  triproxy-app:
+    condition: service_healthy
+  triproxy-dev:
+    condition: service_healthy
 
 services:
   rethinkdb:
-    container_name: rethinkdb
     image: rethinkdb:2.4.2
-    restart: unless-stopped
+    restart: ${STF_RESTART_POLICY:-unless-stopped}
     volumes:
-        - "rethinkdb-data:/data"
-    command: "rethinkdb --bind all --cache-size 2048"
+      - rethinkdb-data:/data
+    command: rethinkdb --bind all --cache-size 2048
+    healthcheck:
+      test: [CMD, bash, -c, "echo > /dev/tcp/127.0.0.1/28015"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
   adb:
-    container_name: adb
     image: devicefarmer/adb:latest
-    restart: unless-stopped
-    volumes: 
-      - "/dev/bus/usb:/dev/bus/usb"
+    restart: ${STF_RESTART_POLICY:-unless-stopped}
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
     privileged: true
 
-  stf:
-    container_name: stf
-    image: devicefarmer/stf
+  migrate:
+    <<: *stf
+    command: stf migrate
+    restart: "no"
+    depends_on:
+      rethinkdb:
+        condition: service_healthy
+
+  triproxy-app:
+    <<: *triproxy
+    command: stf triproxy app
+
+  triproxy-dev:
+    <<: *triproxy
+    command: stf triproxy dev
+
+  processor:
+    <<: *stf
+    command: >-
+      stf processor compose
+      --connect-app-dealer tcp://triproxy-app:7112
+      --connect-dev-dealer tcp://triproxy-dev:7112
+    depends_on: *messaging-ready
+
+  reaper:
+    <<: *stf
+    command: >-
+      stf reaper compose
+      --connect-push tcp://triproxy-dev:7113
+      --connect-sub tcp://triproxy-app:7111
+    depends_on: *messaging-ready
+
+  groups-engine:
+    <<: *stf
+    command: >-
+      stf groups-engine
+      --connect-push tcp://triproxy-app:7113
+      --connect-sub tcp://triproxy-app:7111
+      --connect-push-dev tcp://triproxy-dev:7113
+      --connect-sub-dev tcp://triproxy-dev:7111
+    depends_on: *messaging-ready
+
+  auth:
+    <<: *http
+    command: stf auth-mock --app-url http://${STF_PUBLIC_IP:-127.0.0.1}:7100/
+
+  app:
+    <<: *http
+    command: >-
+      stf app
+      --auth-url http://${STF_PUBLIC_IP:-127.0.0.1}:7100/auth/mock/
+      --websocket-url http://${STF_PUBLIC_IP:-127.0.0.1}:7100/
+
+  api:
+    <<: *http
+    command: >-
+      stf api
+      --connect-push tcp://triproxy-app:7113
+      --connect-sub tcp://triproxy-app:7111
+      --connect-push-dev tcp://triproxy-dev:7113
+      --connect-sub-dev tcp://triproxy-dev:7111
+    depends_on: *messaging-ready
+
+  websocket:
+    <<: *http
+    command: >-
+      stf websocket --storage-url http://proxy:7100/
+      --connect-push tcp://triproxy-app:7113
+      --connect-sub tcp://triproxy-app:7111
+    depends_on: *messaging-ready
+
+  storage:
+    <<: *http
+    command: stf storage-temp
+
+  storage-image:
+    <<: *http
+    command: stf storage-plugin-image --storage-url http://storage:7100/
+
+  storage-apk:
+    <<: *http
+    command: stf storage-plugin-apk --storage-url http://storage:7100/
+
+  provider:
+    <<: *stf
+    command: >-
+      stf provider --name compose --adb-host adb
+      --public-ip ${STF_PUBLIC_IP:-127.0.0.1}
+      --min-port 7400 --max-port 7500
+      --storage-url http://proxy:7100/
+      --connect-sub tcp://triproxy-dev:7111
+      --connect-push tcp://triproxy-dev:7113
+    depends_on:
+      <<: *messaging-ready
+      adb:
+        condition: service_started
+      proxy:
+        condition: service_healthy
+      processor:
+        condition: service_started
+      groups-engine:
+        condition: service_started
+    ports:
+      - "7400-7500:7400-7500"
+
+  proxy:
+    image: nginx:stable-alpine
+    restart: ${STF_RESTART_POLICY:-unless-stopped}
+    volumes:
+      - ./docker/compose/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "7100:7100"
-      - "7110:7110"
-      - "7400-7500:7400-7500"
-    environment:
-      - TZ='America/Los_Angeles'
-      - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
-      - STF_ADMIN_EMAIL=<YOUR_EMAIL>
-      - STF_ADMIN_NAME=<YOUR_NAME>
-    restart: unless-stopped
-    command: stf local --adb-host adb --public-ip YOUR_IP --provider-min-port 7400 --provider-max-port 7500
+    depends_on:
+      auth:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      websocket:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+      storage-image:
+        condition: service_healthy
+      storage-apk:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:7100/auth/mock/]
+      interval: 5s
+      timeout: 5s
+      retries: 36
 
 volumes:
   rethinkdb-data: {}
