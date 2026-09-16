@@ -79,8 +79,8 @@ module.exports =
       var newWindow = $window.open(url, 'STF-' + device.serial, features)
 
       function setWindowTitle(newWindow, device) {
-        var windowTitle = 'STF - ' + device.name
-        if (device.name !== device.model) {
+        var windowTitle = 'STF - ' + device.enhancedName
+        if (device.enhancedName !== device.model) {
           windowTitle += ' (' + device.model + ')'
         }
         // windowTitle += ' (' + device.serial + ')'

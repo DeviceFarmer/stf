@@ -66,6 +66,23 @@ describe('auth-mock', function() {
       }).on('error', done)
     }
 
+    function challenge(done) {
+      http.get({
+        host: '127.0.0.1'
+      , port: port
+      , path: '/auth/mock/'
+      , headers: {}
+      }, function(res) {
+        var body = ''
+        res.on('data', function(chunk) {
+          body += chunk
+        })
+        res.on('end', function() {
+          done(null, res.statusCode, res.headers, body)
+        })
+      }).on('error', done)
+    }
+
     function basic(user, pass) {
       var raw = Buffer.from(user + ':' + pass).toString('base64')
       return {authorization: 'Basic ' + raw}
@@ -135,6 +152,19 @@ describe('auth-mock', function() {
           return done(err)
         }
         expect(code).to.equal(401)
+        return done()
+      })
+    })
+
+    it('should challenge with a 401 status and not a 401 body', function(done) {
+      challenge(function(err, code, headers, body) {
+        if (err) {
+          return done(err)
+        }
+        expect(code).to.equal(401)
+        expect(headers['www-authenticate']).to.equal(
+          'Basic realm=Authorization Required')
+        expect(body).to.equal('Unauthorized')
         return done()
       })
     })
