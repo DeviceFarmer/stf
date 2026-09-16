@@ -36,7 +36,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1131.0",
     "@aws-sdk/credential-providers": "^3.1131.0",
-    "@cypress/request": "^3.0.6",
+    "@cypress/request": "^4.0.1",
     "@devicefarmer/adbkit": "^3.3.9",
     "@devicefarmer/adbkit-apkreader": "^3.2.4",
     "@devicefarmer/adbkit-monkey": "^1.2.1",
