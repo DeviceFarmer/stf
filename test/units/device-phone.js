@@ -27,7 +27,6 @@ function fetch(options) {
   var result = phone.invoke(
     {serial: 'test-device'}
   , adb
-  , {level: options.level}
   , {path: '/data/app/stf.apk', main: 'jp.co.cyberagent.stf.Agent'}
   , service
   )
@@ -40,8 +39,7 @@ describe('device phone info', function() {
   it('should take the identifiers the agent prints and ignore everything else',
     async function() {
       var run = await fetch({
-        level: 34
-      , fromService: {network: 'LTE'}
+        fromService: {network: 'LTE'}
       , shell: function() {
           return Promise.resolve(agentOutput([
             'Unable to read subscriber property: nope'
@@ -71,8 +69,7 @@ describe('device phone info', function() {
   it('should leave the fields blank against an agent without the argument',
     async function() {
       var run = await fetch({
-        level: 34
-      , fromService: {}
+        fromService: {}
       , shell: function() {
           return Promise.resolve(
             agentOutput('Error: unknown argument --telephony\n')
@@ -86,8 +83,7 @@ describe('device phone info', function() {
   it('should never overwrite what the service already answered',
     async function() {
       var run = await fetch({
-        level: 34
-      , fromService: {imei: 'from-service'}
+        fromService: {imei: 'from-service'}
       , shell: function() {
           return Promise.resolve(agentOutput('imei=from-agent\nimsi=42\n'))
         }
@@ -97,13 +93,6 @@ describe('device phone info', function() {
       expect(run.properties.imsi).to.equal('42')
     })
 
-  it('should not ask the agent below api 29', async function() {
-    var run = await fetch({level: 28, fromService: {}})
-
-    expect(run.adb.shell.called).to.equal(false)
-    expect(run.properties).to.deep.equal({})
-  })
-
   it('should not ask the agent when the service answered everything',
     async function() {
       var complete = {
@@ -112,7 +101,7 @@ describe('device phone info', function() {
       , phoneNumber: 'c'
       , iccid: 'd'
       }
-      var run = await fetch({level: 34, fromService: complete})
+      var run = await fetch({fromService: complete})
 
       expect(run.adb.shell.called).to.equal(false)
       expect(run.properties).to.deep.equal(complete)
@@ -121,8 +110,7 @@ describe('device phone info', function() {
   it('should keep the service properties when the agent cannot be run',
     async function() {
       var run = await fetch({
-        level: 34
-      , fromService: {network: 'LTE'}
+        fromService: {network: 'LTE'}
       , shell: function() {
           return Promise.reject(new Error('device offline'))
         }

@@ -61,10 +61,9 @@ var LAYERS = [
   , gating: true
   , failure: 'the SIM identifiers never reached the device document'
   , blurb: 'imei, imsi, iccid and phoneNumber landed on the device ' +
-      'document, which needs an STFService build whose agent answers ' +
-      '`--telephony` (API levels below 29 read them in the application ' +
-      'itself, and a leg whose emulator has no SIM loaded records a pass ' +
-      'because there is nothing to read)'
+      'document, which from API 23 up needs an STFService build whose agent ' +
+      'answers `--telephony` (a leg whose emulator has no SIM loaded records ' +
+      'a pass, because there is nothing to read)'
   }
 , {
     key: 'screen_stream'
