@@ -1,0 +1,19 @@
+services:
+  rethinkdb:
+    command: rethinkdb --bind all --cache-size 256
+
+  adb:
+    platform: linux/amd64
+    privileged: false
+    volumes: !override
+      - "${STF_ADB_KEYS:?Set STF_ADB_KEYS to the host adb key directory}:/root/.android:ro"
+    ports:
+      - "127.0.0.1:15037:5037"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  provider:
+    environment:
+      STF_PROVIDER_ALLOW_REMOTE: "true"
+      STF_PROVIDER_CLEANUP: "false"
+      SCREEN_GRABBER: minicap-apk

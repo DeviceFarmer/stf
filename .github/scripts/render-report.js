@@ -33,6 +33,7 @@ var CORE_LABELS = {
 , component: 'Component tests (karma + AngularJS)'
 , integration:
     'Integration + device-less E2E (stf local + RethinkDB + Playwright)'
+, compose: 'Docker Compose + AVD + Playwright (Android 16, API 36)'
 }
 
 var CORE_ORDER = Object.keys(CORE_LABELS)
