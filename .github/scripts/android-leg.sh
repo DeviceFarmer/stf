@@ -181,22 +181,23 @@ fi
 
 note "checking that the SIM identifiers reached the device document"
 sim_state=""
-sim_loaded=no
+sim_ready=no
 waited=0
 while [ "$waited" -lt 30 ]; do
   sim_state="$(adb -s "$SERIAL" shell getprop gsm.sim.state 2>/dev/null | tr -d '\r\n')"
-  case "$sim_state" in
-    *LOADED*)
-      sim_loaded=yes
+  case ",$sim_state," in
+    *,READY,* | *,LOADED,*)
+      sim_ready=yes
       break
       ;;
   esac
   sleep 3
   waited=$((waited + 3))
 done
+echo "  gsm.sim.state=${sim_state:-unknown}"
 
-if [ "$sim_loaded" != "yes" ]; then
-  echo "::warning::no SIM loaded on $SERIAL (gsm.sim.state=${sim_state:-unknown}), so there are no identifiers to read"
+if [ "$sim_ready" != "yes" ]; then
+  echo "::warning::no usable SIM on $SERIAL (gsm.sim.state=${sim_state:-unknown}), so there are no identifiers to read"
   set_check subscriber_properties pass
 elif node .github/scripts/stf-devices.js subscriber "$SERIAL"; then
   set_check subscriber_properties pass
