@@ -1,4 +1,4 @@
-var chalk = require('chalk')
+var chalk = require('chalk').default
 /* eslint no-console:0 */
 
 // http://stackoverflow.com/questions/7157999/output-jasmine-test-results-to-the-console
