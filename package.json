@@ -53,7 +53,7 @@
     "@dr.pogodin/csurf": "^1.14.1",
     "@julusian/jpeg-turbo": "^3.0.1",
     "@node-saml/passport-saml": "^5.0.1",
-    "@slack/web-api": "^7.9.2",
+    "@slack/web-api": "^8.1.1",
     "@targetprocess/swagger-tools": "^1.0.1",
     "android-device-list": "^1.2.10",
     "autodesk-forks-swagger-express-mw": "^0.9.0",
