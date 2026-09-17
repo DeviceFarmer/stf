@@ -18,11 +18,13 @@ describe('development assets', function() {
   before(async function() {
     directory = await fs.mkdtemp(path.join(os.tmpdir(), 'stf-webpack-'))
     await fs.writeFile(path.join(directory, 'entry.js'),
-      "require('./style.less'); module.exports = require('./template.pug')")
+      "require('./style.less'); require('./template.html'); module.exports = require('./template.pug')")
     await fs.writeFile(path.join(directory, 'style.less'),
       '@color: #123456; .dependency-check { color: @color; }')
     await fs.writeFile(path.join(directory, 'template.pug'),
       'section.dependency-check\n  strong Pug rendered this')
+    await fs.writeFile(path.join(directory, 'template.html'),
+      '<section><strong>HTML loaded this</strong></section>')
 
     var observe = sinon.stub(lifecycle, 'observe').callsFake(function(fn) {
       cleanup = fn
@@ -61,12 +63,13 @@ describe('development assets', function() {
     await fs.rm(directory, {recursive: true, force: true})
   })
 
-  it('should compile Pug and Less and serve JavaScript with its MIME type', async function() {
+  it('should compile Pug, HTML and Less and serve JavaScript with its MIME type', async function() {
     var response = await fetch(origin + '/app.js', {signal: AbortSignal.timeout(5000)})
     var body = await response.text()
     expect(response.status).to.equal(200)
     expect(response.headers.get('content-type')).to.match(/^(text|application)\/javascript/)
     expect(body).to.contain('<strong>Pug rendered this</strong>')
+    expect(body).to.contain('<strong>HTML loaded this</strong>')
     expect(body).to.contain('#123456')
     expect(body).not.to.contain('Module build failed')
     expect(body).not.to.contain('Cannot find module')

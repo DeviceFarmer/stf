@@ -12,7 +12,7 @@ var webpack = require('webpack')
 var webpackStatusConfig = require('./res/common/status/webpack.config')
 var gettext = require('gulp-angular-gettext')
 var pug = require('gulp-pug')
-var del = require('del')
+var deleteAsync = require('del').deleteAsync
 // var protractor = require('gulp-protractor')
 var protractor = require('./res/test/e2e/helpers/gulp-protractor-adv')
 var protractorConfig = './res/test/protractor.conf'
@@ -222,12 +222,12 @@ gulp.task('translate:pull', function() {
   return run('tx pull').exec()
 })
 
-gulp.task('clean', function(cb) {
-  return del([
+gulp.task('clean', function() {
+  return deleteAsync([
     './tmp'
     , './res/build'
     , '.eslintcache'
-  ], cb)
+  ])
 })
 
 gulp.task('build', gulp.parallel('clean', 'webpack:build'))
