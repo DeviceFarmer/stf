@@ -65,7 +65,7 @@
     "compression": "^1.7.5",
     "cookie-session": "^2.0.0-alpha.1",
     "cross-spawn": "^7.0.5",
-    "debug": "^3.1.0",
+    "debug": "^4.4.3",
     "eventemitter3": "^5.0.4",
     "express": "^5.2.1",
     "express-validator": "^7.2.0",
