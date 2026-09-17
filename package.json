@@ -102,7 +102,7 @@
     "temp": "^0.9.4",
     "transliteration": "^2.2.0",
     "url-join": "5.0.0",
-    "utf-8-validate": "^5.0.0",
+    "utf-8-validate": "^6.0.6",
     "uuid": "^14.0.2",
     "ws": "^8.21.3",
     "yargs": "^18.1.0",
