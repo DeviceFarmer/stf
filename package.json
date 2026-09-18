@@ -164,7 +164,7 @@
     "gulp-util": "^3.0.7",
     "html-loader": "^5.1.0",
     "http-https": "^1.0.0",
-    "imports-loader": "^4.0.1",
+    "imports-loader": "^5.0.0",
     "jasmine-core": "^7.0.2",
     "jasmine-reporters": "^2.3.2",
     "karma": "^6.4.4",
