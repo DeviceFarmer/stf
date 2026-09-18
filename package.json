@@ -152,7 +152,6 @@
     "eslint": "^10.10.0",
     "event-stream": "^4.0.1",
     "exports-loader": "^5.0.0",
-    "file-loader": "^6.2.0",
     "fs-extra": "^11.4.0",
     "globals": "^17.12.0",
     "gulp": "^5.0.0",
@@ -191,7 +190,6 @@
     "sinon-chai": "^4.0.1",
     "style-loader": "^4.0.0",
     "template-html-loader": "^1.0.0",
-    "url-loader": "^4.1.1",
     "webpack": "^5.97.0",
     "webpack-dev-server": "^6.0.0"
   },

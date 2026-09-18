@@ -14,7 +14,7 @@ module.exports = function NavigationCtrl($scope, $rootScope) {
   }
 
   function resetFavicon() {
-    $scope.urlFavicon = require('./default-favicon.png').default
+    $scope.urlFavicon = require('./default-favicon.png')
     faviconIsSet = false
   }
 
