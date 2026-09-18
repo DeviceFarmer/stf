@@ -1,4 +1,8 @@
 var Readable = require('stream').Readable
+var childProcess = require('child_process')
+var fs = require('fs')
+var os = require('os')
+var path = require('path')
 
 var expect = require('chai').expect
 var Promise = require('bluebird')
@@ -17,8 +21,9 @@ function agentOutput(text) {
 
 function fetch(options) {
   var adb = {
-    shell: sinon.stub().callsFake(function() {
-      return options.shell ? options.shell() : Promise.resolve(agentOutput(''))
+    shell: sinon.stub().callsFake(function(serial, command) {
+      return options.shell ? options.shell(command) :
+        Promise.resolve(agentOutput(''))
     })
   }
   var service = {
@@ -35,7 +40,57 @@ function fetch(options) {
   })
 }
 
+function runShell(uid, command) {
+  var directory = fs.mkdtempSync(path.join(os.tmpdir(), 'stf-phone-'))
+  var scripts = {
+    id: 'printf "%s\\n" "$STF_TEST_UID"\n'
+  , su: '[ "$1" = shell ] || exit 1\n' +
+      'shift\nSTF_TEST_UID=2000 exec "$@"\n'
+  , app_process: '[ "$STF_TEST_UID" = 2000 ] || exit 1\n' +
+      '[ "$CLASSPATH" = /data/app/stf.apk ] || exit 1\n' +
+      '[ "$*" = "/system/bin jp.co.cyberagent.stf.Agent --telephony" ]' +
+      ' || exit 1\n' +
+      'printf "imei=a\\nimsi=b\\nphoneNumber=c\\niccid=d\\n"\n'
+  }
+  try {
+    Object.keys(scripts).forEach(function(name) {
+      fs.writeFileSync(path.join(directory, name), scripts[name], {mode: 0o755})
+    })
+    var result = childProcess.spawnSync('/bin/sh', ['-c', command], {
+      env: Object.assign({}, process.env, {
+        PATH: directory
+      , STF_TEST_UID: String(uid)
+      })
+    , encoding: 'utf8'
+    })
+    expect(result.status).to.equal(0, result.stderr)
+    return result.stdout
+  }
+  finally {
+    fs.rmSync(directory, {recursive: true, force: true})
+  }
+}
+
 describe('device phone info', function() {
+  [0, 2000].forEach(function(uid) {
+    it('should query as the shell user when ADB uses UID ' + uid,
+      async function() {
+        var run = await fetch({
+          fromService: {}
+        , shell: function(command) {
+            return Promise.resolve(agentOutput(runShell(uid, command)))
+          }
+        })
+
+        expect(run.properties).to.deep.equal({
+          imei: 'a'
+        , imsi: 'b'
+        , phoneNumber: 'c'
+        , iccid: 'd'
+        })
+      })
+  })
+
   it('should take the identifiers the agent prints and ignore everything else',
     async function() {
       var run = await fetch({
