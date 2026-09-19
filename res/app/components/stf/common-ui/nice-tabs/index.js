@@ -1,3 +1,5 @@
+require('./nice-tabs.css')
+
 module.exports = angular.module('stf.nice-tabs', [
 
 ])
