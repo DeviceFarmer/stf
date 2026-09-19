@@ -155,6 +155,29 @@ note "turning on show_touches so gestures are visible in the recording"
 adb -s "$SERIAL" shell settings put system show_touches 1 2>&1 | sed 's/^/  /' || \
   echo "  could not set show_touches, the device recording will show less"
 
+note "waiting for the SIM before STF reads the device identity"
+sim_state=""
+sim_read=no
+sim_ready=no
+waited=0
+while [ "$waited" -lt 30 ]; do
+  if sim_state="$(adb -s "$SERIAL" shell getprop gsm.sim.state | tr -d '\r\n')"; then
+    sim_read=yes
+  else
+    sim_state=""
+    sim_read=no
+  fi
+  case ",$sim_state," in
+    *,READY,* | *,LOADED,*)
+      sim_ready=yes
+      break
+      ;;
+  esac
+  sleep 3
+  waited=$((waited + 3))
+done
+echo "  gsm.sim.state=${sim_state:-unknown}"
+
 note "starting stf local against $SERIAL"
 if ! bash .github/scripts/start-stf.sh "$SERIAL"; then
   echo "::error::stf local did not come up"
@@ -180,23 +203,10 @@ else
 fi
 
 note "checking that the SIM identifiers reached the device document"
-sim_state=""
-sim_ready=no
-waited=0
-while [ "$waited" -lt 30 ]; do
-  sim_state="$(adb -s "$SERIAL" shell getprop gsm.sim.state 2>/dev/null | tr -d '\r\n')"
-  case ",$sim_state," in
-    *,READY,* | *,LOADED,*)
-      sim_ready=yes
-      break
-      ;;
-  esac
-  sleep 3
-  waited=$((waited + 3))
-done
-echo "  gsm.sim.state=${sim_state:-unknown}"
-
-if [ "$sim_ready" != "yes" ]; then
+if [ "$sim_read" != "yes" ]; then
+  echo "::error::could not read gsm.sim.state on $SERIAL, so there is nothing to judge the identifiers against"
+  set_check subscriber_properties fail
+elif [ "$sim_ready" != "yes" ]; then
   echo "::warning::no usable SIM on $SERIAL (gsm.sim.state=${sim_state:-unknown}), so there are no identifiers to read"
   set_check subscriber_properties pass
 elif node .github/scripts/stf-devices.js subscriber "$SERIAL"; then

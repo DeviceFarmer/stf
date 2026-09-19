@@ -34,6 +34,7 @@ function fetch(options) {
   , adb
   , {path: '/data/app/stf.apk', main: 'jp.co.cyberagent.stf.Agent'}
   , service
+  , options.deviceProperties || {'gsm.sim.state': 'LOADED'}
   )
   return result.then(function(properties) {
     return {properties: properties, adb: adb, service: service}
@@ -72,7 +73,78 @@ function runShell(uid, command) {
 }
 
 describe('device phone info', function() {
-  [0, 2000].forEach(function(uid) {
+  ;['ABSENT', 'NOT_READY', 'ABSENT,NOT_READY'].forEach(function(state) {
+    it('should not query subscriber fields when SIM state is ' + state,
+      async function() {
+        var properties = {imei: 'from-service', network: 'LTE'}
+        var run = await fetch({
+          fromService: properties
+        , deviceProperties: {'gsm.sim.state': state}
+        })
+
+        expect(run.adb.shell.called).to.equal(false)
+        expect(run.properties).to.deep.equal(properties)
+      })
+  })
+
+  ;['READY', 'LOADED', 'ABSENT,READY', 'NOT_READY, LOADED']
+    .forEach(function(state) {
+      it('should query missing subscriber fields when SIM state is ' + state,
+        async function() {
+          var run = await fetch({
+            fromService: {imei: 'from-service'}
+          , deviceProperties: {'gsm.sim.state': state}
+          , shell: function() {
+              return Promise.resolve(agentOutput(
+                'imsi=from-agent\niccid=sim-card\nphoneNumber=123\n'
+              ))
+            }
+          })
+
+          expect(run.adb.shell.calledOnce).to.equal(true)
+          expect(run.properties).to.deep.equal({
+            imei: 'from-service'
+          , imsi: 'from-agent'
+          , iccid: 'sim-card'
+          , phoneNumber: '123'
+          })
+        })
+    })
+
+  ;[{}, {'gsm.sim.state': ''}].forEach(function(deviceProperties) {
+    it('should still query the agent when SIM state is unknown',
+      async function() {
+        var run = await fetch({
+          fromService: {imei: 'from-service'}
+        , deviceProperties: deviceProperties
+        , shell: function() {
+            return Promise.resolve(agentOutput('imsi=from-agent\n'))
+          }
+        })
+
+        expect(run.adb.shell.calledOnce).to.equal(true)
+        expect(run.properties.imsi).to.equal('from-agent')
+      })
+  })
+
+  it('should query a missing handset IMEI even when no SIM is present',
+    async function() {
+      var run = await fetch({
+        fromService: {network: 'LTE'}
+      , deviceProperties: {'gsm.sim.state': 'ABSENT'}
+      , shell: function() {
+          return Promise.resolve(agentOutput('imei=from-agent\n'))
+        }
+      })
+
+      expect(run.adb.shell.calledOnce).to.equal(true)
+      expect(run.properties).to.deep.equal({
+        network: 'LTE'
+      , imei: 'from-agent'
+      })
+    })
+
+  ;[0, 2000].forEach(function(uid) {
     it('should query as the shell user when ADB uses UID ' + uid,
       async function() {
         var run = await fetch({
