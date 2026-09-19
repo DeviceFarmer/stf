@@ -5,7 +5,7 @@
 // by walking it, and render-report.js renders one table column per entry in the
 // same order. Splitting the list across files let the two disagree.
 //
-// The first eight are device capability, most fundamental first. `teardown` is
+// The first nine are device capability, most fundamental first. `teardown` is
 // last because it is about the runner rather than the device, and it is only
 // knowable once the leg script has exited.
 //
@@ -53,6 +53,17 @@ var LAYERS = [
   , gating: true
   , failure: 'STF never marked the device present and ready'
   , blurb: 'STF offered it as `Use` and handed over control'
+  }
+, {
+    key: 'subscriber_properties'
+  , label: 'SIM IDs'
+  , seed: 'skip'
+  , gating: true
+  , failure: 'the SIM identifiers never reached the device document'
+  , blurb: 'imei, imsi, iccid and phoneNumber landed on the device ' +
+      'document, which from API 23 up needs an STFService build whose agent ' +
+      'answers `--telephony` (a leg whose emulator reports no usable SIM ' +
+      'records a pass, because there is nothing to read)'
   }
 , {
     key: 'screen_stream'
