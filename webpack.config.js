@@ -48,13 +48,10 @@ module.exports = {
           {test: /\.css$/i, use: ['style-loader', 'css-loader']}
           , {test: /\.scss$/i, use: ['style-loader', 'css-loader', 'sass-loader']}
           , {test: /\.less$/i, use: ['style-loader', 'css-loader', 'less-loader']}
-          , {test: /\.(jpg|png|gif)$/i, use: [{loader: 'url-loader', options: {limit: 1000}}]}
-          , {test: /\.svg/i
-            , use: [{loader: 'url-loader', options: {limit: 1, mimetype: 'image/svg+xml'}}]}
-          , {test: /\.eot$/i
-            , use: [{loader: 'url-loader', options: {limit: 1, mimetype: 'vnd.ms-fontobject'}}]}
-          , {test: /\.(woff|otf|ttf)/i
-            , use: [{loader: 'url-loader', options: {limit: '1', mimetype: 'vnd.ms-fontobject'}}]}
+          , {test: /\.(jpg|png|gif)$/i
+            , type: 'asset'
+            , parser: {dataUrlCondition: {maxSize: 1000}}}
+          , {test: /\.(svg|eot|woff2?|otf|ttf)/i, type: 'asset/resource'}
           , {test: /\.pug$/i
             , use: [{loader: 'template-html-loader', options: {engine: 'pug'}}]}
           , {test: /\.html$/i, loader: 'html-loader'}
