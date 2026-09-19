@@ -323,6 +323,7 @@ ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
+  --link rethinkdb-proxy-28015:rethinkdb \
   -v /srv/ssl/id_provider.cert:/etc/id_provider.cert:ro \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -e "SAML_ID_PROVIDER_ENTRY_POINT_URL=YOUR_ID_PROVIDER_ENTRY_POINT" \
