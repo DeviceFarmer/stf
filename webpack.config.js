@@ -54,7 +54,13 @@ module.exports = {
           , {test: /\.(svg|eot|woff2?|otf|ttf)/i, type: 'asset/resource'}
           , {test: /\.pug$/i
             , use: [{loader: 'template-html-loader', options: {engine: 'pug'}}]}
-          , {test: /\.html$/i, loader: 'html-loader'}
+          , {
+              test: /\.html$/i
+            , loader: 'html-loader'
+            , options: {
+                esModule: false
+              }
+            }
           , {test: /angular\.js$/i
             , use: [{loader: 'exports-loader', options: {type: 'commonjs', exports: 'angular'}}]}
           , {test: /angular-cookies\.js$/i
