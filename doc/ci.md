@@ -50,6 +50,15 @@ job. That is a smoke test of the front end, not a behavioural one.
 
 ## The Android matrix
 
+The Android legs, retries and Compose emulator use
+`.github/scripts/with-emulator-cleanup.sh` to stop the emulator after the test
+script and its diagnostics finish. Cleanup limits `adb emu kill` to 10 seconds,
+then allows 10 seconds for QEMU to exit before sending SIGTERM and another
+5 seconds before SIGKILL. It checks that the selected emulator has stopped
+within another 5 seconds and preserves the test script's exit status. This
+prevents an emulator that acknowledges shutdown but stays alive from holding
+the action open until its 50 minute step timeout.
+
 Legs come from `.github/android-matrix.json`. To add or change one, edit that
 file only: the matrix is generated from it and the report uses the same file to
 decide which legs were required to report, so the two cannot drift apart. API
