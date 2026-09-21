@@ -71,6 +71,7 @@ describe('development assets', function() {
     expect(body).to.contain('<strong>Pug rendered this</strong>')
     expect(body).to.contain('<strong>HTML loaded this</strong>')
     expect(body).to.contain('#123456')
+    expect(body).to.contain('module.exports = code;')
     expect(body).not.to.contain('Module build failed')
     expect(body).not.to.contain('Cannot find module')
   })
