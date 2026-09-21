@@ -35,14 +35,19 @@ ul.devices-icon-view li:hover .device-photo-small img {
 }
 
 ul.devices-icon-view .device-photo-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 90px;
   margin-top: 8px;
   margin-bottom: 10px;
 }
 
 ul.devices-icon-view .device-photo-small img {
   width: auto;
-  height: 90px;
-  max-width: 95%; /* TODO: Fix this with a new container */
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 ul.devices-icon-view .device-name-bigtext {
