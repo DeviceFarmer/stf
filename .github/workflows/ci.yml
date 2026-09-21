@@ -642,7 +642,7 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
             -no-boot-anim -camera-back none -camera-front none
-          script: bash .github/scripts/android-leg.sh
+          script: bash .github/scripts/with-emulator-cleanup.sh .github/scripts/android-leg.sh
 
       - name: Derive the verdict
         if: always()
@@ -717,7 +717,7 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
             -no-boot-anim -camera-back none -camera-front none
-          script: bash .github/scripts/android-leg.sh
+          script: bash .github/scripts/with-emulator-cleanup.sh .github/scripts/android-leg.sh
 
       - name: Derive the verdict again
         if: always() && steps.emulator_retry.outcome != 'skipped'
@@ -843,7 +843,7 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
             -no-boot-anim -camera-back none -camera-front none
-          script: bash .github/scripts/compose-leg.sh
+          script: bash .github/scripts/with-emulator-cleanup.sh .github/scripts/compose-leg.sh
 
       - name: Collect Compose diagnostics
         if: always()
