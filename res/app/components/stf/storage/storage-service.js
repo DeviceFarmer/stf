@@ -14,7 +14,11 @@ module.exports = function StorageServiceFactory($http, $upload) {
   }
 
   service.storeFile = function(type, files, options) {
-    var resolver = Promise.defer()
+    var resolve_, reject_
+    var promise = new Promise(function(resolve, reject) {
+      resolve_ = resolve
+      reject_ = reject
+    })
     var notify = null
     var input = options.filter ? files.filter(options.filter) : files
 
@@ -26,10 +30,10 @@ module.exports = function StorageServiceFactory($http, $upload) {
         })
         .then(
           function(value) {
-            resolver.resolve(value)
+            resolve_(value)
           }
         , function(err) {
-            resolver.reject(err)
+            reject_(err)
           }
         , function(progressEvent) {
             if (notify) {
@@ -41,10 +45,8 @@ module.exports = function StorageServiceFactory($http, $upload) {
     else {
       var err = new Error('No input files')
       err.code = 'no_input_files'
-      resolver.reject(err)
+      reject_(err)
     }
-
-    var promise = resolver.promise
 
     promise.progressed = function(listener) {
       notify = listener

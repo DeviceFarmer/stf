@@ -9,7 +9,11 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
   }
 
   function PendingTransactionResult(result, onProgress) {
-    var resolver = Promise.defer()
+    var resolve_, reject_
+    var promise = new Promise(function(resolve, reject) {
+      resolve_ = resolve
+      reject_ = reject
+    })
     var seq = 0
     var last = Infinity
     var unplaced = []
@@ -32,11 +36,11 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
             if (message.data) {
               result.lastData = result.data[seq] = message.data
             }
-            resolver.resolve(result)
+            resolve_(result)
           }
           else {
             result.lastData = result.error = message.data
-            resolver.reject(new TransactionError(result))
+            reject_(new TransactionError(result))
           }
 
           return
@@ -76,7 +80,7 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     }
 
     this.result = result
-    this.promise = resolver.promise.finally(function() {
+    this.promise = promise.finally(function() {
       result.settled = true
       result.progress = 100
     })
@@ -115,7 +119,7 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
     this.channel = channel
     this.results = results
 
-    var promise = Promise.settle(targets.map(function(target) {
+    var promise = Promise.all(targets.map(function(target) {
         var result = new options.Result(target)
         var pendingResult = new PendingTransactionResult(result, function() {
           if (notify) {
@@ -124,7 +128,7 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
         })
         pending[options.id ? target[options.id] : target.id] = pendingResult
         results.push(result)
-        return pendingResult.promise
+        return pendingResult.promise.reflect()
       }))
       .finally(function() {
         socket.removeListener('tx.done', doneListener)
@@ -238,18 +242,21 @@ module.exports = function TransactionServiceFactory(socket, TransactionError) {
   }
 
   transactionService.punch = function(channel) {
-    var resolver = Promise.defer()
+    var resolve_
+    var promise = new Promise(function(resolve) {
+      resolve_ = resolve
+    })
 
     function punchListener(someChannel) {
       if (channel === someChannel) {
-        resolver.resolve(channel)
+        resolve_(channel)
       }
     }
 
     socket.on('tx.punch', punchListener)
     socket.emit('tx.punch', channel)
 
-    return resolver.promise
+    return promise
       .timeout(5000)
       .finally(function() {
         socket.removeListener('tx.punch', punchListener)
