@@ -487,6 +487,7 @@ message JoinGroupByAdbFingerprintMessage {
   required string fingerprint = 2;
   optional string comment = 3;
   optional string currentGroup = 4;
+  optional string publicKey = 5;
 }
 
 message JoinGroupByVncAuthResponseMessage {
@@ -679,6 +680,8 @@ message ScreenCaptureMessage {
 }
 
 message ConnectStartMessage {
+  optional string email = 1;
+  repeated string adbPublicKeys = 2;
 }
 
 message ConnectStopMessage {
