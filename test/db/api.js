@@ -85,3 +85,28 @@ describe('dbapi owner claim', function() {
     })
   })
 })
+
+describe('dbapi adb keys', function() {
+  beforeEach(function() {
+    lastUpdate = null
+  })
+
+  // The document is built per row, so the entry sits inside the function term as the argument of
+  // the append: [FUNC, [args, {adbKeys: [APPEND, [keys, entry]]}]]
+  function appendedEntry() {
+    return lastUpdate[1][1].adbKeys[1][1]
+  }
+
+  describe('insertUserAdbKey', function() {
+    it('should keep the full key along with the fingerprint', function() {
+      dbapi.insertUserAdbKey('email', {title: 'title', fingerprint: 'fp', publicKey: 'key'})
+      expect(appendedEntry()).to.deep.equal({title: 'title', fingerprint: 'fp', publicKey: 'key'})
+    })
+
+    // The driver refuses undefined fields, so the field has to be left out rather than empty
+    it('should leave the full key out when there is none', function() {
+      dbapi.insertUserAdbKey('email', {title: 'title', fingerprint: 'fp'})
+      expect(appendedEntry()).to.deep.equal({title: 'title', fingerprint: 'fp'})
+    })
+  })
+})
