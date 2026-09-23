@@ -1,5 +1,79 @@
 # Changelog
 
+## 3.8.0 (2026-09-23)
+
+* feat(api): add an admin only Prometheus metrics endpoint by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/893
+* Bump minitouch-prebuilt to 1.3.1 by @koral-- in https://github.com/DeviceFarmer/stf/pull/894
+* Use minirev-prebuilt package instead of vendored binaries by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/895
+* Bump minitouch-prebuilt to 1.3.2 by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/896
+* Fix the specs that could never run, and run them from npm test by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/897
+* Add a GitHub Actions test matrix for Android 5.0 to 16 by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/898
+* Fix validateDate reading the global event instead of its parameter by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/909
+* Stop the Enable KVM step racing udev by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/910
+* Take eslint from 173 warnings to zero by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/911
+* Replace the for..in in urlutil.addParams with Object.assign by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/915
+* Un-mute the six autofixable rules res/ had muted by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/914
+* Un-mute the last four rules res/.eslintrc had muted by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/916
+* Select on focus in textFocusSelect, and stop clobbering drag-selects by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/917
+* Reset the ADB key form when the add panel closes by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/918
+* Turn the store account sign in spinner back on by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/919
+* Wait for control instead of retrying on a timer in RemoteDebugCtrl by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/920
+* Stop the uninstall button opening the accordion it sits in by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/921
+* Depend on stfservice-prebuilt instead of vendoring the APK by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/922
+* Move the version update wiring out of the socket factory by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/923
+* Report an emulator teardown hang as a warning, not a silent timeout by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/924
+* Drop the onLoadEvent directive rather than test dead code by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/925
+* Add Android 16.1 and 17 legs by updating cmdline-tools by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/928
+* Do not let one shutdown observer keep a unit alive by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/929
+* Clear ready when a device goes absent by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/930
+* Collapse the owned-device preamble and the auto-group envelope by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/931
+* Cut releases from a workflow instead of the Releases UI by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/927
+* Restore a device to its owner after a reboot, opt in by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/932
+* Drop the language provider that nothing reads by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/934
+* Bump protobufjs from 5.0.3 to 8.8.0 by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/935
+* Consolidate the dependabot bumps that hold the test baseline by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/936
+* Bump eslint to 10 and migrate to flat config by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/937
+* Drop the dead NativeUrlService by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/942
+* Save logs in the format the save-log modal shows by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/943
+* Consolidate the remaining dependabot bumps and raise the Node floor by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/945
+* Drop the niceTab directive that renders nothing by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/944
+* Pick a fast apt mirror in CI instead of hardcoding one by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/950
+* Stop the fatal-message modal leaking its device-info interval by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/951
+* Put the device name in the browser tab title by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/953
+* Remember and aspect lock the standalone window geometry by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/952
+* Retry the flaky halves of CI instead of widening the token by @koral-- in https://github.com/DeviceFarmer/stf/pull/954
+* Consolidate eight of the ten new dependabot bumps by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/965
+* Call the EventEmitter constructor so eventemitter3 5 can register devices by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/966
+* Make install from URL work, on both storage backends by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/969
+* Consolidate eight of the nine new dependabot bumps by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/980
+* Bump yargs from 7.1.2 to 18.1.0 by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/982
+* Migrate to bluebird 3 and keep stf local exiting cleanly by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/967
+* Cover the mock auth unit's basic auth path by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/981
+* Post the CI report on pull requests from forks by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/983
+* Drop the unreferenced request-progress dependency by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/986
+* Fix three small defects found while upstreaming by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/985
+* Consolidate all 10 Dependabot upgrades from 16 September by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/998
+* Stop clearing ready when a device goes absent by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/997
+* Run separate STF services in Compose with Android 16 CI by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/999
+* Consolidate all 10 Dependabot upgrades from 17 September by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1011
+* Bump imports-loader from 4.0.1 to 5.0.0 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1012
+* Update stfservice-prebuilt version to 2.5.8 by @koral-- in https://github.com/DeviceFarmer/stf/pull/1013
+* Delete semaphore CI directory by @koral-- in https://github.com/DeviceFarmer/stf/pull/1014
+* Serve fonts and images as webpack assets, not url-loader by @koral-- in https://github.com/DeviceFarmer/stf/pull/1015
+* Fill the blank IMEI, IMSI, ICCID and Number rows by asking the shell agent by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1000
+* Remember selected tabs and support bottom tab placement by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1016
+* Preserve device thumbnail aspect ratios in icon view by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1017
+* Disable ES modules in html-loader to fix [object Module] template rendering by @koral-- in https://github.com/DeviceFarmer/stf/pull/1020
+* Bound emulator shutdown in Android CI by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1019
+* fix: replace deprecated Promise.defer() and Promise.settle() with new Promise() by @koral-- in https://github.com/DeviceFarmer/stf/pull/1018
+* Take csurf's default export so the app and auth units start by @koral-- in https://github.com/DeviceFarmer/stf/pull/1021
+* fix(ci): retry the whole adb root block in the Compose leg by @koral-- in https://github.com/DeviceFarmer/stf/pull/1022
+* fix: pick repeated upload fields by submission order, not completion order by @koral-- in https://github.com/DeviceFarmer/stf/pull/1023
+* fix: accept both csurf export shapes across the declared range by @koral-- in https://github.com/DeviceFarmer/stf/pull/1024
+* fix: accept known adb keys on signature so adb connect stops reporting failure by @koral-- in https://github.com/DeviceFarmer/stf/pull/1025
+
+**Full Changelog**: https://github.com/DeviceFarmer/stf/compare/v3.7.9...v3.8.0
+
 ## 3.7.9 (2026-07-08)
 
 * Update OS image from ubuntu2204 to ubuntu2404 by @koral-- in https://github.com/DeviceFarmer/stf/pull/891
