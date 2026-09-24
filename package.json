@@ -177,7 +177,7 @@
     "sinon": "^22.1.0",
     "sinon-chai": "^4.0.1",
     "style-loader": "^4.0.0",
-    "typescript": "~6.0.0",
+    "typescript": "~7.0.2",
     "typescript-eslint": "^8.70.1",
     "vitest": "^5.0.1",
     "webpack": "^5.97.0",
