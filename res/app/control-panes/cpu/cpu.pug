@@ -1,9 +1,0 @@
-.widget-container.fluid-height.stf-cpu(ng-controller='CpuCtrl')
-  .widget-content.padded
-    div.overflow-x
-      ul
-        li(ng-repeat="(id, stats) in data")
-          span {{ stats.deviceName }}
-          ul
-            li(ng-repeat="(cpu, load) in stats.loads")
-              span {{cpu}}: {{load.user + load.nice + load.system}}%

@@ -10,70 +10,66 @@ var log = require('./lib/util/logger').createLogger('webpack:config')
 
 module.exports = {
   webpack: {
-    mode: 'none'
+    mode: 'production'
     , context: __dirname
     , cache: true
     , entry: {
-        app: pathutil.resource('app/app.js')
-        , authldap: pathutil.resource('auth/ldap/scripts/entry.js')
-        , authmock: pathutil.resource('auth/mock/scripts/entry.js')
+        app: pathutil.resource('app/src/entries/app.tsx')
+        , authldap: pathutil.resource('app/src/entries/auth-ldap.tsx')
+        , authmock: pathutil.resource('app/src/entries/auth-mock.tsx')
       }
     , output: {
         path: pathutil.resource('build')
         , publicPath: '/static/app/build/'
         , filename: 'entry/[name].entry.js'
-        , chunkFilename: '[id].[hash].chunk.js'
+        , chunkFilename: '[id].[contenthash].chunk.js'
+        , assetModuleFilename: 'assets/[contenthash][ext]'
     }
     , stats: {
         colors: true
     }
+    , performance: {
+        hints: false
+    }
     , resolve: {
-        modules: [
-          pathutil.resource('app/components')
-          , 'web_modules'
-          , 'bower_components'
-          , 'node_modules'
-        ]
-        , descriptionFiles: ['package.json', 'bower.json']
-        , extensions: ['.js', '.json']
+        extensions: ['.tsx', '.ts', '.js', '.json']
         , alias: {
-            'angular-bootstrap': 'angular-bootstrap/ui-bootstrap-tpls'
-            , localforage: 'localforage/dist/localforage.js'
-            , stats: 'stats.js/src/Stats.js'
-            , 'underscore.string': 'underscore.string/index'
+            '@': pathutil.resource('app/src')
         }
     }
     , module: {
         rules: [
-          {test: /\.css$/i, use: ['style-loader', 'css-loader']}
-          , {test: /\.scss$/i, use: ['style-loader', 'css-loader', 'sass-loader']}
-          , {test: /\.less$/i, use: ['style-loader', 'css-loader', 'less-loader']}
+          {
+            test: /\.[jt]sx?$/i
+            , exclude: /node_modules/
+            , loader: 'esbuild-loader'
+            , options: {
+                target: 'es2020'
+                , jsx: 'automatic'
+                , tsconfig: pathutil.resource('app/tsconfig.json')
+            }
+          }
+          , {
+            test: /\.css$/i
+            , use: [
+                'style-loader'
+                , {
+                  loader: 'css-loader'
+                  , options: {
+                      modules: {
+                        auto: true
+                        , namedExport: false
+                        , exportLocalsConvention: 'as-is'
+                        , localIdentName: '[name]__[local]--[hash:base64:5]'
+                      }
+                  }
+                }
+            ]
+          }
           , {test: /\.(jpg|png|gif)$/i
             , type: 'asset'
             , parser: {dataUrlCondition: {maxSize: 1000}}}
-          , {test: /\.(svg|eot|woff2?|otf|ttf)/i, type: 'asset/resource'}
-          , {test: /\.pug$/i
-            , use: [{loader: 'template-html-loader', options: {engine: 'pug'}}]}
-          , {
-              test: /\.html$/i
-            , loader: 'html-loader'
-            , options: {
-                esModule: false
-              }
-            }
-          , {test: /angular\.js$/i
-            , use: [{loader: 'exports-loader', options: {type: 'commonjs', exports: 'angular'}}]}
-          , {test: /angular-cookies\.js$/i
-            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
-          , {test: /angular-route\.js$/i
-            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
-          , {test: /angular-touch\.js$/i
-            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
-          , {test: /angular-animate\.js$/i
-            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
-          , {test: /angular-growl\.js$/i
-            , use: [{loader: 'imports-loader', options: {imports: 'angular'}}]}
-          , {test: /dialogs\.js$/, use: [{loader: 'script-loader'}]}
+          , {test: /\.(svg|eot|woff2?|otf|ttf)$/i, type: 'asset/resource'}
         ]
     }
     , plugins: [
@@ -93,12 +89,13 @@ module.exports = {
     ]
   }
   , webpackServer: {
-      plugins: [
+      mode: 'development'
+      , plugins: [
         new webpack.LoaderOptionsPlugin({
           debug: true
         })
       ]
-      , devtool: 'eval'
+      , devtool: 'eval-cheap-module-source-map'
       , stats: {
           colors: true
       }

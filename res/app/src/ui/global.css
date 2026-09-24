@@ -1,0 +1,22 @@
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--mantine-color-body);
+}
+
+.selectable {
+  user-select: text;
+}
+
+.unselectable {
+  user-select: none;
+}
+
+.fill-height {
+  height: 100%;
+}

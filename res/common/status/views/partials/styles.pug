@@ -1,0 +1,133 @@
+style.
+  :root {
+    color-scheme: light dark;
+    --status-bg: #f4f6fb;
+    --status-surface: #ffffff;
+    --status-border: #e3e7ef;
+    --status-text: #1f2533;
+    --status-dimmed: #6b7385;
+    --status-accent: #44639f;
+    --status-accent-text: #ffffff;
+    --status-danger: #e03131;
+    --status-danger-soft: #fdecec;
+    --status-warning: #e8590c;
+    --status-warning-soft: #fff1e6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --status-bg: #16181d;
+      --status-surface: #1f2228;
+      --status-border: #2f333c;
+      --status-text: #e6e8ee;
+      --status-dimmed: #9aa1b1;
+      --status-accent: #748dc1;
+      --status-accent-text: #0f1320;
+      --status-danger: #ff6b6b;
+      --status-danger-soft: rgba(255, 107, 107, 0.14);
+      --status-warning: #ffa94d;
+      --status-warning-soft: rgba(255, 169, 77, 0.14);
+    }
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: var(--status-bg);
+    color: var(--status-text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .status-card {
+    width: 100%;
+    max-width: 440px;
+    padding: 40px 32px;
+    border: 1px solid var(--status-border);
+    border-radius: 20px;
+    background: var(--status-surface);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    text-align: center;
+  }
+
+  .status-card .status-brand {
+    margin: 0 0 24px;
+    color: var(--status-dimmed);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    margin-bottom: 24px;
+    border-radius: 50%;
+  }
+
+  .status-icon svg {
+    width: 44px;
+    height: 44px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .status-danger {
+    background: var(--status-danger-soft);
+    color: var(--status-danger);
+  }
+
+  .status-warning {
+    background: var(--status-warning-soft);
+    color: var(--status-warning);
+  }
+
+  .status-card h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 650;
+    line-height: 1.3;
+  }
+
+  .status-card p {
+    margin: 0;
+    color: var(--status-dimmed);
+    font-size: 15px;
+  }
+
+  .status-action {
+    display: inline-block;
+    margin-top: 28px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: var(--status-accent);
+    color: var(--status-accent-text);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 120ms ease;
+  }
+
+  .status-action:hover,
+  .status-action:focus-visible {
+    opacity: 0.88;
+  }

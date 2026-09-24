@@ -10,21 +10,14 @@ var jsonlint = require('gulp-jsonlint')
 var ESLint = require('eslint').ESLint
 var webpack = require('webpack')
 var webpackStatusConfig = require('./res/common/status/webpack.config')
-var gettext = require('gulp-angular-gettext')
-var pug = require('gulp-pug')
 var deleteAsync = require('del').deleteAsync
-// var protractor = require('gulp-protractor')
-var protractor = require('./res/test/e2e/helpers/gulp-protractor-adv')
-var protractorConfig = './res/test/protractor.conf'
-var karma = require('karma').server
-var karmaConfig = '/res/test/karma.conf.js'
 var stream = require('stream')
 var run = require('gulp-run')
+var fs = require('fs')
 
 gulp.task('jsonlint', function() {
   return gulp.src([
-      '.bowerrc'
-    , '.yo-rc.json'
+      '.yo-rc.json'
     , '*.json'
     ], {allowEmpty: true})
     .pipe(jsonlint())
@@ -39,11 +32,9 @@ gulp.task('eslint-cli', function() {
 
   return cli.lintFiles([
     'lib/**/*.js'
-    , 'res/app/**/*.js'
-    , 'res/auth/**/*.js'
+    , 'res/app/src/**/*.{ts,tsx}'
+    , 'res/app/*.ts'
     , 'res/common/**/*.js'
-    , 'res/test/**/*.js'
-    , 'res/web_modules/**/*.js'
     , '*.js'
   ])
     .then(function(results) {
@@ -71,48 +62,9 @@ gulp.task('run:checkversion', function() {
 })
 
 
-gulp.task('karma_ci', function(done) {
-  karma.start({
-    configFile: path.join(__dirname, karmaConfig)
-  , singleRun: true
-  }, done)
+gulp.task('tsc', function() {
+  return run('tsc -p res/app/tsconfig.json').exec()
 })
-
-gulp.task('karma', function(done) {
-  karma.start({
-    configFile: path.join(__dirname, karmaConfig)
-  }, done)
-})
-
-if (gutil.env.multi) {
-  protractorConfig = './res/test/protractor-multi.conf'
-}
-else if (gutil.env.appium) {
-  protractorConfig = './res/test/protractor-appium.conf'
-}
-
-gulp.task('webdriver-update', protractor.webdriverUpdate)
-gulp.task('webdriver-standalone', protractor.webdriverStandalone)
-gulp.task('protractor-explorer', function(callback) {
-  protractor.protractorExplorer({
-    url: require(protractorConfig).config.baseUrl
-  }, callback)
-})
-
-gulp.task('protractor', gulp.series('webdriver-update', function(callback) {
-  gulp.src(['./res/test/e2e/**/*.js'])
-    .pipe(protractor.protractor({
-      configFile: protractorConfig
-    , debug: gutil.env.debug
-    , suite: gutil.env.suite
-    }))
-    .on('error', function(e) {
-      console.log(e)
-
-      /* eslint no-console: 0 */
-    })
-    .on('end', callback)
-}))
 
 // For piping strings
 function fromString(filename, string) {
@@ -176,40 +128,59 @@ gulp.task('webpack:others', function(callback) {
   })
 })
 
-gulp.task('pug', function() {
-  return gulp.src([
-      './res/**/*.pug'
-    , '!./res/bower_components/**'
+gulp.task('translate:extract', function(callback) {
+  var GettextExtractor = require('gettext-extractor').GettextExtractor
+  var JsExtractors = require('gettext-extractor').JsExtractors
+  var extractor = new GettextExtractor()
+  var singular = {arguments: {text: 0}}
+
+  extractor
+    .createJsParser([
+      JsExtractors.callExpression(['t', 'gettext', 'translate'], singular)
+    , JsExtractors.callExpression(['tn', 'translatePlural'], {
+        arguments: {text: 1, textPlural: 2}
+      })
     ])
-    .pipe(pug({
-      locals: {
-        // So res/views/docs.pug doesn't complain
-        markdownFile: {
-          parseContent: function() {
-          }
-        }
-      }
-    }))
-    .pipe(gulp.dest('./tmp/html/'))
+    .parseFilesGlob('./res/app/src/**/*.@(ts|tsx)', {
+      ignore: ['./res/app/src/**/*.test.@(ts|tsx)']
+    })
+
+  extractor.savePotFile('./res/common/lang/po/stf.pot')
+  callback()
 })
 
-gulp.task('translate:extract', gulp.series('pug', function() {
-  return gulp.src([
-      './tmp/html/**/*.html'
-    , './res/**/*.js'
-    , '!./res/bower_components/**'
-    , '!./res/build/**'
-    ])
-    .pipe(gettext.extract('stf.pot'))
-    .pipe(gulp.dest('./res/common/lang/po/'))
-}))
+gulp.task('translate:compile', function(callback) {
+  var gettextParser = require('gettext-parser')
 
-gulp.task('translate:compile', function() {
-  return gulp.src('./res/common/lang/po/**/*.po')
-    .pipe(gettext.compile({
-      format: 'json'
-    }))
-    .pipe(gulp.dest('./res/common/lang/translations/'))
+  var poDir = './res/common/lang/po'
+  fs.readdirSync(poDir).filter(function(name) {
+    return /\.po$/.test(name)
+  }).forEach(function(name) {
+    var file = path.join(poDir, name)
+    var po = gettextParser.po.parse(fs.readFileSync(file))
+    var language = po.headers.Language ||
+      path.basename(file, '.po').replace(/^stf\./, '')
+    var strings = {}
+
+    Object.keys(po.translations).forEach(function(context) {
+      Object.keys(po.translations[context]).forEach(function(msgid) {
+        var entry = po.translations[context][msgid]
+        var translated = entry.msgstr.filter(Boolean)
+        if (msgid && translated.length) {
+          strings[msgid] = entry.msgid_plural ? entry.msgstr : entry.msgstr[0]
+        }
+      })
+    })
+
+    var output = {}
+    output[language] = strings
+    fs.writeFileSync(
+      path.join('./res/common/lang/translations', 'stf.' + language + '.json')
+    , JSON.stringify(output)
+    )
+  })
+
+  callback()
 })
 
 gulp.task('translate:push', function() {
@@ -231,7 +202,7 @@ gulp.task('clean', function() {
 })
 
 gulp.task('build', gulp.parallel('clean', 'webpack:build'))
-gulp.task('lint', gulp.parallel('jsonlint', 'eslint-cli'))
+gulp.task('lint', gulp.parallel('jsonlint', 'eslint-cli', 'tsc'))
 gulp.task('test', gulp.parallel('lint', 'run:checkversion'))
 gulp.task('translate', gulp.parallel(
   'translate:extract'

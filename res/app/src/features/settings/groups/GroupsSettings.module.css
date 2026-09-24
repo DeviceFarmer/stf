@@ -1,0 +1,139 @@
+.root {
+  container-type: inline-size;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: var(--mantine-spacing-md);
+  align-items: start;
+}
+
+@container (max-width: 820px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.listCard {
+  overflow: hidden;
+}
+
+.listHeader {
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-md) var(--mantine-spacing-xs);
+}
+
+.quotas {
+  padding: 0 var(--mantine-spacing-md) var(--mantine-spacing-sm);
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  padding: 0 var(--mantine-spacing-md) var(--mantine-spacing-sm);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px var(--mantine-spacing-md);
+  border-top: 1px solid var(--mantine-color-default-border);
+  transition: background-color 120ms ease;
+}
+
+.item:hover {
+  background: var(--mantine-color-default-hover);
+}
+
+.itemActive,
+.itemActive:hover {
+  background: var(--mantine-primary-color-light);
+  box-shadow: inset 3px 0 0 var(--mantine-primary-color-filled);
+}
+
+.itemCheck {
+  padding-top: 3px;
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemName {
+  font-weight: 600;
+  font-size: var(--mantine-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+
+.itemMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.listFooter {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.detailTitle {
+  word-break: break-all;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+
+.meta b {
+  font-weight: 500;
+  color: var(--mantine-color-text);
+}
+
+.mono {
+  font-family: var(--mantine-font-family-monospace);
+}
+
+.fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.panel {
+  padding-top: var(--mantine-spacing-md);
+}
+
+.link {
+  color: var(--mantine-color-anchor);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

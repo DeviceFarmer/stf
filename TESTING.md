@@ -1,53 +1,46 @@
 ## Unit Frontend
 
-- `brew install phantomjs`
-- `gulp karma`
+The web UI lives in `res/app/src` (React + TypeScript). Its specs sit next to the
+code as `*.test.ts(x)` and run with Vitest in jsdom, no browser needed:
+
+```
+npm run test:component
+```
+
+Type checking and linting of the UI are part of `npm run lint` (`gulp lint` runs
+eslint and `tsc -p res/app/tsconfig.json`).
 
 ## E2E Frontend
 
-## On first run
-- `gulp webdriver-update`
+The end-to-end suite is Playwright, in `test/playwright`. It drives a running
+`stf local` through a real Chromium.
 
-
-
-## Protractor&Jasmine - Local STF tests
-
-
----
-#### Preconditions
-Test configuration point to Google Chrome browser. Test works on Google Chrome v.77.0.3865.75 together with chromedriver with ver. 77.0.3865.40.
-
----
-
-- Connect a device or start android emulator
-- Run RethinkDb
+- Run RethinkDB
   ```
     rethinkdb
   ```
-- Run stf
+- Run stf with mock auth
   ```
-    ./bin/stf local
+    ./bin/stf local --auth-type mock
   ```
-  Wait till STF will be fully functional and devices will be discovered
-- Run tests
+  Wait till STF is fully functional and devices are discovered
+- Install and run the suite
   ```
-     gulp protractor
+    cd test/playwright
+    npm install && npx playwright install chromium
+    npx playwright test ui.spec.js
+    STF_DEVICE_SERIAL=emulator-5554 npx playwright test
   ```
 
----
-#### Info
-Test results can be found in:
-    test-results/reports-protractor/dashboardReport-protractor/index.html
+`ui.spec.js` needs no device. `device.spec.js` skips itself unless
+`STF_DEVICE_SERIAL` names a connected device.
 
----
+Results land in `test-results/playwright` (an HTML report under `html/`, traces
+and videos under `artifacts/`).
 
-## Multiple Browsers Local STF with a specific suite
-- Connect a device
-- Run stf
-- `gulp protractor --multi --suite devices`
+## Remote STF
 
-## Chrome Remote STF
-- `export STF_URL='http://stf-url/#!/'`
+- `export STF_URL='http://stf-url/'`
 - `export STF_USERNAME='user'`
-- `export STF_PASSWORD='pass'`
-- `gulp protractor`
+- `export STF_EMAIL='user@example.com'`
+- `cd test/playwright && npx playwright test`

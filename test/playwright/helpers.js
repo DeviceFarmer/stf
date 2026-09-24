@@ -2,10 +2,10 @@
 // Shared helpers for the Playwright suite.
 //
 // Selectors here come from the STF sources, not from guesses:
-//   login form      res/auth/mock/scripts/signin/signin.pug
-//   device tiles    res/app/device-list/icons/device-list-icons-directive.js
-//   control page    res/app/control-panes/device-control/device-control.pug
-//   screen widget   res/app/components/stf/screen/screen-directive.js
+//   login form      res/app/src/features/auth/SignInForm.tsx
+//   device tiles    res/app/src/features/device-list/DeviceIconsView.tsx
+//   control page    res/app/src/features/control/device-control/DeviceControlPanel.tsx
+//   screen widget   res/app/src/features/control/screen/DeviceScreen.tsx
 //
 
 const {spawn} = require('child_process')
@@ -20,7 +20,7 @@ const SEL = {
   loginForm: 'form[name="signin"]',
   loginName: 'input[name="username"]',
   loginEmail: 'input[name="email"]',
-  loginSubmit: 'input[value="Log In"]',
+  loginSubmit: 'button[type="submit"]',
   loginError: '.alert.alert-danger',
 
   deviceList: '.stf-device-list',
@@ -32,10 +32,10 @@ const SEL = {
   // is the link. So state-available is a marker to assert on, never to click.
   availableMarker: 'button.device-status.state-available',
 
-  screen: 'device-screen',
-  canvas: 'device-screen canvas.screen',
-  screenError: 'device-screen .screen-error',
-  nativeToggle: '.stf-nav-web-native-button button:has-text("Native")',
+  screen: '.device-screen',
+  canvas: '.device-screen canvas.screen',
+  screenError: '.device-screen .screen-error',
+  nativeToggle: '.stf-nav-web-native-button label:has-text("Native")',
   stopUsing: '.stf-vnc-right-buttons button.btn-danger-outline',
   shellInput: '.stf-shell input.shell-input',
   // The empty state is a second pre.shell-results, so exclude it or the
@@ -50,7 +50,7 @@ async function login(page) {
   await page.fill(SEL.loginName, USER_NAME)
   await page.fill(SEL.loginEmail, USER_EMAIL)
   await page.click(SEL.loginSubmit)
-  await page.waitForURL(/#!\/devices/, {timeout: 90000})
+  await page.waitForURL(/#\/devices/, {timeout: 90000})
   await page.waitForSelector(SEL.deviceList)
 }
 

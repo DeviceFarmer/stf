@@ -1,0 +1,7 @@
+.inner {
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md);
+}
+
+.card {
+  padding: var(--mantine-spacing-xl);
+}

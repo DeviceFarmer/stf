@@ -14,39 +14,21 @@ described under Releasing below.
 | Job | What it proves |
 |---|---|
 | `plan` | `.github/android-matrix.json` is well formed, and produces the Android matrix |
-| `build` | `npm install`, `bower install` and the webpack bundle all succeed, and `stf -V` runs |
-| `lint` | `gulp lint` (eslint over `lib/`, `res/`, root JS, plus jsonlint) |
+| `build` | `npm install` and the webpack bundle all succeed, and `stf -V` runs |
+| `lint` | `gulp lint` (eslint over `lib/`, the React/TypeScript UI in `res/app/src`, root JS, a `tsc` typecheck, plus jsonlint) |
 | `unit` | `mocha` over `test/` (`lib/util`, `lib/wire`) |
-| `component` | `karma` + headless Chrome over the 82 AngularJS specs in `res/app/**/*-spec.js`. Read the count with the caveat below |
+| `component` | `vitest` + jsdom over the UI specs in `res/app/src/**/*.test.ts(x)` |
 | `integration` | `stf local` boots against a RethinkDB service, fake devices round-trip through STF's own db layer, and the Playwright web UI suite passes without any device |
 | `android` (matrix) | one leg per Android release from 5.0 to 16: boot an emulator, attach `stf local` to it, and drive it from the browser |
 | `report` | aggregates everything into one sticky PR comment |
 
-### The component tier counts more than it proves
+### The component tier
 
-karma reports 82 specs and the report says so, but that number is not coverage.
-Of the 82 executable `it()` blocks in `res/app`, 3 assert something real, 33 are
-`expect(1).toEqual(1)`, and 46 have an empty body with the assertion left
-commented out, which is the unmodified AngularJS generator stub. The whole tier
-runs in about 0.12s, which is the giveaway. They are upstream's specs and this
-branch does not rewrite them, so the report line names the split instead:
-
-```
-82 specs, 0 failed, 0 errored (3 assert, 79 are upstream stubs)
-```
-
-`.github/scripts/count-assertions.js` computes that split at report time rather
-than hardcoding it, so writing a real spec moves the number without anyone
-having to remember to update it. Run it on its own to see the breakdown:
-
-```bash
-node .github/scripts/count-assertions.js
-```
-
-What the tier does still prove is worth keeping: every spec is compiled and run
-against real AngularJS in a real headless Chrome, so a module that fails to load,
-a broken `require` in `res/app`, or a directive that throws on compile fails the
-job. That is a smoke test of the front end, not a behavioural one.
+`npm run test:component` runs Vitest with jsdom over `res/app/src/**/*.test.ts(x)`.
+It covers the protocol pieces the UI cannot work without (the `tx.*` transaction
+ordering, device state derivation, screen scaling math, translation lookup) and
+pure feature logic such as the logcat filters. It needs no browser, so it runs in
+seconds anywhere; the Playwright tiers are what exercise the rendered UI.
 
 ## The Android matrix
 
@@ -257,7 +239,7 @@ Two things follow, and both are deliberate:
 ## Running the tests locally
 
 ```bash
-npm install                    # deps, bower components and the bundle
+npm install                    # deps and the bundle
 npm test                       # lint, stf -V, then the mocha specs
 ```
 
@@ -266,7 +248,7 @@ Or one tier at a time:
 ```bash
 npm run lint
 npm run test:unit
-CHROME_BIN=$(which google-chrome) npm run test:component
+npm run test:component
 ```
 
 `npm test` was `gulp test`, which is `gulp.parallel('lint',
@@ -275,12 +257,11 @@ specs under `test/` existed but `npm test` never ran them and still passed. It
 now runs that same gulp task and then the mocha specs, so it still needs no
 browser and works anywhere, which is what CONTRIBUTING asks of it.
 
-`test:component` is the karma tier. It needs a Chrome, which is what `CHROME_BIN`
-is for, so CI runs it as its own job where a browser is guaranteed rather than
-making `npm test` depend on one.
+`test:component` is the Vitest tier. It runs in jsdom and needs no browser; CI
+still runs it as its own job so the report shows it as a separate line.
 
 There is no committed `package-lock.json`: `.gitignore` excludes it, so CI uses
-`npm install` and keys its dependency cache on `package.json` and `bower.json`.
+`npm install` and keys its dependency cache on `package.json`.
 
 Every job reads its Node version from `.nvmrc` (22.23.2), which is also what the
 `Dockerfile` and `.semaphore/semaphore.yml` use, so CI tests the runtime the
@@ -291,21 +272,6 @@ npm trusted publishing needs Node 22.14.0 or later and npm 11.5.1 or later, and
 22.23.2 ships npm 10.x. The tarball's bundle is therefore built on a runtime no
 test tier exercises. Nothing else in the release path needs it, so the rest
 reads `.nvmrc` like every other job.
-
-If you bump past Node 22, the karma tier needs an `overrides` entry for log4js.
-karma 2.0.5 pulls log4js 2.11.0, whose layout formatter calls `util.isError` on
-every log argument, and Node 23 removed it. The first line karma logs throws,
-karma's `uncaughtException` handler logs the throw, log4js throws again inside
-the handler, and the process dies with exit code 7 before any test runs. log4js
-dropped that call in 3.0.6, so `"overrides": {"log4js": "^6.9.1"}` fixes it and
-affects nothing outside karma's tree.
-
-`phantomjs-prebuilt` and `karma-phantomjs-launcher` are gone from
-`devDependencies`. PhantomJS has been unmaintained since 2018 and nothing here
-uses it: `karma.conf.js` already defaulted to Chrome with the PhantomJS launcher
-commented out. `.semaphore/semaphore.yml` currently has to run
-`sed -i'' -e '/phantomjs/d' package.json` before `npm install`; with the
-dependency gone that line is a no-op and can be dropped.
 
 For the Playwright suite you need a running `stf local`:
 

@@ -27,10 +27,10 @@ var CHECK_ICON = {
 // Labels have to match what each job passes to verdict.sh, or the table wording
 // changes depending on whether the job lived long enough to report.
 var CORE_LABELS = {
-  build: 'Build (npm + bower + webpack)'
+  build: 'Build (npm + webpack)'
 , lint: 'Lint (eslint + jsonlint + workflow shell)'
 , unit: 'Unit tests (mocha)'
-, component: 'Component tests (karma + AngularJS)'
+, component: 'Component tests (vitest + React)'
 , integration:
     'Integration + device-less E2E (stf local + RethinkDB + Playwright)'
 , compose: 'Docker Compose + AVD + Playwright (Android 16, API 36)'

@@ -38,7 +38,6 @@ RUN set -xo pipefail && \
     echo 'npm pack' | su stf -s /bin/sh && \
     tar -xzf stf-*.tgz && \
     mv package /app && \
-    echo 'bower cache clean' | su stf -s /bin/sh && \
     echo 'npm prune --production' | su stf -s /bin/sh && \
     mv node_modules /app && \
     chown -R root:root /app && \

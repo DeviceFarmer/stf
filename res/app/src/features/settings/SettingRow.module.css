@@ -1,0 +1,50 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.row + .row {
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.rowLead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.rowControl {
+  flex: 0 1 auto;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.stacked {
+  flex-wrap: wrap;
+}
+
+.stacked .rowControl {
+  flex: 1 1 100%;
+  justify-content: stretch;
+}
+
+.stacked .rowControl > * {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 36em) {
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .rowControl {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+}

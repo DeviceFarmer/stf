@@ -1,14 +1,10 @@
 var globals = require('globals')
+var tseslint = require('typescript-eslint')
+var reactHooks = require('eslint-plugin-react-hooks')
 
 var nodeGlobalsOff = Object.fromEntries(Object.keys(globals.node).map(function(name) {
   return [name, 'off']
 }))
-
-var angularGlobals = {
-    angular: 'writable'
-  , inject: 'writable'
-  , waitUrl: 'writable'
-}
 
 var rules = {
     'accessor-pairs': 2
@@ -153,13 +149,45 @@ var rules = {
   , yoda: 2
 }
 
+var tsRules = Object.assign({}, rules, {
+    camelcase: 0
+  , 'consistent-return': 0
+  , 'max-len': [2, 120, 2, {ignoreComments: true, ignoreUrls: true, ignoreStrings: true
+    , ignoreTemplateLiterals: true}]
+  , 'new-cap': 0
+  , 'no-invalid-this': 0
+  , 'no-redeclare': 0
+  , 'no-undef': 0
+  , 'no-undefined': 0
+  , 'no-unused-vars': 0
+  , 'no-use-before-define': 0
+  , 'one-var': 0
+  , '@typescript-eslint/no-explicit-any': 0
+  , '@typescript-eslint/no-unused-vars': [1, {argsIgnorePattern: '^_', varsIgnorePattern: '^_'
+    , caughtErrors: 'none'}]
+  , 'react-hooks/rules-of-hooks': 2
+  , 'react-hooks/exhaustive-deps': 1
+})
+
 module.exports = [
   {
     ignores: [
-      'res/bower_components/**'
-    , 'res/build/**'
+      'res/build/**'
     , 'tmp/**'
     ]
+  }
+, {
+    files: ['res/app/src/**/*.{ts,tsx}', 'res/app/*.ts']
+  , languageOptions: {
+      parser: tseslint.parser
+    , parserOptions: {ecmaFeatures: {jsx: true}, sourceType: 'module'}
+    , globals: Object.assign({}, globals.browser)
+    }
+  , plugins: {
+      '@typescript-eslint': tseslint.plugin
+    , 'react-hooks': reactHooks
+    }
+  , rules: tsRules
   }
 , {
     files: ['**/*.js']
@@ -178,22 +206,6 @@ module.exports = [
       , nodeGlobalsOff
       , globals.commonjs
       , globals.browser
-      , globals.jasmine
-      , angularGlobals
-      )
-    }
-  }
-, {
-    files: ['res/test/**/*.js']
-  , languageOptions: {
-      globals: Object.assign(
-        {}
-      , globals.node
-      , globals.commonjs
-      , globals.browser
-      , globals.jasmine
-      , globals.protractor
-      , angularGlobals
       )
     }
   }
@@ -210,6 +222,13 @@ module.exports = [
     files: ['lib/wire/protobuf.js']
   , rules: {
       'no-sync': 0
+    }
+  }
+, {
+    files: ['gulpfile.js']
+  , rules: {
+      'no-console': 0
+    , 'no-sync': 0
     }
   }
 ]

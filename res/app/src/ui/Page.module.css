@@ -1,0 +1,9 @@
+.page {
+  height: 100%;
+  overflow: auto;
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.inner {
+  margin: 0 auto;
+}

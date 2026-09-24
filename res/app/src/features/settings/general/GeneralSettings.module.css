@@ -1,0 +1,11 @@
+.preview {
+  padding: 0 16px 16px;
+}
+
+.inactive {
+  opacity: 0.55;
+}
+
+.mono input {
+  font-family: var(--mantine-font-family-monospace);
+}

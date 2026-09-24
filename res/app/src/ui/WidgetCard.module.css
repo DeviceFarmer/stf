@@ -1,0 +1,16 @@
+.header {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header + .body:not(.flush) {
+  padding-top: var(--mantine-spacing-md);
+}

@@ -1,15 +1,4 @@
 //extends layout
 block content
-  .row.stf-docs(ng-controller='DocsCtrl')
-    .col-md-10.col-md-offset-1
-      .widget-container.fluid-height
-        .stf-docs-navigation
-          button.btn.btn-primary-outline.docs-back.transparent-border(ng-click='goBack()',
-          ng-show='hasHistory')
-            i.fa.fa-chevron-left.fa-fw
-          button.btn.btn-primary-outline.docs-home.transparent-border(ng-click='goHome()')
-            i.fa.fa-home.fa-fw
-        .widget-content.padded
-          .row
-            .col-md-10.col-md-offset-1.selectable
-              != markdownFile.parseContent()
+  .stf-docs-content
+    != markdownFile.parseContent()

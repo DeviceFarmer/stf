@@ -57,7 +57,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    echo '/tmp/build/node_modules/.bin/bower cache clean' | su stf -s /bin/bash && \
     npm prune --omit=dev && \
     mv node_modules /app && \
     rm -rf ~/.node-gyp && \
@@ -105,7 +104,6 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    echo '/tmp/build/node_modules/.bin/bower cache clean' | su stf -s /bin/bash && \
     echo 'npm prune --omit=dev' | su stf -s /bin/bash && \
     wget --progress=dot:mega \
       https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \

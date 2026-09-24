@@ -17,14 +17,13 @@ describe('development assets', function() {
 
   before(async function() {
     directory = await fs.mkdtemp(path.join(os.tmpdir(), 'stf-webpack-'))
-    await fs.writeFile(path.join(directory, 'entry.js'),
-      "require('./style.less'); require('./template.html'); module.exports = require('./template.pug')")
-    await fs.writeFile(path.join(directory, 'style.less'),
-      '@color: #123456; .dependency-check { color: @color; }')
-    await fs.writeFile(path.join(directory, 'template.pug'),
-      'section.dependency-check\n  strong Pug rendered this')
-    await fs.writeFile(path.join(directory, 'template.html'),
-      '<section><strong>HTML loaded this</strong></section>')
+    await fs.writeFile(path.join(directory, 'entry.ts'),
+      "import './style.css'\nimport classes from './widget.module.css'\n" +
+      "const typed: string = 'TypeScript compiled this'\nexport default [typed, classes.widget]")
+    await fs.writeFile(path.join(directory, 'style.css'),
+      '.dependency-check { color: #123456; }')
+    await fs.writeFile(path.join(directory, 'widget.module.css'),
+      '.widget { color: #654321; }')
 
     var observe = sinon.stub(lifecycle, 'observe').callsFake(function(fn) {
       cleanup = fn
@@ -32,9 +31,11 @@ describe('development assets', function() {
     var middleware
     try {
       middleware = webpackMiddleware({
-        entry: {
-          'app.js': path.join(directory, 'entry.js')
-        , 'app.unknown': path.join(directory, 'entry.js')
+        mode: 'development'
+      , devtool: false
+      , entry: {
+          'app.js': path.join(directory, 'entry.ts')
+        , 'app.unknown': path.join(directory, 'entry.ts')
         }
       , output: {path: path.join(directory, 'build'), filename: '[name]'}
       , plugins: []
@@ -63,17 +64,18 @@ describe('development assets', function() {
     await fs.rm(directory, {recursive: true, force: true})
   })
 
-  it('should compile Pug, HTML and Less and serve JavaScript with its MIME type', async function() {
+  it('should compile TypeScript and CSS modules and serve JavaScript with its MIME type', async function() {
     var response = await fetch(origin + '/app.js', {signal: AbortSignal.timeout(5000)})
     var body = await response.text()
     expect(response.status).to.equal(200)
     expect(response.headers.get('content-type')).to.match(/^(text|application)\/javascript/)
-    expect(body).to.contain('<strong>Pug rendered this</strong>')
-    expect(body).to.contain('<strong>HTML loaded this</strong>')
+    expect(body).to.contain('TypeScript compiled this')
+    expect(body).not.to.contain('typed: string')
     expect(body).to.contain('#123456')
-    expect(body).to.contain('module.exports = code;')
+    expect(body).to.contain('#654321')
+    expect(body).to.match(/widget-module__widget--/)
     expect(body).not.to.contain('Module build failed')
-    expect(body).not.to.contain('Cannot find module')
+    expect(body).not.to.contain('webpackMissingModule')
   })
 
   it('should serve unknown extensions as binary data', async function() {

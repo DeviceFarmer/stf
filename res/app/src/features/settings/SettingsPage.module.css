@@ -1,0 +1,76 @@
+.inner {
+  padding: 24px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.tabs {
+  gap: 24px;
+}
+
+.list {
+  flex-wrap: nowrap;
+}
+
+.vertical .list {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex: 0 0 220px;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+}
+
+.vertical .list::before {
+  display: none;
+}
+
+.vertical .tab {
+  justify-content: flex-start;
+  padding: 8px 12px;
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-dimmed);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.vertical .tabLabel {
+  text-align: start;
+}
+
+.vertical .list .tab:hover {
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+  color: var(--mantine-color-text);
+}
+
+.vertical .list .tab[data-active],
+.vertical .list .tab[data-active]:hover {
+  background: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-light-color);
+}
+
+.horizontal .list {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.horizontal .tab {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.panel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 36em) {
+  .inner {
+    padding: 12px;
+  }
+}
