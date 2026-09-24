@@ -1,0 +1,8 @@
+.forwards {
+  white-space: nowrap;
+}
+
+.forwards td,
+.forwards th {
+  vertical-align: middle;
+}

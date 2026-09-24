@@ -24,16 +24,15 @@ test.describe('STF web UI', function() {
       await page.fill(h.SEL.loginEmail, h.USER_EMAIL)
       await page.click(h.SEL.loginSubmit)
 
-      await page.waitForURL(/#!\/devices/, {timeout: 90000})
+      await page.waitForURL(/#\/devices/, {timeout: 90000})
       await expect(page.locator(h.SEL.deviceList)).toBeVisible()
       await expect(page.locator(h.SEL.loginError)).toHaveCount(0)
 
-      // Angular templates that fail to resolve show up here and nowhere else.
       const fatal = errors.filter(function(text) {
-        return /\[\$injector|\[\$compile|Unexpected token|is not a function/
+        return /Minified React error|ChunkLoadError|Loading chunk|Unexpected token|is not a function|Cannot read properties/
           .test(text)
       })
-      expect(fatal, 'fatal angular errors on the device list').toEqual([])
+      expect(fatal, 'fatal errors on the device list').toEqual([])
     })
 
   test('[check:playwright_ui] the menu reports a version and the signed in user',
@@ -42,7 +41,7 @@ test.describe('STF web UI', function() {
 
       await expect(page.locator(h.SEL.version)).toHaveText(/^v\d+\.\d+\.\d+/)
       await expect(
-        page.locator('.device-stats .text[ng-bind="currentUser.name"]')
+        page.locator('.device-stats .current-user-name')
       ).toHaveText(h.USER_NAME)
     })
 
@@ -53,9 +52,7 @@ test.describe('STF web UI', function() {
       const search = page.locator(h.SEL.deviceSearch)
       await expect(search).toBeVisible()
 
-      // A query that cannot match anything must hide every tile. Filtered
-      // tiles keep their DOM node and gain .filter-out, hence the :not() in
-      // SEL.deviceTiles.
+      // A query that cannot match anything must hide every tile.
       await search.fill('zzz-no-such-device-zzz')
       await expect(page.locator(h.SEL.deviceTiles)).toHaveCount(0, {
         timeout: 20000
@@ -69,11 +66,113 @@ test.describe('STF web UI', function() {
     async function({page}) {
       await h.login(page)
 
-      await page.goto('/#!/settings')
-      await expect(page.locator('[ng-controller="SettingsCtrl"]'))
+      await page.goto('/#/settings')
+      await expect(page.locator('.stf-settings'))
         .toBeVisible({timeout: 30000})
       await expect(
-        page.locator('[ng-controller="SettingsCtrl"] .heading-for-tabs')
+        page.locator('.stf-settings .heading-for-tabs')
       ).toBeVisible()
+    })
+
+  test('[check:playwright_ui] every settings tab each user has renders',
+    async function({page}) {
+      await h.login(page)
+
+      await page.goto('/#/settings')
+      const tabs = page.locator('.stf-settings .heading-for-tabs .nav-tabs a')
+      await expect(tabs.nth(0)).toHaveText('General', {timeout: 30000})
+      await expect(tabs.nth(1)).toHaveText('Keys')
+      await expect(tabs.nth(2)).toHaveText('Groups')
+
+      const visits = [['keys', 'Keys'], ['groups', 'Groups'], ['general', 'General']]
+      for (const [tab, title] of visits) {
+        await page.locator('.stf-settings-tab-' + tab).click()
+        await expect(page).toHaveURL(new RegExp('#/settings/' + tab + '$'))
+        await expect(page.locator('.stf-settings-tab-' + tab))
+          .toHaveAttribute('aria-selected', 'true')
+        await expect(page.locator('.stf-settings').getByRole('tabpanel', {name: title}))
+          .toBeVisible()
+      }
+    })
+
+  test('[check:playwright_ui] the groups page renders',
+    async function({page}) {
+      await h.login(page)
+
+      await page.goto('/#/groups')
+      await expect(page.locator('.stf-groups')).toBeVisible({timeout: 30000})
+      await expect(page.locator('.stf-groups .groups-table tbody tr').first())
+        .toBeVisible({timeout: 30000})
+      await expect(page.locator('.stf-groups .contact-owners')).toBeVisible()
+    })
+
+  test('[check:playwright_ui] the help page renders wiki content',
+    async function({page}) {
+      await h.login(page)
+
+      await page.goto('/#/help')
+      await expect(page.locator('.stf-docs h1').first())
+        .toBeVisible({timeout: 30000})
+
+      await page.locator('.stf-docs .docs-home').click()
+      await expect(page).toHaveURL(/#\/docs\/Help$/)
+      await expect(page.locator('.stf-docs h1').first())
+        .toBeVisible({timeout: 30000})
+    })
+
+  test('[check:playwright_ui] the user page shows the signed in user',
+    async function({page}) {
+      await h.login(page)
+
+      await page.goto('/#/user/' + h.USER_EMAIL)
+      await expect(page.locator('.stf-user-profile .user-name'))
+        .toHaveText(h.USER_NAME, {timeout: 30000})
+    })
+
+  test('[check:playwright_ui] legacy #! links and unknown routes redirect',
+    async function({page}) {
+      await h.login(page)
+
+      await page.goto('/#!/settings/keys')
+      await expect(page).toHaveURL(/#\/settings\/keys$/, {timeout: 30000})
+      await expect(page.locator('.stf-settings')).toBeVisible()
+
+      await page.goto('/#!/groups')
+      await expect(page).toHaveURL(/#\/groups$/, {timeout: 30000})
+      await expect(page.locator('.stf-groups')).toBeVisible()
+
+      await page.goto('/#/no-such-route')
+      await expect(page).toHaveURL(/#\/devices$/, {timeout: 30000})
+      await expect(page.locator(h.SEL.deviceList)).toBeVisible()
+    })
+
+  test('[check:playwright_ui] the color scheme toggle switches themes and persists',
+    async function({page}) {
+      await page.emulateMedia({colorScheme: 'light'})
+      await h.login(page)
+
+      const html = page.locator('html')
+      await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light')
+
+      await page.locator('.stf-menu .stf-color-scheme').click()
+      await expect(html).toHaveAttribute('data-mantine-color-scheme', 'dark')
+
+      await page.reload()
+      await expect(page.locator(h.SEL.deviceList)).toBeVisible({timeout: 30000})
+      await expect(html).toHaveAttribute('data-mantine-color-scheme', 'dark')
+
+      await page.locator('.stf-menu .stf-color-scheme').click()
+      await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light')
+    })
+
+  test('[check:playwright_ui] logout returns to the sign-in form',
+    async function({page}) {
+      await h.login(page)
+
+      await page.locator('.stf-menu .stf-logout').click()
+      await expect(page.locator(h.SEL.loginForm)).toBeVisible({timeout: 30000})
+
+      await page.goto('/#/devices')
+      await expect(page.locator(h.SEL.loginForm)).toBeVisible({timeout: 30000})
     })
 })

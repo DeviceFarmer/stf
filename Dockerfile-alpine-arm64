@@ -43,7 +43,6 @@ RUN echo '--- Check hardware compatibility' && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/sh && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    echo '/tmp/build/node_modules/.bin/bower cache clean' | su stf -s /bin/sh && \
     echo 'npm prune --omit=dev' | su stf -s /bin/sh && \
     wget --progress=dot:mega \
       https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \

@@ -1,0 +1,37 @@
+.toolbar {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.zoom {
+  width: 180px;
+}
+
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--mantine-spacing-md);
+}
+
+.item {
+  flex: 0 0 auto;
+  transition: width 150ms ease;
+}
+
+.link {
+  display: block;
+  line-height: 0;
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 1;
+  transition: opacity 1000ms;
+}
+
+.loading {
+  opacity: 0;
+}

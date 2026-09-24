@@ -1,0 +1,139 @@
+.panel {
+  --stage-bg: radial-gradient(ellipse at 50% 35%, #3a3f47 0%, #24272c 55%, #1b1d21 100%);
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--stage-bg);
+}
+
+:global([data-mantine-color-scheme='dark']) .panel {
+  --stage-bg: radial-gradient(ellipse at 50% 35%, #26292f 0%, #17181b 60%, #101113 100%);
+}
+
+.toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px 6px 10px;
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
+
+.deviceName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--mantine-radius-md);
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-dark-0));
+  transition: background-color 120ms ease;
+}
+
+.deviceName:hover {
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+}
+
+.deviceImage {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.menuDeviceImage {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.kickDevice {
+  color: var(--mantine-color-dimmed);
+}
+
+.kickDevice:hover {
+  color: var(--mantine-color-red-6);
+}
+
+.rightButtons {
+  flex: 0 0 auto;
+}
+
+.contextArea {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+}
+
+.contextAnchor {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.stage {
+  flex: 1 1 auto;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  padding: 22px 22px 14px;
+  overflow: hidden;
+  transition: opacity 150ms ease;
+}
+
+.standalone .stage {
+  padding: 10px;
+}
+
+.dragover {
+  opacity: 0.7;
+  outline: 2px dashed var(--mantine-primary-color-filled);
+  outline-offset: -8px;
+}
+
+.bottom {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 4px 12px 14px;
+}
+
+.navPill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px);
+}
+
+.navKey {
+  color: #d5d9df;
+  transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
+}
+
+.navKey:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.navKey:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.navMenuKey {
+  color: #9aa1ab;
+}

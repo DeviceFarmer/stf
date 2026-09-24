@@ -1,0 +1,64 @@
+.header {
+  padding: var(--mantine-spacing-md) var(--mantine-spacing-md) var(--mantine-spacing-sm);
+}
+
+.section {
+  margin: 0 var(--mantine-spacing-md) var(--mantine-spacing-md);
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.toolbar {
+  padding: 0 var(--mantine-spacing-md) var(--mantine-spacing-sm);
+}
+
+.search {
+  width: 240px;
+}
+
+.table {
+  font-size: var(--mantine-font-size-sm);
+}
+
+.table td,
+.table th {
+  white-space: nowrap;
+}
+
+.checkCell {
+  width: 36px;
+}
+
+.th {
+  font-size: var(--mantine-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--mantine-color-dimmed);
+}
+
+.name {
+  font-weight: 600;
+  color: var(--mantine-color-anchor);
+  text-decoration: none;
+}
+
+.name:hover {
+  text-decoration: underline;
+}
+
+.quotaRow td {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.quotaForm {
+  padding: var(--mantine-spacing-xs) 0;
+  max-width: 820px;
+  white-space: normal;
+}
+
+.footer {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  border-top: 1px solid var(--mantine-color-default-border);
+}

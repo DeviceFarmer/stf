@@ -1,0 +1,59 @@
+.toolbar {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.location {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.breadcrumbs {
+  flex-wrap: wrap;
+  row-gap: 2px;
+  padding: 0 4px;
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+}
+
+.listing {
+  overflow: hidden;
+}
+
+.name {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--mantine-radius-sm);
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.name:hover {
+  color: var(--mantine-color-anchor);
+}
+
+.icon {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.name:hover .downloadHint {
+  opacity: 1;
+}
+
+.nameText {
+  word-break: break-all;
+}
+
+.downloadHint {
+  flex: 0 0 auto;
+  opacity: 0;
+  color: var(--mantine-color-dimmed);
+  transition: opacity 120ms ease;
+}
+
+.nowrap {
+  white-space: nowrap;
+}

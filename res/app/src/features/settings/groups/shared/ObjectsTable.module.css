@@ -1,0 +1,35 @@
+.search {
+  width: 220px;
+}
+
+.table {
+  font-size: var(--mantine-font-size-sm);
+}
+
+.table td,
+.table th {
+  white-space: nowrap;
+}
+
+.checkCell {
+  width: 36px;
+}
+
+.actionCell {
+  width: 44px;
+}
+
+.sortHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-size: var(--mantine-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--mantine-color-dimmed);
+}
+
+.sortHeader:hover {
+  color: var(--mantine-color-text);
+}

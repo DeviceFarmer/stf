@@ -1,0 +1,58 @@
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-dimmed);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.link:hover {
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+  color: var(--mantine-color-text);
+}
+
+.active,
+.active:hover {
+  background: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-light-color);
+}
+
+.banner {
+  flex: 0 1 40%;
+  min-width: 0;
+}
+
+.strip {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--app-shell-border-color);
+}
+
+.strip > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.main {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main > * {
+  flex: 1 1 auto;
+  min-height: 0;
+}

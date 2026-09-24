@@ -1,0 +1,32 @@
+.masonry {
+  columns: 320px auto;
+  column-gap: var(--mantine-spacing-md);
+}
+
+.item {
+  break-inside: avoid;
+  margin-bottom: var(--mantine-spacing-md);
+}
+
+.label {
+  width: 45%;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--mantine-color-dimmed);
+}
+
+.value {
+  word-break: break-word;
+}
+
+.battery {
+  max-width: 180px;
+}
+
+.photo {
+  display: flex;
+  justify-content: center;
+  padding: var(--mantine-spacing-sm);
+  border-radius: var(--mantine-radius-md);
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-8));
+}

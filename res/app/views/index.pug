@@ -3,7 +3,7 @@
 //
 
 doctype html
-html(ng-app='app')
+html(lang='en')
   head
     meta(charset='utf-8')
     base(href='/')
@@ -14,21 +14,8 @@ html(ng-app='app')
     meta(name='format-detection', content='telephone=no')
     meta(name='apple-mobile-web-app-status-bar-style', content='black-translucent')
     link(href='static/logo/exports/STF-128.png', rel='apple-touch-icon')
-
-    title(ng-bind='pageTitle ? "STF - " + pageTitle : "STF"') STF
-  body(ng-cloak).bg-1.fill-height.unselectable
-    div(ng-controller='LayoutCtrl', basic-mode, admin-mode, standalone, landscape).fill-height
-      .pane-top.fill-height(fa-pane)
-        .pane-top-bar(fa-pane, pane-id='menu', pane-anchor='north',
-          pane-size='{{!$root.basicMode && !$root.standalone ? 44 : 0 }}px',
-
-          pane-handle='')
-          div(ng-include='"menu.pug"')
-
-        .pane-center(fa-pane, pane-id='main', pane-anchor='center').fill-height
-          socket-state
-          div(growl)
-          div(ng-view).fill-height
-
+    title STF
+  body.unselectable
+    #root
     script(src='/app/api/v1/state.js')
     script(src='static/app/build/entry/app.entry.js')

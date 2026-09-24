@@ -46,11 +46,11 @@ test.describe('STF against a real device', function() {
 
   test('[check:stf_device_present] the device shows up in the device list',
     async function() {
-      await page.goto('/#!/devices')
+      await page.goto('/#/devices')
       await h.waitForDeviceTile(page)
 
       const tile = page.locator(h.SEL.deviceTiles).filter({
-        has: page.locator('a[href="#!/control/' + SERIAL + '"]')
+        has: page.locator('a[href="#/control/' + SERIAL + '"]')
       })
       await expect(tile, 'a tile for ' + SERIAL).toHaveCount(1, {
         timeout: 180000
@@ -61,7 +61,7 @@ test.describe('STF against a real device', function() {
   test('[check:stf_device_usable] the device can be claimed with Use',
     async function() {
       const tile = page.locator(h.SEL.deviceTiles).filter({
-        has: page.locator('a[href="#!/control/' + SERIAL + '"]')
+        has: page.locator('a[href="#/control/' + SERIAL + '"]')
       })
 
       // state-available means STF has it present, ready and unclaimed.
@@ -73,7 +73,7 @@ test.describe('STF against a real device', function() {
 
       await tile.locator(h.SEL.deviceName).first().click()
 
-      await page.waitForURL(new RegExp('#!/control/'), {timeout: 90000})
+      await page.waitForURL(new RegExp('#/control/'), {timeout: 90000})
       await expect(page.locator(h.SEL.screen)).toBeVisible({timeout: 60000})
 
       // Stop Using only renders once the group invite went through, so this is
@@ -276,7 +276,7 @@ test.describe('STF against a real device', function() {
   test('[check:playwright_ui] releasing the device returns to the device list',
     async function() {
       await page.click(h.SEL.stopUsing)
-      await page.waitForURL(/#!\/devices/, {timeout: 60000})
+      await page.waitForURL(/#\/devices/, {timeout: 60000})
       await expect(page.locator(h.SEL.deviceList)).toBeVisible()
     })
 })

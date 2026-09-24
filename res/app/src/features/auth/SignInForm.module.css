@@ -1,0 +1,13 @@
+.page {
+  min-height: 100dvh;
+  padding: var(--mantine-spacing-md);
+  background:
+    radial-gradient(circle at 20% 20%, light-dark(var(--mantine-color-stf-1), var(--mantine-color-dark-6)) 0, transparent 45%),
+    radial-gradient(circle at 80% 80%, light-dark(var(--mantine-color-blue-1), var(--mantine-color-dark-7)) 0, transparent 40%),
+    var(--mantine-color-body);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+}

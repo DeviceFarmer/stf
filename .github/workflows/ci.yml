@@ -20,8 +20,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  NPM_INSTALL_FLAGS: --no-audit --no-fund --loglevel=http
   # Bump to invalidate the dependency cache without touching package.json.
-  CACHE_EPOCH: v2
+  CACHE_EPOCH: v3
 
 jobs:
   # Reads .github/android-matrix.json so the matrix and the report's coverage
@@ -64,18 +65,11 @@ jobs:
             libzmq3-dev libprotobuf-dev protobuf-compiler \
             graphicsmagick yasm nasm git curl zip unzip wget
 
-      - name: Allow bower git:// dependencies over https
-        run: |
-          git config --global url."https://github.com/".insteadOf git://github.com/
-          git config --global url."https://".insteadOf git://
-          # A bower dependency that has since been deleted prompts for a
-          # GitHub password and hangs the job forever otherwise.
-          echo "GIT_TERMINAL_PROMPT=0" >> "$GITHUB_ENV"
-
       - name: Compute dependency cache key
         id: cachekey
         run: |
-          echo "key=stf-deps-${CACHE_EPOCH}-${{ runner.os }}-${{ hashFiles('package.json', 'bower.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
+          flags="$(printf '%s' "$NPM_INSTALL_FLAGS" | sha256sum | cut -c1-12)"
+          echo "key=stf-deps-${CACHE_EPOCH}-${{ runner.os }}-${flags}-${{ hashFiles('package.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
         id: deps
@@ -83,15 +77,11 @@ jobs:
         with:
           path: |
             node_modules
-            res/bower_components
           key: ${{ steps.cachekey.outputs.key }}
 
       - name: Install npm dependencies
         if: steps.deps.outputs.cache-hit != 'true'
-        run: npm install --no-audit --no-fund --omit=optional --loglevel=http
-
-      - name: Install bower dependencies
-        run: npx bower install --config.interactive=false
+        run: npm install $NPM_INSTALL_FLAGS
 
       # gulp's own `build` task races clean against webpack:build, so run the
       # two halves in order instead.
@@ -120,7 +110,7 @@ jobs:
       - name: Record verdict
         if: always()
         run: |
-          bash .github/scripts/verdict.sh build 'Build (npm + bower + webpack)' \
+          bash .github/scripts/verdict.sh build 'Build (npm + webpack)' \
             '${{ job.status }}' "deps cache ${{ steps.deps.outputs.cache-hit == 'true' && 'hit' || 'miss' }}"
 
       - name: Upload verdict
@@ -149,7 +139,6 @@ jobs:
         with:
           path: |
             node_modules
-            res/bower_components
           key: ${{ needs.build.outputs.cache-key }}
           fail-on-cache-miss: true
 
@@ -199,7 +188,6 @@ jobs:
         with:
           path: |
             node_modules
-            res/bower_components
           key: ${{ needs.build.outputs.cache-key }}
           fail-on-cache-miss: true
 
@@ -239,69 +227,47 @@ jobs:
         with:
           path: |
             node_modules
-            res/bower_components
           key: ${{ needs.build.outputs.cache-key }}
           fail-on-cache-miss: true
 
-      - name: Locate Chrome
-        run: |
-          CHROME="$(command -v google-chrome || command -v google-chrome-stable \
-            || command -v chromium || command -v chromium-browser || true)"
-          if [ -z "$CHROME" ]; then
-            echo "::error::no Chrome binary on the runner"
-            exit 1
-          fi
-          echo "CHROME_BIN=$CHROME" >> "$GITHUB_ENV"
-          "$CHROME" --version
-
-      - name: karma (res/app AngularJS specs)
+      - name: vitest (res/app React specs)
         id: component
-        run: npm run test:component
+        run: npm run test:component -- --reporter=default --reporter=junit --outputFile.junit=../../test-results/vitest/junit.xml
 
-      - name: Summarise karma results
+      - name: Summarise vitest results
         if: always()
-        id: karma
+        id: vitest
         run: |
-          if [ -f test-results/karma/junit.xml ]; then
+          if [ -f test-results/vitest/junit.xml ]; then
             node -e '
               var fs = require("fs")
-              var xml = fs.readFileSync("test-results/karma/junit.xml", "utf8")
+              var xml = fs.readFileSync("test-results/vitest/junit.xml", "utf8")
               var pick = function(name) {
                 var m = new RegExp(name + "=\"(\\d+)\"").exec(xml)
                 return m ? Number(m[1]) : 0
               }
-              // karma counts what ran. The second half says how much of it
-              // asserts anything, because most specs under res/app are the
-              // unmodified AngularJS generator stub and reporting the executed
-              // count alone reads as coverage this tier does not have.
-              // No apostrophes in here: this program is inside a single-quoted
-              // shell string, so one would end it and hand the rest to bash.
-              var counted = require("./.github/scripts/count-assertions.js")
-                .count(["res/app"])
               var line = pick("tests") + " specs, " + pick("failures") +
-                " failed, " + pick("errors") + " errored (" + counted.asserting +
-                " assert, " + (counted.tautology + counted.empty) +
-                " are upstream stubs)"
+                " failed, " + pick("errors") + " errored"
               fs.appendFileSync(process.env.GITHUB_OUTPUT, "summary=" + line + "\n")
             '
           else
             echo "summary=no junit output produced" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload karma results
+      - name: Upload vitest results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: karma-results
-          path: test-results/karma
+          name: vitest-results
+          path: test-results/vitest
           retention-days: 3
           if-no-files-found: warn
 
       - name: Record verdict
         if: always()
         run: |
-          bash .github/scripts/verdict.sh component 'Component tests (karma + AngularJS)' \
-            '${{ steps.component.outcome || job.status }}' '${{ steps.karma.outputs.summary }}'
+          bash .github/scripts/verdict.sh component 'Component tests (vitest + React)' \
+            '${{ steps.component.outcome || job.status }}' '${{ steps.vitest.outputs.summary }}'
 
       - name: Upload verdict
         if: always()
@@ -342,7 +308,6 @@ jobs:
         with:
           path: |
             node_modules
-            res/bower_components
           key: ${{ needs.build.outputs.cache-key }}
           fail-on-cache-miss: true
 
@@ -530,7 +495,6 @@ jobs:
         with:
           path: |
             node_modules
-            res/bower_components
           key: ${{ needs.build.outputs.cache-key }}
           fail-on-cache-miss: true
 

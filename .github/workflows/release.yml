@@ -117,12 +117,6 @@ jobs:
             libzmq3-dev libprotobuf-dev protobuf-compiler \
             graphicsmagick yasm nasm git curl zip unzip wget
 
-      - name: Allow bower git:// dependencies over https
-        run: |
-          git config --global url."https://github.com/".insteadOf git://github.com/
-          git config --global url."https://".insteadOf git://
-          echo "GIT_TERMINAL_PROMPT=0" >> "$GITHUB_ENV"
-
       - name: Install
         run: npm install --omit=optional --loglevel http
 
