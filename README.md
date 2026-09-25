@@ -428,11 +428,11 @@ Most powered USB 3.0 hubs we've tested have had a serious problem: the whole hub
 
 ## Translating
 
-Currently STF UI is available in English and Japanese.
+Translations are managed in the [STF Transifex project](https://app.transifex.com/devicefarmer/stf-main). If you would like to translate STF into your language, please contribute there rather than editing the `po` files directly, so that your work is not overwritten by the next sync.
 
-If you would like translate to any other language, please contribute in the [STF Transifex project](https://www.transifex.com/devicefarmer/stf-main).
+Transifex language codes are used as-is for the files in `res/common/lang/po` and the keys in `res/common/lang/langs.json`.
 
-For updating the source and all the translation files first you have to install the [Transifex client](http://docs.transifex.com/client/setup/).
+For updating the source and all the translation files, first install the [Transifex client](https://developers.transifex.com/docs/cli) and provide an API token, e.g. in the `TX_TOKEN` environment variable.
 
 Then just run:
 ```bash
@@ -441,17 +441,16 @@ gulp translate
 
 It will do the following:
 
-1. Convert all the `jade` files to `html`.
-2. Extract with gettext all translatable strings to `stf.pot`.
-3. Push `stf.pot` to Transifex.
-4. Pull from Transifex all `po` translations.
-5. Compile all `po` files to `json`.
+1. Extract all translatable strings from the UI sources to `stf.pot`.
+2. Push `stf.pot` to Transifex.
+3. Pull from Transifex the translations of every language that has a `po` file.
+4. Compile all `po` files to `json`.
 
-Then in order to add it officially (only needs to be done once):
+Then in order to add a language officially (only needs to be done once):
 
 1. Add the language to `res/common/lang/langs.json`.
-2. Pull the specific language `tx pull -l <lang>`.
-3. Run `gulp translate`.
+2. Pull the specific language with `tx pull -l <lang>`.
+3. Run `gulp translate:compile`.
 
 ## Testing
 

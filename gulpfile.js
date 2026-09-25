@@ -205,7 +205,7 @@ gulp.task('clean', function() {
 gulp.task('build', gulp.parallel('clean', 'webpack:build'))
 gulp.task('lint', gulp.parallel('jsonlint', 'eslint-cli', 'tsc'))
 gulp.task('test', gulp.parallel('lint', 'run:checkversion'))
-gulp.task('translate', gulp.parallel(
+gulp.task('translate', gulp.series(
   'translate:extract'
 , 'translate:push'
 , 'translate:pull'
