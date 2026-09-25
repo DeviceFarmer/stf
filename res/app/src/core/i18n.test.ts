@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from 'vitest'
 import {
-  detectLanguage, gettext, normalizeLanguage, setLanguage, translate, translatePlural
+  detectLanguage, gettext, normalizeLanguage, setLanguage, translate, translatePlural, useLanguage
 } from './i18n'
 
 describe('i18n', () => {
@@ -24,13 +24,20 @@ describe('i18n', () => {
     expect(normalizeLanguage('pl-PL')).toBe('pl')
     expect(normalizeLanguage('pt-BR')).toBe('pt_BR')
     expect(normalizeLanguage('pt-PT')).toBe('pt_BR')
-    expect(normalizeLanguage('ru-RU')).toBe('ru_RU')
+    expect(normalizeLanguage('ru-RU')).toBe('ru')
+    expect(normalizeLanguage('ru_RU')).toBe('ru')
+    expect(normalizeLanguage('ko_KR')).toBe('ko')
     expect(normalizeLanguage('zh-CN')).toBe('zh_CN')
     expect(normalizeLanguage('zh')).toBe('zh_CN')
     expect(normalizeLanguage('zh-TW')).toBe('zh-Hant')
     expect(normalizeLanguage('zh-Hant-HK')).toBe('zh-Hant')
     expect(normalizeLanguage('xx-YY')).toBeUndefined()
     expect(normalizeLanguage('')).toBeUndefined()
+  })
+
+  it('keeps users on their saved legacy language', () => {
+    setLanguage('ru_RU')
+    expect(useLanguage.getState().language).toBe('ru')
   })
 
   it('detects the first supported browser language', () => {
