@@ -10,21 +10,21 @@ msgstr ""
 
 #: res/app/src/features/settings/groups/rules.ts:101
 msgid "(Expiration date - Starting date) must be <= Class duration"
-msgstr ""
+msgstr "(Date d'expiration - Date de début) doit être <= Durée de la classe"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:153
 #: res/app/src/features/settings/groups/shared/ObjectsTable.tsx:195
 #: res/app/src/features/settings/users/UsersSettings.tsx:231
 msgid "{{count}} selected"
-msgstr ""
+msgstr "{{count}} sélectionné(s)"
 
 #: res/app/src/features/group-list/GroupStats.tsx:102
 msgid "{{user.name}} groups duration use"
-msgstr ""
+msgstr "Utilisation de la durée des groupes de {{user.name}}"
 
 #: res/app/src/features/group-list/GroupStats.tsx:97
 msgid "{{user.name}} groups number use"
-msgstr ""
+msgstr "Utilisation du nombre de groupes de {{user.name}}"
 
 #: res/app/src/ui/modals.tsx:155
 msgid "A new version of STF is available"
@@ -71,16 +71,16 @@ msgstr "Actions"
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:74
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:82
 msgid "Activation"
-msgstr ""
+msgstr "Activation"
 
 #: res/app/src/features/group-list/columns.tsx:34
 #: res/app/src/features/settings/groups/rules.ts:155
 msgid "Active"
-msgstr ""
+msgstr "Actif"
 
 #: res/app/src/features/group-list/GroupStats.tsx:39
 msgid "Active groups"
-msgstr ""
+msgstr "Groupes actifs"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:107
 msgid "Activity"
@@ -135,23 +135,23 @@ msgstr "Mode Avion"
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:56
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:67
 msgid "Alert Message"
-msgstr ""
+msgstr "Message d'Alerte"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:75
 msgid "Alert message activation"
-msgstr ""
+msgstr "Activation du message d'alerte"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:88
 msgid "Alert message level"
-msgstr ""
+msgstr "Niveau du message d'alerte"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Annotated"
-msgstr ""
+msgstr "Annoté"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:46
 msgid "Any"
-msgstr ""
+msgstr "Indifférent"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:87
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:40
@@ -160,7 +160,7 @@ msgstr "App Store"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:88
 msgid "App switch"
-msgstr ""
+msgstr "Changer d'application"
 
 #: res/app/src/features/control/device-control/install-file.ts:14
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:151
@@ -173,7 +173,7 @@ msgstr "Applications"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
 msgid "Are you sure you want to reboot this device and keep using it afterwards?"
-msgstr ""
+msgstr "Êtes-vous sûr de vouloir redémarrer ce terminal et continuer à l'utiliser ensuite?"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
@@ -181,7 +181,7 @@ msgstr "Est vous sûr de vouloir redémarrer ce terminal?"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:117
 msgid "Auto Scroll"
-msgstr ""
+msgstr "Défilement Automatique"
 
 #: res/app/src/core/devices/enhance.ts:28
 msgid "Automating"
@@ -197,19 +197,19 @@ msgstr "Disponible"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:172
 msgid "Available device selection"
-msgstr ""
+msgstr "Sélection de terminaux disponibles"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:120
 msgid "Available devices"
-msgstr ""
+msgstr "Terminaux disponibles"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:133
 msgid "Available user selection"
-msgstr ""
+msgstr "Sélection d'utilisateurs disponibles"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:80
 msgid "Available users"
-msgstr ""
+msgstr "Utilisateurs disponibles"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:82
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:28
@@ -219,7 +219,7 @@ msgstr "Précédent"
 #: res/app/src/features/settings/groups/rules.ts:83
 #: res/app/src/features/settings/users/QuotasForm.tsx:20
 msgid "Bad syntax"
-msgstr ""
+msgstr "Syntaxe incorrecte"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:198
 msgid "Battery"
@@ -253,11 +253,11 @@ msgstr "Bluetooth"
 
 #: res/app/src/core/common.ts:29
 msgid "Bookable"
-msgstr ""
+msgstr "Réservable"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:51
 msgid "Booked"
-msgstr ""
+msgstr "Réservé"
 
 #: res/app/src/features/device-list/columns.tsx:287
 msgid "Browser"
@@ -308,12 +308,12 @@ msgstr "Vérifier les erreurs ci-dessous"
 #: res/app/src/features/group-list/columns.tsx:85
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:62
 msgid "Class"
-msgstr ""
+msgstr "Classe"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:141
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:146
 msgid "Clean Bluetooth bonded devices"
-msgstr ""
+msgstr "Supprimer les appareils Bluetooth associés"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:161
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:57
@@ -331,7 +331,7 @@ msgstr "Presse-papier"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:46
 msgid "Close"
-msgstr ""
+msgstr "Fermer"
 
 #: res/app/src/core/devices/enhance.ts:40
 msgid "Cold"
@@ -341,13 +341,13 @@ msgstr "Froid"
 #: res/app/src/features/settings/groups/GroupList.tsx:177
 #: res/app/src/features/settings/users/UsersSettings.tsx:268
 msgid "Confirm Remove"
-msgstr ""
+msgstr "Confirmer la Suppression"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:35
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:36
 #: res/app/src/features/settings/groups/GroupDetail.tsx:200
 msgid "Conflicts"
-msgstr ""
+msgstr "Conflits"
 
 #: res/app/src/core/devices/enhance.ts:20
 #: res/app/src/core/devices/enhance.ts:7
@@ -362,20 +362,20 @@ msgstr "Connexion réussie"
 #: res/app/src/features/group-list/GroupListPage.tsx:128
 #: res/app/src/features/settings/groups/GroupList.tsx:165
 msgid "Contact Owners"
-msgstr ""
+msgstr "Contacter les Propriétaires"
 
 #: res/app/src/features/auth/SignInForm.tsx:165
 #: res/app/src/features/auth/SignInForm.tsx:168
 #: res/app/src/ui/AppLayout.tsx:276
 #: res/app/src/ui/AppLayout.tsx:283
 msgid "Contact Support"
-msgstr ""
+msgstr "Contacter le Support"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:197
 #: res/app/src/features/settings/groups/GroupUsers.tsx:45
 #: res/app/src/features/settings/users/UsersSettings.tsx:248
 msgid "Contact Users"
-msgstr ""
+msgstr "Contacter les Utilisateurs"
 
 #: res/app/src/ui/AppLayout.tsx:211
 msgid "Control"
@@ -383,16 +383,16 @@ msgstr "Contrôle"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Controlled"
-msgstr ""
+msgstr "Contrôlé"
 
 #: res/app/src/ui/CopyButton.tsx:30
 msgid "Copied"
-msgstr ""
+msgstr "Copié"
 
 #: res/app/src/ui/CopyButton.tsx:30
 #: res/app/src/ui/CopyButton.tsx:38
 msgid "Copy to clipboard"
-msgstr ""
+msgstr "Copier dans le presse-papier"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:288
 msgid "Cores"
@@ -405,20 +405,20 @@ msgstr "CPU"
 #: res/app/src/features/device-list/columns.tsx:303
 #: res/app/src/features/settings/groups/GroupDevices.tsx:29
 msgid "CPU Platform"
-msgstr ""
+msgstr "Plateforme CPU"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:134
 msgid "Create"
-msgstr ""
+msgstr "Créer"
 
 #: res/app/src/features/settings/users/CreateUserForm.tsx:42
 #: res/app/src/features/settings/users/UsersSettings.tsx:192
 msgid "Create new user"
-msgstr ""
+msgstr "Créer un nouvel utilisateur"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:25
 msgid "Critical"
-msgstr ""
+msgstr "Critique"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:75
 msgid "Current rotation:"
@@ -432,11 +432,11 @@ msgstr "Personnaliser"
 
 #: res/app/src/core/common.ts:22
 msgid "Daily"
-msgstr ""
+msgstr "Quotidien"
 
 #: res/app/src/ui/AppLayout.tsx:301
 msgid "Dark"
-msgstr ""
+msgstr "Sombre"
 
 #: res/app/src/features/control/ControlPage.tsx:54
 msgid "Dashboard"
@@ -453,7 +453,7 @@ msgstr "Date"
 #: res/app/src/features/settings/general/GeneralSettings.tsx:44
 #: res/app/src/features/settings/general/GeneralSettings.tsx:49
 msgid "Date format"
-msgstr ""
+msgstr "Format de date"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
@@ -461,27 +461,27 @@ msgstr "Mort"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
-msgstr ""
+msgstr "Débogage"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:203
 msgid "Default groups quotas"
-msgstr ""
+msgstr "Quotas de groupes par défaut"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:259
 msgid "Default Groups Quotas"
-msgstr ""
+msgstr "Quotas de Groupes par Défaut"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:62
 msgid "Define your own alert message"
-msgstr ""
+msgstr "Définissez votre propre message d'alerte"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:45
 msgid "Define your own Date format"
-msgstr ""
+msgstr "Définissez votre propre format de date"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:68
 msgid "Define your own Email address separator"
-msgstr ""
+msgstr "Définissez votre propre séparateur d'adresses e-mail"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:217
 msgid "Density"
@@ -505,7 +505,7 @@ msgstr "Terminal"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:51
 msgid "Device booking state"
-msgstr ""
+msgstr "État de réservation du terminal"
 
 #: res/app/src/features/device-list/device-actions.ts:38
 msgid "Device cannot get kicked from the group"
@@ -513,7 +513,7 @@ msgstr "Le Terminal ne peut pas être exclu du groupe"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Device controlling state"
-msgstr ""
+msgstr "État de contrôle du terminal"
 
 #: res/app/src/core/devices/enhance.ts:35
 msgid "Device is not present anymore for some reason."
@@ -525,11 +525,11 @@ msgstr "Le Terminal est présent mais Hors-Ligne"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:275
 msgid "Device list"
-msgstr ""
+msgstr "Liste des terminaux"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Device notes state"
-msgstr ""
+msgstr "État des notes du terminal"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
@@ -537,12 +537,12 @@ msgstr "Photos du Terminal"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Device presence state"
-msgstr ""
+msgstr "État de présence du terminal"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:126
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:153
 msgid "Device selection"
-msgstr ""
+msgstr "Sélection de terminaux"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:101
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:45
@@ -568,7 +568,7 @@ msgstr "Terminaux"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:154
 msgid "Disable Bluetooth"
-msgstr ""
+msgstr "Désactiver le Bluetooth"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Disable WiFi"
@@ -590,7 +590,7 @@ msgstr "écran"
 
 #: res/app/src/core/install.ts:53
 msgid "Downloading..."
-msgstr ""
+msgstr "Téléchargement en cours..."
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:184
 msgid "Drop file to upload"
@@ -604,12 +604,12 @@ msgstr "Mannequin"
 #: res/app/src/features/settings/groups/GroupList.tsx:51
 #: res/app/src/features/settings/users/UsersSettings.tsx:300
 msgid "Duration"
-msgstr ""
+msgstr "Durée"
 
 #: res/app/src/features/auth/SignInForm.tsx:128
 #: res/app/src/features/auth/SignInForm.tsx:129
 msgid "E-mail"
-msgstr ""
+msgstr "E-mail"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:214
 #: res/app/src/features/settings/groups/GroupUsers.tsx:19
@@ -617,16 +617,16 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:297
 #: res/app/src/features/user/UserPage.tsx:80
 msgid "Email"
-msgstr ""
+msgstr "E-mail"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:67
 #: res/app/src/features/settings/general/GeneralSettings.tsx:72
 msgid "Email address separator"
-msgstr ""
+msgstr "Séparateur d'adresses e-mail"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:154
 msgid "Enable Bluetooth"
-msgstr ""
+msgstr "Activer le Bluetooth"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Enable WiFi"
@@ -634,15 +634,15 @@ msgstr "Activer le Wifi"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:184
 msgid "Enable/Disable confirmation for device removing"
-msgstr ""
+msgstr "Activer/Désactiver la confirmation de suppression des terminaux"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:173
 msgid "Enable/Disable confirmation for group removing"
-msgstr ""
+msgstr "Activer/Désactiver la confirmation de suppression des groupes"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:263
 msgid "Enable/Disable confirmation for user removing"
-msgstr ""
+msgstr "Activer/Désactiver la confirmation de suppression des utilisateurs"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:223
 msgid "Encrypted"
@@ -676,7 +676,7 @@ msgstr "Exécute des commandes Shell à distance"
 #: res/app/src/features/settings/groups/GroupDetail.tsx:147
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:102
 msgid "Expiration Date"
-msgstr ""
+msgstr "Date d'Expiration"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:160
 msgid "Failed to download file"
@@ -684,7 +684,7 @@ msgstr "Impossible de télécharger le fichier"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:45
 msgid "False"
-msgstr ""
+msgstr "Faux"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:56
 msgid "Fast Forward"
@@ -696,16 +696,16 @@ msgstr "Explorateur de Fichiers"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:50
 msgid "File Name"
-msgstr ""
+msgstr "Nom du Fichier"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:119
 msgid "Filter on user group ownership"
-msgstr ""
+msgstr "Filtrer selon la possession de groupes par l'utilisateur"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:181
 #: res/app/src/features/settings/users/UsersSettings.tsx:109
 msgid "Filters"
-msgstr ""
+msgstr "Filtres"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:188
 msgid "Find Device"
@@ -751,7 +751,7 @@ msgstr "Obtenir le contenu du Presse-Papier"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:159
 msgid "Get ready"
-msgstr ""
+msgstr "Rendre prêt"
 
 #: res/app/src/features/docs/DocsPage.tsx:83
 #: res/app/src/features/docs/DocsPage.tsx:88
@@ -768,65 +768,65 @@ msgstr "Bien"
 
 #: res/app/src/features/device-list/columns.tsx:245
 msgid "Group Class"
-msgstr ""
+msgstr "Classe du Groupe"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:131
 msgid "Group device selection"
-msgstr ""
+msgstr "Sélection de terminaux du groupe"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:113
 msgid "Group devices"
-msgstr ""
+msgstr "Terminaux du groupe"
 
 #: res/app/src/features/settings/groups/rules.ts:108
 msgid "Group duration quotas is reached"
-msgstr ""
+msgstr "Le quota de durée du groupe est atteint"
 
 #: res/app/src/features/device-list/columns.tsx:252
 msgid "Group Expiration Date"
-msgstr ""
+msgstr "Date d'Expiration du Groupe"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:121
 msgid "Group list"
-msgstr ""
+msgstr "Liste des groupes"
 
 #: res/app/src/features/device-list/columns.tsx:244
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:15
 msgid "Group Name"
-msgstr ""
+msgstr "Nom du Groupe"
 
 #: res/app/src/features/device-list/columns.tsx:256
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:226
 #: res/app/src/features/settings/groups/GroupDevices.tsx:42
 msgid "Group Origin"
-msgstr ""
+msgstr "Origine du Groupe"
 
 #: res/app/src/features/device-list/columns.tsx:248
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:17
 #: res/app/src/features/settings/users/UsersSettings.tsx:120
 msgid "Group Owner"
-msgstr ""
+msgstr "Propriétaire du Groupe"
 
 #: res/app/src/features/device-list/columns.tsx:254
 msgid "Group Repetitions"
-msgstr ""
+msgstr "Répétitions du Groupe"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:94
 #: res/app/src/features/settings/groups/GroupList.tsx:147
 msgid "Group selection"
-msgstr ""
+msgstr "Sélection de groupes"
 
 #: res/app/src/features/device-list/columns.tsx:253
 msgid "Group Starting Date"
-msgstr ""
+msgstr "Date de Début du Groupe"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:90
 msgid "Group user selection"
-msgstr ""
+msgstr "Sélection d'utilisateurs du groupe"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:73
 msgid "Group users"
-msgstr ""
+msgstr "Utilisateurs du groupe"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:51
 #: res/app/src/features/settings/groups/GroupList.tsx:48
@@ -834,23 +834,23 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:299
 #: res/app/src/ui/AppLayout.tsx:214
 msgid "Groups"
-msgstr ""
+msgstr "Groupes"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:103
 msgid "Groups duration quota is reached"
-msgstr ""
+msgstr "Le quota de durée des groupes est atteint"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:124
 msgid "Groups number quota is reached"
-msgstr ""
+msgstr "Le quota de nombre de groupes est atteint"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:343
 msgid "Groups Quotas"
-msgstr ""
+msgstr "Quotas de Groupes"
 
 #: res/app/src/core/common.ts:26
 msgid "Halfyearly"
-msgstr ""
+msgstr "Semestriel"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:258
 msgid "Hardware"
@@ -873,7 +873,7 @@ msgstr "Aide"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Hide Manifest"
-msgstr ""
+msgstr "Cacher le Manifest"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
@@ -899,7 +899,7 @@ msgstr "Nom de l'Hôte"
 
 #: res/app/src/core/common.ts:21
 msgid "Hourly"
-msgstr ""
+msgstr "Horaire"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:253
 msgid "ICCID"
@@ -912,7 +912,7 @@ msgstr "ID"
 #: res/app/src/features/group-list/columns.tsx:66
 #: res/app/src/features/settings/groups/GroupDetail.tsx:144
 msgid "Identifier"
-msgstr ""
+msgstr "Identifiant"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:251
 msgid "IMEI"
@@ -924,7 +924,7 @@ msgstr "IMSI"
 
 #: res/app/src/features/settings/groups/rules.ts:157
 msgid "Inactive"
-msgstr ""
+msgstr "Inactif"
 
 #: res/app/src/features/auth/SignInForm.tsx:86
 msgid "Incorrect login details"
@@ -936,7 +936,7 @@ msgstr "Informations"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:23
 msgid "Information"
-msgstr ""
+msgstr "Information"
 
 #: res/app/src/core/install.ts:159
 msgid "Installation canceled by user."
@@ -961,7 +961,7 @@ msgstr "En cours d'installation de l'application"
 
 #: res/app/src/ui/Pager.tsx:61
 msgid "Items per page"
-msgstr ""
+msgstr "Éléments par page"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:97
 msgid "Key"
@@ -969,7 +969,7 @@ msgstr "Clef"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:181
 msgid "Keyboard"
-msgstr ""
+msgstr "Clavier"
 
 #: res/app/src/features/settings/SettingsPage.tsx:37
 msgid "Keys"
@@ -996,7 +996,7 @@ msgstr "En cours de lancement de l'activité ..."
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
 msgid "LDAP Username"
-msgstr ""
+msgstr "Nom d'utilisateur LDAP"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:205
 #: res/app/src/features/control/panes/logs/LogTable.tsx:133
@@ -1006,7 +1006,7 @@ msgstr "Niveau"
 
 #: res/app/src/ui/AppLayout.tsx:301
 msgid "Light"
-msgstr ""
+msgstr "Clair"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:90
 msgid "Local Settings"
@@ -1020,17 +1020,17 @@ msgstr "Localisation"
 
 #: res/app/src/features/auth/SignInForm.tsx:156
 msgid "Log In"
-msgstr ""
+msgstr "Se connecter"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:102
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:103
 msgid "Logcat Level"
-msgstr ""
+msgstr "Niveau Logcat"
 
 #: res/app/src/ui/AppLayout.tsx:313
 #: res/app/src/ui/AppLayout.tsx:319
 msgid "Logout"
-msgstr ""
+msgstr "Déconnexion"
 
 #: res/app/src/features/control/ControlPage.tsx:60
 msgid "Logs"
@@ -1061,7 +1061,7 @@ msgstr "Fabricant"
 #: res/app/src/features/device-list/columns.tsx:295
 #: res/app/src/features/settings/groups/GroupDevices.tsx:38
 msgid "Market name"
-msgstr ""
+msgstr "Nom commercial"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:49
 msgid "Media"
@@ -1103,7 +1103,7 @@ msgstr "Modèle"
 
 #: res/app/src/core/common.ts:24
 msgid "Monthly"
-msgstr ""
+msgstr "Mensuel"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:147
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:154
@@ -1167,16 +1167,16 @@ msgstr "Pas de clefs ADB"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:173
 msgid "No available devices"
-msgstr ""
+msgstr "Pas de terminaux disponibles"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:134
 msgid "No available users"
-msgstr ""
+msgstr "Pas d'utilisateurs disponibles"
 
 #: res/app/src/features/settings/groups/rules.ts:91
 #: res/app/src/features/settings/users/QuotasForm.tsx:24
 msgid "No change"
-msgstr ""
+msgstr "Aucun changement"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:25
 #: res/app/src/features/control/screen/screen-keyboard.ts:38
@@ -1190,7 +1190,7 @@ msgstr "Pas d'écran de terminal"
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:140
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:265
 msgid "No Devices"
-msgstr ""
+msgstr "Pas de Terminaux"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:103
 msgid "No devices connected"
@@ -1198,24 +1198,24 @@ msgstr "Pas de terminaux connectés"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:132
 msgid "No group devices"
-msgstr ""
+msgstr "Pas de terminaux dans le groupe"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:91
 msgid "No group users"
-msgstr ""
+msgstr "Pas d'utilisateurs dans le groupe"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:87
 #: res/app/src/features/settings/groups/GroupList.tsx:200
 msgid "No Groups"
-msgstr ""
+msgstr "Pas de Groupes"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:28
 msgid "No log entries match the filters"
-msgstr ""
+msgstr "Aucune entrée de log ne correspond aux filtres"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:98
 msgid "No output"
-msgstr ""
+msgstr "Pas de sortie"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:104
 msgid "No photo available"
@@ -1229,7 +1229,7 @@ msgstr "Pas de ports redirigés"
 #: res/app/src/features/group-list/GroupListPage.tsx:161
 #: res/app/src/features/group-list/GroupMembers.tsx:90
 msgid "No results"
-msgstr ""
+msgstr "Aucun résultat"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:118
 msgid "No screenshots taken"
@@ -1237,7 +1237,7 @@ msgstr "Pas de captures d'écran prises"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:289
 msgid "No Users"
-msgstr ""
+msgstr "Pas d'Utilisateurs"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:34
 msgid "Normal Mode"
@@ -1250,7 +1250,7 @@ msgstr "Pas en charge"
 #: res/app/src/features/docs/DocsPage.tsx:62
 #: res/app/src/features/user/UserPage.tsx:54
 msgid "Not Found"
-msgstr ""
+msgstr "Introuvable"
 
 #: res/app/src/features/device-list/cells.tsx:132
 #: res/app/src/features/device-list/cells.tsx:162
@@ -1264,11 +1264,11 @@ msgstr "Nombre"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:54
 msgid "Number of groups"
-msgstr ""
+msgstr "Nombre de groupes"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:80
 msgid "Number of repetitions per group"
-msgstr ""
+msgstr "Nombre de répétitions par groupe"
 
 #: res/app/src/core/devices/enhance.ts:21
 #: res/app/src/core/devices/enhance.ts:8
@@ -1279,11 +1279,11 @@ msgstr "Hors Ligne"
 #: res/app/src/ui/modals.tsx:67
 #: res/app/src/ui/modals.tsx:88
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: res/app/src/core/common.ts:20
 msgid "Once"
-msgstr ""
+msgstr "Une fois"
 
 #: res/app/src/features/control/device-control/install-file.ts:38
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:108
@@ -1299,7 +1299,7 @@ msgstr "Ouvrir"
 #: res/app/src/features/device-list/columns.tsx:304
 #: res/app/src/features/settings/groups/GroupDevices.tsx:34
 msgid "OpenGL ES version"
-msgstr ""
+msgstr "Version OpenGL ES"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:222
 msgid "Orientation"
@@ -1324,7 +1324,7 @@ msgstr "Surchauffe"
 #: res/app/src/features/group-list/columns.tsx:71
 #: res/app/src/features/settings/groups/GroupDetail.tsx:145
 msgid "Owner"
-msgstr ""
+msgstr "Propriétaire"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:102
 msgid "Package"
@@ -1338,20 +1338,20 @@ msgstr "Mot de Passe"
 
 #: res/app/src/ui/mail.ts:18
 msgid "Paste the email addresses from the clipboard!"
-msgstr ""
+msgstr "Collez les adresses e-mail depuis le presse-papier!"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:71
 msgid "Paste to device"
-msgstr ""
+msgstr "Coller sur le terminal"
 
 #: res/app/src/features/group-list/columns.tsx:35
 #: res/app/src/features/settings/groups/rules.ts:152
 msgid "Pending"
-msgstr ""
+msgstr "En suspens"
 
 #: res/app/src/features/group-list/GroupStats.tsx:46
 msgid "Pending groups"
-msgstr ""
+msgstr "Groupes en suspens"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:231
 msgid "Permissions"
@@ -1439,11 +1439,11 @@ msgstr "En Préparation"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Present"
-msgstr ""
+msgstr "Présent"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:33
 msgid "Press Get to start logging"
-msgstr ""
+msgstr "Appuyez sur Obtenir pour démarrer les logs"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"
@@ -1453,7 +1453,7 @@ msgstr "Précédent"
 #: res/app/src/features/settings/groups/GroupUsers.tsx:24
 #: res/app/src/features/settings/users/UsersSettings.tsx:298
 msgid "Privilege"
-msgstr ""
+msgstr "Privilège"
 
 #: res/app/src/core/install.ts:55
 msgid "Processing..."
@@ -1470,7 +1470,7 @@ msgstr "En cours de téléversement des Applications ...."
 
 #: res/app/src/core/common.ts:25
 msgid "Quaterly"
-msgstr ""
+msgstr "Trimestriel"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:298
 msgid "RAM"
@@ -1484,40 +1484,40 @@ msgstr "Prêt"
 
 #: res/app/src/features/group-list/GroupStats.tsx:44
 msgid "Ready groups"
-msgstr ""
+msgstr "Groupes prêts"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:112
 msgid "Really delete this device?"
-msgstr ""
+msgstr "Voulez-vous vraiment supprimer ce terminal?"
 
 #: res/app/src/features/settings/groups/actions.ts:62
 msgid "Really delete this group?"
-msgstr ""
+msgstr "Voulez-vous vraiment supprimer ce groupe?"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:123
 msgid "Really delete this selection of devices?"
-msgstr ""
+msgstr "Voulez-vous vraiment supprimer cette sélection de terminaux?"
 
 #: res/app/src/features/settings/groups/actions.ts:70
 msgid "Really delete this selection of groups?"
-msgstr ""
+msgstr "Voulez-vous vraiment supprimer cette sélection de groupes?"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:166
 msgid "Really delete this selection of users?"
-msgstr ""
+msgstr "Voulez-vous vraiment supprimer cette sélection d'utilisateurs?"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:158
 msgid "Really delete this user?"
-msgstr ""
+msgstr "Voulez-vous vraiment supprimer cet utilisateur?"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:34
 msgid "Recents"
-msgstr ""
+msgstr "Récents"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
-msgstr ""
+msgstr "Syntaxe regex"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
@@ -1550,31 +1550,31 @@ msgstr "Enlever"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:197
 msgid "Remove the device selection"
-msgstr ""
+msgstr "Supprimer la sélection de terminaux"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:184
 msgid "Remove the group selection"
-msgstr ""
+msgstr "Supprimer la sélection de groupes"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:275
 msgid "Remove the user selection"
-msgstr ""
+msgstr "Supprimer la sélection d'utilisateurs"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:71
 #: res/app/src/features/settings/users/UsersSettings.tsx:115
 msgid "Removing filters"
-msgstr ""
+msgstr "Filtres de suppression"
 
 #: res/app/src/features/group-list/columns.tsx:86
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:71
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:81
 #: res/app/src/features/settings/users/UsersSettings.tsx:301
 msgid "Repetitions"
-msgstr ""
+msgstr "Répétitions"
 
 #: res/app/src/features/settings/groups/rules.ts:94
 msgid "Repetitions must be > 0 for this Class"
-msgstr ""
+msgstr "Les répétitions doivent être > 0 pour cette Classe"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:65
 #: res/app/src/features/settings/general/GeneralSettings.tsx:104
@@ -1592,7 +1592,7 @@ msgstr "Réinitialiser les paramètres"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:47
 msgid "Restart and Keep Device"
-msgstr ""
+msgstr "Redémarrer et Garder le Terminal"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:35
 msgid "Restart Device"
@@ -1644,7 +1644,7 @@ msgstr "Exécutez cette commande pour copier la clef de votre presse-papier"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:68
 msgid "Sample of log format"
-msgstr ""
+msgstr "Exemple de format de log"
 
 #: res/app/src/features/device-list/cells.tsx:143
 #: res/app/src/features/settings/groups/GroupDetail.tsx:100
@@ -1652,14 +1652,14 @@ msgstr ""
 #: res/app/src/features/settings/users/CreateUserForm.tsx:83
 #: res/app/src/features/settings/users/QuotasForm.tsx:95
 msgid "Save"
-msgstr ""
+msgstr "Enregistrer"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:134
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:139
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:80
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:90
 msgid "Save Logs"
-msgstr ""
+msgstr "Enregistrer les Logs"
 
 #: res/app/src/features/control/device-control/device-commands.ts:23
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:48
@@ -1668,11 +1668,11 @@ msgstr "Sauver la capture d'écran"
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:115
 msgid "Saving will also get ready the group!"
-msgstr ""
+msgstr "L'enregistrement rendra aussi le groupe prêt!"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:196
 msgid "Schedule"
-msgstr ""
+msgstr "Planification"
 
 #: res/app/src/features/device-list/columns.tsx:281
 #: res/app/src/features/group-list/GroupMembers.tsx:153
@@ -1712,7 +1712,7 @@ msgstr "Rechercher"
 #: res/app/src/features/settings/groups/shared/ObjectsTable.tsx:137
 #: res/app/src/features/settings/users/UsersSettings.tsx:232
 msgid "Select all"
-msgstr ""
+msgstr "Tout sélectionner"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:265
 #: res/app/src/features/device-list/columns.tsx:293
@@ -1729,15 +1729,15 @@ msgstr "Erreur Serveur. Vérifier les logs de sortie."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:171
 msgid "Set filters for device removing"
-msgstr ""
+msgstr "Définir les filtres de suppression des terminaux"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:101
 msgid "Set filters for user removing"
-msgstr ""
+msgstr "Définir les filtres de suppression des utilisateurs"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:251
 msgid "Set groups quotas for new users"
-msgstr ""
+msgstr "Définir les quotas de groupes pour les nouveaux utilisateurs"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:34
 #: res/app/src/features/settings/SettingsPage.tsx:56
@@ -1748,7 +1748,7 @@ msgstr "Paramètres"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:101
 msgid "Settings cleared"
-msgstr ""
+msgstr "Paramètres effacés"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:46
 msgid "Shell"
@@ -1756,7 +1756,7 @@ msgstr "Shell"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Show Manifest"
-msgstr ""
+msgstr "Afficher le Manifest"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
@@ -1769,11 +1769,11 @@ msgstr "S'enregistrer"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in to continue"
-msgstr ""
+msgstr "Connectez-vous pour continuer"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in with your LDAP account"
-msgstr ""
+msgstr "Connectez-vous avec votre compte LDAP"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:188
 msgid "Sign Out"
@@ -1794,7 +1794,7 @@ msgstr "Taille"
 
 #: res/app/src/features/auth/SignInForm.tsx:95
 msgid "Smartphone Test Farm"
-msgstr ""
+msgstr "Smartphone Test Farm"
 
 #: res/app/src/ui/AppLayout.tsx:109
 msgid "Socket connection was lost"
@@ -1810,11 +1810,11 @@ msgstr "Clefs spéciales"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
-msgstr ""
+msgstr "Standard"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:90
 msgid "Start"
-msgstr ""
+msgstr "Démarrer"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:86
 msgid "Start/Stop Logging"
@@ -1825,11 +1825,11 @@ msgstr "Démarrer/Arrêter les logs"
 #: res/app/src/features/settings/groups/GroupDetail.tsx:146
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:92
 msgid "Starting Date"
-msgstr ""
+msgstr "Date de Début"
 
 #: res/app/src/features/settings/groups/rules.ts:97
 msgid "Starting date >= Expiration date"
-msgstr ""
+msgstr "Date de début >= Date d'expiration"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:204
 #: res/app/src/features/device-list/columns.tsx:238
@@ -2018,7 +2018,7 @@ msgstr "L'utilisateur requêté partagé n'existe pas."
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:56
 msgid "The schedule can only be changed while the group is pending"
-msgstr ""
+msgstr "La planification ne peut être modifiée que lorsque le groupe est en suspens"
 
 #: res/app/src/core/install.ts:196
 msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
@@ -2038,7 +2038,7 @@ msgstr "L'URI transmise n'est pas invalide."
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265
 msgid "This folder is empty"
-msgstr ""
+msgstr "Ce dossier est vide"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:111
 #: res/app/src/features/control/panes/logs/LogTable.tsx:138
@@ -2064,15 +2064,15 @@ msgstr "Nombre total de Terminaux"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:66
 msgid "Total duration of groups (ms)"
-msgstr ""
+msgstr "Durée totale des groupes (ms)"
 
 #: res/app/src/features/group-list/GroupStats.tsx:38
 msgid "Total groups"
-msgstr ""
+msgstr "Nombre total de groupes"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:44
 msgid "True"
-msgstr ""
+msgstr "Vrai"
 
 #: res/app/src/features/control/ControlPage.tsx:118
 #: res/app/src/ui/modals.tsx:141
@@ -2090,7 +2090,7 @@ msgstr "Non Autorisé"
 
 #: res/app/src/features/settings/groups/rules.ts:105
 msgid "Unauthorized class while device list is not empty"
-msgstr ""
+msgstr "Classe non autorisée tant que la liste des terminaux n'est pas vide"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:73
 msgid "Uninstall"
@@ -2139,12 +2139,12 @@ msgstr "Utilisateur"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:182
 msgid "User list"
-msgstr ""
+msgstr "Liste des utilisateurs"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:177
 #: res/app/src/features/settings/users/UsersSettings.tsx:226
 msgid "User selection"
-msgstr ""
+msgstr "Sélection d'utilisateurs"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:101
 msgid "Username"
@@ -2154,7 +2154,7 @@ msgstr "Nom de l'utilisateur"
 #: res/app/src/features/settings/groups/GroupDetail.tsx:193
 #: res/app/src/features/settings/SettingsPage.tsx:40
 msgid "Users"
-msgstr ""
+msgstr "Utilisateurs"
 
 #: res/app/src/core/devices/enhance.ts:25
 msgid "Using"
@@ -2194,18 +2194,18 @@ msgstr "Augmenter le Volume"
 
 #: res/app/src/features/group-list/columns.tsx:36
 msgid "Waiting"
-msgstr ""
+msgstr "En attente"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:31
 msgid "Waiting for log entries"
-msgstr ""
+msgstr "En attente d'entrées de log"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:24
 #: res/app/src/features/settings/groups/actions.ts:33
 #: res/app/src/features/settings/users/UsersSettings.tsx:158
 #: res/app/src/features/settings/users/UsersSettings.tsx:166
 msgid "Warning"
-msgstr ""
+msgstr "Avertissement"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:88
 msgid "Warning:"
@@ -2217,7 +2217,7 @@ msgstr "Web"
 
 #: res/app/src/core/common.ts:23
 msgid "Weekly"
-msgstr ""
+msgstr "Hebdomadaire"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:219
 msgid "Width"
@@ -2241,28 +2241,28 @@ msgstr "Sans Fil"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:148
 msgid "Write a mail to the available user selection"
-msgstr ""
+msgstr "Écrire un e-mail à la sélection d'utilisateurs disponibles"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:108
 msgid "Write a mail to the group user selection"
-msgstr ""
+msgstr "Écrire un e-mail à la sélection d'utilisateurs du groupe"
 
 #: res/app/src/features/auth/SignInForm.tsx:163
 msgid "Write a mail to the support team"
-msgstr ""
+msgstr "Écrire un e-mail à l'équipe de support"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:120
 #: res/app/src/features/settings/groups/GroupList.tsx:162
 msgid "Write an email to the group owner selection"
-msgstr ""
+msgstr "Écrire un e-mail à la sélection de propriétaires de groupes"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:189
 msgid "Write an email to the group user selection"
-msgstr ""
+msgstr "Écrire un e-mail à la sélection d'utilisateurs du groupe"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:240
 msgid "Write an email to the user selection"
-msgstr ""
+msgstr "Écrire un e-mail à la sélection d'utilisateurs"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:224
 msgid "X DPI"
@@ -2274,7 +2274,7 @@ msgstr "Y DPI"
 
 #: res/app/src/core/common.ts:27
 msgid "Yearly"
-msgstr ""
+msgstr "Annuel"
 
 #: res/app/src/core/devices/enhance.ts:97
 msgid "Yes"
@@ -2282,7 +2282,7 @@ msgstr "Oui"
 
 #: res/app/src/features/user/UserPage.tsx:72
 msgid "You"
-msgstr ""
+msgstr "Vous"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
