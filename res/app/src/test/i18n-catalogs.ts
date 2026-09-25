@@ -5,4 +5,7 @@ export const catalogs: Record<string, Catalog> = {
     Devices: 'Appareils'
     , 'Hello {{name}}': 'Bonjour {{name}}'
   }
+  , pl: {
+    '{{count}} device': ['{{count}} urządzenie', '{{count}} urządzenia', '{{count}} urządzeń', '{{count}} urządzenia']
+  }
 }

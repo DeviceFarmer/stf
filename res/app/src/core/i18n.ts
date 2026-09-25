@@ -75,6 +75,25 @@ export function translate(msgid: string, params?: TranslateParams, language?: st
   return interpolate(text || msgid, params)
 }
 
+// Transifex orders plural forms by CLDR category
+const pluralCategoryOrder = ['zero', 'one', 'two', 'few', 'many', 'other']
+
+function pluralIndex(count: number, language: string, forms: number): number {
+  try {
+    const rules = new Intl.PluralRules(language.replace('_', '-'))
+    const categories = [...rules.resolvedOptions().pluralCategories]
+      .sort((a, b) => pluralCategoryOrder.indexOf(a) - pluralCategoryOrder.indexOf(b))
+    // A browser with other CLDR data may disagree on the forms, so only trust a match
+    if (categories.length === forms) {
+      return categories.indexOf(rules.select(count))
+    }
+  }
+  catch {
+    // Unknown locale, use the fallback below
+  }
+  return count === 1 ? 0 : Math.min(1, forms - 1)
+}
+
 export function translatePlural(
   count: number
 , singular: string
@@ -82,11 +101,11 @@ export function translatePlural(
 , params?: TranslateParams
 , language?: string
 ): string {
-  const catalog = catalogs[language || useLanguage.getState().language]
-  const entry = catalog?.[singular]
+  const current = language || useLanguage.getState().language
+  const entry = catalogs[current]?.[singular]
   const merged = {count, ...params}
   if (Array.isArray(entry)) {
-    const form = entry[count === 1 ? 0 : Math.min(1, entry.length - 1)]
+    const form = entry[pluralIndex(count, current, entry.length)]
     if (form) {
       return interpolate(form, merged)
     }

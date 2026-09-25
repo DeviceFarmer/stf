@@ -51,4 +51,13 @@ describe('i18n', () => {
     expect(translatePlural(1, '{{count}} device', '{{count}} devices')).toBe('1 device')
     expect(translatePlural(3, '{{count}} device', '{{count}} devices')).toBe('3 devices')
   })
+
+  it('picks plural forms by CLDR category', () => {
+    const devices = (count: number) => translatePlural(count, '{{count}} device', '{{count}} devices', {}, 'pl')
+    expect(devices(1)).toBe('1 urządzenie')
+    expect(devices(3)).toBe('3 urządzenia')
+    expect(devices(5)).toBe('5 urządzeń')
+    expect(devices(22)).toBe('22 urządzenia')
+    expect(devices(1.5)).toBe('1.5 urządzenia')
+  })
 })
