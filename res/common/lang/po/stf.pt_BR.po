@@ -50,7 +50,7 @@ msgstr "ABI"
 
 #: res/app/src/core/devices/enhance.ts:49
 msgid "AC"
-msgstr "ACI"
+msgstr "AC"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:144
 msgid "Access Tokens"
@@ -457,7 +457,7 @@ msgstr "Formato de data"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr "Parado"
+msgstr "Morto"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
@@ -521,7 +521,7 @@ msgstr "O dispositivo não está mais disponível por algum motivo."
 
 #: res/app/src/core/devices/enhance.ts:36
 msgid "Device is present but offline."
-msgstr "Dispositivo presenta mas está indisponível"
+msgstr "Dispositivo presente, mas está indisponível."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:275
 msgid "Device list"
@@ -598,7 +598,7 @@ msgstr "Arrastar arquivo para instalar"
 
 #: res/app/src/core/devices/enhance.ts:72
 msgid "Dummy"
-msgstr "Modelo"
+msgstr "Fictícia"
 
 #: res/app/src/features/group-list/columns.tsx:88
 #: res/app/src/features/settings/groups/GroupList.tsx:51
@@ -646,7 +646,7 @@ msgstr "Habilitar/Desabilitar confirmação para remoção de usuários"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:223
 msgid "Encrypted"
-msgstr "Encriptar"
+msgstr "Criptografado"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
@@ -688,11 +688,11 @@ msgstr "Falso"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:56
 msgid "Fast Forward"
-msgstr "Avanço Rápido "
+msgstr "Avanço Rápido"
 
 #: res/app/src/features/control/ControlPage.tsx:85
 msgid "File Explorer"
-msgstr "Explorar Arquivo"
+msgstr "Explorador de Arquivos"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:50
 msgid "File Name"
@@ -721,7 +721,7 @@ msgstr "FPS"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:289
 msgid "Frequency"
-msgstr "Frequencia"
+msgstr "Frequência"
 
 #: res/app/src/core/devices/enhance.ts:57
 msgid "Full"
@@ -953,7 +953,7 @@ msgstr "Instalado com sucesso."
 
 #: res/app/src/core/install.ts:158
 msgid "Installation timed out."
-msgstr "Timeout durante instalacão."
+msgstr "Tempo limite esgotado durante a instalação."
 
 #: res/app/src/core/install.ts:57
 msgid "Installing app..."
@@ -1077,23 +1077,23 @@ msgstr "Menu"
 
 #: res/app/src/core/devices/enhance.ts:74
 msgid "Mobile"
-msgstr "Dispositivo"
+msgstr "Móvel"
 
 #: res/app/src/core/devices/enhance.ts:75
 msgid "Mobile DUN"
-msgstr "DUN do Dispositivo"
+msgstr "DUN Móvel"
 
 #: res/app/src/core/devices/enhance.ts:76
 msgid "Mobile High Priority"
-msgstr "Dispositivo com Prioridade Alta"
+msgstr "Móvel com Prioridade Alta"
 
 #: res/app/src/core/devices/enhance.ts:77
 msgid "Mobile MMS"
-msgstr "MMS do Dispositivo"
+msgstr "MMS Móvel"
 
 #: res/app/src/core/devices/enhance.ts:78
 msgid "Mobile SUPL"
-msgstr "SUPL do Dispositivo"
+msgstr "SUPL Móvel"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:264
 #: res/app/src/features/device-list/columns.tsx:258
@@ -1219,11 +1219,11 @@ msgstr "Nenhuma saída"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:104
 msgid "No photo available"
-msgstr "Nenhuma foto disponível "
+msgstr "Nenhuma foto disponível"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:94
 msgid "No Ports Forwarded"
-msgstr "Sem portas"
+msgstr "Nenhuma porta redirecionada"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:117
 #: res/app/src/features/group-list/GroupListPage.tsx:161
@@ -1245,7 +1245,7 @@ msgstr "Modo Normal"
 
 #: res/app/src/core/devices/enhance.ts:58
 msgid "Not Charging"
-msgstr "Nada Carregando"
+msgstr "Não Carregando"
 
 #: res/app/src/features/docs/DocsPage.tsx:62
 #: res/app/src/features/user/UserPage.tsx:54
@@ -1294,7 +1294,7 @@ msgstr "Oops!"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:98
 msgid "Open"
-msgstr "Aberto"
+msgstr "Abrir"
 
 #: res/app/src/features/device-list/columns.tsx:304
 #: res/app/src/features/settings/groups/GroupDevices.tsx:34
@@ -1416,7 +1416,7 @@ msgstr "Porta"
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:75
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:83
 msgid "Port Forwarding"
-msgstr "Porta de envio"
+msgstr "Redirecionamento de Portas"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:82
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:86
@@ -1522,15 +1522,15 @@ msgstr "Sintaxe regex"
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr "Liberado"
+msgstr "Lançamento"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
-msgstr "Recaregar"
+msgstr "Recarregar"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:67
 msgid "Remote debug"
-msgstr "Dupurar remotamente"
+msgstr "Depurar remotamente"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:126
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:207
@@ -1584,7 +1584,7 @@ msgstr "Resetar"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:56
 msgid "Reset all browser settings"
-msgstr "Restar todas as configurações do navegador"
+msgstr "Resetar todas as configurações do navegador"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:93
 msgid "Reset Settings"
@@ -1596,7 +1596,7 @@ msgstr "Reiniciar e Manter Dispositivo"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:35
 msgid "Restart Device"
-msgstr "Reiniciar Dipositivo"
+msgstr "Reiniciar Dispositivo"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:167
 msgid "Retry"
@@ -1618,7 +1618,7 @@ msgstr "ROM"
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:106
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:110
 msgid "Rotate Left"
-msgstr "Rotar para Esquerda"
+msgstr "Girar para a Esquerda"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:44
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:116
@@ -1632,11 +1632,11 @@ msgstr "Rodar"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
 msgid "Run the following on your command line to debug the device from your Browser"
-msgstr "Executar a seguinte linha de comando para depurar o navegador do seu dispositivo"
+msgstr "Execute o seguinte na sua linha de comando para depurar o dispositivo a partir do seu navegador"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
 msgid "Run the following on your command line to debug the device from your IDE"
-msgstr "Executar a seguinte linha de comando para depurar o IDE do seu dispositivo"
+msgstr "Execute o seguinte na sua linha de comando para depurar o dispositivo a partir do seu IDE"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Run this command to copy the key to your clipboard"
@@ -1692,7 +1692,7 @@ msgstr "Capturas das Telas"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:300
 msgid "SD Card Mounted"
-msgstr "Catão SD Montado"
+msgstr "Cartão SD Montado"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:277
 #: res/app/src/features/device-list/columns.tsx:297
@@ -1700,7 +1700,7 @@ msgstr "Catão SD Montado"
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:224
 #: res/app/src/features/settings/groups/GroupDevices.tsx:26
 msgid "SDK"
-msgstr "DSK"
+msgstr "SDK"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:37
 #: res/app/src/features/device-list/DeviceListPage.tsx:134
@@ -1806,7 +1806,7 @@ msgstr "Alguém roubou seu dispositivo."
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"
-msgstr "Chaves Especiais"
+msgstr "Teclas Especiais"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
@@ -1818,7 +1818,7 @@ msgstr "Iniciar"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:86
 msgid "Start/Stop Logging"
-msgstr "Iniciar/Pausar Entrada"
+msgstr "Iniciar/Parar Logs"
 
 #: res/app/src/features/group-list/columns.tsx:93
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:13
@@ -1876,7 +1876,7 @@ msgstr "Tag"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
-msgstr "Captura Tela"
+msgstr "Capturar Tela"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
@@ -1930,7 +1930,7 @@ msgstr "O novo pacote falhou porque a versão atual do SDK é mais recente do qu
 
 #: res/app/src/core/install.ts:170
 msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr "The new package failed because the current SDK version is older than that required by the package."
+msgstr "O novo pacote falhou porque a versão atual do SDK é mais antiga do que a exigida pelo pacote."
 
 #: res/app/src/core/install.ts:169
 msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
@@ -1938,11 +1938,11 @@ msgstr "O novo pacote falhou ao otimizar e validar seus arquivos dex, porque nã
 
 #: res/app/src/core/install.ts:183
 msgid "The new package has an older version code than the currently installed package."
-msgstr "O novo pacote falhou para otimizar e validar os seus arquivos dex, porque não existe uma exploração suficiente ou uma validação falhou."
+msgstr "O novo pacote tem um código de versão mais antigo do que o pacote atualmente instalado."
 
 #: res/app/src/core/install.ts:182
 msgid "The new package is assigned a different UID than it previously held."
-msgstr "O novo pacote é atribuído um UID diferente do que anteriormente realizada."
+msgstr "Foi atribuído ao novo pacote um UID diferente do que ele tinha anteriormente."
 
 #: res/app/src/core/install.ts:175
 msgid "The new package uses a feature that is not available."
@@ -1994,7 +1994,7 @@ msgstr "A Análise encontrou o CertificateEncodingException em um dos arquivos n
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
-msgstr "A análise encontrou uma exceção não esperada. "
+msgstr "A análise encontrou uma exceção inesperada."
 
 #: res/app/src/core/install.ts:192
 msgid "The parser encountered some structural problem in the manifest."
@@ -2010,7 +2010,7 @@ msgstr "A análise encontrou: foi dado um caminho que não é um arquivo, ou nã
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
-msgstr "Não foi possível analizar o arquivo AndroidManifest.xml."
+msgstr "O analisador não conseguiu obter o arquivo AndroidManifest.xml."
 
 #: res/app/src/core/install.ts:165
 msgid "The requested shared user does not exist."
@@ -2117,7 +2117,7 @@ msgstr "Fazer envio por Link"
 #: res/app/src/core/install.ts:54
 #: res/app/src/features/control/device-control/install-file.ts:17
 msgid "Uploading..."
-msgstr "Enviado..."
+msgstr "Enviando..."
 
 #: res/app/src/features/device-list/DeviceStats.tsx:40
 msgid "Usable Devices"
@@ -2162,7 +2162,7 @@ msgstr "Usando"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:236
 msgid "Using Fallback"
-msgstr "Retornar verssão"
+msgstr "Usando Failover"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:276
 msgid "Version"
@@ -2178,7 +2178,7 @@ msgstr "Modo vibrar"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
-msgstr "Voltage"
+msgstr "Voltagem"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:41
 msgid "Volume"
@@ -2286,4 +2286,4 @@ msgstr "Você"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr "Você removeu o dispositivo."
+msgstr "Você (ou outra pessoa) removeu o dispositivo."

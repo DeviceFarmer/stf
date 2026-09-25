@@ -36,7 +36,7 @@ msgstr "Пакет з такою назвою вже установлено."
 
 #: res/app/src/core/install.ts:166
 msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr "Раніше установлений пакет з таким іменем має інший цифровий підпис (дані старого пакету також на видалені)."
+msgstr "Раніше установлений пакет з таким іменем має інший цифровий підпис (дані старого пакету також не видалені)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
@@ -54,7 +54,7 @@ msgstr "AC"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:144
 msgid "Access Tokens"
-msgstr "Токен Доступу"
+msgstr "Токени доступу"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:167
 msgid "Account"
@@ -84,7 +84,7 @@ msgstr "Активні групи"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:107
 msgid "Activity"
-msgstr "Діяльність"
+msgstr "Activity"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:140
 msgid "ADB Keys"
@@ -114,7 +114,7 @@ msgstr "Додати наступний ADB ключ до STF"
 
 #: res/app/src/ui/AppLayout.tsx:83
 msgid "Admin mode has been disabled."
-msgstr "Режим адміністратора деактевовано"
+msgstr "Режим адміністратора деактивовано."
 
 #: res/app/src/ui/AppLayout.tsx:82
 msgid "Admin mode has been enabled."
@@ -295,7 +295,7 @@ msgstr "Оператор"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:111
 msgid "Category"
-msgstr "Кетегорія"
+msgstr "Категорія"
 
 #: res/app/src/core/devices/enhance.ts:55
 msgid "Charging"
@@ -357,7 +357,7 @@ msgstr "Підключений"
 
 #: res/app/src/ui/AppLayout.tsx:104
 msgid "Connected successfully."
-msgstr "Підключенно успішно."
+msgstr "Підключено успішно."
 
 #: res/app/src/features/group-list/GroupListPage.tsx:128
 #: res/app/src/features/settings/groups/GroupList.tsx:165
@@ -457,7 +457,7 @@ msgstr "Формат дати"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr "Не відповідає"
+msgstr "Несправність"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
@@ -555,7 +555,7 @@ msgstr "Пристрій було відключено"
 
 #: res/app/src/core/devices/enhance.ts:34
 msgid "Device was kicked by automatic timeout."
-msgstr "Пристрій було відлючено через закінчення часу."
+msgstr "Пристрій було відключено через закінчення часу."
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168
 #: res/app/src/features/device-list/DeviceListPage.tsx:49
@@ -660,7 +660,7 @@ msgstr "Помилка"
 #: res/app/src/features/control/screen/screen-keyboard.ts:41
 #: res/app/src/features/control/screen/screen-keyboard.ts:45
 msgid "Error while getting data"
-msgstr "Помилка під час отрмання даних"
+msgstr "Помилка під час отримання даних"
 
 #: res/app/src/core/devices/enhance.ts:73
 msgid "Ethernet"
@@ -713,7 +713,7 @@ msgstr "Знайти пристрій"
 
 #: res/app/src/ui/modals.tsx:183
 msgid "Fingerprint"
-msgstr "Видбиток пальця"
+msgstr "Відбиток пальця"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:218
 msgid "FPS"
@@ -729,7 +729,7 @@ msgstr "Повний"
 
 #: res/app/src/features/settings/SettingsPage.tsx:36
 msgid "General"
-msgstr "Загалний"
+msgstr "Загальні"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:159
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:164
@@ -743,7 +743,7 @@ msgstr "Генерування нового токену"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Get"
-msgstr "Дістати"
+msgstr "Отримати"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:61
 msgid "Get clipboard contents"
@@ -764,7 +764,7 @@ msgstr "Відкрити список пристроїв"
 
 #: res/app/src/core/devices/enhance.ts:41
 msgid "Good"
-msgstr "Файно"
+msgstr "Добрий"
 
 #: res/app/src/features/device-list/columns.tsx:245
 msgid "Group Class"
@@ -1050,7 +1050,7 @@ msgstr "Управління додатками"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:103
 msgid "Manner Mode"
-msgstr "Режим методу"
+msgstr "Режим дзвінка"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:262
 #: res/app/src/features/device-list/columns.tsx:294
@@ -1085,7 +1085,7 @@ msgstr "Мобільний DUN"
 
 #: res/app/src/core/devices/enhance.ts:76
 msgid "Mobile High Priority"
-msgstr "Високий пріорітет мобільного"
+msgstr "Високий пріоритет мобільного"
 
 #: res/app/src/core/devices/enhance.ts:77
 msgid "Mobile MMS"
@@ -1108,7 +1108,7 @@ msgstr "Щомісяця"
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:147
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:154
 msgid "More about Access Tokens"
-msgstr "Більше про ключі доступу"
+msgstr "Більше про токени доступу"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:143
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:150
@@ -1159,7 +1159,7 @@ msgstr "Ні"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:191
 msgid "No access tokens"
-msgstr "Відсутні ключі доступу"
+msgstr "Відсутні токени доступу"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:174
 msgid "No ADB keys"
@@ -1185,7 +1185,7 @@ msgstr "В буфері обміну відсутні дані"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:160
 msgid "No device screen"
-msgstr "Відсутні екран пристрою"
+msgstr "Відсутній екран пристрою"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:140
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:265
@@ -1223,7 +1223,7 @@ msgstr "Відсутнє фото"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:94
 msgid "No Ports Forwarded"
-msgstr "Відсутні перенаправлені пори"
+msgstr "Відсутні перенаправлені порти"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:117
 #: res/app/src/features/group-list/GroupListPage.tsx:161
@@ -1260,7 +1260,7 @@ msgstr "Записки"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:250
 msgid "Number"
-msgstr "Число"
+msgstr "Номер"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:54
 msgid "Number of groups"
@@ -1447,7 +1447,7 @@ msgstr "Натисніть «Отримати», щоб почати логув�
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"
-msgstr "Попередніій"
+msgstr "Попередній"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:215
 #: res/app/src/features/settings/groups/GroupUsers.tsx:24
@@ -1522,7 +1522,7 @@ msgstr "Синтаксис регулярного виразу"
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr "Вільно"
+msgstr "Дата випуску"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
@@ -1721,7 +1721,7 @@ msgstr "Вибрати всі"
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:12
 #: res/app/src/features/settings/groups/GroupDevices.tsx:16
 msgid "Serial"
-msgstr "Серійни номер"
+msgstr "Серійний номер"
 
 #: res/app/src/features/auth/SignInForm.tsx:87
 msgid "Server error. Check log output."
@@ -1906,7 +1906,7 @@ msgstr "Новий пакет не може бути встановлений, �
 
 #: res/app/src/core/install.ts:179
 msgid "The new package couldn't be installed because the verification timed out."
-msgstr "Новий пакет не може бути встановлений, тому що вийшов час провірки."
+msgstr "Новий пакет не може бути встановлений, тому що вийшов час перевірки."
 
 #: res/app/src/core/install.ts:178
 msgid "The new package couldn't be installed in the specified install location because the media is not available."
@@ -1918,23 +1918,23 @@ msgstr "Новий пакет не може бути встановлений в
 
 #: res/app/src/core/install.ts:171
 msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "Новий пакет впав тому що він вміщає контент з таким самим рівнем авторитету, що і в системі."
+msgstr "Не вдалося встановити новий пакет, оскільки він містить постачальника вмісту з таким самим authority, як у вже встановленого в системі постачальника."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr "Новий пакет впав, так як він являє собою пакет тільки тестовий, і користувач не встановив прапор INSTALL_ALLOW_TEST."
+msgstr "Не вдалося встановити новий пакет, оскільки він позначений як пакет лише для тестування, а програма, що викликає, не передала прапорець INSTALL_ALLOW_TEST."
 
 #: res/app/src/core/install.ts:172
 msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr "Новий пакет впав, так як поточна версія SDK є новішою, ніж вимагає пакет."
+msgstr "Не вдалося встановити новий пакет, оскільки поточна версія SDK новіша, ніж вимагає пакет."
 
 #: res/app/src/core/install.ts:170
 msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr "Новий пакет впав, так як поточна версія SDK є старішою, ніж вимагає пакет."
+msgstr "Не вдалося встановити новий пакет, оскільки поточна версія SDK старіша, ніж вимагає пакет."
 
 #: res/app/src/core/install.ts:169
 msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
-msgstr "Новий пакет впав при оптимізації і перевірці своїх DEX файлів, або тому, що не було не достатньо місця для зберігання або перевірка не вдалася."
+msgstr "Не вдалося встановити новий пакет під час оптимізації та перевірки його DEX-файлів: недостатньо місця для зберігання або перевірка не вдалася."
 
 #: res/app/src/core/install.ts:183
 msgid "The new package has an older version code than the currently installed package."
@@ -1962,7 +1962,7 @@ msgstr "Пакет який встановлюється містить нати
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."
-msgstr "Пакет міняється залежно від очікуваного виклику програми."
+msgstr "Пакет відрізняється від того, що очікувала програма, яка його викликала."
 
 #: res/app/src/core/install.ts:160
 msgid "The package is already installed."
@@ -1986,7 +1986,7 @@ msgstr "Аналізатор виявив невірне або відсутнє
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr "Парсер стикнувся з погано розданим ім'ям користувача в маніфесті"
+msgstr "Аналізатор виявив неправильне ім'я спільного ідентифікатора користувача (shared user id) в маніфесті."
 
 #: res/app/src/core/install.ts:189
 msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
@@ -2014,7 +2014,7 @@ msgstr "Синтаксичний аналізатор не зміг отрима
 
 #: res/app/src/core/install.ts:165
 msgid "The requested shared user does not exist."
-msgstr "Загального користувач не існує."
+msgstr "Запитаного спільного користувача не існує."
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:56
 msgid "The schedule can only be changed while the group is pending"
@@ -2103,16 +2103,16 @@ msgstr "Невідомий"
 
 #: res/app/src/core/devices/enhance.ts:92
 msgid "Unknown reason."
-msgstr "Невідома причини."
+msgstr "Невідома причина."
 
 #: res/app/src/core/devices/enhance.ts:45
 msgid "Unspecified Failure"
-msgstr "Невизначена біда"
+msgstr "Невизначена несправність"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:205
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:206
 msgid "Upload From Link"
-msgstr "Завантажити по посилання"
+msgstr "Завантажити за посиланням"
 
 #: res/app/src/core/install.ts:54
 #: res/app/src/features/control/device-control/install-file.ts:17
@@ -2158,11 +2158,11 @@ msgstr "Користувачі"
 
 #: res/app/src/core/devices/enhance.ts:25
 msgid "Using"
-msgstr "Використовуєтсья"
+msgstr "Використовується"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:236
 msgid "Using Fallback"
-msgstr "Використання відступу"
+msgstr "Резервне з'єднання"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:276
 msgid "Version"
@@ -2237,7 +2237,7 @@ msgstr "WiMAX"
 
 #: res/app/src/core/devices/enhance.ts:51
 msgid "Wireless"
-msgstr "Безровідне"
+msgstr "Бездротове"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:148
 msgid "Write a mail to the available user selection"

@@ -66,7 +66,7 @@ msgstr "动作"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:168
 msgid "Actions"
-msgstr "更多动作"
+msgstr "操作"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:74
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:82
@@ -185,7 +185,7 @@ msgstr "自动滚动"
 
 #: res/app/src/core/devices/enhance.ts:28
 msgid "Automating"
-msgstr "自动化的"
+msgstr "自动化中"
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
@@ -335,7 +335,7 @@ msgstr "关闭"
 
 #: res/app/src/core/devices/enhance.ts:40
 msgid "Cold"
-msgstr "冷却"
+msgstr "过冷"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:194
 #: res/app/src/features/settings/groups/GroupList.tsx:177
@@ -517,7 +517,7 @@ msgstr "设备控制状态"
 
 #: res/app/src/core/devices/enhance.ts:35
 msgid "Device is not present anymore for some reason."
-msgstr "设备由于某些原因无法显示。"
+msgstr "设备由于某些原因已不存在。"
 
 #: res/app/src/core/devices/enhance.ts:36
 msgid "Device is present but offline."
@@ -1050,7 +1050,7 @@ msgstr "管理应用"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:103
 msgid "Manner Mode"
-msgstr "管理模式"
+msgstr "礼貌模式"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:262
 #: res/app/src/features/device-list/columns.tsx:294
@@ -1085,7 +1085,7 @@ msgstr "Mobile DUN"
 
 #: res/app/src/core/devices/enhance.ts:76
 msgid "Mobile High Priority"
-msgstr "移动设备优先"
+msgstr "移动网络（高优先级）"
 
 #: res/app/src/core/devices/enhance.ts:77
 msgid "Mobile MMS"
@@ -1151,7 +1151,7 @@ msgstr "网络"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:55
 msgid "Next"
-msgstr "前进"
+msgstr "下一首"
 
 #: res/app/src/core/devices/enhance.ts:100
 msgid "No"
@@ -1219,7 +1219,7 @@ msgstr "没有输出"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:104
 msgid "No photo available"
-msgstr "沒有可用的照片"
+msgstr "没有可用的照片"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:94
 msgid "No Ports Forwarded"
@@ -1401,11 +1401,11 @@ msgstr "请输入格式正确的 email "
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:124
 msgid "Please enter your Store password"
-msgstr "请输入您所保存的密码"
+msgstr "请输入您的商店账号密码"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:108
 msgid "Please enter your Store username"
-msgstr "输入您所保存的用户名"
+msgstr "请输入您的商店账号用户名"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:117
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:120
@@ -1447,7 +1447,7 @@ msgstr "点击“获取”开始记录日志"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"
-msgstr "后退"
+msgstr "上一首"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:215
 #: res/app/src/features/settings/groups/GroupUsers.tsx:24
@@ -1480,7 +1480,7 @@ msgstr "RAM"
 #: res/app/src/core/devices/enhance.ts:24
 #: res/app/src/features/group-list/columns.tsx:37
 msgid "Ready"
-msgstr "可用"
+msgstr "就绪"
 
 #: res/app/src/features/group-list/GroupStats.tsx:44
 msgid "Ready groups"
@@ -1859,7 +1859,7 @@ msgstr "停止使用"
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:76
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:82
 msgid "Store Account"
-msgstr "保存账号"
+msgstr "商店账号"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:239
 msgid "Sub Type"
@@ -1898,7 +1898,7 @@ msgstr "此设备暂时无法使用。"
 
 #: res/app/src/core/install.ts:168
 msgid "The existing package could not be deleted."
-msgstr "已安装的应用可能不会被删除。"
+msgstr "无法删除已安装的应用。"
 
 #: res/app/src/core/install.ts:180
 msgid "The new package couldn't be installed because the verification did not succeed."
@@ -2022,7 +2022,7 @@ msgstr "只有在组处于待定状态时才能更改日程"
 
 #: res/app/src/core/install.ts:196
 msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
-msgstr "该系统无法安装此软件包，因为其安装的原生内核没有匹配到应系统所支持的的ABI。"
+msgstr "系统无法安装此软件包，因为其原生代码与系统支持的任何 ABI 都不匹配。"
 
 #: res/app/src/core/install.ts:194
 msgid "The system failed to install the package because of system issues."
@@ -2286,4 +2286,4 @@ msgstr "你"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr "你 (或別人) 已移出了该设备。"
+msgstr "你（或别人）已移出了该设备。"

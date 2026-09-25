@@ -457,7 +457,7 @@ msgstr "日付の形式"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr "残量なし"
+msgstr "故障"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
@@ -680,7 +680,7 @@ msgstr "有効期限"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:160
 msgid "Failed to download file"
-msgstr "ファイルのダウンロードが失敗しした。"
+msgstr "ファイルのダウンロードに失敗しました。"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:45
 msgid "False"
@@ -878,7 +878,7 @@ msgstr "マニフェストを非表示"
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
 msgid "Hide Screen"
-msgstr "画面を非表しない"
+msgstr "画面を非表示にする"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:85
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:31
@@ -928,7 +928,7 @@ msgstr "非アクティブ"
 
 #: res/app/src/features/auth/SignInForm.tsx:86
 msgid "Incorrect login details"
-msgstr "不正ログイン情報"
+msgstr "ログイン情報が正しくありません"
 
 #: res/app/src/features/control/ControlPage.tsx:91
 msgid "Info"
@@ -1802,7 +1802,7 @@ msgstr "ソケットへの接続が切れました"
 
 #: res/app/src/core/devices/enhance.ts:33
 msgid "Someone stole your device."
-msgstr "誰かはデバイスを盗みました。"
+msgstr "誰かがデバイスを盗みました。"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"

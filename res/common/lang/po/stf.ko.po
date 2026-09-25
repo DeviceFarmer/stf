@@ -335,7 +335,7 @@ msgstr "닫기"
 
 #: res/app/src/core/devices/enhance.ts:40
 msgid "Cold"
-msgstr "양호"
+msgstr "저온"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:194
 #: res/app/src/features/settings/groups/GroupList.tsx:177
@@ -396,7 +396,7 @@ msgstr "클립보드에 복사"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:288
 msgid "Cores"
-msgstr "코어 종류"
+msgstr "코어 수"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:283
 msgid "CPU"
@@ -422,7 +422,7 @@ msgstr "심각"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:75
 msgid "Current rotation:"
-msgstr "현재 회전"
+msgstr "현재 회전:"
 
 #: res/app/src/ui/ColumnChoice.tsx:47
 #: res/app/src/ui/ColumnChoice.tsx:48
@@ -457,7 +457,7 @@ msgstr "날짜 형식"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr "정지"
+msgstr "고장"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
@@ -485,7 +485,7 @@ msgstr "사용자 지정 이메일 주소 구분자를 정의합니다"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:217
 msgid "Density"
-msgstr "해상도"
+msgstr "밀도"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:177
 msgid "Details"
@@ -576,7 +576,7 @@ msgstr "WiFi 비활성화"
 
 #: res/app/src/core/devices/enhance.ts:56
 msgid "Discharging"
-msgstr "충전중이 아님"
+msgstr "방전중"
 
 #: res/app/src/core/devices/enhance.ts:19
 #: res/app/src/core/devices/enhance.ts:6
@@ -1108,7 +1108,7 @@ msgstr "매월"
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:147
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:154
 msgid "More about Access Tokens"
-msgstr "좀 더 자세한 엑세스 토큰에 대해서 확인하기"
+msgstr "액세스 토큰에 대해 자세히 알아보기"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:143
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:150
@@ -1159,7 +1159,7 @@ msgstr "아니오"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:191
 msgid "No access tokens"
-msgstr "등록된 엑세스 토큰이 없습니다"
+msgstr "등록된 액세스 토큰이 없습니다"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:174
 msgid "No ADB keys"
@@ -1859,7 +1859,7 @@ msgstr "사용 종료"
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:76
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:82
 msgid "Store Account"
-msgstr "저장소 계정"
+msgstr "스토어 계정"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:239
 msgid "Sub Type"
@@ -1918,7 +1918,7 @@ msgstr "지정한 위치에 새로운 패키지를 설치 할 수 없습니다."
 
 #: res/app/src/core/install.ts:171
 msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "이미 동일한 패키지가 설치되어 있습니다."
+msgstr "시스템에 이미 설치된 프로바이더와 동일한 authority를 가진 콘텐츠 프로바이더가 포함되어 있어 새로운 패키지를 설치할 수 없습니다."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
@@ -1938,7 +1938,7 @@ msgstr "저장 공간이 부족하거나 검증에 실패하여 새로운 패키
 
 #: res/app/src/core/install.ts:183
 msgid "The new package has an older version code than the currently installed package."
-msgstr "새로운 패키지에 오래된 버전의 코드가 존재하여 설치 할 수 없습니다."
+msgstr "새로운 패키지의 버전 코드가 현재 설치된 패키지보다 낮습니다."
 
 #: res/app/src/core/install.ts:182
 msgid "The new package is assigned a different UID than it previously held."
@@ -1986,7 +1986,7 @@ msgstr "매니페스트에 잘못되거나 누락된 패키지 이름을 발견�
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr "매니페스트에 잘못된 아이디나 이름을 발견했습니다."
+msgstr "매니페스트에서 잘못된 공유 사용자 ID 이름을 발견했습니다."
 
 #: res/app/src/core/install.ts:189
 msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
@@ -2034,7 +2034,7 @@ msgstr "사용자의 앱 설치가 제한되어 있어 패키지를 설치하지
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."
-msgstr "URL이 잘못 전달 됐습니다."
+msgstr "전달된 URI가 잘못되었습니다."
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265
 msgid "This folder is empty"

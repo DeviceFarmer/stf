@@ -54,7 +54,7 @@ msgstr "Переменный Ток"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:144
 msgid "Access Tokens"
-msgstr "токены доступа"
+msgstr "Токены доступа"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:167
 msgid "Account"
@@ -457,7 +457,7 @@ msgstr "Формат даты"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr "Не отвечает"
+msgstr "Неисправность"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
@@ -739,7 +739,7 @@ msgstr "Сгенерировать токен доступа"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:70
 msgid "Generate New Token"
-msgstr "Сгенерировать новый токен доступа "
+msgstr "Сгенерировать новый токен доступа"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Get"
@@ -1260,7 +1260,7 @@ msgstr "Записи"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:250
 msgid "Number"
-msgstr "Число"
+msgstr "Номер"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:54
 msgid "Number of groups"
@@ -1290,7 +1290,7 @@ msgstr "Однократно"
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:105
 #: res/app/src/ui/notify.ts:8
 msgid "Oops!"
-msgstr "Ой"
+msgstr "Ой!"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:98
 msgid "Open"
@@ -1393,7 +1393,7 @@ msgstr "Платформа"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:53
 msgid "Play/Pause"
-msgstr "Играть/Пауза"
+msgstr "Воспроизведение/Пауза"
 
 #: res/app/src/features/auth/SignInForm.tsx:49
 msgid "Please enter a valid email"
@@ -1522,7 +1522,7 @@ msgstr "Синтаксис регулярных выражений"
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr "Свободно"
+msgstr "Дата выпуска"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
@@ -1845,7 +1845,7 @@ msgstr "Стоп"
 
 #: res/app/src/core/devices/enhance.ts:15
 msgid "Stop Automation"
-msgstr "Остановить Автоматизацию "
+msgstr "Остановить автоматизацию"
 
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
@@ -1962,7 +1962,7 @@ msgstr "Установленный пакет содержит нативный 
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."
-msgstr "Пакет изменился и не сответсвует тому что вызывающая программа ожидает. "
+msgstr "Пакет изменился и не соответствует тому, что ожидает вызывающая программа."
 
 #: res/app/src/core/install.ts:160
 msgid "The package is already installed."
@@ -2107,7 +2107,7 @@ msgstr "Неизвестная причина."
 
 #: res/app/src/core/devices/enhance.ts:45
 msgid "Unspecified Failure"
-msgstr "Неу"
+msgstr "Неизвестная неисправность"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:205
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:206
@@ -2213,7 +2213,7 @@ msgstr "Предупреждение:"
 
 #: res/app/src/ui/AppLayout.tsx:269
 msgid "Web"
-msgstr "Интернет"
+msgstr "Веб"
 
 #: res/app/src/core/common.ts:23
 msgid "Weekly"

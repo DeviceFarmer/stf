@@ -40,7 +40,7 @@ msgstr "Poprzednio zainstalowana paczka o tej samej nazwie ma inną sygnaturę o
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
-msgstr "Zewnętrzne media nie mogą uzyskać dostępu do punktu montowania zabezpieczonego kontenera."
+msgstr "Nie można uzyskać dostępu do punktu montowania zabezpieczonego kontenera na nośniku zewnętrznym."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:278
 #: res/app/src/features/device-list/columns.tsx:302
@@ -323,7 +323,7 @@ msgstr "Usuń sparowane urządzenia Bluetooth"
 #: res/app/src/features/device-list/DeviceListPage.tsx:139
 #: res/app/src/ui/Pager.tsx:46
 msgid "Clear"
-msgstr "Czysty"
+msgstr "Wyczyść"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:41
 msgid "Clipboard"
@@ -396,7 +396,7 @@ msgstr "Kopiuj do schowka"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:288
 msgid "Cores"
-msgstr "Rdzenia"
+msgstr "Rdzenie"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:283
 msgid "CPU"
@@ -688,7 +688,7 @@ msgstr "Nie"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:56
 msgid "Fast Forward"
-msgstr "Przekaż do"
+msgstr "Przewiń do przodu"
 
 #: res/app/src/features/control/ControlPage.tsx:85
 msgid "File Explorer"
@@ -743,7 +743,7 @@ msgstr "Wygeneruj nowy token"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Get"
-msgstr "Weź"
+msgstr "Pobierz"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:61
 msgid "Get clipboard contents"
@@ -891,11 +891,11 @@ msgstr "Dom"
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:101
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:110
 msgid "Host"
-msgstr "Gospodarz"
+msgstr "Host"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:118
 msgid "Hostname"
-msgstr "Nazwa gospodarza"
+msgstr "Nazwa hosta"
 
 #: res/app/src/core/common.ts:21
 msgid "Hourly"
@@ -944,7 +944,7 @@ msgstr "Instalacja anulowana przez użytkownika."
 
 #: res/app/src/core/install.ts:157
 msgid "Installation failed due to an unknown error."
-msgstr "Instalacja nie powiodła się z powodu nieznanego błedu."
+msgstr "Instalacja nie powiodła się z powodu nieznanego błędu."
 
 #: res/app/src/core/install.ts:156
 #: res/app/src/features/control/device-control/install-file.ts:32
@@ -957,7 +957,7 @@ msgstr "Przekroczono czas na instalację."
 
 #: res/app/src/core/install.ts:57
 msgid "Installing app..."
-msgstr "Instalowanie aplikacji.."
+msgstr "Instalowanie aplikacji..."
 
 #: res/app/src/ui/Pager.tsx:61
 msgid "Items per page"
@@ -991,7 +991,7 @@ msgstr "Uruchom aktywność"
 
 #: res/app/src/core/install.ts:58
 msgid "Launching activity..."
-msgstr "Uruchamianie aktywności.."
+msgstr "Uruchamianie aktywności..."
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
@@ -1159,7 +1159,7 @@ msgstr "Nie"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:191
 msgid "No access tokens"
-msgstr "Brak kluczy dostępu"
+msgstr "Brak tokenów dostępu"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:174
 msgid "No ADB keys"
@@ -1393,7 +1393,7 @@ msgstr "Platforma"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:53
 msgid "Play/Pause"
-msgstr " Włącz/Wyłącz"
+msgstr "Odtwórz/Wstrzymaj"
 
 #: res/app/src/features/auth/SignInForm.tsx:49
 msgid "Please enter a valid email"
@@ -1457,7 +1457,7 @@ msgstr "Uprawnienia"
 
 #: res/app/src/core/install.ts:55
 msgid "Processing..."
-msgstr "Przetwarzanie.."
+msgstr "Przetwarzanie..."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:263
 #: res/app/src/features/device-list/columns.tsx:263
@@ -1466,7 +1466,7 @@ msgstr "Produkt"
 
 #: res/app/src/core/install.ts:56
 msgid "Pushing app..."
-msgstr "Pushowanie aplikacji.."
+msgstr "Przesyłanie aplikacji na urządzenie..."
 
 #: res/app/src/core/common.ts:25
 msgid "Quaterly"
@@ -1522,7 +1522,7 @@ msgstr "Składnia wyrażenia regularnego"
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr "Zwolnione"
+msgstr "Data premiery"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
@@ -1624,7 +1624,7 @@ msgstr "Obróć w Lewo"
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:116
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:120
 msgid "Rotate Right"
-msgstr "Obróc w Prawo"
+msgstr "Obróć w prawo"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:77
 msgid "Run"
@@ -1806,7 +1806,7 @@ msgstr "Ktoś ukradł Twoje urządzenie."
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"
-msgstr "Specjalne klucze"
+msgstr "Klawisze specjalne"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
@@ -1859,7 +1859,7 @@ msgstr "Przestań używać"
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:76
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:82
 msgid "Store Account"
-msgstr "Zapisz konto"
+msgstr "Konto sklepu"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:239
 msgid "Sub Type"
@@ -2286,4 +2286,4 @@ msgstr "Ty"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr "Ty (lub ktoś inny) kopnął urządzenie."
+msgstr "Urządzenie zostało wyrzucone przez Ciebie (lub kogoś innego)."

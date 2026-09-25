@@ -36,7 +36,7 @@ msgstr "Aynı isimde daha önce yüklenmiş bir paket bulunmaktadır."
 
 #: res/app/src/core/install.ts:166
 msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr "Daha önce aynı isim ile yüklenmiş paket, farklı bir isimde imzalanmıştır, bu yüzden yeni paket ( ve eski isimdeki paket dataları kaldırılmamıştır.)"
+msgstr "Daha önce aynı isimle yüklenmiş paketin imzası yeni paketinkinden farklı (ve eski paketin verileri kaldırılmadı)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
@@ -110,7 +110,7 @@ msgstr "Anahtar Ekle"
 
 #: res/app/src/ui/modals.tsx:176
 msgid "Add the following ADB Key to STF?"
-msgstr "Aşağıdaki ADB anahtarını STF'ye Eklediniz mi?"
+msgstr "Aşağıdaki ADB anahtarı STF'ye eklensin mi?"
 
 #: res/app/src/ui/AppLayout.tsx:83
 msgid "Admin mode has been disabled."
@@ -291,7 +291,7 @@ msgstr "İptal"
 #: res/app/src/features/device-list/columns.tsx:273
 #: res/app/src/features/settings/groups/GroupDevices.tsx:17
 msgid "Carrier"
-msgstr "Taşıyıcı"
+msgstr "Operatör"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:111
 msgid "Category"
@@ -327,7 +327,7 @@ msgstr "Temizle"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:41
 msgid "Clipboard"
-msgstr "Panoya Kopyala"
+msgstr "Pano"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:46
 msgid "Close"
@@ -555,7 +555,7 @@ msgstr "Cihaz bağlantısı sonlandı."
 
 #: res/app/src/core/devices/enhance.ts:34
 msgid "Device was kicked by automatic timeout."
-msgstr "Cihaz otomatik zaman aşımından dolayı kapatıldı."
+msgstr "Cihaz otomatik zaman aşımı nedeniyle serbest bırakıldı."
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168
 #: res/app/src/features/device-list/DeviceListPage.tsx:49
@@ -576,7 +576,7 @@ msgstr "WiFi'yı Kapat"
 
 #: res/app/src/core/devices/enhance.ts:56
 msgid "Discharging"
-msgstr "Sarj olmuyor"
+msgstr "Deşarj oluyor"
 
 #: res/app/src/core/devices/enhance.ts:19
 #: res/app/src/core/devices/enhance.ts:6
@@ -586,7 +586,7 @@ msgstr "Bağlantı Sonlandı"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:212
 msgid "Display"
-msgstr "Görüntüle"
+msgstr "Ekran"
 
 #: res/app/src/core/install.ts:53
 msgid "Downloading..."
@@ -664,7 +664,7 @@ msgstr "Veriler alınırken hata oluştu."
 
 #: res/app/src/core/devices/enhance.ts:73
 msgid "Ethernet"
-msgstr "İnternet"
+msgstr "Ethernet"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:47
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:92
@@ -1010,7 +1010,7 @@ msgstr "Açık"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:90
 msgid "Local Settings"
-msgstr "Genel Ayarlar"
+msgstr "Yerel Ayarlar"
 
 #: res/app/src/features/device-list/columns.tsx:325
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:225
@@ -1233,7 +1233,7 @@ msgstr "Sonuç yok"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:118
 msgid "No screenshots taken"
-msgstr "Ekran görüntüsü anahtarı yok"
+msgstr "Ekran görüntüsü alınmadı"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:289
 msgid "No Users"
@@ -1245,7 +1245,7 @@ msgstr "Normal Mod"
 
 #: res/app/src/core/devices/enhance.ts:58
 msgid "Not Charging"
-msgstr "Sarj olmuyor"
+msgstr "Şarj olmuyor"
 
 #: res/app/src/features/docs/DocsPage.tsx:62
 #: res/app/src/features/user/UserPage.tsx:54
@@ -1381,7 +1381,7 @@ msgstr "Fiziksel Cihaz"
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:110
 #: res/app/src/features/control/panes/logs/LogTable.tsx:137
 msgid "PID"
-msgstr "Telefon ID"
+msgstr "PID"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:192
 msgid "Place"
@@ -1457,7 +1457,7 @@ msgstr "Yetki"
 
 #: res/app/src/core/install.ts:55
 msgid "Processing..."
-msgstr "İşleniyor"
+msgstr "İşleniyor..."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:263
 #: res/app/src/features/device-list/columns.tsx:263
@@ -1522,7 +1522,7 @@ msgstr "Regex sözdizimi"
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr "Sürüm"
+msgstr "Çıkış Tarihi"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
@@ -1604,7 +1604,7 @@ msgstr "Tekrar Dene"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:51
 msgid "Rewind"
-msgstr "Geri Alma"
+msgstr "Geri Sar"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:237
 msgid "Roaming"
@@ -1806,7 +1806,7 @@ msgstr "Birisi cihazınızı çaldı."
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"
-msgstr "Özel Anahtarlar"
+msgstr "Özel Tuşlar"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
@@ -1818,7 +1818,7 @@ msgstr "Başlat"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:86
 msgid "Start/Stop Logging"
-msgstr "Log Almayı Başlat"
+msgstr "Log Almayı Başlat/Durdur"
 
 #: res/app/src/features/group-list/columns.tsx:93
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:13
@@ -1990,7 +1990,7 @@ msgstr "Ayrıştırıcı, manifest'te kötü bir paylaşılan kullanıcı adıyl
 
 #: res/app/src/core/install.ts:189
 msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr "Ayrıştırıcı, .apk'daki dosyalardan birinde Sertifika Kodlaması Durumu ile karşılaştı."
+msgstr "Ayrıştırıcı, .apk'daki dosyalardan birinde CertificateEncodingException ile karşılaştı."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
@@ -2010,7 +2010,7 @@ msgstr "Ayrıştırıcıya dosya olmayan veya beklenen '.apk' uzantısıyla bitm
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
-msgstr "Ayrıştırıcı, AndroidManifest.xml dosyasını kurtaramadı."
+msgstr "Ayrıştırıcı, AndroidManifest.xml dosyasını alamadı."
 
 #: res/app/src/core/install.ts:165
 msgid "The requested shared user does not exist."
@@ -2162,7 +2162,7 @@ msgstr "Kullanılıyor"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:236
 msgid "Using Fallback"
-msgstr "Yedeği kullanma"
+msgstr "Yedek Kullanılıyor"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:276
 msgid "Version"
@@ -2286,4 +2286,4 @@ msgstr "Siz"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr "Siz (veya bir başkası) cihazı attı."
+msgstr "Siz (veya bir başkası) cihazı serbest bıraktınız."

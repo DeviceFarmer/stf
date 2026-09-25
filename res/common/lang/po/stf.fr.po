@@ -36,17 +36,17 @@ msgstr "Un paquet est déjà installé avec le même nom"
 
 #: res/app/src/core/install.ts:166
 msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr "Un paquet précédemment installée du même nom a une signature différente de celle du nouveau paquet (et les données de l'ancien paquet n'a pas été supprimée)."
+msgstr "Un paquet précédemment installé du même nom a une signature différente de celle du nouveau paquet (et les données de l'ancien paquet n'ont pas été supprimées)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
-msgstr "Un conteneur sécurisé équipé ne peut pas être accessible sur un support externe."
+msgstr "Impossible d'accéder au point de montage d'un conteneur sécurisé sur un support externe."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:278
 #: res/app/src/features/device-list/columns.tsx:302
 #: res/app/src/features/settings/groups/GroupDevices.tsx:27
 msgid "ABI"
-msgstr "IBP"
+msgstr "ABI"
 
 #: res/app/src/core/devices/enhance.ts:49
 msgid "AC"
@@ -126,7 +126,7 @@ msgstr "Avancé"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:64
 msgid "Advanced Input"
-msgstr "Entrée Avancé"
+msgstr "Entrée Avancée"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:235
 msgid "Airplane Mode"
@@ -177,7 +177,7 @@ msgstr "Êtes-vous sûr de vouloir redémarrer ce terminal et continuer à l'uti
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
-msgstr "Est vous sûr de vouloir redémarrer ce terminal?"
+msgstr "Êtes-vous sûr de vouloir redémarrer ce terminal?"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:117
 msgid "Auto Scroll"
@@ -299,7 +299,7 @@ msgstr "Catégorie"
 
 #: res/app/src/core/devices/enhance.ts:55
 msgid "Charging"
-msgstr "Chargement"
+msgstr "En charge"
 
 #: res/app/src/features/auth/SignInForm.tsx:85
 msgid "Check errors below"
@@ -586,7 +586,7 @@ msgstr "Déconnecté"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:212
 msgid "Display"
-msgstr "écran"
+msgstr "Écran"
 
 #: res/app/src/core/install.ts:53
 msgid "Downloading..."
@@ -598,7 +598,7 @@ msgstr "Déposer le fichier à téléverser"
 
 #: res/app/src/core/devices/enhance.ts:72
 msgid "Dummy"
-msgstr "Mannequin"
+msgstr "Factice"
 
 #: res/app/src/features/group-list/columns.tsx:88
 #: res/app/src/features/settings/groups/GroupList.tsx:51
@@ -725,7 +725,7 @@ msgstr "Fréquence"
 
 #: res/app/src/core/devices/enhance.ts:57
 msgid "Full"
-msgstr "Rempli"
+msgstr "Pleine"
 
 #: res/app/src/features/settings/SettingsPage.tsx:36
 msgid "General"
@@ -862,7 +862,7 @@ msgstr "Santé"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:220
 msgid "Height"
-msgstr "Taille"
+msgstr "Hauteur"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
 #: res/app/src/features/docs/DocsPage.tsx:28
@@ -953,7 +953,7 @@ msgstr "Installation réussie"
 
 #: res/app/src/core/install.ts:158
 msgid "Installation timed out."
-msgstr "L'installation a expirée."
+msgstr "L'installation a expiré."
 
 #: res/app/src/core/install.ts:57
 msgid "Installing app..."
@@ -983,7 +983,7 @@ msgstr "Paysage"
 #: res/app/src/features/settings/general/GeneralSettings.tsx:22
 #: res/app/src/features/settings/general/GeneralSettings.tsx:25
 msgid "Language"
-msgstr "Langage"
+msgstr "Langue"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:120
 msgid "Launch Activity"
@@ -1159,7 +1159,7 @@ msgstr "Non"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:191
 msgid "No access tokens"
-msgstr "Pas d'accès aux jetons"
+msgstr "Pas de jetons d'accès"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:174
 msgid "No ADB keys"
@@ -1260,7 +1260,7 @@ msgstr "Notes"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:250
 msgid "Number"
-msgstr "Nombre"
+msgstr "Numéro"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:54
 msgid "Number of groups"
@@ -1401,11 +1401,11 @@ msgstr "S'il vous plaît entrez un e-mail valide"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:124
 msgid "Please enter your Store password"
-msgstr "S'il vous plaît entrez vôtre mot de passe du Store"
+msgstr "S'il vous plaît entrez votre mot de passe du Store"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:108
 msgid "Please enter your Store username"
-msgstr "S'il vous plaît entrez vôtre identifiant du Store"
+msgstr "S'il vous plaît entrez votre identifiant du Store"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:117
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:120
@@ -1522,7 +1522,7 @@ msgstr "Syntaxe regex"
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr "Versionée"
+msgstr "Date de sortie"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
@@ -1632,15 +1632,15 @@ msgstr "Exécuter"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
 msgid "Run the following on your command line to debug the device from your Browser"
-msgstr "Exécutez la commande suivante sur la ligne de commande pour déboguer le périphérique de votre navigateur"
+msgstr "Exécutez la commande suivante sur la ligne de commande pour déboguer le terminal depuis votre navigateur"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
 msgid "Run the following on your command line to debug the device from your IDE"
-msgstr "Exécutez la commande suivante sur la ligne de commande pour déboguer le périphérique de votre IDE"
+msgstr "Exécutez la commande suivante sur la ligne de commande pour déboguer le terminal depuis votre IDE"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Run this command to copy the key to your clipboard"
-msgstr "Exécutez cette commande pour copier la clef de votre presse-papier"
+msgstr "Exécutez cette commande pour copier la clef dans votre presse-papier"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:68
 msgid "Sample of log format"
@@ -1679,7 +1679,7 @@ msgstr "Planification"
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:223
 #: res/app/src/features/settings/groups/GroupDevices.tsx:20
 msgid "Screen"
-msgstr "écran"
+msgstr "Écran"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
@@ -1692,7 +1692,7 @@ msgstr "Captures d'écran"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:300
 msgid "SD Card Mounted"
-msgstr "Carte SD Monté"
+msgstr "Carte SD Montée"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:277
 #: res/app/src/features/device-list/columns.tsx:297
@@ -1721,7 +1721,7 @@ msgstr "Tout sélectionner"
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:12
 #: res/app/src/features/settings/groups/GroupDevices.tsx:16
 msgid "Serial"
-msgstr "Sériel"
+msgstr "Numéro de série"
 
 #: res/app/src/features/auth/SignInForm.tsx:87
 msgid "Server error. Check log output."
@@ -1765,7 +1765,7 @@ msgstr "Afficher l'écran"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:157
 msgid "Sign In"
-msgstr "S'enregistrer"
+msgstr "Se connecter"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in to continue"
@@ -1798,7 +1798,7 @@ msgstr "Smartphone Test Farm"
 
 #: res/app/src/ui/AppLayout.tsx:109
 msgid "Socket connection was lost"
-msgstr "La connexion au Socket a été perdu"
+msgstr "La connexion au Socket a été perdue"
 
 #: res/app/src/core/devices/enhance.ts:33
 msgid "Someone stole your device."
@@ -1806,7 +1806,7 @@ msgstr "Quelqu'un a volé votre terminal."
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"
-msgstr "Clefs spéciales"
+msgstr "Touches spéciales"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
@@ -1872,7 +1872,7 @@ msgstr "Permuter le Charset"
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:112
 #: res/app/src/features/control/panes/logs/LogTable.tsx:139
 msgid "Tag"
-msgstr "étiquette"
+msgstr "Étiquette"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
@@ -1890,7 +1890,7 @@ msgstr "Texte"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:163
 msgid "The current view is marked secure and cannot be viewed remotely."
-msgstr "La vue actuelle est marqué sécurisé et ne peut être consulté à distance."
+msgstr "La vue actuelle est marquée comme sécurisée et ne peut pas être consultée à distance."
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
@@ -1918,7 +1918,7 @@ msgstr "Le nouveau paquet n'a pas pu être installé à l'emplacement spécifié
 
 #: res/app/src/core/install.ts:171
 msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "Le nouveau paquet a échoué car it contient un fournisseur de contenu avec la même autorité en tant que fournisseur déjà installé dans le système."
+msgstr "Le nouveau paquet a échoué car il contient un fournisseur de contenu ayant la même autorité qu'un fournisseur déjà installé dans le système."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
@@ -1942,7 +1942,7 @@ msgstr "Le nouveau paquet a un code de version plus ancien que le paquet actuell
 
 #: res/app/src/core/install.ts:182
 msgid "The new package is assigned a different UID than it previously held."
-msgstr "Le nouveau paquet est affecté un ID différent qu'il détenait auparavant."
+msgstr "Le nouveau paquet se voit attribuer un UID différent de celui qu'il détenait auparavant."
 
 #: res/app/src/core/install.ts:175
 msgid "The new package uses a feature that is not available."
@@ -1974,7 +1974,7 @@ msgstr "Le service de gestionnaire de paquets a constaté que le terminal ne dis
 
 #: res/app/src/core/install.ts:193
 msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
-msgstr "L'analyseur n'a pas trouvé toutes les tags actionnables (de l'instrumentation et des applications) dans le manifest."
+msgstr "L'analyseur n'a trouvé aucune balise exploitable (instrumentation ou application) dans le manifest."
 
 #: res/app/src/core/install.ts:187
 msgid "The parser did not find any certificates in the .apk."
@@ -2006,7 +2006,7 @@ msgstr "L'analyseur a trouvé des certificats contradictoires sur les fichiers d
 
 #: res/app/src/core/install.ts:184
 msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
-msgstr "L'analyseur a donné un chemin qui n'est pas un fichier, ou ne se termine pas avec le \".apk\" extension attendue."
+msgstr "L'analyseur a reçu un chemin qui n'est pas un fichier, ou qui ne se termine pas par l'extension « .apk » attendue."
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
@@ -2014,7 +2014,7 @@ msgstr "L'analyseur n'a pas pu extraire le fichier AndroidManifest.xml."
 
 #: res/app/src/core/install.ts:165
 msgid "The requested shared user does not exist."
-msgstr "L'utilisateur requêté partagé n'existe pas."
+msgstr "L'utilisateur partagé demandé n'existe pas."
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:56
 msgid "The schedule can only be changed while the group is pending"
@@ -2030,11 +2030,11 @@ msgstr "Le système n'a pas réussi à installer le paquet en raison de problèm
 
 #: res/app/src/core/install.ts:195
 msgid "The system failed to install the package because the user is restricted from installing apps."
-msgstr "Le système n'a pas réussi à installer le paquet parce que l'utilisateur est limité à partir de l'installation d'applications."
+msgstr "Le système n'a pas réussi à installer le paquet parce que l'utilisateur n'est pas autorisé à installer des applications."
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."
-msgstr "L'URI transmise n'est pas invalide."
+msgstr "L'URI transmise est invalide."
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265
 msgid "This folder is empty"
@@ -2048,7 +2048,7 @@ msgstr "TID"
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:109
 #: res/app/src/features/control/panes/logs/LogTable.tsx:134
 msgid "Time"
-msgstr "Temps"
+msgstr "Heure"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Tip:"
@@ -2162,7 +2162,7 @@ msgstr "En Utilisation"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:236
 msgid "Using Fallback"
-msgstr "Reprise de l'Utilisation"
+msgstr "Mode de secours"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:276
 msgid "Version"
@@ -2170,7 +2170,7 @@ msgstr "Version"
 
 #: res/app/src/ui/modals.tsx:151
 msgid "Version Update"
-msgstr "Version de la mise à jour"
+msgstr "Mise à jour de version"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:33
 msgid "Vibrate Mode"
@@ -2286,4 +2286,4 @@ msgstr "Vous"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr "Vous (ou quelqu'un d'autre) a exclu le Terminal."
+msgstr "Vous (ou quelqu'un d'autre) avez exclu le Terminal."
