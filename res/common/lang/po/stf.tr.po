@@ -1,12 +1,12 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: STF\n"
-"Language-Team: Japanese (https://app.transifex.com/devicefarmer/teams/110261/ja/)\n"
-"Language: ja\n"
+"Language-Team: Turkish (https://app.transifex.com/devicefarmer/teams/110261/tr/)\n"
+"Language: tr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: res/app/src/features/settings/groups/rules.ts:101
 msgid "(Expiration date - Starting date) must be <= Class duration"
@@ -28,19 +28,19 @@ msgstr ""
 
 #: res/app/src/ui/modals.tsx:155
 msgid "A new version of STF is available"
-msgstr "STFの新しいバージョンがリリースされました"
+msgstr "STF uygulamasının yeni bir versiyonu mevcuttur."
 
 #: res/app/src/core/install.ts:164
 msgid "A package is already installed with the same name."
-msgstr ""
+msgstr "Aynı isimde daha önce yüklenmiş bir paket bulunmaktadır."
 
 #: res/app/src/core/install.ts:166
 msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr ""
+msgstr "Daha önce aynı isim ile yüklenmiş paket, farklı bir isimde imzalanmıştır, bu yüzden yeni paket ( ve eski isimdeki paket dataları kaldırılmamıştır.)"
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
-msgstr ""
+msgstr "Harici medya ortamına güvenli bir bağlantı oluşturulamadı."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:278
 #: res/app/src/features/device-list/columns.tsx:302
@@ -54,19 +54,19 @@ msgstr "AC"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:144
 msgid "Access Tokens"
-msgstr "アクセストークン"
+msgstr "Erişim Anahtarları"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:167
 msgid "Account"
-msgstr "アカウント"
+msgstr "Hesap"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:108
 msgid "Action"
-msgstr "アクション"
+msgstr "Aksiyon"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:168
 msgid "Actions"
-msgstr "アクション"
+msgstr "Aksiyonlar"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:74
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:82
@@ -84,53 +84,53 @@ msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:107
 msgid "Activity"
-msgstr "アクティビティ"
+msgstr "Faaliyet"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:140
 msgid "ADB Keys"
-msgstr "ADBキー"
+msgstr "ADB Anahtarları"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:182
 #: res/app/src/features/settings/groups/GroupDevices.tsx:209
 #: res/app/src/features/settings/groups/GroupUsers.tsx:139
 #: res/app/src/features/settings/groups/GroupUsers.tsx:160
 msgid "Add"
-msgstr "追加"
+msgstr "Ekle"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:155
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:160
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:82
 msgid "Add ADB Key"
-msgstr "ADBキーを追加"
+msgstr "ADB Anahtarı Ekle"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:124
 #: res/app/src/ui/modals.tsx:201
 msgid "Add Key"
-msgstr "キー追加"
+msgstr "Anahtar Ekle"
 
 #: res/app/src/ui/modals.tsx:176
 msgid "Add the following ADB Key to STF?"
-msgstr "STFに下記のADBキーを追加しますか？"
+msgstr "Aşağıdaki ADB anahtarını STF'ye Eklediniz mi?"
 
 #: res/app/src/ui/AppLayout.tsx:83
 msgid "Admin mode has been disabled."
-msgstr "管理モードは無効になりました。"
+msgstr "Yönetici modu etkisizleştirildi. "
 
 #: res/app/src/ui/AppLayout.tsx:82
 msgid "Admin mode has been enabled."
-msgstr "管理モードは有効になりました。"
+msgstr "Yönetici modu açıldı."
 
 #: res/app/src/features/control/ControlPage.tsx:79
 msgid "Advanced"
-msgstr "高度機能"
+msgstr "Gelişmiş"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:64
 msgid "Advanced Input"
-msgstr "高度な入力"
+msgstr "Gelişmiş Girdi"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:235
 msgid "Airplane Mode"
-msgstr "機内モード"
+msgstr "Uçak Modu"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:56
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:67
@@ -156,7 +156,7 @@ msgstr ""
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:87
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:40
 msgid "App Store"
-msgstr "アプリストア"
+msgstr "Uygulama Mağazası"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:88
 msgid "App switch"
@@ -165,11 +165,11 @@ msgstr ""
 #: res/app/src/features/control/device-control/install-file.ts:14
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:151
 msgid "App Upload"
-msgstr "アプリアップロード"
+msgstr "Uygulama Yükle"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:69
 msgid "Apps"
-msgstr "アプリ"
+msgstr "Uygulamalar"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
 msgid "Are you sure you want to reboot this device and keep using it afterwards?"
@@ -177,7 +177,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
-msgstr "この端末を再起動しますか？"
+msgstr "Bu cihazı tekrardan başlatmak istediğinize emin misiniz?"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:117
 msgid "Auto Scroll"
@@ -185,15 +185,15 @@ msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:28
 msgid "Automating"
-msgstr ""
+msgstr "Otomatikleştirme"
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
-msgstr "自動化"
+msgstr "Otomasyon"
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
-msgstr "利用可能"
+msgstr "Müsait"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:172
 msgid "Available device selection"
@@ -214,7 +214,7 @@ msgstr ""
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:82
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:28
 msgid "Back"
-msgstr "戻る"
+msgstr "Geri"
 
 #: res/app/src/features/settings/groups/rules.ts:83
 #: res/app/src/features/settings/users/QuotasForm.tsx:20
@@ -223,27 +223,27 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:198
 msgid "Battery"
-msgstr "バッテリー"
+msgstr "Pil"
 
 #: res/app/src/features/device-list/columns.tsx:309
 msgid "Battery Health"
-msgstr "バッテリー健康状態"
+msgstr "Pil Sağlığı"
 
 #: res/app/src/features/device-list/columns.tsx:316
 msgid "Battery Level"
-msgstr "バッテリーレベル"
+msgstr "Pil Düzeyi"
 
 #: res/app/src/features/device-list/columns.tsx:311
 msgid "Battery Source"
-msgstr "バッテリー電力源"
+msgstr "Pil Kaynağı"
 
 #: res/app/src/features/device-list/columns.tsx:313
 msgid "Battery Status"
-msgstr "バッテリー状態"
+msgstr "Pil Durumu"
 
 #: res/app/src/features/device-list/columns.tsx:321
 msgid "Battery Temp"
-msgstr "バッテリー温度"
+msgstr "Pil Sıcaklığı"
 
 #: res/app/src/core/devices/enhance.ts:71
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:140
@@ -261,20 +261,20 @@ msgstr ""
 
 #: res/app/src/features/device-list/columns.tsx:287
 msgid "Browser"
-msgstr "ブラウザ"
+msgstr "Tarayıcı"
 
 #: res/app/src/core/devices/enhance.ts:13
 #: res/app/src/core/devices/enhance.ts:26
 msgid "Busy"
-msgstr "貸し出し中"
+msgstr "Meşgul"
 
 #: res/app/src/features/device-list/DeviceStats.tsx:41
 msgid "Busy Devices"
-msgstr "貸出し中"
+msgstr "Meşgul Cihazlar"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:35
 msgid "Camera"
-msgstr "カメラ"
+msgstr "Kamera"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:78
 #: res/app/src/features/device-list/cells.tsx:146
@@ -285,25 +285,25 @@ msgstr "カメラ"
 #: res/app/src/ui/modals.tsx:57
 #: res/app/src/ui/modals.tsx:89
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "İptal"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:248
 #: res/app/src/features/device-list/columns.tsx:273
 #: res/app/src/features/settings/groups/GroupDevices.tsx:17
 msgid "Carrier"
-msgstr "キャリア"
+msgstr "Taşıyıcı"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:111
 msgid "Category"
-msgstr "カテゴリー"
+msgstr "Kategori"
 
 #: res/app/src/core/devices/enhance.ts:55
 msgid "Charging"
-msgstr "充電中"
+msgstr "Şarj oluyor"
 
 #: res/app/src/features/auth/SignInForm.tsx:85
 msgid "Check errors below"
-msgstr "下記エラーがありました"
+msgstr "Aşağıdaki hataları kontrol ediniz. "
 
 #: res/app/src/features/group-list/columns.tsx:85
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:62
@@ -323,11 +323,11 @@ msgstr ""
 #: res/app/src/features/device-list/DeviceListPage.tsx:139
 #: res/app/src/ui/Pager.tsx:46
 msgid "Clear"
-msgstr "クリア"
+msgstr "Temizle"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:41
 msgid "Clipboard"
-msgstr "クリップボード"
+msgstr "Panoya Kopyala"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:46
 msgid "Close"
@@ -335,7 +335,7 @@ msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:40
 msgid "Cold"
-msgstr "コールド"
+msgstr "Soğuk"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:194
 #: res/app/src/features/settings/groups/GroupList.tsx:177
@@ -353,11 +353,11 @@ msgstr ""
 #: res/app/src/core/devices/enhance.ts:7
 #: res/app/src/features/control/panes/info/InfoPane.tsx:234
 msgid "Connected"
-msgstr "接続中"
+msgstr "Bağlı"
 
 #: res/app/src/ui/AppLayout.tsx:104
 msgid "Connected successfully."
-msgstr "接続できました。"
+msgstr "Başarılı bir şekilde bağlanıldı."
 
 #: res/app/src/features/group-list/GroupListPage.tsx:128
 #: res/app/src/features/settings/groups/GroupList.tsx:165
@@ -379,7 +379,7 @@ msgstr ""
 
 #: res/app/src/ui/AppLayout.tsx:211
 msgid "Control"
-msgstr "リモート操作"
+msgstr "Kontrol"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Controlled"
@@ -396,11 +396,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:288
 msgid "Cores"
-msgstr "コア数"
+msgstr "Çekirdek Sayısı"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:283
 msgid "CPU"
-msgstr "CPU"
+msgstr "İşlemci"
 
 #: res/app/src/features/device-list/columns.tsx:303
 #: res/app/src/features/settings/groups/GroupDevices.tsx:29
@@ -422,13 +422,13 @@ msgstr ""
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:75
 msgid "Current rotation:"
-msgstr ""
+msgstr "Mevcut rotasyon:"
 
 #: res/app/src/ui/ColumnChoice.tsx:47
 #: res/app/src/ui/ColumnChoice.tsx:48
 #: res/app/src/ui/ColumnChoice.tsx:54
 msgid "Customize"
-msgstr "カスタマイズ"
+msgstr "Özelleştirme"
 
 #: res/app/src/core/common.ts:22
 msgid "Daily"
@@ -440,15 +440,15 @@ msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:54
 msgid "Dashboard"
-msgstr "ダッシュボード"
+msgstr "Kontrol Paneli"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:116
 msgid "Data"
-msgstr "データ"
+msgstr "Veri"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:230
 msgid "Date"
-msgstr "日付"
+msgstr "Tarih"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:44
 #: res/app/src/features/settings/general/GeneralSettings.tsx:49
@@ -457,7 +457,7 @@ msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr "残量なし"
+msgstr "Bozuk"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
@@ -485,15 +485,15 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:217
 msgid "Density"
-msgstr "表示密度"
+msgstr "Yoğunluk"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:177
 msgid "Details"
-msgstr "詳細"
+msgstr "Detaylar"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:58
 msgid "Developer"
-msgstr "開発者"
+msgstr "Geliştirici"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:109
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:97
@@ -501,7 +501,7 @@ msgstr "開発者"
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:114
 #: res/app/src/ui/modals.tsx:187
 msgid "Device"
-msgstr "デバイス"
+msgstr "Cihaz"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:51
 msgid "Device booking state"
@@ -509,7 +509,7 @@ msgstr ""
 
 #: res/app/src/features/device-list/device-actions.ts:38
 msgid "Device cannot get kicked from the group"
-msgstr "このデバイスはグループからキックできません。"
+msgstr "Cihaz gruptan çıkartılamıyor"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Device controlling state"
@@ -517,11 +517,11 @@ msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:35
 msgid "Device is not present anymore for some reason."
-msgstr "実機が見えなくなりました。"
+msgstr "Cihaz herhangi bir sebepten dolayı mevcut değil."
 
 #: res/app/src/core/devices/enhance.ts:36
 msgid "Device is present but offline."
-msgstr "デバイスは接続されているが、オフラインになっています。"
+msgstr "Cihaz mevcut ancak çevrimdışı."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:275
 msgid "Device list"
@@ -533,7 +533,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
-msgstr "実機写真"
+msgstr "Cihaz Resmi"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Device presence state"
@@ -547,11 +547,11 @@ msgstr ""
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:101
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:45
 msgid "Device Settings"
-msgstr "実機設定"
+msgstr "Cihaz Ayarları"
 
 #: res/app/src/features/control/ControlPage.tsx:109
 msgid "Device was disconnected"
-msgstr "デバイスへの接続が切れました"
+msgstr "Cihaz bağlantısı sonlandı."
 
 #: res/app/src/core/devices/enhance.ts:34
 msgid "Device was kicked by automatic timeout.\t"
@@ -564,7 +564,7 @@ msgstr ""
 #: res/app/src/features/settings/SettingsPage.tsx:39
 #: res/app/src/ui/AppLayout.tsx:213
 msgid "Devices"
-msgstr "端末リスト"
+msgstr "Cihazlar"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:154
 msgid "Disable Bluetooth"
@@ -572,21 +572,21 @@ msgstr ""
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Disable WiFi"
-msgstr "無線LANを無効にする"
+msgstr "WiFi'yı Kapat"
 
 #: res/app/src/core/devices/enhance.ts:56
 msgid "Discharging"
-msgstr "放電中"
+msgstr "Sarj olmuyor"
 
 #: res/app/src/core/devices/enhance.ts:19
 #: res/app/src/core/devices/enhance.ts:6
 #: res/app/src/ui/modals.tsx:127
 msgid "Disconnected"
-msgstr "切断中"
+msgstr "Bağlantı Sonlandı"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:212
 msgid "Display"
-msgstr "ディスプレー"
+msgstr "Görüntüle"
 
 #: res/app/src/core/install.ts:53
 msgid "Downloading..."
@@ -594,11 +594,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:184
 msgid "Drop file to upload"
-msgstr "ここにファイルをドロップ"
+msgstr "Yüklenecek dosyaları buraya sürükleyiniz."
 
 #: res/app/src/core/devices/enhance.ts:72
 msgid "Dummy"
-msgstr "ダミー"
+msgstr "Sahte Veri"
 
 #: res/app/src/features/group-list/columns.tsx:88
 #: res/app/src/features/settings/groups/GroupList.tsx:51
@@ -630,7 +630,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Enable WiFi"
-msgstr "無線LANを有効にする"
+msgstr "WiFi'yı etkinleştir."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:184
 msgid "Enable/Disable confirmation for device removing"
@@ -646,7 +646,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:223
 msgid "Encrypted"
-msgstr "暗号化"
+msgstr "Şifrelenmiş"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
@@ -654,22 +654,22 @@ msgstr "暗号化"
 #: res/app/src/ui/AppLayout.tsx:110
 #: res/app/src/ui/AppLayout.tsx:111
 msgid "Error"
-msgstr "エラー"
+msgstr "Hata"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:28
 #: res/app/src/features/control/screen/screen-keyboard.ts:41
 #: res/app/src/features/control/screen/screen-keyboard.ts:45
 msgid "Error while getting data"
-msgstr "データ取得中にエラーが発生しました。"
+msgstr "Veriler alınırken hata oluştu."
 
 #: res/app/src/core/devices/enhance.ts:73
 msgid "Ethernet"
-msgstr "イーサーネット"
+msgstr "İnternet"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:47
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:92
 msgid "Executes remote shell commands"
-msgstr "リモートシェルコマンドを実行する"
+msgstr ""
 
 #: res/app/src/features/group-list/columns.tsx:98
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:14
@@ -680,7 +680,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:160
 msgid "Failed to download file"
-msgstr "ファイルのダウンロードが失敗しした。"
+msgstr "Dosya indirilemedi"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:45
 msgid "False"
@@ -688,11 +688,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:56
 msgid "Fast Forward"
-msgstr "早送り"
+msgstr "Hızlı İlerlet"
 
 #: res/app/src/features/control/ControlPage.tsx:85
 msgid "File Explorer"
-msgstr "エクスプローラー"
+msgstr "Dosya Gezgini"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:50
 msgid "File Name"
@@ -709,11 +709,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:188
 msgid "Find Device"
-msgstr "実機を探す"
+msgstr "Cihaz Bul"
 
 #: res/app/src/ui/modals.tsx:183
 msgid "Fingerprint"
-msgstr "指紋"
+msgstr "Parmak izi"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:218
 msgid "FPS"
@@ -721,33 +721,33 @@ msgstr "FPS"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:289
 msgid "Frequency"
-msgstr "クロック"
+msgstr "Sıklık"
 
 #: res/app/src/core/devices/enhance.ts:57
 msgid "Full"
-msgstr "フル"
+msgstr "Dolu"
 
 #: res/app/src/features/settings/SettingsPage.tsx:36
 msgid "General"
-msgstr "一般"
+msgstr "Genel"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:159
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:164
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:57
 msgid "Generate Access Token"
-msgstr "アクセストークン生成"
+msgstr "Erişim Anahtarı Oluştur"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:70
 msgid "Generate New Token"
-msgstr "新規トークン生成"
+msgstr "Yeni Anahtar Oluştur"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Get"
-msgstr "取得"
+msgstr "Al"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:61
 msgid "Get clipboard contents"
-msgstr "クリップボードの中身を取得する"
+msgstr "Pano içeriğini al"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:159
 msgid "Get ready"
@@ -756,15 +756,15 @@ msgstr ""
 #: res/app/src/features/docs/DocsPage.tsx:83
 #: res/app/src/features/docs/DocsPage.tsx:88
 msgid "Go Back"
-msgstr "戻る"
+msgstr "Geri dön"
 
 #: res/app/src/features/control/ControlPage.tsx:121
 msgid "Go to Device List"
-msgstr "端末リストへ"
+msgstr "Cihaz listesine git."
 
 #: res/app/src/core/devices/enhance.ts:41
 msgid "Good"
-msgstr "良い"
+msgstr "İyi"
 
 #: res/app/src/features/device-list/columns.tsx:245
 msgid "Group Class"
@@ -854,22 +854,22 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:258
 msgid "Hardware"
-msgstr "ハードウェア"
+msgstr "Donanım"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:202
 msgid "Health"
-msgstr "健康状態"
+msgstr "Sağlık"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:220
 msgid "Height"
-msgstr "高さ"
+msgstr "Boy/Yükseklik"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
 #: res/app/src/features/docs/DocsPage.tsx:28
 #: res/app/src/ui/AppLayout.tsx:289
 #: res/app/src/ui/AppLayout.tsx:295
 msgid "Help"
-msgstr "ヘルプ"
+msgstr "Yardım"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Hide Manifest"
@@ -878,7 +878,7 @@ msgstr ""
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
 msgid "Hide Screen"
-msgstr "画面を非表しない"
+msgstr "Ekranı Gizle"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:85
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:31
@@ -886,16 +886,16 @@ msgstr "画面を非表しない"
 #: res/app/src/features/docs/DocsPage.tsx:64
 #: res/app/src/features/docs/DocsPage.tsx:95
 msgid "Home"
-msgstr "ホーム"
+msgstr "Ana Ekran"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:101
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:110
 msgid "Host"
-msgstr "ホスト"
+msgstr "Ana Makine"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:118
 msgid "Hostname"
-msgstr "ホスト名"
+msgstr "Ana Makine Adı"
 
 #: res/app/src/core/common.ts:21
 msgid "Hourly"
@@ -920,7 +920,7 @@ msgstr "IMEI"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:252
 msgid "IMSI"
-msgstr ""
+msgstr "IMSI"
 
 #: res/app/src/features/settings/groups/rules.ts:157
 msgid "Inactive"
@@ -928,11 +928,11 @@ msgstr ""
 
 #: res/app/src/features/auth/SignInForm.tsx:86
 msgid "Incorrect login details"
-msgstr "不正ログイン情報"
+msgstr "Hatalı giriş bilgileri"
 
 #: res/app/src/features/control/ControlPage.tsx:91
 msgid "Info"
-msgstr "情報"
+msgstr "Bilgi"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:23
 msgid "Information"
@@ -940,24 +940,24 @@ msgstr ""
 
 #: res/app/src/core/install.ts:159
 msgid "Installation canceled by user."
-msgstr "インストールはユーザーによってキャンセルされました。"
+msgstr "Yükleme kullanıcı tarafından iptal edildi."
 
 #: res/app/src/core/install.ts:157
 msgid "Installation failed due to an unknown error."
-msgstr "インストールが未知のエラーで失敗しました。"
+msgstr "Yükleme bilinmeyen bir hata nedeniyle başarısız oldu."
 
 #: res/app/src/core/install.ts:156
 #: res/app/src/features/control/device-control/install-file.ts:32
 msgid "Installation succeeded."
-msgstr "インストールが完了しました。"
+msgstr "Yükleme başarılı."
 
 #: res/app/src/core/install.ts:158
 msgid "Installation timed out."
-msgstr "インストールがタイムアウトしました。"
+msgstr "Yükleme zaman aşımına uğradı."
 
 #: res/app/src/core/install.ts:57
 msgid "Installing app..."
-msgstr "アプリをインストール中..."
+msgstr "Uygulama yükleniyor..."
 
 #: res/app/src/ui/Pager.tsx:61
 msgid "Items per page"
@@ -965,7 +965,7 @@ msgstr ""
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:97
 msgid "Key"
-msgstr "キー"
+msgstr "Anahtar"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:181
 msgid "Keyboard"
@@ -973,25 +973,25 @@ msgstr ""
 
 #: res/app/src/features/settings/SettingsPage.tsx:37
 msgid "Keys"
-msgstr "認証キー"
+msgstr "Anahtarlar"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:93
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:97
 msgid "Landscape"
-msgstr "横"
+msgstr "Yatay"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:22
 #: res/app/src/features/settings/general/GeneralSettings.tsx:25
 msgid "Language"
-msgstr "言語"
+msgstr "Dil"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:120
 msgid "Launch Activity"
-msgstr "アクティビティを起動する"
+msgstr "Aktiviteyi Çalıştır"
 
 #: res/app/src/core/install.ts:58
 msgid "Launching activity..."
-msgstr "アクティビティを起動中..."
+msgstr "Aktivite çalıştırılıyor..."
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
@@ -1002,7 +1002,7 @@ msgstr ""
 #: res/app/src/features/control/panes/logs/LogTable.tsx:133
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:87
 msgid "Level"
-msgstr "レベル"
+msgstr "Seviye"
 
 #: res/app/src/ui/AppLayout.tsx:301
 msgid "Light"
@@ -1010,13 +1010,13 @@ msgstr ""
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:90
 msgid "Local Settings"
-msgstr "ローカル設定"
+msgstr "Genel Ayarlar"
 
 #: res/app/src/features/device-list/columns.tsx:325
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:225
 #: res/app/src/features/settings/groups/GroupDevices.tsx:40
 msgid "Location"
-msgstr "場所"
+msgstr "Konum"
 
 #: res/app/src/features/auth/SignInForm.tsx:156
 msgid "Log In"
@@ -1034,29 +1034,29 @@ msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:60
 msgid "Logs"
-msgstr "ログ"
+msgstr "Kayıtlar"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:23
 msgid "Maintenance"
-msgstr "メンテナンス"
+msgstr "Bakım"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:90
 msgid "Make sure to copy your access token now. You won't be able to see it again."
-msgstr ""
+msgstr "Erişim anahtarını kopyaladığınızdan emin olun. Tekrar göremeyeceksiniz."
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:52
 msgid "Manage Apps"
-msgstr "アプリ管理"
+msgstr "Uygulamaları Yönet"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:103
 msgid "Manner Mode"
-msgstr "マナーモード"
+msgstr "Davranış Modu"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:262
 #: res/app/src/features/device-list/columns.tsx:294
 #: res/app/src/features/settings/groups/GroupDevices.tsx:22
 msgid "Manufacturer"
-msgstr "メーカー"
+msgstr "Üretici"
 
 #: res/app/src/features/device-list/columns.tsx:295
 #: res/app/src/features/settings/groups/GroupDevices.tsx:38
@@ -1065,41 +1065,41 @@ msgstr ""
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:49
 msgid "Media"
-msgstr "メディア"
+msgstr "Medya"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:294
 msgid "Memory"
-msgstr "メモリー"
+msgstr "Hafıza"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:79
 msgid "Menu"
-msgstr "メニュー"
+msgstr "Menü"
 
 #: res/app/src/core/devices/enhance.ts:74
 msgid "Mobile"
-msgstr "モバイル"
+msgstr "Mobil Cihaz"
 
 #: res/app/src/core/devices/enhance.ts:75
 msgid "Mobile DUN"
-msgstr "モバイルDUN"
+msgstr "Mobil Cihaz DUN"
 
 #: res/app/src/core/devices/enhance.ts:76
 msgid "Mobile High Priority"
-msgstr "モバイル最優先"
+msgstr "Mobil Cihaz Önceliklendirmesi"
 
 #: res/app/src/core/devices/enhance.ts:77
 msgid "Mobile MMS"
-msgstr "モバイルMMS"
+msgstr "Mobil Cihaz MMS"
 
 #: res/app/src/core/devices/enhance.ts:78
 msgid "Mobile SUPL"
-msgstr "モバイルSUPL"
+msgstr "Mobil Cihaz SUPL"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:264
 #: res/app/src/features/device-list/columns.tsx:258
 #: res/app/src/features/settings/groups/GroupDevices.tsx:15
 msgid "Model"
-msgstr "機種名"
+msgstr "Model"
 
 #: res/app/src/core/common.ts:24
 msgid "Monthly"
@@ -1108,16 +1108,16 @@ msgstr ""
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:147
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:154
 msgid "More about Access Tokens"
-msgstr "アクセストークンについて"
+msgstr "Erişim Anahtarları hakkında daha fazla bilgi"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:143
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:150
 msgid "More about ADB Keys"
-msgstr "ADBキーについて"
+msgstr "ADB Anahtarları hakkında daha fazla bilgi"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:43
 msgid "Mute"
-msgstr "音を消す"
+msgstr "Sessiz"
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
@@ -1132,38 +1132,38 @@ msgstr "音を消す"
 #: res/app/src/features/settings/users/CreateUserForm.tsx:57
 #: res/app/src/features/settings/users/UsersSettings.tsx:296
 msgid "Name"
-msgstr "名称"
+msgstr "İsim"
 
 #: res/app/src/ui/AppLayout.tsx:270
 msgid "Native"
-msgstr "Native"
+msgstr "Uygulama"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:54
 msgid "Navigation"
-msgstr "ブラウジング"
+msgstr "Navigasyon"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:230
 #: res/app/src/features/control/panes/info/InfoPane.tsx:249
 #: res/app/src/features/device-list/columns.tsx:280
 #: res/app/src/features/settings/groups/GroupDevices.tsx:19
 msgid "Network"
-msgstr "ネットワーク"
+msgstr "Ağ"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:55
 msgid "Next"
-msgstr "次"
+msgstr "Sonraki"
 
 #: res/app/src/core/devices/enhance.ts:100
 msgid "No"
-msgstr "いいえ"
+msgstr "Hayır"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:191
 msgid "No access tokens"
-msgstr "アクセストークンはありません"
+msgstr "Erişim anahtarı yok"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:174
 msgid "No ADB keys"
-msgstr "ADBキーはありません"
+msgstr "ADB Anahtarları Yok"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:173
 msgid "No available devices"
@@ -1181,11 +1181,11 @@ msgstr ""
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:25
 #: res/app/src/features/control/screen/screen-keyboard.ts:38
 msgid "No clipboard data"
-msgstr "クリップボードデータはありません"
+msgstr ""
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:160
 msgid "No device screen"
-msgstr "画面が表示できません"
+msgstr "Cihaz ekranı yok"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:140
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:265
@@ -1194,7 +1194,7 @@ msgstr ""
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:103
 msgid "No devices connected"
-msgstr "端末が接続されていません"
+msgstr "Cihaz bağlanmadı"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:132
 msgid "No group devices"
@@ -1219,11 +1219,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:104
 msgid "No photo available"
-msgstr "写真はありません"
+msgstr "Fotoğraf mevcut değil"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:94
 msgid "No Ports Forwarded"
-msgstr "フォワードされたポートはありません"
+msgstr ""
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:117
 #: res/app/src/features/group-list/GroupListPage.tsx:161
@@ -1233,7 +1233,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:118
 msgid "No screenshots taken"
-msgstr "キャプチャはありません"
+msgstr "Ekran görüntüsü anahtarı yok"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:289
 msgid "No Users"
@@ -1241,11 +1241,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:34
 msgid "Normal Mode"
-msgstr "通常モード"
+msgstr "Normal Mod"
 
 #: res/app/src/core/devices/enhance.ts:58
 msgid "Not Charging"
-msgstr "充電されていない"
+msgstr "Sarj olmuyor"
 
 #: res/app/src/features/docs/DocsPage.tsx:62
 #: res/app/src/features/user/UserPage.tsx:54
@@ -1256,11 +1256,11 @@ msgstr ""
 #: res/app/src/features/device-list/cells.tsx:162
 #: res/app/src/features/device-list/columns.tsx:326
 msgid "Notes"
-msgstr "注釈"
+msgstr "Notlar"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:250
 msgid "Number"
-msgstr "番号"
+msgstr "Numara"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:54
 msgid "Number of groups"
@@ -1273,7 +1273,7 @@ msgstr ""
 #: res/app/src/core/devices/enhance.ts:21
 #: res/app/src/core/devices/enhance.ts:8
 msgid "Offline"
-msgstr "オフライン"
+msgstr "Çevrimdışı"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:111
 #: res/app/src/ui/modals.tsx:67
@@ -1290,11 +1290,11 @@ msgstr ""
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:105
 #: res/app/src/ui/notify.ts:8
 msgid "Oops!"
-msgstr "おっと！"
+msgstr "Eyvah!"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:98
 msgid "Open"
-msgstr "開く"
+msgstr "Aç"
 
 #: res/app/src/features/device-list/columns.tsx:304
 #: res/app/src/features/settings/groups/GroupDevices.tsx:34
@@ -1303,7 +1303,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:222
 msgid "Orientation"
-msgstr "方向"
+msgstr "Yönlendirme"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:275
 #: res/app/src/features/device-list/columns.tsx:276
@@ -1311,15 +1311,15 @@ msgstr "方向"
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:222
 #: res/app/src/features/settings/groups/GroupDevices.tsx:18
 msgid "OS"
-msgstr "OS"
+msgstr "İşletim Sistemi"
 
 #: res/app/src/core/devices/enhance.ts:43
 msgid "Over Voltage"
-msgstr "過電圧"
+msgstr "Aşırı Voltaj"
 
 #: res/app/src/core/devices/enhance.ts:44
 msgid "Overheat"
-msgstr "過熱"
+msgstr "Aşırı Isınma"
 
 #: res/app/src/features/group-list/columns.tsx:71
 #: res/app/src/features/settings/groups/GroupDetail.tsx:145
@@ -1328,13 +1328,13 @@ msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:102
 msgid "Package"
-msgstr "パッケージ"
+msgstr "Paket"
 
 #: res/app/src/features/auth/SignInForm.tsx:144
 #: res/app/src/features/auth/SignInForm.tsx:145
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:117
 msgid "Password"
-msgstr "パスワード"
+msgstr "Şifre"
 
 #: res/app/src/ui/mail.ts:18
 msgid "Paste the email addresses from the clipboard!"
@@ -1355,87 +1355,87 @@ msgstr ""
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:231
 msgid "Permissions"
-msgstr "権限"
+msgstr "İzinler"
 
 #: res/app/src/features/device-list/columns.tsx:305
 msgid "Phone"
-msgstr "電話番号"
+msgstr "Telefon"
 
 #: res/app/src/features/device-list/columns.tsx:308
 msgid "Phone ICCID"
-msgstr "携帯ICCID"
+msgstr "Telefon ICCID"
 
 #: res/app/src/features/device-list/columns.tsx:306
 #: res/app/src/features/settings/groups/GroupDevices.tsx:39
 msgid "Phone IMEI"
-msgstr "携帯IMEI"
+msgstr "Telefon IMEI"
 
 #: res/app/src/features/device-list/columns.tsx:307
 msgid "Phone IMSI"
-msgstr ""
+msgstr "Telefon IMSI"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:183
 msgid "Physical Device"
-msgstr "物理デバイス"
+msgstr "Fiziksel Cihaz"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:110
 #: res/app/src/features/control/panes/logs/LogTable.tsx:137
 msgid "PID"
-msgstr "PID"
+msgstr "Telefon ID"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:192
 msgid "Place"
-msgstr "場所"
+msgstr "Yer"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:271
 msgid "Platform"
-msgstr "プラットホーム"
+msgstr "Platform"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:53
 msgid "Play/Pause"
-msgstr "再生/停止"
+msgstr "Oynat/Durdur"
 
 #: res/app/src/features/auth/SignInForm.tsx:49
 msgid "Please enter a valid email"
-msgstr "有効なメールアドレスを入力してください"
+msgstr "Lütfen geçerli bir e-posta girin"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:124
 msgid "Please enter your Store password"
-msgstr "ストアのパスワードを入力してください"
+msgstr "Lütfen Mağaza şifrenizi giriniz"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:108
 msgid "Please enter your Store username"
-msgstr "ストアのユーザ名を入力してください"
+msgstr "Lütfen Mağaza kullanıcı adınızı giriniz"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:117
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:120
 msgid "Port"
-msgstr "ポート"
+msgstr "Port"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:27
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:75
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:83
 msgid "Port Forwarding"
-msgstr "ポートフォワーディング"
+msgstr "Port Yönlendirme"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:82
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:86
 msgid "Portrait"
-msgstr "縦"
+msgstr "Dikey"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:34
 msgid "Power"
-msgstr "電源"
+msgstr "Güç"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:203
 msgid "Power Source"
-msgstr "電力源"
+msgstr "Güç Kaynağı"
 
 #: res/app/src/core/devices/enhance.ts:10
 #: res/app/src/core/devices/enhance.ts:23
 #: res/app/src/features/control/ControlPage.tsx:288
 msgid "Preparing"
-msgstr "準備中"
+msgstr "Hazırlanıyor"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Present"
@@ -1447,7 +1447,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"
-msgstr "前"
+msgstr "Önceki"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:215
 #: res/app/src/features/settings/groups/GroupUsers.tsx:24
@@ -1457,16 +1457,16 @@ msgstr ""
 
 #: res/app/src/core/install.ts:55
 msgid "Processing..."
-msgstr "処理中..."
+msgstr "İşleniyor"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:263
 #: res/app/src/features/device-list/columns.tsx:263
 msgid "Product"
-msgstr "型番"
+msgstr "Ürün"
 
 #: res/app/src/core/install.ts:56
 msgid "Pushing app..."
-msgstr "アプリをプッシュ中..."
+msgstr ""
 
 #: res/app/src/core/common.ts:25
 msgid "Quaterly"
@@ -1480,7 +1480,7 @@ msgstr "RAM"
 #: res/app/src/core/devices/enhance.ts:24
 #: res/app/src/features/group-list/columns.tsx:37
 msgid "Ready"
-msgstr "利用可能"
+msgstr "Hazır"
 
 #: res/app/src/features/group-list/GroupStats.tsx:44
 msgid "Ready groups"
@@ -1522,15 +1522,15 @@ msgstr ""
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr "発売日"
+msgstr "Sürüm"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
-msgstr "再読込"
+msgstr "Yeniden yükle"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:67
 msgid "Remote debug"
-msgstr "リモートデバッグ"
+msgstr "Uzaktan hata ayıklama"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:126
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:207
@@ -1546,7 +1546,7 @@ msgstr "リモートデバッグ"
 #: res/app/src/features/settings/users/UsersSettings.tsx:283
 #: res/app/src/features/settings/users/UsersSettings.tsx:348
 msgid "Remove"
-msgstr "削除"
+msgstr "Kaldır"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:197
 msgid "Remove the device selection"
@@ -1580,15 +1580,15 @@ msgstr ""
 #: res/app/src/features/settings/general/GeneralSettings.tsx:104
 #: res/app/src/ui/ColumnChoice.tsx:87
 msgid "Reset"
-msgstr "初期化"
+msgstr "Sıfırla"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:56
 msgid "Reset all browser settings"
-msgstr "ブラウザの設定をリセットする"
+msgstr "Tüm Browser ayarlarını sıfırla"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:93
 msgid "Reset Settings"
-msgstr "すべての設定をリセット"
+msgstr "Ayarları Sıfırla"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:47
 msgid "Restart and Keep Device"
@@ -1596,19 +1596,19 @@ msgstr ""
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:35
 msgid "Restart Device"
-msgstr "端末を再起動"
+msgstr "Cihazı Tekrar Başlat"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:167
 msgid "Retry"
-msgstr "再試行"
+msgstr "Tekrar Dene"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:51
 msgid "Rewind"
-msgstr "巻き戻す"
+msgstr "Geri Alma"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:237
 msgid "Roaming"
-msgstr "ローミング"
+msgstr "Dolaşım"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:299
 msgid "ROM"
@@ -1618,29 +1618,29 @@ msgstr "ROM"
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:106
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:110
 msgid "Rotate Left"
-msgstr "左回りに回転"
+msgstr "Sola Döndür"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:44
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:116
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:120
 msgid "Rotate Right"
-msgstr "右回りに回転"
+msgstr "Sağa Döndür"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:77
 msgid "Run"
-msgstr "実行"
+msgstr "Çalıştır"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
 msgid "Run the following on your command line to debug the device from your Browser"
-msgstr "次のコマンドをコマンドラインで実行しますと、お使いのブラウザより端末のデバッグができます。"
+msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
 msgid "Run the following on your command line to debug the device from your IDE"
-msgstr "次のコマンドをコマンドラインで実行しますと、お使いのIDEより端末のデバッグができます。"
+msgstr ""
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Run this command to copy the key to your clipboard"
-msgstr "次のコマンドを実行しますと、キーがコピーされます"
+msgstr ""
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:68
 msgid "Sample of log format"
@@ -1664,7 +1664,7 @@ msgstr ""
 #: res/app/src/features/control/device-control/device-commands.ts:23
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:48
 msgid "Save ScreenShot"
-msgstr "スクリーンショットを保存する"
+msgstr "Ekran Görüntüsü Kaydet"
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:115
 msgid "Saving will also get ready the group!"
@@ -1679,20 +1679,20 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:223
 #: res/app/src/features/settings/groups/GroupDevices.tsx:20
 msgid "Screen"
-msgstr "解像度"
+msgstr "Ekran"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
 msgid "Screenshot"
-msgstr "キャプチャ"
+msgstr "Ekran Görüntüsü"
 
 #: res/app/src/features/control/ControlPage.tsx:67
 msgid "Screenshots"
-msgstr "キャプチャ"
+msgstr "Ekran Görüntüleri"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:300
 msgid "SD Card Mounted"
-msgstr "SDカード"
+msgstr "Hafıza Kartı Takılı"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:277
 #: res/app/src/features/device-list/columns.tsx:297
@@ -1706,7 +1706,7 @@ msgstr "SDK"
 #: res/app/src/features/device-list/DeviceListPage.tsx:134
 #: res/app/src/ui/Pager.tsx:38
 msgid "Search"
-msgstr "検索"
+msgstr "Arama"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:154
 #: res/app/src/features/settings/groups/shared/ObjectsTable.tsx:137
@@ -1721,11 +1721,11 @@ msgstr ""
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:12
 #: res/app/src/features/settings/groups/GroupDevices.tsx:16
 msgid "Serial"
-msgstr "シリアル"
+msgstr "Serial"
 
 #: res/app/src/features/auth/SignInForm.tsx:87
 msgid "Server error. Check log output."
-msgstr "サーバーエラー。ログを確認してください。"
+msgstr "Sunucu hatası. Logları kontrol ediniz."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:171
 msgid "Set filters for device removing"
@@ -1744,7 +1744,7 @@ msgstr ""
 #: res/app/src/features/settings/SettingsPage.tsx:79
 #: res/app/src/ui/AppLayout.tsx:215
 msgid "Settings"
-msgstr "設定"
+msgstr "Ayarlar"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:101
 msgid "Settings cleared"
@@ -1752,7 +1752,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:46
 msgid "Shell"
-msgstr "シェル"
+msgstr "Kabuk"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Show Manifest"
@@ -1761,11 +1761,11 @@ msgstr ""
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
 msgid "Show Screen"
-msgstr "画面を表示する"
+msgstr "Ekranı Göster"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:157
 msgid "Sign In"
-msgstr "サインイン"
+msgstr "Oturum Aç"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in to continue"
@@ -1777,11 +1777,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:188
 msgid "Sign Out"
-msgstr "サインアウト"
+msgstr "Oturum Kapat"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:32
 msgid "Silent Mode"
-msgstr "マナーモード"
+msgstr "Sessiz Modu"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:244
 msgid "SIM"
@@ -1790,7 +1790,7 @@ msgstr "SIM"
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:229
 #: res/app/src/features/control/panes/info/InfoPane.tsx:216
 msgid "Size"
-msgstr "サイズ"
+msgstr "Boyut"
 
 #: res/app/src/features/auth/SignInForm.tsx:95
 msgid "Smartphone Test Farm"
@@ -1798,15 +1798,15 @@ msgstr ""
 
 #: res/app/src/ui/AppLayout.tsx:109
 msgid "Socket connection was lost"
-msgstr "ソケットへの接続が切れました"
+msgstr "Soket bağlantısı kayboldu"
 
 #: res/app/src/core/devices/enhance.ts:33
 msgid "Someone stole your device."
-msgstr "誰かはデバイスを盗みました。"
+msgstr "Birisi cihazınızı çaldı."
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"
-msgstr "特別なキー"
+msgstr "Özel Anahtarlar"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
@@ -1818,7 +1818,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:86
 msgid "Start/Stop Logging"
-msgstr "ログ取得の開始／停止"
+msgstr "Log Almayı Başlat"
 
 #: res/app/src/features/group-list/columns.tsx:93
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:13
@@ -1835,13 +1835,13 @@ msgstr ""
 #: res/app/src/features/device-list/columns.tsx:238
 #: res/app/src/features/group-list/columns.tsx:51
 msgid "Status"
-msgstr "ステータス"
+msgstr "Durum"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:54
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:79
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Stop"
-msgstr "停止"
+msgstr "Dur"
 
 #: res/app/src/core/devices/enhance.ts:15
 msgid "Stop Automation"
@@ -1853,40 +1853,40 @@ msgstr ""
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:146
 #: res/app/src/features/control/device-control/use-device-actions.ts:67
 msgid "Stop Using"
-msgstr "停止する"
+msgstr ""
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:63
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:76
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:82
 msgid "Store Account"
-msgstr "ストアアカウント"
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:239
 msgid "Sub Type"
-msgstr "サブタイプ"
+msgstr ""
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:36
 msgid "Switch Charset"
-msgstr "文字入力の切り替え"
+msgstr ""
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:112
 #: res/app/src/features/control/panes/logs/LogTable.tsx:139
 msgid "Tag"
-msgstr "タグ"
+msgstr "Etiket"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
-msgstr "スクリーンショットを撮る"
+msgstr "Ekran Görüntüsü Al"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
-msgstr "温度"
+msgstr "Sıcaklık"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:113
 #: res/app/src/features/control/panes/logs/LogTable.tsx:142
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:61
 msgid "Text"
-msgstr "テキスト"
+msgstr "Metin"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:163
 msgid "The current view is marked secure and cannot be viewed remotely."
@@ -1894,11 +1894,11 @@ msgstr ""
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
-msgstr "しばらく端末が利用できなくなります。"
+msgstr "Cihaz bir süreliğine müsait değil."
 
 #: res/app/src/core/install.ts:168
 msgid "The existing package could not be deleted."
-msgstr "既存のパッケージは削除できませんでした。"
+msgstr ""
 
 #: res/app/src/core/install.ts:180
 msgid "The new package couldn't be installed because the verification did not succeed."
@@ -1974,47 +1974,47 @@ msgstr ""
 
 #: res/app/src/core/install.ts:193
 msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
-msgstr ""
+msgstr "Ayrıştırıcı, manifest'te herhangi bir eyleme geçirilmiş etiket (enstrümantasyon veya uygulama) bulamadı."
 
 #: res/app/src/core/install.ts:187
 msgid "The parser did not find any certificates in the .apk."
-msgstr ""
+msgstr "Ayrıştırıcı, .apk dosyasında herhangi bir sertifika bulamadı."
 
 #: res/app/src/core/install.ts:190
 msgid "The parser encountered a bad or missing package name in the manifest."
-msgstr ""
+msgstr "Ayrıştırıcı, manifest'te kötü veya eksik bir paket adıyla karşılaştı."
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr ""
+msgstr "Ayrıştırıcı, manifest'te kötü bir paylaşılan kullanıcı adıyla karşılaştı."
 
 #: res/app/src/core/install.ts:189
 msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr ""
+msgstr "Ayrıştırıcı, .apk'daki dosyalardan birinde Sertifika Kodlaması Durumu ile karşılaştı."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
-msgstr ""
+msgstr "Ayrıştırıcı beklenmeyen bir durum ile karşılaştı."
 
 #: res/app/src/core/install.ts:192
 msgid "The parser encountered some structural problem in the manifest."
-msgstr ""
+msgstr "Ayrıştırıcı manifest'te bazı yapısal problemlerle karşılaştı."
 
 #: res/app/src/core/install.ts:188
 msgid "The parser found inconsistent certificates on the files in the .apk."
-msgstr ""
+msgstr "Ayrıştırıcı, .apk içindeki dosyalarda tutarsız sertifikalar buldu."
 
 #: res/app/src/core/install.ts:184
 msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
-msgstr ""
+msgstr "Ayrıştırıcıya dosya olmayan veya beklenen '.apk' uzantısıyla bitmeyen bir yol verildi."
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
-msgstr ""
+msgstr "Ayrıştırıcı, AndroidManifest.xml dosyasını kurtaramadı."
 
 #: res/app/src/core/install.ts:165
 msgid "The requested shared user does not exist."
-msgstr ""
+msgstr "İstenen paylaşılan kullanıcı mevcut değil."
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:56
 msgid "The schedule can only be changed while the group is pending"
@@ -2034,7 +2034,7 @@ msgstr ""
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."
-msgstr "渡されたURIは無効です。"
+msgstr "Girilen URI geçersiz."
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265
 msgid "This folder is empty"
@@ -2043,24 +2043,24 @@ msgstr ""
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:111
 #: res/app/src/features/control/panes/logs/LogTable.tsx:138
 msgid "TID"
-msgstr "TID"
+msgstr ""
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:109
 #: res/app/src/features/control/panes/logs/LogTable.tsx:134
 msgid "Time"
-msgstr "時刻"
+msgstr "Zaman"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Tip:"
-msgstr "ヒント："
+msgstr "İpucu:"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:61
 msgid "Title"
-msgstr "タイトル"
+msgstr "Başlık"
 
 #: res/app/src/features/device-list/DeviceStats.tsx:39
 msgid "Total Devices"
-msgstr "全機種"
+msgstr "Toplam Cihazlar"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:66
 msgid "Total duration of groups (ms)"
@@ -2077,16 +2077,16 @@ msgstr ""
 #: res/app/src/features/control/ControlPage.tsx:118
 #: res/app/src/ui/modals.tsx:141
 msgid "Try to reconnect"
-msgstr "再接続する"
+msgstr "Tekrar bağlanmayı dene"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:238
 msgid "Type"
-msgstr "タイプ"
+msgstr "Tip"
 
 #: res/app/src/core/devices/enhance.ts:22
 #: res/app/src/core/devices/enhance.ts:9
 msgid "Unauthorized"
-msgstr "権限外"
+msgstr "Yetkisiz"
 
 #: res/app/src/features/settings/groups/rules.ts:105
 msgid "Unauthorized class while device list is not empty"
@@ -2094,34 +2094,34 @@ msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:73
 msgid "Uninstall"
-msgstr "削除"
+msgstr "Kaldır"
 
 #: res/app/src/core/devices/enhance.ts:84
 #: res/app/src/core/devices/enhance.ts:88
 msgid "Unknown"
-msgstr "未知"
+msgstr "Bilinmeyen"
 
 #: res/app/src/core/devices/enhance.ts:92
 msgid "Unknown reason."
-msgstr "未知。"
+msgstr "Bilinmeyen sebep."
 
 #: res/app/src/core/devices/enhance.ts:45
 msgid "Unspecified Failure"
-msgstr "未定義の失敗"
+msgstr "Belirtilmemiş Hata"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:205
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:206
 msgid "Upload From Link"
-msgstr "リンク先よりアップロードする"
+msgstr "Bağlantıdan Yükle"
 
 #: res/app/src/core/install.ts:54
 #: res/app/src/features/control/device-control/install-file.ts:17
 msgid "Uploading..."
-msgstr "アップロード中..."
+msgstr "Yükleniyor..."
 
 #: res/app/src/features/device-list/DeviceStats.tsx:40
 msgid "Usable Devices"
-msgstr "利用可能"
+msgstr "Kullanılabilir Cihazlar"
 
 #: res/app/src/core/devices/enhance.ts:50
 msgid "USB"
@@ -2129,13 +2129,13 @@ msgstr "USB"
 
 #: res/app/src/core/devices/enhance.ts:14
 msgid "Use"
-msgstr "利用する"
+msgstr "Kullan"
 
 #: res/app/src/features/device-list/columns.tsx:330
 #: res/app/src/features/user/UserPage.tsx:46
 #: res/app/src/features/user/UserPage.tsx:88
 msgid "User"
-msgstr "ユーザ"
+msgstr "Kullanıcı"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:182
 msgid "User list"
@@ -2148,7 +2148,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:101
 msgid "Username"
-msgstr "ユーザ名"
+msgstr "Kullanıcı Adı"
 
 #: res/app/src/features/group-list/columns.tsx:81
 #: res/app/src/features/settings/groups/GroupDetail.tsx:193
@@ -2158,39 +2158,39 @@ msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:25
 msgid "Using"
-msgstr "利用中"
+msgstr "Kullanılıyor"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:236
 msgid "Using Fallback"
-msgstr "フォールバックを使用中"
+msgstr "Yedeği kullanma"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:276
 msgid "Version"
-msgstr "バージョン"
+msgstr "Versiyon"
 
 #: res/app/src/ui/modals.tsx:151
 msgid "Version Update"
-msgstr "バージョンアップ"
+msgstr "Versiyon Güncelleme"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:33
 msgid "Vibrate Mode"
-msgstr "マナーモード（バイブON）"
+msgstr "Titreşim Modu"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
-msgstr "電圧"
+msgstr "Voltaj"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:41
 msgid "Volume"
-msgstr "音量"
+msgstr "Ses"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:44
 msgid "Volume Down"
-msgstr "音量↓"
+msgstr "Sesi Kıs"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:45
 msgid "Volume Up"
-msgstr "音量↑"
+msgstr "Sesi Aç"
 
 #: res/app/src/features/group-list/columns.tsx:36
 msgid "Waiting"
@@ -2209,7 +2209,7 @@ msgstr ""
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:88
 msgid "Warning:"
-msgstr "注意:"
+msgstr "Uyarı:"
 
 #: res/app/src/ui/AppLayout.tsx:269
 msgid "Web"
@@ -2221,7 +2221,7 @@ msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:219
 msgid "Width"
-msgstr "幅"
+msgstr "En"
 
 #: res/app/src/core/devices/enhance.ts:79
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:124
@@ -2229,7 +2229,7 @@ msgstr "幅"
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:46
 #: res/app/src/features/control/panes/info/InfoPane.tsx:41
 msgid "WiFi"
-msgstr "無線LAN"
+msgstr "WiFi"
 
 #: res/app/src/core/devices/enhance.ts:80
 msgid "WiMAX"
@@ -2237,7 +2237,7 @@ msgstr "WiMAX"
 
 #: res/app/src/core/devices/enhance.ts:51
 msgid "Wireless"
-msgstr "無線"
+msgstr "Kablosuz Bağlantı"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:148
 msgid "Write a mail to the available user selection"
@@ -2278,7 +2278,7 @@ msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:97
 msgid "Yes"
-msgstr "はい"
+msgstr "Evet"
 
 #: res/app/src/features/user/UserPage.tsx:72
 msgid "You"
@@ -2286,4 +2286,4 @@ msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr "この実機はキックされました。"
+msgstr "Siz (veya bir başkası) cihazı attı."
