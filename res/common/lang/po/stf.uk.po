@@ -873,7 +873,7 @@ msgstr "Допомога"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Hide Manifest"
-msgstr "Заховати маніфест"
+msgstr "Приховати маніфест"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
@@ -1443,7 +1443,7 @@ msgstr "Присутні"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:33
 msgid "Press Get to start logging"
-msgstr "Натисніть «Дістати», щоб почати логування"
+msgstr "Натисніть «Отримати», щоб почати логування"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"

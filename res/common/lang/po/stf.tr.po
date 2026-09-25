@@ -20,11 +20,11 @@ msgstr "{{count}} seçildi"
 
 #: res/app/src/features/group-list/GroupStats.tsx:102
 msgid "{{user.name}} groups duration use"
-msgstr "{{user.name}} grup süresi kullanımı"
+msgstr "{{user.name}} kullanıcısının grup süresi kullanımı"
 
 #: res/app/src/features/group-list/GroupStats.tsx:97
 msgid "{{user.name}} groups number use"
-msgstr "{{user.name}} grup sayısı kullanımı"
+msgstr "{{user.name}} kullanıcısının grup sayısı kullanımı"
 
 #: res/app/src/ui/modals.tsx:155
 msgid "A new version of STF is available"
@@ -151,7 +151,7 @@ msgstr "Not Eklenmiş"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:46
 msgid "Any"
-msgstr "Herhangi"
+msgstr "Tümü"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:87
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:40
@@ -873,7 +873,7 @@ msgstr "Yardım"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Hide Manifest"
-msgstr "Manifest'i Gizle"
+msgstr "Manifesti Gizle"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
@@ -1574,7 +1574,7 @@ msgstr "Tekrarlar"
 
 #: res/app/src/features/settings/groups/rules.ts:94
 msgid "Repetitions must be > 0 for this Class"
-msgstr "Bu Sınıf için tekrar sayısı > 0 olmalıdır"
+msgstr "Bu sınıf için tekrar sayısı > 0 olmalıdır"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:65
 #: res/app/src/features/settings/general/GeneralSettings.tsx:104
@@ -1668,7 +1668,7 @@ msgstr "Ekran Görüntüsü Kaydet"
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:115
 msgid "Saving will also get ready the group!"
-msgstr "Kaydetmek grubu da hazır hale getirecek!"
+msgstr "Kaydettiğinizde grup da hazır hale getirilecek!"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:196
 msgid "Schedule"
@@ -1756,7 +1756,7 @@ msgstr "Kabuk"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Show Manifest"
-msgstr "Manifest'i Göster"
+msgstr "Manifesti Göster"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133

@@ -2245,7 +2245,7 @@ msgstr "選択した利用可能なユーザにメールを送信"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:108
 msgid "Write a mail to the group user selection"
-msgstr "選択したグループのユーザにメールを送信"
+msgstr "グループ内の選択したユーザにメールを送信"
 
 #: res/app/src/features/auth/SignInForm.tsx:163
 msgid "Write a mail to the support team"
@@ -2258,7 +2258,7 @@ msgstr "選択したグループオーナーにメールを送信"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:189
 msgid "Write an email to the group user selection"
-msgstr "選択したグループのユーザにメールを送信"
+msgstr "グループ内の選択したユーザにメールを送信"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:240
 msgid "Write an email to the user selection"

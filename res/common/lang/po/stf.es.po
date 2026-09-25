@@ -700,7 +700,7 @@ msgstr "Nombre del fichero"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:119
 msgid "Filter on user group ownership"
-msgstr "Filtrar por propiedad de grupos del usuario"
+msgstr "Filtrar según si el usuario es propietario de grupos"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:181
 #: res/app/src/features/settings/users/UsersSettings.tsx:109

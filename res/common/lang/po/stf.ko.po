@@ -1922,7 +1922,7 @@ msgstr "이미 동일한 패키지가 설치되어 있습니다."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr "새로운 패키지가 테스트 전용 패키지로 지정되어 있지만 호출자가 INSTALL_ALLOW_TEST 플래그를 제공하지 않아 설치 할 수 없습니다."
+msgstr "새로운 패키지가 테스트 전용 패키지로 지정되어 있지만 호출자가 INSTALL_ALLOW_TEST 플래그를 제공하지 않아 설치할 수 없습니다."
 
 #: res/app/src/core/install.ts:172
 msgid "The new package failed because the current SDK version is newer than that required by the package."

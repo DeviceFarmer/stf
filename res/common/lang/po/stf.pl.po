@@ -1443,7 +1443,7 @@ msgstr "Obecne"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:33
 msgid "Press Get to start logging"
-msgstr "Naciśnij „Weź”, aby rozpocząć logowanie"
+msgstr "Naciśnij „Pobierz”, aby rozpocząć zbieranie logów"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"
@@ -1990,7 +1990,7 @@ msgstr "Parser napotkał w manifeście nieprawidłową nazwę współdzielonego 
 
 #: res/app/src/core/install.ts:189
 msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr "Parser napotkał wyjątek CertificateEncodingException w jednym z plików w .apk."
+msgstr "Parser napotkał wyjątek CertificateEncodingException w jednym z plików pakietu .apk."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
@@ -2002,7 +2002,7 @@ msgstr "Parser napotkał problem strukturalny w manifeście."
 
 #: res/app/src/core/install.ts:188
 msgid "The parser found inconsistent certificates on the files in the .apk."
-msgstr "Parser znalazł niespójne certyfikaty w plikach w .apk."
+msgstr "Parser znalazł niespójne certyfikaty w plikach pakietu .apk."
 
 #: res/app/src/core/install.ts:184
 msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
@@ -2121,7 +2121,7 @@ msgstr "Wysyłanie..."
 
 #: res/app/src/features/device-list/DeviceStats.tsx:40
 msgid "Usable Devices"
-msgstr "Urządzenia do użycia"
+msgstr "Urządzenia gotowe do użycia"
 
 #: res/app/src/core/devices/enhance.ts:50
 msgid "USB"

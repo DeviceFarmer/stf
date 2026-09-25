@@ -1918,23 +1918,23 @@ msgstr "Das neue Paket konnte nicht im gewünschten Pfad gespeichert werden."
 
 #: res/app/src/core/install.ts:171
 msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "Das neue Paket ist fehlgeschlagen, da es einen Content Provider mit derselben Authority wie ein bereits im System installierter Provider enthält."
+msgstr "Das neue Paket konnte nicht installiert werden, da es einen Content Provider mit derselben Authority wie ein bereits im System installierter Provider enthält."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr "Das neue Paket ist fehlgeschlagen, da es als reines Testpaket gekennzeichnet ist und der Aufrufer das Flag INSTALL_ALLOW_TEST nicht gesetzt hat."
+msgstr "Das neue Paket konnte nicht installiert werden, da es als reines Testpaket gekennzeichnet ist und der Aufrufer das Flag INSTALL_ALLOW_TEST nicht gesetzt hat."
 
 #: res/app/src/core/install.ts:172
 msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr "Das neue Paket ist fehlgeschlagen, da die aktuelle SDK-Version neuer ist als die vom Paket benötigte."
+msgstr "Das neue Paket konnte nicht installiert werden, da die aktuelle SDK-Version neuer ist als die vom Paket benötigte."
 
 #: res/app/src/core/install.ts:170
 msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr "Das neue Paket ist fehlgeschlagen, da die aktuelle SDK-Version älter ist als die vom Paket benötigte."
+msgstr "Das neue Paket konnte nicht installiert werden, da die aktuelle SDK-Version älter ist als die vom Paket benötigte."
 
 #: res/app/src/core/install.ts:169
 msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
-msgstr "Das neue Paket ist beim Optimieren und Validieren seiner Dex-Dateien fehlgeschlagen, entweder weil nicht genügend Speicherplatz vorhanden war oder die Validierung fehlschlug."
+msgstr "Das neue Paket konnte nicht installiert werden, da beim Optimieren und Validieren seiner Dex-Dateien nicht genügend Speicherplatz vorhanden war oder die Validierung fehlschlug."
 
 #: res/app/src/core/install.ts:183
 msgid "The new package has an older version code than the currently installed package."
