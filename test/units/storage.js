@@ -217,3 +217,70 @@ var getImage = require('../../lib/units/storage/plugins/image/task/get')
     }
   })
 })
+
+describe('storage image plugin', function() {
+  var blobServer, server, origin
+  var bytes = Buffer.from([255, 216, 255, 217])
+
+  before(async function() {
+    blobServer = http.createServer(function(req, res) {
+      res.end(bytes)
+    })
+    await new Promise(function(resolve) {
+      blobServer.listen(0, '127.0.0.1', resolve)
+    })
+
+    var transformPath = require.resolve('../../lib/units/storage/plugins/image/task/transform')
+    var unitPath = require.resolve('../../lib/units/storage/plugins/image')
+    var cachedTransform = require.cache[transformPath]
+    var cachedUnit = require.cache[unitPath]
+    require.cache[transformPath] = {exports: function(stream) {
+      return Promise.resolve(stream)
+    }}
+    delete require.cache[unitPath]
+
+    var createServer = http.createServer
+    var capture = sinon.stub(http, 'createServer').callsFake(function(app) {
+      server = createServer.call(http, app)
+      return server
+    })
+    try {
+      require(unitPath)({
+        port: 0
+      , concurrency: 1
+      , storageUrl: 'http://127.0.0.1:' + blobServer.address().port + '/'
+      })
+    }
+    finally {
+      capture.restore()
+      ;[[transformPath, cachedTransform], [unitPath, cachedUnit]].forEach(function(entry) {
+        if (entry[1]) {
+          require.cache[entry[0]] = entry[1]
+        }
+        else {
+          delete require.cache[entry[0]]
+        }
+      })
+    }
+    await new Promise(function(resolve) {
+      server.once('listening', resolve)
+    })
+    origin = 'http://127.0.0.1:' + server.address().port
+  })
+
+  after(async function() {
+    await Promise.all([server, blobServer].map(function(instance) {
+      return new Promise(function(resolve) {
+        instance.close(resolve)
+      })
+    }))
+  })
+
+  it('should name downloads after the requested resource', async function() {
+    var response = await fetch(origin + '/s/image/some-id/emulator-5554.jpg?download')
+    expect(response.status).to.equal(200)
+    expect(response.headers.get('content-disposition'))
+      .to.equal('attachment; filename="emulator-5554.jpg"')
+    expect(Buffer.from(await response.arrayBuffer())).to.deep.equal(bytes)
+  })
+})
