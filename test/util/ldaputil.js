@@ -102,6 +102,7 @@ describe('ldaputil', function() {
         , function(err) {
             expect(err).to.be.an.instanceof(ldaputil.InvalidCredentialsError)
             expect(err.user).to.equal('alice')
+            expect(err.message).to.equal('Invalid credentials for user "alice"')
           })
     })
 
@@ -113,6 +114,7 @@ describe('ldaputil', function() {
         , function(err) {
             expect(err).to.be.an.instanceof(ldaputil.InvalidCredentialsError)
             expect(err.user).to.equal('bob')
+            expect(err.message).to.equal('Invalid credentials for user "bob"')
           })
     })
 
