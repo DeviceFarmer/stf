@@ -554,8 +554,8 @@ msgid "Device was disconnected"
 msgstr "Das Geräte wurde getrennt."
 
 #: res/app/src/core/devices/enhance.ts:34
-msgid "Device was kicked by automatic timeout.\t"
-msgstr ""
+msgid "Device was kicked by automatic timeout."
+msgstr "Gerät wurde nach Zeitablauf automatisch entfernt."
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168
 #: res/app/src/features/device-list/DeviceListPage.tsx:49

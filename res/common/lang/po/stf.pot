@@ -548,7 +548,7 @@ msgid "Device was disconnected"
 msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:34
-msgid "Device was kicked by automatic timeout.\t"
+msgid "Device was kicked by automatic timeout."
 msgstr ""
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168

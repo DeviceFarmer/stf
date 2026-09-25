@@ -554,8 +554,8 @@ msgid "Device was disconnected"
 msgstr "연결이 끊어졌습니다"
 
 #: res/app/src/core/devices/enhance.ts:34
-msgid "Device was kicked by automatic timeout.\t"
-msgstr ""
+msgid "Device was kicked by automatic timeout."
+msgstr "시간초과로 인해 단말기 사용이 종료되었습니다."
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168
 #: res/app/src/features/device-list/DeviceListPage.tsx:49

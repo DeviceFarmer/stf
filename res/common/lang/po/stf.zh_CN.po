@@ -554,8 +554,8 @@ msgid "Device was disconnected"
 msgstr "设备已断开连接"
 
 #: res/app/src/core/devices/enhance.ts:34
-msgid "Device was kicked by automatic timeout.\t"
-msgstr ""
+msgid "Device was kicked by automatic timeout."
+msgstr "设备由于超时已被移出"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168
 #: res/app/src/features/device-list/DeviceListPage.tsx:49
