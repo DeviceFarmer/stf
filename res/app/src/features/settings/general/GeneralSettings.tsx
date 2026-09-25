@@ -3,7 +3,7 @@ import {notifications} from '@mantine/notifications'
 import {IconCalendarTime, IconDeviceFloppy, IconLanguage, IconMail, IconRestore} from '@tabler/icons-react'
 import {isAdmin} from '@/core/app-state'
 import {defaultDateFormat} from '@/core/date-format'
-import {detectLanguage, languageSettingKey, languages, useTranslation} from '@/core/i18n'
+import {detectLanguage, languageSettingKey, languages, normalizeLanguage, useTranslation} from '@/core/i18n'
 import {resetSettings, useSetting} from '@/core/settings'
 import {WidgetCard} from '@/ui/WidgetCard'
 import {SettingRow} from '../SettingRow'
@@ -24,7 +24,7 @@ function LanguageSetting() {
         className='stf-language-select'
         aria-label={t('Language')}
         data={languageOptions}
-        value={language}
+        value={normalizeLanguage(language) || detectLanguage()}
         onChange={(value) => value && setLanguage(value)}
         allowDeselect={false}
         checkIconPosition='right'

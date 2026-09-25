@@ -7,15 +7,52 @@ export const languages = supportedLanguages as Record<string, string>
 export const defaultLanguage = 'en'
 export const languageSettingKey = 'selectedLanguage'
 
+// Codes users may have saved before the catalogs were renamed
+const legacyLanguages: Record<string, string> = {ru_RU: 'ru', ko_KR: 'ko'}
+
+const languagesByKey = new Map(Object.keys(languages).map((code) => [languageKey(code), code]))
+
+function languageKey(code: string): string {
+  return code.replace(/_/g, '-').toLowerCase()
+}
+
+function chineseLanguage(key: string): string {
+  return /^zh-(hant|tw|hk|mo)\b/.test(key) ? 'zh-Hant' : 'zh_CN'
+}
+
+// Accepts catalog codes, legacy codes and browser tags like pt-BR or zh-TW
+export function normalizeLanguage(code: string | null | undefined): string | undefined {
+  if (!code) {
+    return undefined
+  }
+  const key = languageKey(legacyLanguages[code] || code)
+  const base = key.split('-')[0]
+  if (languagesByKey.has(key)) {
+    return languagesByKey.get(key)
+  }
+  if (base === 'zh') {
+    return chineseLanguage(key)
+  }
+  // Fall back to any regional variant, so pt-PT still gets pt_BR rather than English
+  return languagesByKey.get(base) ||
+    [...languagesByKey].find(([other]) => other.split('-')[0] === base)?.[1]
+}
+
 export function detectLanguage(): string {
-  const detected = typeof navigator !== 'undefined' ? navigator.language : defaultLanguage
-  return languages[detected] ? detected : defaultLanguage
+  const detected = typeof navigator !== 'undefined' ? navigator.languages || [navigator.language] : []
+  for (const code of detected) {
+    const language = normalizeLanguage(code)
+    if (language) {
+      return language
+    }
+  }
+  return defaultLanguage
 }
 
 export const useLanguage = create<{language: string}>(() => ({language: detectLanguage()}))
 
 export function setLanguage(language: string): void {
-  useLanguage.setState({language: languages[language] ? language : defaultLanguage})
+  useLanguage.setState({language: normalizeLanguage(language) || defaultLanguage})
   document.documentElement.lang = useLanguage.getState().language.replace('_', '-')
 }
 
