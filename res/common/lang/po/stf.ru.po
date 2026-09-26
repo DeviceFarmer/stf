@@ -1918,7 +1918,7 @@ msgstr "Пакет не может быть установлен в указан
 
 #: res/app/src/core/install.ts:171
 msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "Не удаётся установить новый пакет потому что он содержит поставщик услуг с тем же авторитетом как тот который уже установлен на системе. "
+msgstr "Не удаётся установить новый пакет потому что он содержит поставщик услуг с тем же авторитетом как тот который уже установлен на системе."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
@@ -1950,7 +1950,7 @@ msgstr "Пакет использует функцию которая не до�
 
 #: res/app/src/core/install.ts:167
 msgid "The new package uses a shared library that is not available."
-msgstr "Пакет использует общую библиотеку которая не доступна. "
+msgstr "Пакет использует общую библиотеку которая не доступна."
 
 #: res/app/src/core/install.ts:161
 msgid "The package archive file is invalid."

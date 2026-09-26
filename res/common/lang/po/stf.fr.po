@@ -957,7 +957,7 @@ msgstr "L'installation a expiré."
 
 #: res/app/src/core/install.ts:57
 msgid "Installing app..."
-msgstr "En cours d'installation de l'application"
+msgstr "En cours d'installation de l'application..."
 
 #: res/app/src/ui/Pager.tsx:61
 msgid "Items per page"
@@ -991,7 +991,7 @@ msgstr "Lancer l'Activité"
 
 #: res/app/src/core/install.ts:58
 msgid "Launching activity..."
-msgstr "En cours de lancement de l'activité ..."
+msgstr "En cours de lancement de l'activité..."
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
@@ -1457,7 +1457,7 @@ msgstr "Privilège"
 
 #: res/app/src/core/install.ts:55
 msgid "Processing..."
-msgstr "En Traitement ...."
+msgstr "En traitement..."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:263
 #: res/app/src/features/device-list/columns.tsx:263
@@ -1466,7 +1466,7 @@ msgstr "Produit"
 
 #: res/app/src/core/install.ts:56
 msgid "Pushing app..."
-msgstr "En cours de téléversement des Applications ...."
+msgstr "En cours de téléversement de l'application..."
 
 #: res/app/src/core/common.ts:25
 msgid "Quaterly"
@@ -2117,7 +2117,7 @@ msgstr "Téléverser depuis le Lien"
 #: res/app/src/core/install.ts:54
 #: res/app/src/features/control/device-control/install-file.ts:17
 msgid "Uploading..."
-msgstr "En cours de téléversement ..."
+msgstr "En cours de téléversement..."
 
 #: res/app/src/features/device-list/DeviceStats.tsx:40
 msgid "Usable Devices"

@@ -1397,7 +1397,7 @@ msgstr "播放/暂停"
 
 #: res/app/src/features/auth/SignInForm.tsx:49
 msgid "Please enter a valid email"
-msgstr "请输入格式正确的 email "
+msgstr "请输入格式正确的 email"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:124
 msgid "Please enter your Store password"
@@ -1950,7 +1950,7 @@ msgstr "使用了一个无效的特性。"
 
 #: res/app/src/core/install.ts:167
 msgid "The new package uses a shared library that is not available."
-msgstr "共享库已丢失 "
+msgstr "共享库已丢失"
 
 #: res/app/src/core/install.ts:161
 msgid "The package archive file is invalid."
@@ -1958,7 +1958,7 @@ msgstr "无效的安装包。"
 
 #: res/app/src/core/install.ts:174
 msgid "The package being installed contains native code, but none that is compatible with the device's CPU_ABI."
-msgstr "包含的本机代码不兼容的CPU_ABI "
+msgstr "包含的本机代码不兼容的CPU_ABI"
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."

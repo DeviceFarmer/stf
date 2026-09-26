@@ -991,7 +991,7 @@ msgstr "執行活動"
 
 #: res/app/src/core/install.ts:58
 msgid "Launching activity..."
-msgstr "活動執行中"
+msgstr "活動執行中..."
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
@@ -1926,7 +1926,7 @@ msgstr "新套件安裝失敗，因為套件指定為僅供測試，而呼叫端
 
 #: res/app/src/core/install.ts:172
 msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr " 新套件安裝失敗，因為目前的 SDK 版本太新"
+msgstr "新套件安裝失敗，因為目前的 SDK 版本太新"
 
 #: res/app/src/core/install.ts:170
 msgid "The new package failed because the current SDK version is older than that required by the package."

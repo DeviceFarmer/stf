@@ -114,7 +114,7 @@ msgstr "Aşağıdaki ADB anahtarı STF'ye eklensin mi?"
 
 #: res/app/src/ui/AppLayout.tsx:83
 msgid "Admin mode has been disabled."
-msgstr "Yönetici modu etkisizleştirildi. "
+msgstr "Yönetici modu etkisizleştirildi."
 
 #: res/app/src/ui/AppLayout.tsx:82
 msgid "Admin mode has been enabled."
@@ -303,7 +303,7 @@ msgstr "Şarj oluyor"
 
 #: res/app/src/features/auth/SignInForm.tsx:85
 msgid "Check errors below"
-msgstr "Aşağıdaki hataları kontrol ediniz. "
+msgstr "Aşağıdaki hataları kontrol ediniz."
 
 #: res/app/src/features/group-list/columns.tsx:85
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:62
