@@ -1,0 +1,117 @@
+name: Translations
+
+# Keeps Transifex (devicefarmer/stf-main) and res/common/lang in step:
+# - a new stf.pot on master is pushed to Transifex as the source strings;
+# - every week the translations are pulled back and proposed as a pull request.
+#
+# Both jobs need a TX_TOKEN repository secret (a Transifex API token) and skip
+# with a notice without one. Opening the pull request also needs "Allow GitHub
+# Actions to create and approve pull requests" in the repository settings.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - res/common/lang/po/stf.pot
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: translations
+  cancel-in-progress: false
+
+env:
+  NPM_INSTALL_FLAGS: --no-audit --no-fund --loglevel=http
+
+jobs:
+  push-source:
+    name: Push source strings
+    if: github.event_name == 'push' && github.repository == 'DeviceFarmer/stf'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TX_TOKEN: ${{ secrets.TX_TOKEN }}
+    steps:
+      - name: Check for a Transifex token
+        if: env.TX_TOKEN == ''
+        run: echo '::notice::TX_TOKEN is not set, skipping the Transifex push'
+
+      - uses: actions/checkout@v7
+        if: env.TX_TOKEN != ''
+
+      - name: Install the Transifex CLI
+        if: env.TX_TOKEN != ''
+        run: bash .github/scripts/install-tx.sh
+
+      - name: Push stf.pot to Transifex
+        if: env.TX_TOKEN != ''
+        run: tx push --source
+
+  pull-translations:
+    name: Pull translations
+    if: github.event_name != 'push' && github.repository == 'DeviceFarmer/stf'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      TX_TOKEN: ${{ secrets.TX_TOKEN }}
+    steps:
+      - name: Check for a Transifex token
+        if: env.TX_TOKEN == ''
+        run: echo '::notice::TX_TOKEN is not set, skipping the Transifex pull'
+
+      - uses: actions/checkout@v7
+        if: env.TX_TOKEN != ''
+
+      - uses: actions/setup-node@v7
+        if: env.TX_TOKEN != ''
+        with:
+          node-version-file: '.nvmrc'
+
+      # The gulp translate tasks are plain JavaScript, so the native addons
+      # and the front-end build that install scripts would run are not needed.
+      - name: Install npm dependencies
+        if: env.TX_TOKEN != ''
+        run: npm install --ignore-scripts $NPM_INSTALL_FLAGS
+
+      - name: Install the Transifex CLI
+        if: env.TX_TOKEN != ''
+        run: bash .github/scripts/install-tx.sh
+
+      # Only the languages langs.json offers. A language that crosses
+      # minimum_perc on Transifex is added by hand, together with its label.
+      - name: Pull translations from Transifex
+        if: env.TX_TOKEN != ''
+        run: |
+          languages="$(node -p 'Object.keys(require("./res/common/lang/langs.json")).filter(l => l !== "en").join(",")')"
+          tx pull --translations --force --languages "$languages"
+
+      # A pull request opened with GITHUB_TOKEN does not trigger CI, so this is
+      # the only check it gets before a maintainer looks at it.
+      - name: Compile and check the catalogs
+        if: env.TX_TOKEN != ''
+        run: |
+          npx gulp translate:compile
+          npx gulp translate:check
+
+      - name: Open or update the pull request
+        if: env.TX_TOKEN != ''
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: transifex/translations
+          delete-branch: true
+          add-paths: |
+            res/common/lang/po/*.po
+            res/common/lang/translations/*.json
+          commit-message: Update translations from Transifex
+          title: Update translations from Transifex
+          body: |
+            Translations pulled from [Transifex](https://app.transifex.com/devicefarmer/stf-main/) by the Translations workflow, with the catalogs recompiled.
+
+            `gulp translate:check` passed in the workflow run. CI does not run on pull requests opened by GitHub Actions, so close and reopen this one to run it.

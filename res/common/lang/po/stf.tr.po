@@ -1,11 +1,12 @@
+# Translators:
+# Karol Wrótniak, 2026
+# 
 msgid ""
 msgstr ""
-"Project-Id-Version: STF\n"
+"Last-Translator: Karol Wrótniak, 2026\n"
 "Language-Team: Turkish (https://app.transifex.com/devicefarmer/teams/110261/tr/)\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: tr\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: res/app/src/features/settings/groups/rules.ts:101
@@ -35,8 +36,12 @@ msgid "A package is already installed with the same name."
 msgstr "Aynı isimde daha önce yüklenmiş bir paket bulunmaktadır."
 
 #: res/app/src/core/install.ts:166
-msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr "Daha önce aynı isimle yüklenmiş paketin imzası yeni paketinkinden farklı (ve eski paketin verileri kaldırılmadı)."
+msgid ""
+"A previously installed package of the same name has a different signature "
+"than the new package (and the old package's data was not removed)."
+msgstr ""
+"Daha önce aynı isimle yüklenmiş paketin imzası yeni paketinkinden farklı (ve"
+" eski paketin verileri kaldırılmadı)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
@@ -172,8 +177,11 @@ msgid "Apps"
 msgstr "Uygulamalar"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
-msgid "Are you sure you want to reboot this device and keep using it afterwards?"
-msgstr "Bu cihazı tekrar başlatıp ardından kullanmaya devam etmek istediğinize emin misiniz?"
+msgid ""
+"Are you sure you want to reboot this device and keep using it afterwards?"
+msgstr ""
+"Bu cihazı tekrar başlatıp ardından kullanmaya devam etmek istediğinize emin "
+"misiniz?"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
@@ -281,8 +289,7 @@ msgstr "Kamera"
 #: res/app/src/features/settings/groups/GroupDetail.tsx:107
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:69
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:123
-#: res/app/src/ui/modals.tsx:192
-#: res/app/src/ui/modals.tsx:57
+#: res/app/src/ui/modals.tsx:192 res/app/src/ui/modals.tsx:57
 #: res/app/src/ui/modals.tsx:89
 msgid "Cancel"
 msgstr "İptal"
@@ -366,8 +373,7 @@ msgstr "Sahiplerle İletişime Geç"
 
 #: res/app/src/features/auth/SignInForm.tsx:165
 #: res/app/src/features/auth/SignInForm.tsx:168
-#: res/app/src/ui/AppLayout.tsx:276
-#: res/app/src/ui/AppLayout.tsx:283
+#: res/app/src/ui/AppLayout.tsx:276 res/app/src/ui/AppLayout.tsx:283
 msgid "Contact Support"
 msgstr "Destekle İletişime Geç"
 
@@ -389,8 +395,7 @@ msgstr "Kontrol Ediliyor"
 msgid "Copied"
 msgstr "Kopyalandı"
 
-#: res/app/src/ui/CopyButton.tsx:30
-#: res/app/src/ui/CopyButton.tsx:38
+#: res/app/src/ui/CopyButton.tsx:30 res/app/src/ui/CopyButton.tsx:38
 msgid "Copy to clipboard"
 msgstr "Panoya kopyala"
 
@@ -424,8 +429,7 @@ msgstr "Kritik"
 msgid "Current rotation:"
 msgstr "Mevcut rotasyon:"
 
-#: res/app/src/ui/ColumnChoice.tsx:47
-#: res/app/src/ui/ColumnChoice.tsx:48
+#: res/app/src/ui/ColumnChoice.tsx:47 res/app/src/ui/ColumnChoice.tsx:48
 #: res/app/src/ui/ColumnChoice.tsx:54
 msgid "Customize"
 msgstr "Özelleştirme"
@@ -579,8 +583,7 @@ msgid "Discharging"
 msgstr "Deşarj oluyor"
 
 #: res/app/src/core/devices/enhance.ts:19
-#: res/app/src/core/devices/enhance.ts:6
-#: res/app/src/ui/modals.tsx:127
+#: res/app/src/core/devices/enhance.ts:6 res/app/src/ui/modals.tsx:127
 msgid "Disconnected"
 msgstr "Bağlantı Sonlandı"
 
@@ -651,8 +654,7 @@ msgstr "Şifrelenmiş"
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:64
-#: res/app/src/ui/AppLayout.tsx:110
-#: res/app/src/ui/AppLayout.tsx:111
+#: res/app/src/ui/AppLayout.tsx:110 res/app/src/ui/AppLayout.tsx:111
 msgid "Error"
 msgstr "Hata"
 
@@ -865,8 +867,7 @@ msgid "Height"
 msgstr "Boy/Yükseklik"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
-#: res/app/src/features/docs/DocsPage.tsx:28
-#: res/app/src/ui/AppLayout.tsx:289
+#: res/app/src/features/docs/DocsPage.tsx:28 res/app/src/ui/AppLayout.tsx:289
 #: res/app/src/ui/AppLayout.tsx:295
 msgid "Help"
 msgstr "Yardım"
@@ -1027,8 +1028,7 @@ msgstr "Giriş Yap"
 msgid "Logcat Level"
 msgstr "Logcat Seviyesi"
 
-#: res/app/src/ui/AppLayout.tsx:313
-#: res/app/src/ui/AppLayout.tsx:319
+#: res/app/src/ui/AppLayout.tsx:313 res/app/src/ui/AppLayout.tsx:319
 msgid "Logout"
 msgstr "Çıkış Yap"
 
@@ -1041,8 +1041,10 @@ msgid "Maintenance"
 msgstr "Bakım"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:90
-msgid "Make sure to copy your access token now. You won't be able to see it again."
-msgstr "Erişim anahtarını kopyaladığınızdan emin olun. Tekrar göremeyeceksiniz."
+msgid ""
+"Make sure to copy your access token now. You won't be able to see it again."
+msgstr ""
+"Erişim anahtarını kopyaladığınızdan emin olun. Tekrar göremeyeceksiniz."
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:52
 msgid "Manage Apps"
@@ -1276,8 +1278,7 @@ msgid "Offline"
 msgstr "Çevrimdışı"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:111
-#: res/app/src/ui/modals.tsx:67
-#: res/app/src/ui/modals.tsx:88
+#: res/app/src/ui/modals.tsx:67 res/app/src/ui/modals.tsx:88
 msgid "OK"
 msgstr "Tamam"
 
@@ -1631,12 +1632,18 @@ msgid "Run"
 msgstr "Çalıştır"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
-msgid "Run the following on your command line to debug the device from your Browser"
-msgstr "Cihazda Tarayıcınızdan hata ayıklamak için komut satırınızda aşağıdakini çalıştırın"
+msgid ""
+"Run the following on your command line to debug the device from your Browser"
+msgstr ""
+"Cihazda Tarayıcınızdan hata ayıklamak için komut satırınızda aşağıdakini "
+"çalıştırın"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
-msgid "Run the following on your command line to debug the device from your IDE"
-msgstr "Cihazda IDE'nizden hata ayıklamak için komut satırınızda aşağıdakini çalıştırın"
+msgid ""
+"Run the following on your command line to debug the device from your IDE"
+msgstr ""
+"Cihazda IDE'nizden hata ayıklamak için komut satırınızda aşağıdakini "
+"çalıştırın"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Run this command to copy the key to your clipboard"
@@ -1890,7 +1897,8 @@ msgstr "Metin"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:163
 msgid "The current view is marked secure and cannot be viewed remotely."
-msgstr "Geçerli görünüm güvenli olarak işaretlenmiş ve uzaktan görüntülenemez."
+msgstr ""
+"Geçerli görünüm güvenli olarak işaretlenmiş ve uzaktan görüntülenemez."
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
@@ -1901,44 +1909,75 @@ msgid "The existing package could not be deleted."
 msgstr "Mevcut paket silinemedi."
 
 #: res/app/src/core/install.ts:180
-msgid "The new package couldn't be installed because the verification did not succeed."
+msgid ""
+"The new package couldn't be installed because the verification did not "
+"succeed."
 msgstr "Doğrulama başarısız olduğu için yeni paket yüklenemedi."
 
 #: res/app/src/core/install.ts:179
-msgid "The new package couldn't be installed because the verification timed out."
+msgid ""
+"The new package couldn't be installed because the verification timed out."
 msgstr "Doğrulama zaman aşımına uğradığı için yeni paket yüklenemedi."
 
 #: res/app/src/core/install.ts:178
-msgid "The new package couldn't be installed in the specified install location because the media is not available."
-msgstr "Medya kullanılamadığı için yeni paket belirtilen yükleme konumuna yüklenemedi."
+msgid ""
+"The new package couldn't be installed in the specified install location "
+"because the media is not available."
+msgstr ""
+"Medya kullanılamadığı için yeni paket belirtilen yükleme konumuna "
+"yüklenemedi."
 
 #: res/app/src/core/install.ts:177
-msgid "The new package couldn't be installed in the specified install location."
+msgid ""
+"The new package couldn't be installed in the specified install location."
 msgstr "Yeni paket belirtilen yükleme konumuna yüklenemedi."
 
 #: res/app/src/core/install.ts:171
-msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "Yeni paket, sistemde zaten yüklü olan bir sağlayıcıyla aynı yetkiye (authority) sahip bir içerik sağlayıcı içerdiği için başarısız oldu."
+msgid ""
+"The new package failed because it contains a content provider with thesame "
+"authority as a provider already installed in the system."
+msgstr ""
+"Yeni paket, sistemde zaten yüklü olan bir sağlayıcıyla aynı yetkiye "
+"(authority) sahip bir içerik sağlayıcı içerdiği için başarısız oldu."
 
 #: res/app/src/core/install.ts:173
-msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr "Yeni paket, yalnızca test amaçlı olarak belirtildiği ve çağıran taraf INSTALL_ALLOW_TEST bayrağını sağlamadığı için başarısız oldu."
+msgid ""
+"The new package failed because it has specified that it is a test-only "
+"package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
+msgstr ""
+"Yeni paket, yalnızca test amaçlı olarak belirtildiği ve çağıran taraf "
+"INSTALL_ALLOW_TEST bayrağını sağlamadığı için başarısız oldu."
 
 #: res/app/src/core/install.ts:172
-msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr "Mevcut SDK versiyonu paketin gerektirdiğinden daha yeni olduğu için yeni paket başarısız oldu."
+msgid ""
+"The new package failed because the current SDK version is newer than that "
+"required by the package."
+msgstr ""
+"Mevcut SDK versiyonu paketin gerektirdiğinden daha yeni olduğu için yeni "
+"paket başarısız oldu."
 
 #: res/app/src/core/install.ts:170
-msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr "Mevcut SDK versiyonu paketin gerektirdiğinden daha eski olduğu için yeni paket başarısız oldu."
+msgid ""
+"The new package failed because the current SDK version is older than that "
+"required by the package."
+msgstr ""
+"Mevcut SDK versiyonu paketin gerektirdiğinden daha eski olduğu için yeni "
+"paket başarısız oldu."
 
 #: res/app/src/core/install.ts:169
-msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
-msgstr "Yeni paket, dex dosyaları optimize edilip doğrulanırken ya yeterli depolama alanı olmadığı ya da doğrulama başarısız olduğu için başarısız oldu."
+msgid ""
+"The new package failed while optimizing and validating its dex files, either"
+" because there was not enough storage or the validation failed."
+msgstr ""
+"Yeni paket, dex dosyaları optimize edilip doğrulanırken ya yeterli depolama "
+"alanı olmadığı ya da doğrulama başarısız olduğu için başarısız oldu."
 
 #: res/app/src/core/install.ts:183
-msgid "The new package has an older version code than the currently installed package."
-msgstr "Yeni paketin versiyon kodu, şu anda yüklü olan paketinkinden daha eski."
+msgid ""
+"The new package has an older version code than the currently installed "
+"package."
+msgstr ""
+"Yeni paketin versiyon kodu, şu anda yüklü olan paketinkinden daha eski."
 
 #: res/app/src/core/install.ts:182
 msgid "The new package is assigned a different UID than it previously held."
@@ -1957,8 +1996,12 @@ msgid "The package archive file is invalid."
 msgstr "Paket arşiv dosyası geçersiz."
 
 #: res/app/src/core/install.ts:174
-msgid "The package being installed contains native code, but none that is compatible with the device's CPU_ABI."
-msgstr "Yüklenen paket yerel kod içeriyor, ancak hiçbiri cihazın CPU_ABI'si ile uyumlu değil."
+msgid ""
+"The package being installed contains native code, but none that is "
+"compatible with the device's CPU_ABI."
+msgstr ""
+"Yüklenen paket yerel kod içeriyor, ancak hiçbiri cihazın CPU_ABI'si ile "
+"uyumlu değil."
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."
@@ -1969,12 +2012,20 @@ msgid "The package is already installed."
 msgstr "Paket zaten yüklü."
 
 #: res/app/src/core/install.ts:163
-msgid "The package manager service found that the device didn't have enough storage space to install the app."
-msgstr "Paket yöneticisi hizmeti, cihazda uygulamayı yüklemek için yeterli depolama alanı olmadığını tespit etti."
+msgid ""
+"The package manager service found that the device didn't have enough storage"
+" space to install the app."
+msgstr ""
+"Paket yöneticisi hizmeti, cihazda uygulamayı yüklemek için yeterli depolama "
+"alanı olmadığını tespit etti."
 
 #: res/app/src/core/install.ts:193
-msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
-msgstr "Ayrıştırıcı, manifest'te herhangi bir eyleme geçirilmiş etiket (enstrümantasyon veya uygulama) bulamadı."
+msgid ""
+"The parser did not find any actionable tags (instrumentation or application)"
+" in the manifest."
+msgstr ""
+"Ayrıştırıcı, manifest'te herhangi bir eyleme geçirilmiş etiket "
+"(enstrümantasyon veya uygulama) bulamadı."
 
 #: res/app/src/core/install.ts:187
 msgid "The parser did not find any certificates in the .apk."
@@ -1986,11 +2037,16 @@ msgstr "Ayrıştırıcı, manifest'te kötü veya eksik bir paket adıyla karş�
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr "Ayrıştırıcı, manifest'te kötü bir paylaşılan kullanıcı adıyla karşılaştı."
+msgstr ""
+"Ayrıştırıcı, manifest'te kötü bir paylaşılan kullanıcı adıyla karşılaştı."
 
 #: res/app/src/core/install.ts:189
-msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr "Ayrıştırıcı, .apk'daki dosyalardan birinde CertificateEncodingException ile karşılaştı."
+msgid ""
+"The parser encountered a CertificateEncodingException in one of the files in"
+" the .apk."
+msgstr ""
+"Ayrıştırıcı, .apk'daki dosyalardan birinde CertificateEncodingException ile "
+"karşılaştı."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
@@ -2005,8 +2061,12 @@ msgid "The parser found inconsistent certificates on the files in the .apk."
 msgstr "Ayrıştırıcı, .apk içindeki dosyalarda tutarsız sertifikalar buldu."
 
 #: res/app/src/core/install.ts:184
-msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
-msgstr "Ayrıştırıcıya dosya olmayan veya beklenen '.apk' uzantısıyla bitmeyen bir yol verildi."
+msgid ""
+"The parser was given a path that is not a file, or does not end with the "
+"expected '.apk' extension."
+msgstr ""
+"Ayrıştırıcıya dosya olmayan veya beklenen '.apk' uzantısıyla bitmeyen bir "
+"yol verildi."
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
@@ -2021,16 +2081,23 @@ msgid "The schedule can only be changed while the group is pending"
 msgstr "Zamanlama yalnızca grup beklemedeyken değiştirilebilir"
 
 #: res/app/src/core/install.ts:196
-msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
-msgstr "Paketteki yerel kod, sistemin desteklediği ABI'lerin hiçbiriyle eşleşmediği için sistem paketi yükleyemedi."
+msgid ""
+"The system failed to install the package because its packaged native code "
+"did not match any of the ABIs supported by the system."
+msgstr ""
+"Paketteki yerel kod, sistemin desteklediği ABI'lerin hiçbiriyle eşleşmediği "
+"için sistem paketi yükleyemedi."
 
 #: res/app/src/core/install.ts:194
 msgid "The system failed to install the package because of system issues."
 msgstr "Sistem sorunları nedeniyle sistem paketi yükleyemedi."
 
 #: res/app/src/core/install.ts:195
-msgid "The system failed to install the package because the user is restricted from installing apps."
-msgstr "Kullanıcının uygulama yüklemesi kısıtlandığı için sistem paketi yükleyemedi."
+msgid ""
+"The system failed to install the package because the user is restricted from"
+" installing apps."
+msgstr ""
+"Kullanıcının uygulama yüklemesi kısıtlandığı için sistem paketi yükleyemedi."
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."

@@ -1,11 +1,12 @@
+# Translators:
+# Karol Wrótniak, 2026
+# 
 msgid ""
 msgstr ""
-"Project-Id-Version: STF\n"
+"Last-Translator: Karol Wrótniak, 2026\n"
 "Language-Team: Chinese (China) (https://app.transifex.com/devicefarmer/teams/110261/zh_CN/)\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: zh_CN\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: res/app/src/features/settings/groups/rules.ts:101
@@ -35,7 +36,9 @@ msgid "A package is already installed with the same name."
 msgstr "已经安装了同名的安装包。"
 
 #: res/app/src/core/install.ts:166
-msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
+msgid ""
+"A previously installed package of the same name has a different signature "
+"than the new package (and the old package's data was not removed)."
 msgstr "新安装包与已安装的同名包存在签名冲突（老的安装包数据没有清除）。"
 
 #: res/app/src/core/install.ts:176
@@ -172,7 +175,8 @@ msgid "Apps"
 msgstr "应用程序"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
-msgid "Are you sure you want to reboot this device and keep using it afterwards?"
+msgid ""
+"Are you sure you want to reboot this device and keep using it afterwards?"
 msgstr "你确定要重启这台设备并在重启后继续使用么？"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
@@ -281,8 +285,7 @@ msgstr "相机"
 #: res/app/src/features/settings/groups/GroupDetail.tsx:107
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:69
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:123
-#: res/app/src/ui/modals.tsx:192
-#: res/app/src/ui/modals.tsx:57
+#: res/app/src/ui/modals.tsx:192 res/app/src/ui/modals.tsx:57
 #: res/app/src/ui/modals.tsx:89
 msgid "Cancel"
 msgstr "取消"
@@ -366,8 +369,7 @@ msgstr "联系所有者"
 
 #: res/app/src/features/auth/SignInForm.tsx:165
 #: res/app/src/features/auth/SignInForm.tsx:168
-#: res/app/src/ui/AppLayout.tsx:276
-#: res/app/src/ui/AppLayout.tsx:283
+#: res/app/src/ui/AppLayout.tsx:276 res/app/src/ui/AppLayout.tsx:283
 msgid "Contact Support"
 msgstr "联系技术支持"
 
@@ -389,8 +391,7 @@ msgstr "被控制"
 msgid "Copied"
 msgstr "已复制"
 
-#: res/app/src/ui/CopyButton.tsx:30
-#: res/app/src/ui/CopyButton.tsx:38
+#: res/app/src/ui/CopyButton.tsx:30 res/app/src/ui/CopyButton.tsx:38
 msgid "Copy to clipboard"
 msgstr "复制到剪贴板"
 
@@ -424,8 +425,7 @@ msgstr "严重"
 msgid "Current rotation:"
 msgstr "当前角度："
 
-#: res/app/src/ui/ColumnChoice.tsx:47
-#: res/app/src/ui/ColumnChoice.tsx:48
+#: res/app/src/ui/ColumnChoice.tsx:47 res/app/src/ui/ColumnChoice.tsx:48
 #: res/app/src/ui/ColumnChoice.tsx:54
 msgid "Customize"
 msgstr "自定义"
@@ -579,8 +579,7 @@ msgid "Discharging"
 msgstr "放电中"
 
 #: res/app/src/core/devices/enhance.ts:19
-#: res/app/src/core/devices/enhance.ts:6
-#: res/app/src/ui/modals.tsx:127
+#: res/app/src/core/devices/enhance.ts:6 res/app/src/ui/modals.tsx:127
 msgid "Disconnected"
 msgstr "未连接"
 
@@ -651,8 +650,7 @@ msgstr "加密的"
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:64
-#: res/app/src/ui/AppLayout.tsx:110
-#: res/app/src/ui/AppLayout.tsx:111
+#: res/app/src/ui/AppLayout.tsx:110 res/app/src/ui/AppLayout.tsx:111
 msgid "Error"
 msgstr "错误"
 
@@ -865,8 +863,7 @@ msgid "Height"
 msgstr "高度"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
-#: res/app/src/features/docs/DocsPage.tsx:28
-#: res/app/src/ui/AppLayout.tsx:289
+#: res/app/src/features/docs/DocsPage.tsx:28 res/app/src/ui/AppLayout.tsx:289
 #: res/app/src/ui/AppLayout.tsx:295
 msgid "Help"
 msgstr "帮助"
@@ -1027,8 +1024,7 @@ msgstr "登录"
 msgid "Logcat Level"
 msgstr "Logcat 级别"
 
-#: res/app/src/ui/AppLayout.tsx:313
-#: res/app/src/ui/AppLayout.tsx:319
+#: res/app/src/ui/AppLayout.tsx:313 res/app/src/ui/AppLayout.tsx:319
 msgid "Logout"
 msgstr "注销"
 
@@ -1041,7 +1037,8 @@ msgid "Maintenance"
 msgstr "维护"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:90
-msgid "Make sure to copy your access token now. You won't be able to see it again."
+msgid ""
+"Make sure to copy your access token now. You won't be able to see it again."
 msgstr "请确保已备份您的身份验证凭证，此凭证后续将不再显示！"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:52
@@ -1276,8 +1273,7 @@ msgid "Offline"
 msgstr "离线"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:111
-#: res/app/src/ui/modals.tsx:67
-#: res/app/src/ui/modals.tsx:88
+#: res/app/src/ui/modals.tsx:67 res/app/src/ui/modals.tsx:88
 msgid "OK"
 msgstr "确定"
 
@@ -1631,11 +1627,13 @@ msgid "Run"
 msgstr "运行"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
-msgid "Run the following on your command line to debug the device from your Browser"
+msgid ""
+"Run the following on your command line to debug the device from your Browser"
 msgstr "运行下面的命令行从您的浏览器中调试设备"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
-msgid "Run the following on your command line to debug the device from your IDE"
+msgid ""
+"Run the following on your command line to debug the device from your IDE"
 msgstr "运行下面命令行从您的 IDE 调试设备"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
@@ -1901,43 +1899,61 @@ msgid "The existing package could not be deleted."
 msgstr "无法删除已安装的应用。"
 
 #: res/app/src/core/install.ts:180
-msgid "The new package couldn't be installed because the verification did not succeed."
+msgid ""
+"The new package couldn't be installed because the verification did not "
+"succeed."
 msgstr "未通过验证，无法安装新应用。"
 
 #: res/app/src/core/install.ts:179
-msgid "The new package couldn't be installed because the verification timed out."
+msgid ""
+"The new package couldn't be installed because the verification timed out."
 msgstr "验证超时，无法安装新应用。"
 
 #: res/app/src/core/install.ts:178
-msgid "The new package couldn't be installed in the specified install location because the media is not available."
+msgid ""
+"The new package couldn't be installed in the specified install location "
+"because the media is not available."
 msgstr "SD卡不可用。"
 
 #: res/app/src/core/install.ts:177
-msgid "The new package couldn't be installed in the specified install location."
+msgid ""
+"The new package couldn't be installed in the specified install location."
 msgstr "无效的安装路径。"
 
 #: res/app/src/core/install.ts:171
-msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
+msgid ""
+"The new package failed because it contains a content provider with thesame "
+"authority as a provider already installed in the system."
 msgstr "新的包安装失败，因为存在同名的内容提供者(content provider)。"
 
 #: res/app/src/core/install.ts:173
-msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
+msgid ""
+"The new package failed because it has specified that it is a test-only "
+"package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
 msgstr "新包安装失败，调用者不被允许测试 。"
 
 #: res/app/src/core/install.ts:172
-msgid "The new package failed because the current SDK version is newer than that required by the package."
+msgid ""
+"The new package failed because the current SDK version is newer than that "
+"required by the package."
 msgstr "新的包安装失败，因为系统版本过新 。"
 
 #: res/app/src/core/install.ts:170
-msgid "The new package failed because the current SDK version is older than that required by the package."
+msgid ""
+"The new package failed because the current SDK version is older than that "
+"required by the package."
 msgstr "新的包安装失败，系统版本过旧 。"
 
 #: res/app/src/core/install.ts:169
-msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
+msgid ""
+"The new package failed while optimizing and validating its dex files, either"
+" because there was not enough storage or the validation failed."
 msgstr "空间不足或验证失败"
 
 #: res/app/src/core/install.ts:183
-msgid "The new package has an older version code than the currently installed package."
+msgid ""
+"The new package has an older version code than the currently installed "
+"package."
 msgstr "新包比目前安装的包的代码版本旧。"
 
 #: res/app/src/core/install.ts:182
@@ -1957,7 +1973,9 @@ msgid "The package archive file is invalid."
 msgstr "无效的安装包。"
 
 #: res/app/src/core/install.ts:174
-msgid "The package being installed contains native code, but none that is compatible with the device's CPU_ABI."
+msgid ""
+"The package being installed contains native code, but none that is "
+"compatible with the device's CPU_ABI."
 msgstr "包含的本机代码不兼容的CPU_ABI"
 
 #: res/app/src/core/install.ts:181
@@ -1969,11 +1987,15 @@ msgid "The package is already installed."
 msgstr "应用已经安装。"
 
 #: res/app/src/core/install.ts:163
-msgid "The package manager service found that the device didn't have enough storage space to install the app."
+msgid ""
+"The package manager service found that the device didn't have enough storage"
+" space to install the app."
 msgstr "没有足够的存储空间安装应用。"
 
 #: res/app/src/core/install.ts:193
-msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
+msgid ""
+"The parser did not find any actionable tags (instrumentation or application)"
+" in the manifest."
 msgstr "解析失败，manifest中没有actionable tags(instrumentation 或application) 。"
 
 #: res/app/src/core/install.ts:187
@@ -1989,7 +2011,9 @@ msgid "The parser encountered a bad shared user id name in the manifest."
 msgstr "解析失败，manifest中的共享用户错误。"
 
 #: res/app/src/core/install.ts:189
-msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
+msgid ""
+"The parser encountered a CertificateEncodingException in one of the files in"
+" the .apk."
 msgstr "解析失败，证书编码异常。"
 
 #: res/app/src/core/install.ts:186
@@ -2005,7 +2029,9 @@ msgid "The parser found inconsistent certificates on the files in the .apk."
 msgstr "解析失败，证书不一致。"
 
 #: res/app/src/core/install.ts:184
-msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
+msgid ""
+"The parser was given a path that is not a file, or does not end with the "
+"expected '.apk' extension."
 msgstr "解析器所获得的是一个路径而不是一个文件，或者文件没有以‘.apk’结尾。"
 
 #: res/app/src/core/install.ts:185
@@ -2021,7 +2047,9 @@ msgid "The schedule can only be changed while the group is pending"
 msgstr "只有在组处于待定状态时才能更改日程"
 
 #: res/app/src/core/install.ts:196
-msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
+msgid ""
+"The system failed to install the package because its packaged native code "
+"did not match any of the ABIs supported by the system."
 msgstr "系统无法安装此软件包，因为其原生代码与系统支持的任何 ABI 都不匹配。"
 
 #: res/app/src/core/install.ts:194
@@ -2029,7 +2057,9 @@ msgid "The system failed to install the package because of system issues."
 msgstr "因为系统问题无法安装程序。"
 
 #: res/app/src/core/install.ts:195
-msgid "The system failed to install the package because the user is restricted from installing apps."
+msgid ""
+"The system failed to install the package because the user is restricted from"
+" installing apps."
 msgstr "程序安装失败，因为用户被限制安装该应用软件"
 
 #: res/app/src/core/install.ts:162

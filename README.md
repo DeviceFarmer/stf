@@ -432,9 +432,14 @@ Translations are managed in the [STF Transifex project](https://app.transifex.co
 
 Transifex language codes are used as-is for the files in `res/common/lang/po` and the keys in `res/common/lang/langs.json`.
 
-For updating the source and all the translation files, first install the [Transifex client](https://developers.transifex.com/docs/cli) and provide an API token, e.g. in the `TX_TOKEN` environment variable.
+When you add or change a translatable string in the UI, run `gulp translate:extract` and commit the updated `stf.pot`. `gulp lint`, and so CI, runs `gulp translate:check`, which fails when `stf.pot` does not match the sources, when a compiled `json` catalog does not match its `po` file, when `langs.json` and the catalogs disagree, or when a translation uses a placeholder its source string does not have.
 
-Then just run:
+The [Translations workflow](.github/workflows/translations.yml) does the rest once the repository has a `TX_TOKEN` secret holding a Transifex API token:
+
+1. A new `stf.pot` on `master` is pushed to Transifex.
+2. Every week, the translations of the languages in `langs.json` are pulled from Transifex, compiled and proposed as a pull request.
+
+To do the same by hand, install the [Transifex client](https://developers.transifex.com/docs/cli), provide an API token in the `TX_TOKEN` environment variable and run:
 ```bash
 gulp translate
 ```
