@@ -70,4 +70,13 @@ describe('i18n', () => {
     expect(devices(22)).toBe('22 urządzenia')
     expect(devices(1.5)).toBe('1.5 urządzenia')
   })
+
+  it('falls back to the last plural form when the browser disagrees on categories', () => {
+    const options = vi.spyOn(Intl.PluralRules.prototype, 'resolvedOptions')
+      .mockReturnValue({pluralCategories: ['one', 'other']} as unknown as Intl.ResolvedPluralRulesOptions)
+    const devices = (count: number) => translatePlural(count, '{{count}} device', '{{count}} devices', {}, 'fr')
+    expect(devices(1)).toBe('1 appareil')
+    expect(devices(2)).toBe('2 appareils')
+    options.mockRestore()
+  })
 })

@@ -92,7 +92,8 @@ function pluralIndex(count: number, language: string, forms: number): number {
   catch {
     // Unknown locale, use the fallback below
   }
-  return count === 1 ? 0 : Math.min(1, forms - 1)
+  // CLDR order puts 'other' last
+  return count === 1 ? 0 : forms - 1
 }
 
 export function translatePlural(
