@@ -51,8 +51,9 @@ export function detectLanguage(): string {
 
 export const useLanguage = create<{language: string}>(() => ({language: detectLanguage()}))
 
-export function setLanguage(language: string): void {
-  useLanguage.setState({language: normalizeLanguage(language) || defaultLanguage})
+// A missing or unknown code falls back to the browser language
+export function setLanguage(language?: string | null): void {
+  useLanguage.setState({language: normalizeLanguage(language) || detectLanguage()})
   document.documentElement.lang = useLanguage.getState().language.replace('_', '-')
 }
 

@@ -16,8 +16,18 @@ describe('i18n', () => {
     expect(translate('Devices')).toBe('Appareils')
     expect(translate('Hello {{ name }}', {name: 'STF'})).toBe('Hello STF')
     expect(translate('Hello {{name}}', {name: 'STF'})).toBe('Bonjour STF')
-    setLanguage('xx')
+    setLanguage('en')
     expect(translate('Devices')).toBe('Devices')
+  })
+
+  it('falls back to the browser language for a missing or unknown code', () => {
+    const languages = vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['fr-FR'])
+    setLanguage('xx')
+    expect(useLanguage.getState().language).toBe('fr')
+    setLanguage(undefined)
+    expect(useLanguage.getState().language).toBe('fr')
+    languages.mockRestore()
+    setLanguage('en')
   })
 
   it('normalizes browser tags and legacy codes to catalog codes', () => {
