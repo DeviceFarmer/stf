@@ -302,7 +302,8 @@ gulp.task('translate:push', function() {
 
 gulp.task('translate:pull', function() {
   gutil.log('Pulling translations from Transifex...')
-  return run('tx pull').exec()
+  // A fresh checkout is newer than Transifex, which tx would otherwise skip
+  return run('tx pull --translations --force').exec()
 })
 
 gulp.task('clean', function() {
