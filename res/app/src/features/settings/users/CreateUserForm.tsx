@@ -10,7 +10,7 @@ export const userNameRegex = /^[0-9a-zA-Z-_. ]{1,50}$/
 export const userNameRegexStr = String(userNameRegex)
 const emailPattern = /^[^\s@]+@[^\s@]+$/
 
-export function CreateUserForm({onCreated, className}: {onCreated: () => void, className?: string}) {
+export function CreateUserForm({onCreated, className}: {onCreated: () => void, className?: string | undefined}) {
   const {t} = useTranslation()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')

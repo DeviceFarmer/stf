@@ -1,0 +1,117 @@
+/**
+* Copyright © 2019 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+**/
+
+import dbapi from '../../../db/api.js'
+import jwtutil from '../../../util/jwtutil.js'
+import logger from '../../../util/logger.js'
+import apiutil from '../../../util/apiutil.js'
+import type {Response} from 'express'
+import type {SecurityRequest} from '../../../types/units-api.js'
+
+var log = logger.createLogger('api:helpers:securityHandlers')
+
+// Specifications: https://tools.ietf.org/html/rfc6750#section-2.1
+
+function accessTokenAuth(req: SecurityRequest, res: Response, next: (err?: unknown) => void) {
+  if (req.headers.authorization) {
+    var authHeader = req.headers.authorization.split(' ')
+    var format = authHeader[0]
+    var tokenId = authHeader[1]
+
+    if (format !== 'Bearer') {
+      return res.status(401).json({
+        success: false
+      , description: 'Authorization header should be in "Bearer $AUTH_TOKEN" format'
+      })
+    }
+
+    if (!tokenId) {
+      log.error('Bad Access Token Header')
+      return res.status(401).json({
+        success: false
+      , description: 'Bad Credentials'
+      })
+    }
+
+    return dbapi.loadAccessToken(tokenId)
+      .then(function(token) {
+        if (!token) {
+          return res.status(401).json({
+            success: false
+          , description: 'Bad Credentials'
+          })
+        }
+
+        var jwt = token.jwt
+        var data = jwtutil.decode(jwt, req.options.secret)
+
+        if (!data) {
+          return res.status(500).json({
+            success: false
+          , description: 'Internal Server Error'
+          })
+        }
+
+        return dbapi.loadUser(data.email)
+          .then(function(user) {
+            if (user) {
+              if (user.privilege === apiutil.USER &&
+                  req.swagger.operation.definition.tags.indexOf('admin') > -1) {
+                return res.status(403).json({
+                  success: false
+                , description: 'Forbidden: privileged operation (admin)'
+                })
+              }
+              req.user = user
+              return next()
+            }
+            else {
+              return res.status(500).json({
+                success: false
+              , description: 'Internal Server Error'
+              })
+            }
+          })
+          .catch(function(err) {
+            log.error('Failed to load user: ', err.stack)
+          })
+      })
+      .catch(function(err) {
+        log.error('Failed to load token: ', err.stack)
+        return res.status(401).json({
+          success: false
+        , description: 'Bad Credentials'
+        })
+      })
+  }
+  // Request is coming from browser app
+  // TODO: Remove this once frontend become stateless
+  //       and start sending request without session
+  else if (req.session && req.session.jwt) {
+    return dbapi.loadUser(req.session.jwt.email)
+      .then(function(user) {
+        if (user) {
+          req.user = user
+          return next()
+        }
+        else {
+          return res.status(500).json({
+            success: false
+          , description: 'Internal Server Error'
+          })
+        }
+      })
+      .catch(next)
+  }
+  else {
+    return res.status(401).json({
+      success: false
+    , description: 'Requires Authentication'
+    })
+  }
+}
+
+export {
+  accessTokenAuth
+}

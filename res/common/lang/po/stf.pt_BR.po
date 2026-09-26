@@ -183,7 +183,7 @@ msgstr "Ocupado"
 
 #: app/device-list/stats/device-list-stats.html:1
 msgid "Busy Devices"
-msgstr "Dispositivos Ocupados"
+msgstr "Devices Ocupados"
 
 #: app/control-panes/info/info.html:1
 #: app/control-panes/performance/cpu/cpu.html:1
@@ -754,7 +754,7 @@ msgstr "Nenhuma tela de dispositivo"
 
 #: app/device-list/empty/device-list-empty.html:1
 msgid "No devices connected"
-msgstr "Nenhum dispositivo conectado"
+msgstr "Nenhum device conectado"
 
 #: app/components/stf/common-ui/modals/lightbox-image/lightbox-image.html:1
 msgid "No photo available"

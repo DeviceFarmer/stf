@@ -234,7 +234,7 @@ export const releaseGracePeriod = 10000
 const shared = new Map<string, SharedTracker>()
 
 interface TrackerOptions {
-  serial?: string
+  serial?: string | undefined
   keepAlive?: boolean
 }
 

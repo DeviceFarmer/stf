@@ -1,0 +1,677 @@
+/**
+* Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+**/
+
+import util from 'util'
+
+import Promise from 'bluebird'
+import syrup from '@devicefarmer/stf-syrup'
+import WebSocket, {WebSocketServer} from 'ws'
+import * as uuid from 'uuid'
+import EventEmitter from 'eventemitter3'
+import split from 'split'
+
+import logger from '../../../../util/logger.js'
+import lifecycle from '../../../../util/lifecycle.js'
+import bannerutil from './util/banner.js'
+import FrameParser from './util/frameparser.js'
+import FrameConfig from './util/frameconfig.js'
+import BroadcastSet from './util/broadcastset.js'
+import StateQueue from '../../../../util/statequeue.js'
+import RiskyStream from '../../../../util/riskystream.js'
+import FailCounter from '../../../../util/failcounter.js'
+import type {Duplex} from 'stream'
+import adbSyrup from '../../support/adb.js'
+import minicapSyrup from '../../resources/minicap.js'
+import displaySyrup from '../util/display.js'
+import optionsSyrup from './options.js'
+
+type SyrupValue<S> = S extends syrup.Syrup<infer T> ? T : never
+type Adb = ReturnType<typeof import('../../../../util/adbutil.js').default>
+type ScreenOptions = SyrupValue<typeof import('./options.js').default>
+
+interface ScreenStreamOptions {
+  serial: string
+  screenGrabber: string
+  screenFrameRate: number
+  screenJpegQuality: number
+  screenPingInterval: number
+}
+
+interface Minicap {
+  run(mode: string, cmd: string): Promise<Duplex>
+}
+
+interface Display {
+  properties: {
+    width: number
+    height: number
+    rotation: number
+  }
+  on(event: 'rotationChange', listener: (rotation: number) => void): unknown
+}
+
+interface FrameProducerEvents {
+  start: () => void
+  stop: () => void
+  readable: () => void
+  pid: (pid: number) => void
+  error: (err: Error) => void
+}
+
+export default syrup.serial()
+  .dependency(adbSyrup)
+  .dependency(minicapSyrup)
+  .dependency(displaySyrup)
+  .dependency(optionsSyrup)
+  .define(function(
+    options: ScreenStreamOptions
+  , adb: Adb
+  , minicap: Minicap
+  , display: Display
+  , screenOptions: ScreenOptions
+  ) {
+    var log = logger.createLogger('device:plugins:screen:stream')
+    log.info('ScreenGrabber option set to %s', options.screenGrabber)
+    log.info('ScreenFrameRate option set to %d', options.screenFrameRate)
+
+    interface ScreenClient {
+      onStart: (producer: FrameProducer) => Promise<unknown>
+      onFrame: (frame: Buffer) => Promise<unknown>
+    }
+
+    class FrameProducer extends EventEmitter.EventEmitter<FrameProducerEvents> {
+      static STATE_STOPPED = 1
+      static STATE_STARTING = 2
+      static STATE_STARTED = 3
+      static STATE_STOPPING = 4
+
+      declare actionQueue: unknown[]
+      declare runningState: number
+      declare desiredState: StateQueue
+      declare output: RiskyStream | null
+      declare socket: RiskyStream | null
+      declare pid: number
+      declare banner: Awaited<ReturnType<FrameProducer['_readBanner']>> | null
+      declare parser: FrameParser | null
+      declare frameConfig: FrameConfig
+      declare grabber: string
+      declare readable: boolean
+      declare needsReadable: boolean
+      declare failCounter: FailCounter
+      declare failed: boolean
+      declare readableListener: () => void
+      declare broadcastSet: BroadcastSet<ScreenClient>
+
+      constructor(config: FrameConfig) {
+        super()
+        this.actionQueue = []
+        this.runningState = FrameProducer.STATE_STOPPED
+        this.desiredState = new StateQueue()
+        this.output = null
+        this.socket = null
+        this.pid = -1
+        this.banner = null
+        this.parser = null
+        this.frameConfig = config
+        this.grabber = options.screenGrabber
+        this.readable = false
+        this.needsReadable = false
+        this.failCounter = new FailCounter(3, 10000)
+        this.failCounter.on('exceedLimit', this._failLimitExceeded.bind(this))
+        this.failed = false
+        this.readableListener = this._readableListener.bind(this)
+      }
+
+      _ensureState() {
+        if (this.desiredState.empty()) {
+          return
+        }
+
+        if (this.failed) {
+          log.warn('Will not apply desired state due to too many failures')
+          return
+        }
+
+        switch (this.runningState) {
+        case FrameProducer.STATE_STARTING:
+        case FrameProducer.STATE_STOPPING:
+          // Just wait.
+          break
+        case FrameProducer.STATE_STOPPED:
+          if (this.desiredState.next() === FrameProducer.STATE_STARTED) {
+            this.runningState = FrameProducer.STATE_STARTING
+            this._startService().bind(this)
+              .then(function(this: FrameProducer, out) {
+                this.output = new RiskyStream(out)
+                  .on('unexpectedEnd', this._outputEnded.bind(this))
+                return this._readOutput(this.output.stream)
+              })
+              .then(function(this: FrameProducer) {
+                return this._waitForPid()
+              })
+              .then(function(this: FrameProducer) {
+                return this._connectService()
+              })
+              .then(function(this: FrameProducer, socket) {
+                this.parser = new FrameParser()
+                this.socket = new RiskyStream(socket)
+                  .on('unexpectedEnd', this._socketEnded.bind(this))
+                return this._readBanner(this.socket.stream)
+              })
+              .then(function(this: FrameProducer, banner) {
+                this.banner = banner
+                return this._readFrames(this.socket!.stream)
+              })
+              .then(function(this: FrameProducer) {
+                this.runningState = FrameProducer.STATE_STARTED
+                this.emit('start')
+              })
+              .catch(function(this: FrameProducer) {
+                return this._stop().finally(function(this: FrameProducer) {
+                  this.failCounter.inc()
+                  this.grabber = 'minicap-apk'
+                })
+              })
+              .finally(function(this: FrameProducer) {
+                this._ensureState()
+              })
+          }
+          else {
+            setImmediate(this._ensureState.bind(this))
+          }
+          break
+        case FrameProducer.STATE_STARTED:
+          if (this.desiredState.next() === FrameProducer.STATE_STOPPED) {
+            this.runningState = FrameProducer.STATE_STOPPING
+            this._stop().finally(function(this: FrameProducer) {
+              this._ensureState()
+            })
+          }
+          else {
+            setImmediate(this._ensureState.bind(this))
+          }
+          break
+        }
+      }
+
+      start() {
+        log.info('Requesting frame producer to start')
+        this.desiredState.push(FrameProducer.STATE_STARTED)
+        this._ensureState()
+      }
+
+      stop() {
+        log.info('Requesting frame producer to stop')
+        this.desiredState.push(FrameProducer.STATE_STOPPED)
+        this._ensureState()
+      }
+
+      restart() {
+        switch (this.runningState) {
+        case FrameProducer.STATE_STARTED:
+        case FrameProducer.STATE_STARTING:
+          this.desiredState.push(FrameProducer.STATE_STOPPED)
+          this.desiredState.push(FrameProducer.STATE_STARTED)
+          this._ensureState()
+          break
+        }
+      }
+
+      updateRotation(rotation: number) {
+        if (this.frameConfig.rotation === rotation) {
+          log.info('Keeping %d as current frame producer rotation', rotation)
+          return
+        }
+
+        log.info('Setting frame producer rotation to %d', rotation)
+        this.frameConfig.rotation = rotation
+        this._configChanged()
+      }
+
+      updateProjection(width: number, height: number) {
+        if (this.frameConfig.virtualWidth === width &&
+            this.frameConfig.virtualHeight === height) {
+          log.info(
+            'Keeping %dx%d as current frame producer projection', width, height)
+          return
+        }
+
+        log.info('Setting frame producer projection to %dx%d', width, height)
+        this.frameConfig.virtualWidth = width
+        this.frameConfig.virtualHeight = height
+        this._configChanged()
+      }
+
+      nextFrame() {
+        var frame = null
+        var chunk
+
+        if (this.parser) {
+          while ((frame = this.parser.nextFrame()) === null) {
+            chunk = this.socket!.stream.read()
+            if (chunk) {
+              this.parser.push(chunk)
+            }
+            else {
+              this.readable = false
+              break
+            }
+          }
+        }
+
+        return frame
+      }
+
+      needFrame() {
+        this.needsReadable = true
+        this._maybeEmitReadable()
+      }
+
+      _configChanged() {
+        this.restart()
+      }
+
+      _socketEnded() {
+        log.warn('Connection to minicap ended unexpectedly')
+        this.failCounter.inc()
+        this.restart()
+      }
+
+      _outputEnded() {
+        log.warn('Shell keeping minicap running ended unexpectedly')
+        this.failCounter.inc()
+        this.restart()
+      }
+
+      _failLimitExceeded(limit: number, time: number) {
+        this._stop()
+        this.failed = true
+        this.emit('error', new Error(util.format(
+          'Failed more than %d times in %dms'
+        , limit
+        , time
+        )))
+      }
+
+      _startService() {
+        log.info('Launching screen service %s', this.grabber)
+        if (options.screenFrameRate <= 0.0) {
+          return minicap.run(this.grabber, util.format(
+            '-S -Q %d -P %s'
+          , options.screenJpegQuality
+          , this.frameConfig.toString()
+          ))
+          .timeout(10000)
+        }
+        else {
+          return minicap.run(this.grabber, util.format(
+            '-S -r %d -Q %d -P %s'
+          , options.screenFrameRate
+          , options.screenJpegQuality
+          , this.frameConfig.toString()
+          ))
+          .timeout(10000)
+        }
+      }
+
+      _readOutput(out: Duplex) {
+        out.pipe(split()).on('data', function(this: FrameProducer, line: string) {
+          var trimmed = line.toString().trim()
+
+          if (trimmed === '') {
+            return
+          }
+
+          if (/ERROR/.test(line)) {
+            log.fatal('minicap error: "%s"', line)
+            lifecycle.fatal()
+            return
+          }
+
+          var match = /^PID: (\d+)$/.exec(line)
+          if (match) {
+            this.pid = Number(match[1])
+            this.emit('pid', this.pid)
+          }
+
+          log.info('minicap says: "%s"', line)
+        }.bind(this))
+      }
+
+      _waitForPid() {
+        if (this.pid > 0) {
+          return Promise.resolve(this.pid)
+        }
+
+        var pidListener: (pid: number) => void
+        return new Promise<number>(function(this: FrameProducer, resolve: (pid: number) => void) {
+            this.on('pid', pidListener = resolve)
+          }.bind(this)).bind(this)
+          .timeout(5000)
+          .finally(function(this: FrameProducer) {
+            this.removeListener('pid', pidListener)
+          })
+      }
+
+      _connectService() {
+        function tryConnect(times: number, delay: number): Promise<Duplex> {
+          return adb.openLocal(options.serial, 'localabstract:minicap')
+            .timeout(10000)
+            .then(function(out) {
+              return out
+            })
+            .catch(function(err) {
+              if (/closed/.test(err.message) && times > 1) {
+                return Promise.delay(delay)
+                  .then(function() {
+                    return tryConnect(times - 1, delay * 2)
+                  })
+              }
+              return Promise.reject(err)
+            })
+        }
+        log.info('Connecting to minicap service')
+        return tryConnect(5, 100)
+      }
+
+      _stop() {
+        return this._disconnectService(this.socket).bind(this)
+          .timeout(2000)
+          .then(function(this: FrameProducer) {
+            return this._stopService(this.output).timeout(10000)
+          })
+          .then(function(this: FrameProducer) {
+            this.runningState = FrameProducer.STATE_STOPPED
+            this.emit('stop')
+          })
+          .catch(function(this: FrameProducer, err) {
+            // In practice we _should_ never get here due to _stopService()
+            // being quite aggressive. But if we do, well... assume it
+            // stopped anyway for now.
+            this.runningState = FrameProducer.STATE_STOPPED
+            this.emit('error', err)
+            this.emit('stop')
+          })
+          .finally(function(this: FrameProducer) {
+            this.output = null
+            this.socket = null
+            this.pid = -1
+            this.banner = null
+            this.parser = null
+          })
+      }
+
+      _disconnectService(socket: RiskyStream | null) {
+        log.info('Disconnecting from minicap service')
+
+        if (!socket || socket.ended) {
+          return Promise.resolve(true)
+        }
+
+        socket.stream.removeListener('readable', this.readableListener)
+
+        var endListener: () => void
+        return new Promise<boolean>(function(resolve) {
+            socket.on('end', endListener = function() {
+              resolve(true)
+            })
+
+            socket.stream.resume()
+            socket.end()
+          })
+          .finally(function() {
+            socket.removeListener('end', endListener)
+          })
+      }
+
+      _stopService(output: RiskyStream | null) {
+        log.info('Stopping minicap service')
+
+        if (!output || output.ended) {
+          return Promise.resolve(true)
+        }
+
+        var pid = this.pid
+
+        function kill(signal: 'SIGTERM' | 'SIGKILL') {
+          if (pid <= 0) {
+            return Promise.reject(new Error('Minicap service pid is unknown'))
+          }
+
+          var signum = {
+            SIGTERM: -15
+          , SIGKILL: -9
+          }[signal]
+
+          log.info('Sending %s to minicap', signal)
+          return Promise.all([
+              output!.waitForEnd()
+            , adb.shell(options.serial, ['kill', signum, pid])
+                .then(adb.util.readAll)
+                .return(true)
+            ])
+            .timeout(2000)
+        }
+
+        function kindKill() {
+          return kill('SIGTERM')
+        }
+
+        function forceKill() {
+          return kill('SIGKILL')
+        }
+
+        function forceEnd() {
+          log.info('Ending minicap I/O as a last resort')
+          output!.end()
+          return Promise.resolve(true)
+        }
+
+        return kindKill()
+          .catch(Promise.TimeoutError, forceKill)
+          .catch(forceEnd)
+      }
+
+      _readBanner(socket: Duplex) {
+        log.info('Reading minicap banner')
+        return bannerutil.read(socket).timeout(2000)
+      }
+
+      _readFrames(socket: Duplex) {
+        this.needsReadable = true
+        socket.on('readable', this.readableListener)
+
+        // We may already have data pending. Let the user know they should
+        // at least attempt to read frames now.
+        this.readableListener()
+      }
+
+      _maybeEmitReadable() {
+        if (this.readable && this.needsReadable) {
+          this.needsReadable = false
+          this.emit('readable')
+        }
+      }
+
+      _readableListener() {
+        this.readable = true
+        this._maybeEmitReadable()
+      }
+    }
+
+    function createServer() {
+      log.info('Starting WebSocket server on port %d', screenOptions.publicPort)
+
+      var wss = new WebSocketServer({
+        port: screenOptions.publicPort
+      , perMessageDeflate: false
+      })
+
+      var listeningListener: () => void, errorListener: (err: Error) => void
+      return new Promise<typeof wss>(function(resolve, reject) {
+          listeningListener = function() {
+            return resolve(wss)
+          }
+
+          errorListener = function(err: Error) {
+            return reject(err)
+          }
+
+          wss.on('listening', listeningListener)
+          wss.on('error', errorListener)
+        })
+        .finally(function() {
+          wss.removeListener('listening', listeningListener)
+          wss.removeListener('error', errorListener)
+        })
+    }
+
+    return createServer()
+      .then(function(wss) {
+        log.info('creating FrameProducer: %s', options.screenGrabber)
+        var frameProducer = new FrameProducer(
+          new FrameConfig(display.properties, display.properties))
+        var broadcastSet = frameProducer.broadcastSet = new BroadcastSet()
+
+        broadcastSet.on('nonempty', function() {
+          frameProducer.start()
+        })
+
+        broadcastSet.on('empty', function() {
+          frameProducer.stop()
+        })
+
+        broadcastSet.on('insert', function(id) {
+          // If two clients join a session in the middle, one of them
+          // may not release the initial size because the projection
+          // doesn't necessarily change, and the producer doesn't Getting
+          // restarted. Therefore we have to call onStart() manually
+          // if the producer is already up and running.
+          switch (frameProducer.runningState) {
+          case FrameProducer.STATE_STARTED:
+            broadcastSet.get(id)!.onStart(frameProducer)
+            break
+          }
+        })
+
+        display.on('rotationChange', function(newRotation) {
+          frameProducer.updateRotation(newRotation)
+        })
+
+        frameProducer.on('start', function() {
+          broadcastSet.keys().map(function(id) {
+            return broadcastSet.get(id)!.onStart(frameProducer)
+          })
+        })
+
+        frameProducer.on('readable', function next() {
+          var frame = frameProducer.nextFrame()
+          if (frame) {
+            Promise.all(broadcastSet.keys().map(function(id) {
+              return broadcastSet.get(id)!.onFrame(frame!).reflect()
+            })).then(next)
+          }
+          else {
+            frameProducer.needFrame()
+          }
+        })
+
+        frameProducer.on('error', function(err) {
+          log.fatal('Frame producer had an error', err.stack)
+          lifecycle.fatal()
+        })
+
+        wss.on('connection', function(ws) {
+          var id = uuid.v4()
+          var pingTimer: NodeJS.Timeout
+
+          function send(message: string | Buffer, options?: {binary: boolean}) {
+            return new Promise<void>(function(resolve, reject) {
+              switch (ws.readyState) {
+              case WebSocket.CONNECTING:
+                // This should never happen.
+                log.warn('Unable to send to CONNECTING client "%s"', id)
+                break
+              case WebSocket.OPEN:
+                // This is what SHOULD happen.
+                ws.send(message, options!, function(err) {
+                  return err ? reject(err) : resolve()
+                })
+                break
+              case WebSocket.CLOSING:
+                // Ok, a 'close' event should remove the client from the set
+                // soon.
+                break
+              case WebSocket.CLOSED:
+                // This should never happen.
+                log.warn('Unable to send to CLOSED client "%s"', id)
+                clearInterval(pingTimer)
+                broadcastSet.remove(id)
+                break
+              }
+            })
+          }
+
+          function wsStartNotifier() {
+            return send(util.format(
+              'start %s'
+            , JSON.stringify(frameProducer.banner)
+            ))
+          }
+
+          function wsPingNotifier() {
+            return send('ping')
+          }
+
+          function wsFrameNotifier(frame: Buffer) {
+            return send(frame, {
+              binary: true
+            })
+          }
+
+          // Sending a ping message every now and then makes sure that
+          // reverse proxies like nginx don't time out the connection [1].
+          //
+          // [1] http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_read_timeout
+          pingTimer = setInterval(wsPingNotifier, options.screenPingInterval)
+
+          ws.on('message', function(data) {
+            var match = /^(on|off|(size) ([0-9]+)x([0-9]+))$/.exec(data as unknown as string)
+            if (match) {
+              switch (match[2] || match[1]) {
+              case 'on':
+                broadcastSet.insert(id, {
+                  onStart: wsStartNotifier
+                , onFrame: wsFrameNotifier
+                })
+                break
+              case 'off':
+                broadcastSet.remove(id)
+                // Keep pinging even when the screen is off.
+                break
+              case 'size':
+                frameProducer.updateProjection(
+                  Number(match[3]), Number(match[4]))
+                break
+              }
+            }
+          })
+
+          ws.on('close', function() {
+            clearInterval(pingTimer)
+            broadcastSet.remove(id)
+          })
+        })
+
+        lifecycle.observe(function() {
+          wss.close()
+        })
+
+        lifecycle.observe(function() {
+          frameProducer.stop()
+        })
+
+        return frameProducer
+      })
+  })

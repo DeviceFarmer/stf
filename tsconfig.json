@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "types": ["node", "mocha"]
+  },
+  "include": [
+    "*.ts",
+    "*.mts",
+    ".github/scripts/**/*.mts",
+    "res/common/**/*.ts",
+    "res/common/**/*.mts",
+    "test/**/*.mts",
+    "lib/**/*.ts"
+  ],
+  "exclude": ["test/playwright", "node_modules"]
+}

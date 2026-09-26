@@ -72,7 +72,7 @@ export function AdvancedInputCard({control}: Pick<PaneProps, 'control'>) {
                   <ActionIcon
                     variant='default'
                     size='lg'
-                    c={color ? `${color}.6` : undefined}
+                    {...(color ? {c: `${color}.6`} : {})}
                     onClick={() => control.keyPress(key)}
                     aria-label={t(label)}
                     data-key={key}

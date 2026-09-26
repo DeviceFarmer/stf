@@ -14,3 +14,6 @@
 package-lock.json
 yarn.lock
 /test-results/
+/lib/**/*.js
+/lib/types/wire.d.ts
+/lib/types/stfservice-wire.d.ts

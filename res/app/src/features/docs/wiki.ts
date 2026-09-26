@@ -28,7 +28,7 @@ export function appRouteOf(href: string): string | null {
   }
   const routed = hashRoute.exec(url.hash)
   if (routed && url.pathname === '/') {
-    return routed[1]
+    return routed[1]!
   }
   if (url.pathname.startsWith(wikiPrefix)) {
     const file = decodeURIComponent(url.pathname.slice(wikiPrefix.length)).replace(/^\[[\w-]+\]-/, '')

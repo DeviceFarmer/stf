@@ -1,0 +1,647 @@
+/**
+* Copyright © 2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
+**/
+
+import util from 'util'
+
+import adbutil from './adbutil.js'
+import Promise from 'bluebird'
+import type {Readable} from 'stream'
+
+var adb = adbutil()
+
+interface KeyModifier {
+  type: string
+}
+
+interface LiteralBehavior {
+  type: 'literal'
+  value: string | number
+}
+
+interface NumericLiteralBehavior {
+  type: 'literal'
+  value: number
+}
+
+interface FallbackBehavior {
+  type: 'fallback'
+  key: string
+}
+
+interface NoneBehavior {
+  type: 'none'
+}
+
+type KeyBehavior = LiteralBehavior | FallbackBehavior | NoneBehavior
+
+interface KeyRule {
+  modifiers: KeyModifier[]
+  behaviors: KeyBehavior[]
+}
+
+interface KeyEntry {
+  key: string
+  rules: KeyRule[]
+}
+
+interface KeyMap {
+  type: string | null
+  keys: KeyEntry[]
+}
+
+interface KeyCombination {
+  key: number
+  modifiers: number[]
+  complexity: number
+}
+
+type CharMap = {[char: string]: KeyCombination[]}
+
+interface KeyUtil {
+  parseKeyCharacterMap(stream: Readable): Promise<KeyMap>
+  namedKey(name: string): number
+  buildCharMap(keymap: KeyMap): CharMap
+}
+
+var keyutil: KeyUtil = Object.create(null)
+
+keyutil.parseKeyCharacterMap = function(stream: Readable) {
+  var resolve_: (value: KeyMap) => void
+    , reject_: (reason: unknown) => void
+    , lastKey: KeyEntry
+    , lastRule: KeyRule
+    , lastModifier: KeyModifier
+    , lastBehavior: LiteralBehavior | FallbackBehavior
+  var promise = new Promise<KeyMap>(function(resolve, reject) {
+    resolve_ = resolve
+    reject_ = reject
+  })
+  var state = 'type_t'
+  var keymap = {
+        type: null as string | null
+      , keys: [] as KeyEntry[]
+      }
+
+  function fail(char: string, state: string): never {
+    throw new Error(util.format(
+      'Unexpected character "%s" in state "%s"'
+    , char
+    , state
+    ))
+  }
+
+  function parse(char: string) {
+    switch (state) {
+      case 'comment_before_type_t':
+        if (char === '\n') {
+          state = 'type_t'
+          break
+        }
+        return true
+      case 'type_t':
+        if (char === '\n') {
+          return true
+        }
+        if (char === '#') {
+          state = 'comment_before_type_t'
+          return true
+        }
+        if (char === 'k') {
+          state = 'key_k'
+          return parse(char)
+        }
+        if (char === 't') {
+          state = 'type_y'
+          return true
+        }
+        return fail(char, state)
+      case 'type_y':
+        if (char === 'y') {
+          state = 'type_p'
+          return true
+        }
+        return fail(char, state)
+      case 'type_p':
+        if (char === 'p') {
+          state = 'type_e'
+          return true
+        }
+        return fail(char, state)
+      case 'type_e':
+        if (char === 'e') {
+          state = 'type_name_start'
+          keymap.type = ''
+          return true
+        }
+        return fail(char, state)
+      case 'type_name_start':
+        if (char === ' ') {
+          return true
+        }
+        if (char >= 'A' && char <= 'Z') {
+          keymap.type += char
+          state = 'type_name_continued'
+          return true
+        }
+        return fail(char, state)
+      case 'type_name_continued':
+        if (char === '\n') {
+          // Could have more of these, although it doesn't make much sense
+          state = 'type_t'
+          return true
+        }
+        if (char >= 'A' && char <= 'Z') {
+          keymap.type += char
+          return true
+        }
+        return fail(char, state)
+      case 'comment_before_key_k':
+        if (char === '\n') {
+          state = 'key_k'
+          break
+        }
+        return true
+      case 'key_k':
+        if (char === '\n') {
+          return true
+        }
+        if (char === '#') {
+          state = 'comment_before_key_k'
+          return true
+        }
+        if (char === 'k') {
+          state = 'key_e'
+          return true
+        }
+        return fail(char, state)
+      case 'key_e':
+        if (char === 'e') {
+          state = 'key_y'
+          return true
+        }
+        return fail(char, state)
+      case 'key_y':
+        if (char === 'y') {
+          state = 'key_name_start'
+          return true
+        }
+        return fail(char, state)
+      case 'key_name_start':
+        if (char === ' ') {
+          return true
+        }
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'A' && char <= 'Z')) {
+          keymap.keys.push(lastKey = {
+            key: char
+          , rules: []
+          })
+          state = 'key_name_continued'
+          return true
+        }
+        return fail(char, state)
+      case 'key_name_continued':
+        if (char === ' ') {
+          state = 'key_start_block'
+          return true
+        }
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'A' && char <= 'Z') ||
+            (char === '_')) {
+          lastKey.key += char
+          return true
+        }
+        return fail(char, state)
+      case 'key_start_block':
+        if (char === ' ') {
+          return true
+        }
+        if (char === '{') {
+          state = 'filter_name_start'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_name_start':
+        if (char === '\n' || char === '\t' || char === ' ') {
+          return true
+        }
+        if (char === '}') {
+          state = 'key_k'
+          return true
+        }
+        if (char >= 'a' && char <= 'z') {
+          lastKey.rules.push(lastRule = {
+            modifiers: [lastModifier = {
+              type: char
+            }]
+          , behaviors: []
+          })
+          state = 'filter_name_continued'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_name_continued':
+        if (char === ':') {
+          state = 'filter_behavior_start'
+          return true
+        }
+        if (char === ',') {
+          state = 'filter_name_or_start'
+          return true
+        }
+        if (char === '+') {
+          state = 'filter_name_and_start'
+          return true
+        }
+        if (char >= 'a' && char <= 'z') {
+          lastModifier.type += char
+          return true
+        }
+        return fail(char, state)
+      case 'filter_name_or_start':
+        if (char === ' ') {
+          return true
+        }
+        if (char >= 'a' && char <= 'z') {
+          lastKey.rules.push(lastRule = {
+            modifiers: [lastModifier = {
+              type: char
+            }]
+          , behaviors: lastRule.behaviors
+          })
+          state = 'filter_name_continued'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_name_and_start':
+        if (char === ' ') {
+          return true
+        }
+        if (char >= 'a' && char <= 'z') {
+          lastRule.modifiers.push(lastModifier = {
+            type: char
+          })
+          state = 'filter_name_continued'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_literal':
+        if (char === '\\') {
+          state = 'filter_behavior_literal_escape'
+          return true
+        }
+        if (char !== "'") {
+          lastRule.behaviors.push({
+            type: 'literal'
+          , value: char
+          })
+          state = 'filter_behavior_literal_end'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_literal_escape':
+        if (char === '\\' || char === '\'' || char === '"') {
+          lastRule.behaviors.push({
+            type: 'literal'
+          , value: char
+          })
+          state = 'filter_behavior_literal_end'
+          return true
+        }
+        if (char === 'n') {
+          lastRule.behaviors.push({
+            type: 'literal'
+          , value: '\n'
+          })
+          state = 'filter_behavior_literal_end'
+          return true
+        }
+        if (char === 't') {
+          lastRule.behaviors.push({
+            type: 'literal'
+          , value: '\t'
+          })
+          state = 'filter_behavior_literal_end'
+          return true
+        }
+        if (char === 'u') {
+          state = 'filter_behavior_literal_unicode_1'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_literal_end':
+        if (char === '\'') {
+          state = 'filter_behavior_start'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_start':
+        if (char === '\n') {
+          state = 'filter_name_start'
+          return true
+        }
+        if (char === ' ') {
+          return true
+        }
+        if (char === "'") {
+          state = 'filter_behavior_literal'
+          return true
+        }
+        if (char === 'n') {
+          state = 'filter_behavior_none_2'
+          return true
+        }
+        if (char === 'f') {
+          state = 'filter_behavior_fallback_2'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_2':
+        if (char === 'a') {
+          state = 'filter_behavior_fallback_3'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_3':
+        if (char === 'l') {
+          state = 'filter_behavior_fallback_4'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_4':
+        if (char === 'l') {
+          state = 'filter_behavior_fallback_5'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_5':
+        if (char === 'b') {
+          state = 'filter_behavior_fallback_6'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_6':
+        if (char === 'a') {
+          state = 'filter_behavior_fallback_7'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_7':
+        if (char === 'c') {
+          state = 'filter_behavior_fallback_8'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_8':
+        if (char === 'k') {
+          state = 'filter_behavior_fallback_key_start'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_key_start':
+        if (char === ' ') {
+          return true
+        }
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'A' && char <= 'Z')) {
+          lastRule.behaviors.push(lastBehavior = {
+            type: 'fallback'
+          , key: char
+          })
+          state = 'filter_behavior_fallback_key_continued'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_fallback_key_continued':
+        if (char === ' ') {
+          state = 'filter_behavior_start'
+          return true
+        }
+        if (char === '\n') {
+          state = 'filter_name_start'
+          return true
+        }
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'A' && char <= 'Z') ||
+            (char === '_')) {
+          (lastBehavior as FallbackBehavior).key += char
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_none_2':
+        if (char === 'o') {
+          state = 'filter_behavior_none_3'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_none_3':
+        if (char === 'n') {
+          state = 'filter_behavior_none_4'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_none_4':
+        if (char === 'e') {
+          lastRule.behaviors.push({
+            type: 'none'
+          })
+          state = 'filter_behavior_start'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_literal_unicode_1':
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'a' && char <= 'f')) {
+          lastRule.behaviors.push(lastBehavior = {
+            type: 'literal'
+          , value: parseInt(char, 16) << 12
+          })
+          state = 'filter_behavior_literal_unicode_2'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_literal_unicode_2':
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'a' && char <= 'f')) {
+          (lastBehavior as NumericLiteralBehavior).value += parseInt(char, 16) << 8
+          state = 'filter_behavior_literal_unicode_3'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_literal_unicode_3':
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'a' && char <= 'f')) {
+          (lastBehavior as NumericLiteralBehavior).value += parseInt(char, 16) << 4
+          state = 'filter_behavior_literal_unicode_4'
+          return true
+        }
+        return fail(char, state)
+      case 'filter_behavior_literal_unicode_4':
+        if ((char >= '0' && char <= '9') ||
+            (char >= 'a' && char <= 'f')) {
+          (lastBehavior as NumericLiteralBehavior).value += parseInt(char, 16)
+          ;(lastBehavior as LiteralBehavior).value = String.fromCharCode((lastBehavior as
+            NumericLiteralBehavior).value)
+          state = 'filter_behavior_literal_end'
+          return true
+        }
+        return fail(char, state)
+      default:
+        throw new Error(util.format('Unexpected state "%s"', state))
+    }
+    return true
+  }
+
+  function errorListener(err: Error) {
+    reject_(err)
+  }
+
+  function readableListener() {
+    var chunk = stream.read()
+    if (!chunk) {
+      // Node emits a final "readable" with nothing left to read before "end".
+      return
+    }
+    var i = 0
+    var l = chunk.length
+
+    try {
+      while (i < l) {
+        parse(String.fromCharCode(chunk[i++]))
+      }
+    }
+    catch (err) {
+      reject_(err)
+    }
+  }
+
+  function endListener() {
+    resolve_(keymap)
+  }
+
+  stream.on('error', errorListener)
+  stream.on('readable', readableListener)
+  stream.on('end', endListener)
+
+  return promise.finally(function() {
+    stream.removeListener('error', errorListener)
+    stream.removeListener('readable', readableListener)
+    stream.removeListener('end', endListener)
+  })
+}
+
+keyutil.namedKey = function(name: string) {
+  var key = adb.Keycode[('KEYCODE_' + name.toUpperCase()) as keyof typeof adb.Keycode]
+  if (typeof key === 'undefined') {
+    throw new Error(util.format('Unknown key "%s"', name))
+  }
+  return key
+}
+
+keyutil.buildCharMap = function(keymap: KeyMap) {
+  var charmap: CharMap = Object.create(null)
+
+  keymap.keys.forEach(function(key) {
+    key.rules.forEach(function(rule) {
+      var combination = {
+        key: keyutil.namedKey(key.key)
+      , modifiers: [] as number[]
+      , complexity: 0
+      }
+
+      var shouldHandle = rule.modifiers.every(function(modifier) {
+        switch (modifier.type) {
+          case 'label':
+            return false // ignore
+          case 'base':
+            return true
+          case 'shift':
+          case 'lshift':
+            combination.modifiers.push(adb.Keycode.KEYCODE_SHIFT_LEFT)
+            combination.complexity += 10
+            return true
+          case 'rshift':
+            combination.modifiers.push(adb.Keycode.KEYCODE_SHIFT_RIGHT)
+            combination.complexity += 10
+            return true
+          case 'alt':
+          case 'lalt':
+            combination.modifiers.push(adb.Keycode.KEYCODE_ALT_LEFT)
+            combination.complexity += 20
+            return true
+          case 'ralt':
+            combination.modifiers.push(adb.Keycode.KEYCODE_ALT_RIGHT)
+            combination.complexity += 20
+            return true
+          case 'ctrl':
+          case 'lctrl':
+            combination.modifiers.push(adb.Keycode.KEYCODE_CTRL_LEFT)
+            combination.complexity += 20
+            return true
+          case 'rctrl':
+            combination.modifiers.push(adb.Keycode.KEYCODE_CTRL_RIGHT)
+            combination.complexity += 20
+            return true
+          case 'meta':
+          case 'lmeta':
+            combination.modifiers.push(adb.Keycode.KEYCODE_META_LEFT)
+            combination.complexity += 20
+            return true
+          case 'rmeta':
+            combination.modifiers.push(adb.Keycode.KEYCODE_META_RIGHT)
+            combination.complexity += 20
+            return true
+          case 'sym':
+            combination.modifiers.push(adb.Keycode.KEYCODE_SYM)
+            combination.complexity += 10
+            return true
+          case 'fn':
+            combination.modifiers.push(adb.Keycode.KEYCODE_FUNCTION)
+            combination.complexity += 30
+            return true
+          case 'capslock':
+            combination.modifiers.push(adb.Keycode.KEYCODE_CAPS_LOCK)
+            combination.complexity += 30
+            return true
+          case 'numlock':
+            combination.modifiers.push(adb.Keycode.KEYCODE_NUM_LOCK)
+            combination.complexity += 30
+            return true
+          case 'scrolllock':
+            combination.modifiers.push(adb.Keycode.KEYCODE_SCROLL_LOCK)
+            combination.complexity += 30
+            return true
+        }
+        return false
+      })
+
+      if (!shouldHandle) {
+        return
+      }
+
+      rule.behaviors.forEach(function(behavior) {
+        switch (behavior.type) {
+          case 'literal':
+            if (!charmap[behavior.value]) {
+              charmap[behavior.value] = [combination]
+            }
+            else {
+              charmap[behavior.value]!.push(combination)
+
+              // Could be more efficient, but we only have 1-4 combinations
+              // per key, so we don't really care.
+              charmap[behavior.value]!.sort(function(a, b) {
+                return a.complexity - b.complexity
+              })
+            }
+            break
+        }
+      })
+    })
+  })
+
+  return charmap
+}
+
+export default keyutil

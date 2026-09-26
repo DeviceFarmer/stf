@@ -18,7 +18,7 @@ const priorityColors: Record<string, string> = {
   , Fatal: 'red'
 }
 
-function cellClass(...names: string[]): string {
+function cellClass(...names: Array<string | undefined>): string {
   return [classes.cell, ...names].join(' ')
 }
 
@@ -54,7 +54,7 @@ function findEntryIndex(entries: LogEntry[], id: number): number {
   let high = entries.length
   while (low < high) {
     const middle = (low + high) >> 1
-    if (entries[middle].id < id) {
+    if (entries[middle]!.id < id) {
       low = middle + 1
     }
     else {

@@ -167,7 +167,7 @@ export function ObjectsTable<T>({
                     key={key}
                     className='selectable'
                     data-key={key}
-                    bg={isSelectable && selected.has(key) ? 'var(--mantine-primary-color-light)' : undefined}
+                    {...(isSelectable && selected.has(key) ? {bg: 'var(--mantine-primary-color-light)'} : {})}
                   >
                     {withSelection && (
                       <Table.Td className={classes.checkCell}>
