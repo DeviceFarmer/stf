@@ -1,11 +1,12 @@
+# Translators:
+# Karol Wrótniak, 2026
+# 
 msgid ""
 msgstr ""
-"Project-Id-Version: STF\n"
+"Last-Translator: Karol Wrótniak, 2026\n"
 "Language-Team: French (https://app.transifex.com/devicefarmer/teams/110261/fr/)\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: fr\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
 
 #: res/app/src/features/settings/groups/rules.ts:101
@@ -35,12 +36,19 @@ msgid "A package is already installed with the same name."
 msgstr "Un paquet est déjà installé avec le même nom"
 
 #: res/app/src/core/install.ts:166
-msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr "Un paquet précédemment installé du même nom a une signature différente de celle du nouveau paquet (et les données de l'ancien paquet n'ont pas été supprimées)."
+msgid ""
+"A previously installed package of the same name has a different signature "
+"than the new package (and the old package's data was not removed)."
+msgstr ""
+"Un paquet précédemment installé du même nom a une signature différente de "
+"celle du nouveau paquet (et les données de l'ancien paquet n'ont pas été "
+"supprimées)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
-msgstr "Impossible d'accéder au point de montage d'un conteneur sécurisé sur un support externe."
+msgstr ""
+"Impossible d'accéder au point de montage d'un conteneur sécurisé sur un "
+"support externe."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:278
 #: res/app/src/features/device-list/columns.tsx:302
@@ -172,8 +180,11 @@ msgid "Apps"
 msgstr "Applications"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
-msgid "Are you sure you want to reboot this device and keep using it afterwards?"
-msgstr "Êtes-vous sûr de vouloir redémarrer ce terminal et continuer à l'utiliser ensuite?"
+msgid ""
+"Are you sure you want to reboot this device and keep using it afterwards?"
+msgstr ""
+"Êtes-vous sûr de vouloir redémarrer ce terminal et continuer à l'utiliser "
+"ensuite?"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
@@ -281,8 +292,7 @@ msgstr "Caméra"
 #: res/app/src/features/settings/groups/GroupDetail.tsx:107
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:69
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:123
-#: res/app/src/ui/modals.tsx:192
-#: res/app/src/ui/modals.tsx:57
+#: res/app/src/ui/modals.tsx:192 res/app/src/ui/modals.tsx:57
 #: res/app/src/ui/modals.tsx:89
 msgid "Cancel"
 msgstr "Annuler"
@@ -366,8 +376,7 @@ msgstr "Contacter les Propriétaires"
 
 #: res/app/src/features/auth/SignInForm.tsx:165
 #: res/app/src/features/auth/SignInForm.tsx:168
-#: res/app/src/ui/AppLayout.tsx:276
-#: res/app/src/ui/AppLayout.tsx:283
+#: res/app/src/ui/AppLayout.tsx:276 res/app/src/ui/AppLayout.tsx:283
 msgid "Contact Support"
 msgstr "Contacter le Support"
 
@@ -389,8 +398,7 @@ msgstr "Contrôlé"
 msgid "Copied"
 msgstr "Copié"
 
-#: res/app/src/ui/CopyButton.tsx:30
-#: res/app/src/ui/CopyButton.tsx:38
+#: res/app/src/ui/CopyButton.tsx:30 res/app/src/ui/CopyButton.tsx:38
 msgid "Copy to clipboard"
 msgstr "Copier dans le presse-papier"
 
@@ -424,8 +432,7 @@ msgstr "Critique"
 msgid "Current rotation:"
 msgstr "Rotation actuelle"
 
-#: res/app/src/ui/ColumnChoice.tsx:47
-#: res/app/src/ui/ColumnChoice.tsx:48
+#: res/app/src/ui/ColumnChoice.tsx:47 res/app/src/ui/ColumnChoice.tsx:48
 #: res/app/src/ui/ColumnChoice.tsx:54
 msgid "Customize"
 msgstr "Personnaliser"
@@ -579,8 +586,7 @@ msgid "Discharging"
 msgstr "En Décharge"
 
 #: res/app/src/core/devices/enhance.ts:19
-#: res/app/src/core/devices/enhance.ts:6
-#: res/app/src/ui/modals.tsx:127
+#: res/app/src/core/devices/enhance.ts:6 res/app/src/ui/modals.tsx:127
 msgid "Disconnected"
 msgstr "Déconnecté"
 
@@ -651,8 +657,7 @@ msgstr "Crypté"
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:64
-#: res/app/src/ui/AppLayout.tsx:110
-#: res/app/src/ui/AppLayout.tsx:111
+#: res/app/src/ui/AppLayout.tsx:110 res/app/src/ui/AppLayout.tsx:111
 msgid "Error"
 msgstr "Erreur"
 
@@ -865,8 +870,7 @@ msgid "Height"
 msgstr "Hauteur"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
-#: res/app/src/features/docs/DocsPage.tsx:28
-#: res/app/src/ui/AppLayout.tsx:289
+#: res/app/src/features/docs/DocsPage.tsx:28 res/app/src/ui/AppLayout.tsx:289
 #: res/app/src/ui/AppLayout.tsx:295
 msgid "Help"
 msgstr "Aide"
@@ -1027,8 +1031,7 @@ msgstr "Se connecter"
 msgid "Logcat Level"
 msgstr "Niveau Logcat"
 
-#: res/app/src/ui/AppLayout.tsx:313
-#: res/app/src/ui/AppLayout.tsx:319
+#: res/app/src/ui/AppLayout.tsx:313 res/app/src/ui/AppLayout.tsx:319
 msgid "Logout"
 msgstr "Déconnexion"
 
@@ -1041,8 +1044,11 @@ msgid "Maintenance"
 msgstr "Maintenance"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:90
-msgid "Make sure to copy your access token now. You won't be able to see it again."
-msgstr "Assurez-vous de copier votre jeton d'accès maintenant. Vous ne serez pas en mesure de le voir à nouveau."
+msgid ""
+"Make sure to copy your access token now. You won't be able to see it again."
+msgstr ""
+"Assurez-vous de copier votre jeton d'accès maintenant. Vous ne serez pas en "
+"mesure de le voir à nouveau."
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:52
 msgid "Manage Apps"
@@ -1276,8 +1282,7 @@ msgid "Offline"
 msgstr "Hors Ligne"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:111
-#: res/app/src/ui/modals.tsx:67
-#: res/app/src/ui/modals.tsx:88
+#: res/app/src/ui/modals.tsx:67 res/app/src/ui/modals.tsx:88
 msgid "OK"
 msgstr "OK"
 
@@ -1631,12 +1636,18 @@ msgid "Run"
 msgstr "Exécuter"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
-msgid "Run the following on your command line to debug the device from your Browser"
-msgstr "Exécutez la commande suivante sur la ligne de commande pour déboguer le terminal depuis votre navigateur"
+msgid ""
+"Run the following on your command line to debug the device from your Browser"
+msgstr ""
+"Exécutez la commande suivante sur la ligne de commande pour déboguer le "
+"terminal depuis votre navigateur"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
-msgid "Run the following on your command line to debug the device from your IDE"
-msgstr "Exécutez la commande suivante sur la ligne de commande pour déboguer le terminal depuis votre IDE"
+msgid ""
+"Run the following on your command line to debug the device from your IDE"
+msgstr ""
+"Exécutez la commande suivante sur la ligne de commande pour déboguer le "
+"terminal depuis votre IDE"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Run this command to copy the key to your clipboard"
@@ -1890,7 +1901,9 @@ msgstr "Texte"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:163
 msgid "The current view is marked secure and cannot be viewed remotely."
-msgstr "La vue actuelle est marquée comme sécurisée et ne peut pas être consultée à distance."
+msgstr ""
+"La vue actuelle est marquée comme sécurisée et ne peut pas être consultée à "
+"distance."
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
@@ -1901,64 +1914,111 @@ msgid "The existing package could not be deleted."
 msgstr "Le package existant ne peut pas être supprimé."
 
 #: res/app/src/core/install.ts:180
-msgid "The new package couldn't be installed because the verification did not succeed."
-msgstr "Le nouveau paquet n'a pas pu être installé car la vérification n'a pas réussi."
+msgid ""
+"The new package couldn't be installed because the verification did not "
+"succeed."
+msgstr ""
+"Le nouveau paquet n'a pas pu être installé car la vérification n'a pas "
+"réussi."
 
 #: res/app/src/core/install.ts:179
-msgid "The new package couldn't be installed because the verification timed out."
-msgstr "Le nouveau paquet n'a pas pu être installé car la vérification a expiré."
+msgid ""
+"The new package couldn't be installed because the verification timed out."
+msgstr ""
+"Le nouveau paquet n'a pas pu être installé car la vérification a expiré."
 
 #: res/app/src/core/install.ts:178
-msgid "The new package couldn't be installed in the specified install location because the media is not available."
-msgstr "Le nouveau paquet n'a pas pu être installé à l'emplacement spécifié pour l'installation parce que les médias ne sont pas disponibles."
+msgid ""
+"The new package couldn't be installed in the specified install location "
+"because the media is not available."
+msgstr ""
+"Le nouveau paquet n'a pas pu être installé à l'emplacement spécifié pour "
+"l'installation parce que les médias ne sont pas disponibles."
 
 #: res/app/src/core/install.ts:177
-msgid "The new package couldn't be installed in the specified install location."
-msgstr "Le nouveau paquet n'a pas pu être installé à l'emplacement spécifié pour installation."
+msgid ""
+"The new package couldn't be installed in the specified install location."
+msgstr ""
+"Le nouveau paquet n'a pas pu être installé à l'emplacement spécifié pour "
+"installation."
 
 #: res/app/src/core/install.ts:171
-msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "Le nouveau paquet a échoué car il contient un fournisseur de contenu ayant la même autorité qu'un fournisseur déjà installé dans le système."
+msgid ""
+"The new package failed because it contains a content provider with thesame "
+"authority as a provider already installed in the system."
+msgstr ""
+"Le nouveau paquet a échoué car il contient un fournisseur de contenu ayant "
+"la même autorité qu'un fournisseur déjà installé dans le système."
 
 #: res/app/src/core/install.ts:173
-msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr "Le nouveau paquet a échoué car il a précisé qu'il est un paquet de test uniquement et l'appelant n'a pas fourni le drapeau INSTALL_ALLOW_TEST."
+msgid ""
+"The new package failed because it has specified that it is a test-only "
+"package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
+msgstr ""
+"Le nouveau paquet a échoué car il a précisé qu'il est un paquet de test "
+"uniquement et l'appelant n'a pas fourni le drapeau INSTALL_ALLOW_TEST."
 
 #: res/app/src/core/install.ts:172
-msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr "Le nouveau paquet a échoué parce que la version actuelle du SDK est plus récente que celle requise par le paquet."
+msgid ""
+"The new package failed because the current SDK version is newer than that "
+"required by the package."
+msgstr ""
+"Le nouveau paquet a échoué parce que la version actuelle du SDK est plus "
+"récente que celle requise par le paquet."
 
 #: res/app/src/core/install.ts:170
-msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr "Le nouveau paquet a échoué parce que la version actuelle du SDK est plus ancienne que celle requise par le paquet."
+msgid ""
+"The new package failed because the current SDK version is older than that "
+"required by the package."
+msgstr ""
+"Le nouveau paquet a échoué parce que la version actuelle du SDK est plus "
+"ancienne que celle requise par le paquet."
 
 #: res/app/src/core/install.ts:169
-msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
-msgstr "Le nouveau paquet a échoué lors de l'optimisation et l'évaluation de ses fichiers dex, soit parce qu'il n'y avait pas assez de stockage ou la validation a échoué."
+msgid ""
+"The new package failed while optimizing and validating its dex files, either"
+" because there was not enough storage or the validation failed."
+msgstr ""
+"Le nouveau paquet a échoué lors de l'optimisation et l'évaluation de ses "
+"fichiers dex, soit parce qu'il n'y avait pas assez de stockage ou la "
+"validation a échoué."
 
 #: res/app/src/core/install.ts:183
-msgid "The new package has an older version code than the currently installed package."
-msgstr "Le nouveau paquet a un code de version plus ancien que le paquet actuellement installé."
+msgid ""
+"The new package has an older version code than the currently installed "
+"package."
+msgstr ""
+"Le nouveau paquet a un code de version plus ancien que le paquet "
+"actuellement installé."
 
 #: res/app/src/core/install.ts:182
 msgid "The new package is assigned a different UID than it previously held."
-msgstr "Le nouveau paquet se voit attribuer un UID différent de celui qu'il détenait auparavant."
+msgstr ""
+"Le nouveau paquet se voit attribuer un UID différent de celui qu'il détenait"
+" auparavant."
 
 #: res/app/src/core/install.ts:175
 msgid "The new package uses a feature that is not available."
-msgstr "Le nouveau paquet utilise une fonctionnalité qui n'est pas disponible."
+msgstr ""
+"Le nouveau paquet utilise une fonctionnalité qui n'est pas disponible."
 
 #: res/app/src/core/install.ts:167
 msgid "The new package uses a shared library that is not available."
-msgstr "Le nouveau paquet utilise une bibliothèque partagée qui n'est pas disponible."
+msgstr ""
+"Le nouveau paquet utilise une bibliothèque partagée qui n'est pas "
+"disponible."
 
 #: res/app/src/core/install.ts:161
 msgid "The package archive file is invalid."
 msgstr "Le fichier d'archive de paquet est invalide."
 
 #: res/app/src/core/install.ts:174
-msgid "The package being installed contains native code, but none that is compatible with the device's CPU_ABI."
-msgstr "Le package installé contient du code natif, mais aucun qui soit compatible avec le CPU_ABI du terminal."
+msgid ""
+"The package being installed contains native code, but none that is "
+"compatible with the device's CPU_ABI."
+msgstr ""
+"Le package installé contient du code natif, mais aucun qui soit compatible "
+"avec le CPU_ABI du terminal."
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."
@@ -1969,12 +2029,20 @@ msgid "The package is already installed."
 msgstr "Le paquet est déjà installé"
 
 #: res/app/src/core/install.ts:163
-msgid "The package manager service found that the device didn't have enough storage space to install the app."
-msgstr "Le service de gestionnaire de paquets a constaté que le terminal ne dispose pas de suffisamment d'espace de stockage pour installer l'application."
+msgid ""
+"The package manager service found that the device didn't have enough storage"
+" space to install the app."
+msgstr ""
+"Le service de gestionnaire de paquets a constaté que le terminal ne dispose "
+"pas de suffisamment d'espace de stockage pour installer l'application."
 
 #: res/app/src/core/install.ts:193
-msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
-msgstr "L'analyseur n'a trouvé aucune balise exploitable (instrumentation ou application) dans le manifest."
+msgid ""
+"The parser did not find any actionable tags (instrumentation or application)"
+" in the manifest."
+msgstr ""
+"L'analyseur n'a trouvé aucune balise exploitable (instrumentation ou "
+"application) dans le manifest."
 
 #: res/app/src/core/install.ts:187
 msgid "The parser did not find any certificates in the .apk."
@@ -1982,15 +2050,23 @@ msgstr "L'analyseur n'a pas trouvé de certificat dans le fichier .apk."
 
 #: res/app/src/core/install.ts:190
 msgid "The parser encountered a bad or missing package name in the manifest."
-msgstr "L'analyseur a rencontré un mauvais ou manquant nom du paquet dans le manifest."
+msgstr ""
+"L'analyseur a rencontré un mauvais ou manquant nom du paquet dans le "
+"manifest."
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr "L'analyseur a rencontré un mauvais nom d'utilisateur partagé dans le manifest."
+msgstr ""
+"L'analyseur a rencontré un mauvais nom d'utilisateur partagé dans le "
+"manifest."
 
 #: res/app/src/core/install.ts:189
-msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr "L'analyseur a rencontré une CertificateEncodingException dans l'un des fichiers de l'apk."
+msgid ""
+"The parser encountered a CertificateEncodingException in one of the files in"
+" the .apk."
+msgstr ""
+"L'analyseur a rencontré une CertificateEncodingException dans l'un des "
+"fichiers de l'apk."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
@@ -2002,11 +2078,17 @@ msgstr "L'analyseur a rencontré un problème structurel dans le manifest."
 
 #: res/app/src/core/install.ts:188
 msgid "The parser found inconsistent certificates on the files in the .apk."
-msgstr "L'analyseur a trouvé des certificats contradictoires sur les fichiers de l'apk."
+msgstr ""
+"L'analyseur a trouvé des certificats contradictoires sur les fichiers de "
+"l'apk."
 
 #: res/app/src/core/install.ts:184
-msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
-msgstr "L'analyseur a reçu un chemin qui n'est pas un fichier, ou qui ne se termine pas par l'extension « .apk » attendue."
+msgid ""
+"The parser was given a path that is not a file, or does not end with the "
+"expected '.apk' extension."
+msgstr ""
+"L'analyseur a reçu un chemin qui n'est pas un fichier, ou qui ne se termine "
+"pas par l'extension « .apk » attendue."
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
@@ -2018,19 +2100,30 @@ msgstr "L'utilisateur partagé demandé n'existe pas."
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:56
 msgid "The schedule can only be changed while the group is pending"
-msgstr "La planification ne peut être modifiée que lorsque le groupe est en suspens"
+msgstr ""
+"La planification ne peut être modifiée que lorsque le groupe est en suspens"
 
 #: res/app/src/core/install.ts:196
-msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
-msgstr "Le système n'a pas réussi à installer le paquet parce que son code natif emballé ne correspond à aucune ABI supporté par le système."
+msgid ""
+"The system failed to install the package because its packaged native code "
+"did not match any of the ABIs supported by the system."
+msgstr ""
+"Le système n'a pas réussi à installer le paquet parce que son code natif "
+"emballé ne correspond à aucune ABI supporté par le système."
 
 #: res/app/src/core/install.ts:194
 msgid "The system failed to install the package because of system issues."
-msgstr "Le système n'a pas réussi à installer le paquet en raison de problèmes du système."
+msgstr ""
+"Le système n'a pas réussi à installer le paquet en raison de problèmes du "
+"système."
 
 #: res/app/src/core/install.ts:195
-msgid "The system failed to install the package because the user is restricted from installing apps."
-msgstr "Le système n'a pas réussi à installer le paquet parce que l'utilisateur n'est pas autorisé à installer des applications."
+msgid ""
+"The system failed to install the package because the user is restricted from"
+" installing apps."
+msgstr ""
+"Le système n'a pas réussi à installer le paquet parce que l'utilisateur "
+"n'est pas autorisé à installer des applications."
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."
