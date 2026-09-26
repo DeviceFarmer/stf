@@ -35,7 +35,7 @@ const entries = [
 
 describe('enhanceEntry', () => {
   it('labels the date and priority like LogcatService', () => {
-    const entry = entries[1]
+    const entry = entries[1]!
     expect(entry.dateLabel).toBe('09:05:07.042')
     expect(entry.priorityLabel).toBe('Debug')
     expect(entry.deviceLabel).toBe('Android')
@@ -43,7 +43,7 @@ describe('enhanceEntry', () => {
 
   it('offers the Verbose to Fatal levels', () => {
     expect(levelNumbers.map((level) => level.name)).toEqual(['Verbose', 'Debug', 'Info', 'Warn', 'Error', 'Fatal'])
-    expect(levelNumbers[0].number).toBe(2)
+    expect(levelNumbers[0]!.number).toBe(2)
   })
 })
 
@@ -113,7 +113,7 @@ describe('formatLogs', () => {
     const output = formatLogs('serial-1', entries, 'log')
     const lines = output.split('\n').filter(Boolean)
     expect(lines).toHaveLength(4)
-    expect(lines[0].split('\t')).toEqual([String(entries[0].date), '1234', 'Zygote', 'Verbose', 'verbose line'])
+    expect(lines[0]!.split('\t')).toEqual([String(entries[0]!.date), '1234', 'Zygote', 'Verbose', 'verbose line'])
   })
 
   it('writes the device and entries for the json format', () => {
@@ -121,7 +121,7 @@ describe('formatLogs', () => {
     expect(output.deviceOS).toBe('Android')
     expect(output.serial).toBe('serial-1')
     expect(output.logs[3]).toEqual({
-      date: entries[3].date
+      date: entries[3]!.date
       , pid: 1234
       , tag: 'ActivityManager'
       , priorityLabel: 'Error'

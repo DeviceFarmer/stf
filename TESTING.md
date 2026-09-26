@@ -7,7 +7,7 @@ code as `*.test.ts(x)` and run with Vitest in jsdom, no browser needed:
 npm run test:component
 ```
 
-Type checking and linting of the UI are part of `npm run lint` (`gulp lint` runs
+Type checking and linting of the UI are part of `npm run lint` (`node build.mts lint` runs
 eslint and `tsc -p res/app/tsconfig.json`).
 
 ## E2E Frontend
@@ -19,8 +19,9 @@ The end-to-end suite is Playwright, in `test/playwright`. It drives a running
   ```
     rethinkdb
   ```
-- Run stf with mock auth
+- Compile `lib/` and run stf with mock auth
   ```
+    node build.mts compile
     ./bin/stf local --auth-type mock
   ```
   Wait till STF is fully functional and devices are discovered
@@ -28,11 +29,11 @@ The end-to-end suite is Playwright, in `test/playwright`. It drives a running
   ```
     cd test/playwright
     npm install && npx playwright install chromium
-    npx playwright test ui.spec.js
+    npx playwright test ui.spec.ts
     STF_DEVICE_SERIAL=emulator-5554 npx playwright test
   ```
 
-`ui.spec.js` needs no device. `device.spec.js` skips itself unless
+`ui.spec.ts` needs no device. `device.spec.ts` skips itself unless
 `STF_DEVICE_SERIAL` names a connected device.
 
 Results land in `test-results/playwright` (an HTML report under `html/`, traces

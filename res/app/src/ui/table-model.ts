@@ -2,7 +2,7 @@ export type ColumnSort = 'none' | 'sort-asc' | 'sort-desc'
 
 export interface TableColumnData {
   name: string
-  selected?: boolean
+  selected?: boolean | undefined
   sort: ColumnSort
 }
 
@@ -22,7 +22,7 @@ export function normalizeTableData(stored: unknown, defaults: TableData): TableD
   const data = stored as TableData | undefined
   const valid = Array.isArray(data?.columns) &&
     data.columns.length === defaults.columns.length &&
-    data.columns.every((column, index) => column?.name === defaults.columns[index].name) &&
+    data.columns.every((column, index) => column?.name === defaults.columns[index]!.name) &&
     typeof data.sort?.index === 'number' &&
     data.sort.index >= 0 &&
     data.sort.index < defaults.columns.length

@@ -88,7 +88,7 @@ jobs:
             }
             fs.writeFileSync(file, next)
           ' "$VERSION"
-          node .github/scripts/changelog.js CHANGELOG.md "$VERSION" notes.md
+          node .github/scripts/changelog.mts CHANGELOG.md "$VERSION" notes.md
           git diff --stat
 
       - name: Push the release branch

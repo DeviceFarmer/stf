@@ -1558,3 +1558,12 @@ msgstr "Да"
 #: app/components/stf/device/device-info-filter/index.js:35
 msgid "You (or someone else) kicked the device."
 msgstr "Вы (или кто-то еще) отключили устройство."
+
+msgid "File Name"
+msgstr "Имя файла"
+
+msgid "Sample of log format"
+msgstr "Образец формата журнал"
+
+msgid "Save Logs"
+msgstr "сохранить журнал"

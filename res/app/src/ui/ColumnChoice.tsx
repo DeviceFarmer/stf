@@ -37,7 +37,7 @@ export function ColumnChoice({items, onChange, onReset, reorderable, compact, po
     if (dragged !== null && dragged !== index) {
       const next = items.slice()
       const [moved] = next.splice(dragged, 1)
-      next.splice(index, 0, moved)
+      next.splice(index, 0, moved!)
       onChange(next)
     }
     endDrag()

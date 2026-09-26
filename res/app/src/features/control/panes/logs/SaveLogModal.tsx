@@ -23,7 +23,7 @@ function SaveLogForm({serial, entries, onDone}: {
 }) {
   const {t} = useTranslation()
   const [fileName, setFileName] = useState('')
-  const [extension, setExtension] = useState<LogExtension>(logExtensions[0])
+  const [extension, setExtension] = useState<LogExtension>(logExtensions[0]!)
   const sample = useMemo(
     () => formatLogs(serial, entries, extension, sampleLines)
     , [serial, entries, extension]

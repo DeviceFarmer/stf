@@ -3,7 +3,7 @@ import classes from './Page.module.css'
 
 export function Page({className, innerClassName, maxWidth, ref, children}: {
   className?: string
-  innerClassName?: string
+  innerClassName?: string | undefined
   maxWidth?: number
   ref?: Ref<HTMLDivElement>
   children: ReactNode

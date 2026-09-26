@@ -58,7 +58,7 @@ export default function GroupListPage() {
   })), [groups.data, dateFormat])
 
   const filtered = useMemo(() => {
-    const column = groupColumns[groupData.sort.index]
+    const column = groupColumns[groupData.sort.index]!
     const sorted = orderBy(
       rows
       , [(row: GroupRow) => sortKey(column.sortValue(row))]
@@ -150,7 +150,7 @@ export default function GroupListPage() {
               {paged.items.map((row) => (
                 <Table.Tr key={row.group.id}>
                   {visibleColumns.map(({column, index}) => (
-                    <Table.Td key={column.name}>{groupColumns[index].render(row)}</Table.Td>
+                    <Table.Td key={column.name}>{groupColumns[index]!.render(row)}</Table.Td>
                   ))}
                 </Table.Tr>
               ))}

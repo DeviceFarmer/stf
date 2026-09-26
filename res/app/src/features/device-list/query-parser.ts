@@ -1,6 +1,8 @@
+export type QueryOp = '<' | '<=' | '>' | '>='
+
 export interface QueryTerm {
   field: string | null
-  op: string | null
+  op: QueryOp | null
   query: string
 }
 

@@ -76,7 +76,7 @@ function isSameTime(date: Date, value?: string): boolean {
 export function validateSchedule(
   group: Group
 , draft: ScheduleDraft
-, context: {admin: boolean, owner?: SettingsUser}
+, context: {admin: boolean, owner?: SettingsUser | undefined}
 ): string {
   if (Number.isNaN(draft.start.getTime()) || Number.isNaN(draft.stop.getTime()) ||
       !Number.isFinite(draft.repetitions)) {

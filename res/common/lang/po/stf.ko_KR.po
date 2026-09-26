@@ -1553,3 +1553,12 @@ msgstr "네"
 #: app/components/stf/device/device-info-filter/index.js:35
 msgid "You (or someone else) kicked the device."
 msgstr "당신(혹은 다른 누군가)이 단말기를 사용 종료 하였습니다."
+
+msgid "File Name"
+msgstr "파일 이름"
+
+msgid "Sample of log format"
+msgstr "로그 형식의 샘플"
+
+msgid "Save Logs"
+msgstr "로그 샘플"

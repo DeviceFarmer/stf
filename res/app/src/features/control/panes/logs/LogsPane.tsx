@@ -87,7 +87,7 @@ const LogsToolbar = memo(function LogsToolbar({
         <Button
           size='xs'
           variant={started ? 'filled' : 'light'}
-          color={started ? 'red' : undefined}
+          {...(started ? {color: 'red'} : {})}
           aria-pressed={started}
           leftSection={started ? <span className={classes.live} /> : <IconPlayerPlayFilled size={14} />}
           onClick={toggleLogging}

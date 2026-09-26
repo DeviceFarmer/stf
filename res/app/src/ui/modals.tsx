@@ -27,7 +27,7 @@ export function ModalTitle({icon: Icon, color, title}: {
 }) {
   return (
     <Group gap='sm'>
-      <ThemeIcon variant='light' color={color} radius='xl'>
+      <ThemeIcon variant='light' {...(color === undefined ? {} : {color})} radius='xl'>
         <Icon size={18} />
       </ThemeIcon>
       <Text fw={600}>{title}</Text>
@@ -88,7 +88,7 @@ export function openConfirm(options: {
         confirm: options.confirmLabel || translate('OK')
         , cancel: translate('Cancel')
       }
-      , confirmProps: {color: options.danger ? 'red' : undefined, variant: 'filled'}
+      , confirmProps: {...(options.danger ? {color: 'red'} : {}), variant: 'filled'}
       , onConfirm: () => resolve(true)
       , onCancel: () => resolve(false)
       , onClose: () => resolve(false)
