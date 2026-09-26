@@ -1,274 +1,280 @@
 msgid ""
 msgstr ""
-"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: STF\n"
+"Language-Team: Korean (https://app.transifex.com/devicefarmer/teams/110261/ko/)\n"
+"Language: ko\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #: res/app/src/features/settings/groups/rules.ts:101
 msgid "(Expiration date - Starting date) must be <= Class duration"
-msgstr ""
+msgstr "(만료일 - 시작일)은 클래스 기간 이하여야 합니다"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:153
 #: res/app/src/features/settings/groups/shared/ObjectsTable.tsx:195
 #: res/app/src/features/settings/users/UsersSettings.tsx:231
 msgid "{{count}} selected"
-msgstr ""
+msgstr "{{count}}개 선택됨"
 
 #: res/app/src/features/group-list/GroupStats.tsx:102
 msgid "{{user.name}} groups duration use"
-msgstr ""
+msgstr "{{user.name}}의 그룹 기간 사용량"
 
 #: res/app/src/features/group-list/GroupStats.tsx:97
 msgid "{{user.name}} groups number use"
-msgstr ""
+msgstr "{{user.name}}의 그룹 수 사용량"
 
 #: res/app/src/ui/modals.tsx:155
 msgid "A new version of STF is available"
-msgstr ""
+msgstr "새 버전의 STF를 사용 가능 합니다"
 
 #: res/app/src/core/install.ts:164
 msgid "A package is already installed with the same name."
-msgstr ""
+msgstr "동일한 패키지가 설치되어 있습니다."
 
 #: res/app/src/core/install.ts:166
 msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr ""
+msgstr "이전에 설치된 패키지와 새로운 패키지의 서명이 다릅니다(또한 이전에 설치된 패키지 데이터가 삭제되지 않았습니다)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
-msgstr ""
+msgstr "외부 미디어의 보안 컨테이너 마운트 지점에 접근할 수 없습니다."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:278
 #: res/app/src/features/device-list/columns.tsx:302
 #: res/app/src/features/settings/groups/GroupDevices.tsx:27
 msgid "ABI"
-msgstr ""
+msgstr "ABI"
 
 #: res/app/src/core/devices/enhance.ts:49
 msgid "AC"
-msgstr ""
+msgstr "AC"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:144
 msgid "Access Tokens"
-msgstr ""
+msgstr "액세스 토큰"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:167
 msgid "Account"
-msgstr ""
+msgstr "계정"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:108
 msgid "Action"
-msgstr ""
+msgstr "동작"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:168
 msgid "Actions"
-msgstr ""
+msgstr "동작"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:74
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:82
 msgid "Activation"
-msgstr ""
+msgstr "활성화"
 
 #: res/app/src/features/group-list/columns.tsx:34
 #: res/app/src/features/settings/groups/rules.ts:155
 msgid "Active"
-msgstr ""
+msgstr "활성"
 
 #: res/app/src/features/group-list/GroupStats.tsx:39
 msgid "Active groups"
-msgstr ""
+msgstr "활성 그룹"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:107
 msgid "Activity"
-msgstr ""
+msgstr "액티비티"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:140
 msgid "ADB Keys"
-msgstr ""
+msgstr "ADB 키"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:182
 #: res/app/src/features/settings/groups/GroupDevices.tsx:209
 #: res/app/src/features/settings/groups/GroupUsers.tsx:139
 #: res/app/src/features/settings/groups/GroupUsers.tsx:160
 msgid "Add"
-msgstr ""
+msgstr "추가"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:155
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:160
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:82
 msgid "Add ADB Key"
-msgstr ""
+msgstr "ADB 키 추가"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:124
 #: res/app/src/ui/modals.tsx:201
 msgid "Add Key"
-msgstr ""
+msgstr "키 추가"
 
 #: res/app/src/ui/modals.tsx:176
 msgid "Add the following ADB Key to STF?"
-msgstr ""
+msgstr "다음 ADB 키를 STF에 추가 하시겠습니까?"
 
 #: res/app/src/ui/AppLayout.tsx:83
 msgid "Admin mode has been disabled."
-msgstr ""
+msgstr "관리자 모드가 비활성화 되었습니다."
 
 #: res/app/src/ui/AppLayout.tsx:82
 msgid "Admin mode has been enabled."
-msgstr ""
+msgstr "관리자 모드가 활성화 되었습니다."
 
 #: res/app/src/features/control/ControlPage.tsx:79
 msgid "Advanced"
-msgstr ""
+msgstr "고급"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:64
 msgid "Advanced Input"
-msgstr ""
+msgstr "고급 입력"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:235
 msgid "Airplane Mode"
-msgstr ""
+msgstr "비행기 모드"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:56
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:67
 msgid "Alert Message"
-msgstr ""
+msgstr "알림 메시지"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:75
 msgid "Alert message activation"
-msgstr ""
+msgstr "알림 메시지 활성화"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:88
 msgid "Alert message level"
-msgstr ""
+msgstr "알림 메시지 수준"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Annotated"
-msgstr ""
+msgstr "메모 있음"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:46
 msgid "Any"
-msgstr ""
+msgstr "전체"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:87
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:40
 msgid "App Store"
-msgstr ""
+msgstr "앱 스토어"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:88
 msgid "App switch"
-msgstr ""
+msgstr "앱 전환"
 
 #: res/app/src/features/control/device-control/install-file.ts:14
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:151
 msgid "App Upload"
-msgstr ""
+msgstr "앱 업로드"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:69
 msgid "Apps"
-msgstr ""
+msgstr "앱스"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
 msgid "Are you sure you want to reboot this device and keep using it afterwards?"
-msgstr ""
+msgstr "단말기를 재부팅한 후 계속 사용하시겠습니까?"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
-msgstr ""
+msgstr "단말기를 재부팅 하시겠습니까?"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:117
 msgid "Auto Scroll"
-msgstr ""
+msgstr "자동 스크롤"
 
 #: res/app/src/core/devices/enhance.ts:28
 msgid "Automating"
-msgstr ""
+msgstr "자동화"
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
-msgstr ""
+msgstr "자동화"
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
-msgstr ""
+msgstr "사용 가능"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:172
 msgid "Available device selection"
-msgstr ""
+msgstr "사용 가능한 단말기 선택"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:120
 msgid "Available devices"
-msgstr ""
+msgstr "사용 가능한 단말기"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:133
 msgid "Available user selection"
-msgstr ""
+msgstr "사용 가능한 사용자 선택"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:80
 msgid "Available users"
-msgstr ""
+msgstr "사용 가능한 사용자"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:82
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:28
 msgid "Back"
-msgstr ""
+msgstr "뒤로 가기"
 
 #: res/app/src/features/settings/groups/rules.ts:83
 #: res/app/src/features/settings/users/QuotasForm.tsx:20
 msgid "Bad syntax"
-msgstr ""
+msgstr "잘못된 구문"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:198
 msgid "Battery"
-msgstr ""
+msgstr "배터리"
 
 #: res/app/src/features/device-list/columns.tsx:309
 msgid "Battery Health"
-msgstr ""
+msgstr "배터리 상태"
 
 #: res/app/src/features/device-list/columns.tsx:316
 msgid "Battery Level"
-msgstr ""
+msgstr "배터리 수준"
 
 #: res/app/src/features/device-list/columns.tsx:311
 msgid "Battery Source"
-msgstr ""
+msgstr "배터리 종류"
 
 #: res/app/src/features/device-list/columns.tsx:313
 msgid "Battery Status"
-msgstr ""
+msgstr "배터리 충전 상태"
 
 #: res/app/src/features/device-list/columns.tsx:321
 msgid "Battery Temp"
-msgstr ""
+msgstr "배터리 온도"
 
 #: res/app/src/core/devices/enhance.ts:71
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:140
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:162
 msgid "Bluetooth"
-msgstr ""
+msgstr "블루투스"
 
 #: res/app/src/core/common.ts:29
 msgid "Bookable"
-msgstr ""
+msgstr "예약 가능"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:51
 msgid "Booked"
-msgstr ""
+msgstr "예약됨"
 
 #: res/app/src/features/device-list/columns.tsx:287
 msgid "Browser"
-msgstr ""
+msgstr "브라우저"
 
 #: res/app/src/core/devices/enhance.ts:13
 #: res/app/src/core/devices/enhance.ts:26
 msgid "Busy"
-msgstr ""
+msgstr "점유중"
 
 #: res/app/src/features/device-list/DeviceStats.tsx:41
 msgid "Busy Devices"
-msgstr ""
+msgstr "사용 중인 단말기"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:35
 msgid "Camera"
-msgstr ""
+msgstr "카메라"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:78
 #: res/app/src/features/device-list/cells.tsx:146
@@ -279,35 +285,35 @@ msgstr ""
 #: res/app/src/ui/modals.tsx:57
 #: res/app/src/ui/modals.tsx:89
 msgid "Cancel"
-msgstr ""
+msgstr "취소"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:248
 #: res/app/src/features/device-list/columns.tsx:273
 #: res/app/src/features/settings/groups/GroupDevices.tsx:17
 msgid "Carrier"
-msgstr ""
+msgstr "통신사"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:111
 msgid "Category"
-msgstr ""
+msgstr "범주"
 
 #: res/app/src/core/devices/enhance.ts:55
 msgid "Charging"
-msgstr ""
+msgstr "충전중"
 
 #: res/app/src/features/auth/SignInForm.tsx:85
 msgid "Check errors below"
-msgstr ""
+msgstr "아래 오류를 확인 하세요"
 
 #: res/app/src/features/group-list/columns.tsx:85
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:62
 msgid "Class"
-msgstr ""
+msgstr "클래스"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:141
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:146
 msgid "Clean Bluetooth bonded devices"
-msgstr ""
+msgstr "페어링된 블루투스 기기 삭제"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:161
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:57
@@ -317,177 +323,177 @@ msgstr ""
 #: res/app/src/features/device-list/DeviceListPage.tsx:139
 #: res/app/src/ui/Pager.tsx:46
 msgid "Clear"
-msgstr ""
+msgstr "지우기"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:41
 msgid "Clipboard"
-msgstr ""
+msgstr "클립보드"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:46
 msgid "Close"
-msgstr ""
+msgstr "닫기"
 
 #: res/app/src/core/devices/enhance.ts:40
 msgid "Cold"
-msgstr ""
+msgstr "저온"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:194
 #: res/app/src/features/settings/groups/GroupList.tsx:177
 #: res/app/src/features/settings/users/UsersSettings.tsx:268
 msgid "Confirm Remove"
-msgstr ""
+msgstr "제거 확인"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:35
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:36
 #: res/app/src/features/settings/groups/GroupDetail.tsx:200
 msgid "Conflicts"
-msgstr ""
+msgstr "충돌"
 
 #: res/app/src/core/devices/enhance.ts:20
 #: res/app/src/core/devices/enhance.ts:7
 #: res/app/src/features/control/panes/info/InfoPane.tsx:234
 msgid "Connected"
-msgstr ""
+msgstr "연결"
 
 #: res/app/src/ui/AppLayout.tsx:104
 msgid "Connected successfully."
-msgstr ""
+msgstr "연결했습니다"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:128
 #: res/app/src/features/settings/groups/GroupList.tsx:165
 msgid "Contact Owners"
-msgstr ""
+msgstr "소유자에게 연락"
 
 #: res/app/src/features/auth/SignInForm.tsx:165
 #: res/app/src/features/auth/SignInForm.tsx:168
 #: res/app/src/ui/AppLayout.tsx:276
 #: res/app/src/ui/AppLayout.tsx:283
 msgid "Contact Support"
-msgstr ""
+msgstr "지원팀에 문의"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:197
 #: res/app/src/features/settings/groups/GroupUsers.tsx:45
 #: res/app/src/features/settings/users/UsersSettings.tsx:248
 msgid "Contact Users"
-msgstr ""
+msgstr "사용자에게 연락"
 
 #: res/app/src/ui/AppLayout.tsx:211
 msgid "Control"
-msgstr ""
+msgstr "컨트롤 화면"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Controlled"
-msgstr ""
+msgstr "제어 중"
 
 #: res/app/src/ui/CopyButton.tsx:30
 msgid "Copied"
-msgstr ""
+msgstr "복사됨"
 
 #: res/app/src/ui/CopyButton.tsx:30
 #: res/app/src/ui/CopyButton.tsx:38
 msgid "Copy to clipboard"
-msgstr ""
+msgstr "클립보드에 복사"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:288
 msgid "Cores"
-msgstr ""
+msgstr "코어 수"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:283
 msgid "CPU"
-msgstr ""
+msgstr "CPU"
 
 #: res/app/src/features/device-list/columns.tsx:303
 #: res/app/src/features/settings/groups/GroupDevices.tsx:29
 msgid "CPU Platform"
-msgstr ""
+msgstr "CPU 플랫폼"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:134
 msgid "Create"
-msgstr ""
+msgstr "생성"
 
 #: res/app/src/features/settings/users/CreateUserForm.tsx:42
 #: res/app/src/features/settings/users/UsersSettings.tsx:192
 msgid "Create new user"
-msgstr ""
+msgstr "새 사용자 생성"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:25
 msgid "Critical"
-msgstr ""
+msgstr "심각"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:75
 msgid "Current rotation:"
-msgstr ""
+msgstr "현재 회전:"
 
 #: res/app/src/ui/ColumnChoice.tsx:47
 #: res/app/src/ui/ColumnChoice.tsx:48
 #: res/app/src/ui/ColumnChoice.tsx:54
 msgid "Customize"
-msgstr ""
+msgstr "사용자 지정"
 
 #: res/app/src/core/common.ts:22
 msgid "Daily"
-msgstr ""
+msgstr "매일"
 
 #: res/app/src/ui/AppLayout.tsx:301
 msgid "Dark"
-msgstr ""
+msgstr "다크"
 
 #: res/app/src/features/control/ControlPage.tsx:54
 msgid "Dashboard"
-msgstr ""
+msgstr "대시보드"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:116
 msgid "Data"
-msgstr ""
+msgstr "데이터"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:230
 msgid "Date"
-msgstr ""
+msgstr "날짜"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:44
 #: res/app/src/features/settings/general/GeneralSettings.tsx:49
 msgid "Date format"
-msgstr ""
+msgstr "날짜 형식"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr ""
+msgstr "고장"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
-msgstr ""
+msgstr "디버그"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:203
 msgid "Default groups quotas"
-msgstr ""
+msgstr "기본 그룹 할당량"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:259
 msgid "Default Groups Quotas"
-msgstr ""
+msgstr "기본 그룹 할당량"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:62
 msgid "Define your own alert message"
-msgstr ""
+msgstr "사용자 지정 알림 메시지를 정의합니다"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:45
 msgid "Define your own Date format"
-msgstr ""
+msgstr "사용자 지정 날짜 형식을 정의합니다"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:68
 msgid "Define your own Email address separator"
-msgstr ""
+msgstr "사용자 지정 이메일 주소 구분자를 정의합니다"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:217
 msgid "Density"
-msgstr ""
+msgstr "밀도"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:177
 msgid "Details"
-msgstr ""
+msgstr "세부 정보"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:58
 msgid "Developer"
-msgstr ""
+msgstr "개발자 옵션"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:109
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:97
@@ -495,61 +501,61 @@ msgstr ""
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:114
 #: res/app/src/ui/modals.tsx:187
 msgid "Device"
-msgstr ""
+msgstr "단말기"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:51
 msgid "Device booking state"
-msgstr ""
+msgstr "단말기 예약 상태"
 
 #: res/app/src/features/device-list/device-actions.ts:38
 msgid "Device cannot get kicked from the group"
-msgstr ""
+msgstr "디바이스는 그룹으로부터 배제될 수 없다"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Device controlling state"
-msgstr ""
+msgstr "단말기 제어 상태"
 
 #: res/app/src/core/devices/enhance.ts:35
 msgid "Device is not present anymore for some reason."
-msgstr ""
+msgstr "더이상 단말기가 존재하지 않습니다."
 
 #: res/app/src/core/devices/enhance.ts:36
 msgid "Device is present but offline."
-msgstr ""
+msgstr "장치가 연결되어 있지만 오프라인 상태입니다."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:275
 msgid "Device list"
-msgstr ""
+msgstr "단말기 목록"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Device notes state"
-msgstr ""
+msgstr "단말기 메모 상태"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
-msgstr ""
+msgstr "단말기 사진"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Device presence state"
-msgstr ""
+msgstr "단말기 연결 상태"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:126
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:153
 msgid "Device selection"
-msgstr ""
+msgstr "단말기 선택"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:101
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:45
 msgid "Device Settings"
-msgstr ""
+msgstr "단말기 설정"
 
 #: res/app/src/features/control/ControlPage.tsx:109
 msgid "Device was disconnected"
-msgstr ""
+msgstr "연결이 끊어졌습니다"
 
 #: res/app/src/core/devices/enhance.ts:34
 msgid "Device was kicked by automatic timeout."
-msgstr ""
+msgstr "시간초과로 인해 단말기 사용이 종료되었습니다."
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168
 #: res/app/src/features/device-list/DeviceListPage.tsx:49
@@ -558,52 +564,52 @@ msgstr ""
 #: res/app/src/features/settings/SettingsPage.tsx:39
 #: res/app/src/ui/AppLayout.tsx:213
 msgid "Devices"
-msgstr ""
+msgstr "단말기 리스트"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:154
 msgid "Disable Bluetooth"
-msgstr ""
+msgstr "블루투스 비활성화"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Disable WiFi"
-msgstr ""
+msgstr "WiFi 비활성화"
 
 #: res/app/src/core/devices/enhance.ts:56
 msgid "Discharging"
-msgstr ""
+msgstr "방전중"
 
 #: res/app/src/core/devices/enhance.ts:19
 #: res/app/src/core/devices/enhance.ts:6
 #: res/app/src/ui/modals.tsx:127
 msgid "Disconnected"
-msgstr ""
+msgstr "연결 끊김"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:212
 msgid "Display"
-msgstr ""
+msgstr "화면"
 
 #: res/app/src/core/install.ts:53
 msgid "Downloading..."
-msgstr ""
+msgstr "다운로드중..."
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:184
 msgid "Drop file to upload"
-msgstr ""
+msgstr "업로드 할 파일을 올려놓으세요"
 
 #: res/app/src/core/devices/enhance.ts:72
 msgid "Dummy"
-msgstr ""
+msgstr "더미"
 
 #: res/app/src/features/group-list/columns.tsx:88
 #: res/app/src/features/settings/groups/GroupList.tsx:51
 #: res/app/src/features/settings/users/UsersSettings.tsx:300
 msgid "Duration"
-msgstr ""
+msgstr "기간"
 
 #: res/app/src/features/auth/SignInForm.tsx:128
 #: res/app/src/features/auth/SignInForm.tsx:129
 msgid "E-mail"
-msgstr ""
+msgstr "이메일"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:214
 #: res/app/src/features/settings/groups/GroupUsers.tsx:19
@@ -611,36 +617,36 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:297
 #: res/app/src/features/user/UserPage.tsx:80
 msgid "Email"
-msgstr ""
+msgstr "이메일"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:67
 #: res/app/src/features/settings/general/GeneralSettings.tsx:72
 msgid "Email address separator"
-msgstr ""
+msgstr "이메일 주소 구분자"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:154
 msgid "Enable Bluetooth"
-msgstr ""
+msgstr "블루투스 활성화"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Enable WiFi"
-msgstr ""
+msgstr "WiFi 활성화"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:184
 msgid "Enable/Disable confirmation for device removing"
-msgstr ""
+msgstr "단말기 제거 시 확인 활성화/비활성화"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:173
 msgid "Enable/Disable confirmation for group removing"
-msgstr ""
+msgstr "그룹 제거 시 확인 활성화/비활성화"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:263
 msgid "Enable/Disable confirmation for user removing"
-msgstr ""
+msgstr "사용자 제거 시 확인 활성화/비활성화"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:223
 msgid "Encrypted"
-msgstr ""
+msgstr "암호화"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
@@ -648,179 +654,179 @@ msgstr ""
 #: res/app/src/ui/AppLayout.tsx:110
 #: res/app/src/ui/AppLayout.tsx:111
 msgid "Error"
-msgstr ""
+msgstr "오류"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:28
 #: res/app/src/features/control/screen/screen-keyboard.ts:41
 #: res/app/src/features/control/screen/screen-keyboard.ts:45
 msgid "Error while getting data"
-msgstr ""
+msgstr "데이터를 얻어오는데 실패했습니다"
 
 #: res/app/src/core/devices/enhance.ts:73
 msgid "Ethernet"
-msgstr ""
+msgstr "이더넷"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:47
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:92
 msgid "Executes remote shell commands"
-msgstr ""
+msgstr "원격 쉘 명령을 실행합니다"
 
 #: res/app/src/features/group-list/columns.tsx:98
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:14
 #: res/app/src/features/settings/groups/GroupDetail.tsx:147
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:102
 msgid "Expiration Date"
-msgstr ""
+msgstr "만료일"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:160
 msgid "Failed to download file"
-msgstr ""
+msgstr "파일을 다운로드 할 수 없습니다"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:45
 msgid "False"
-msgstr ""
+msgstr "아니오"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:56
 msgid "Fast Forward"
-msgstr ""
+msgstr "빨리 감기"
 
 #: res/app/src/features/control/ControlPage.tsx:85
 msgid "File Explorer"
-msgstr ""
+msgstr "파일 탐색기"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:50
 msgid "File Name"
-msgstr ""
+msgstr "파일 이름"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:119
 msgid "Filter on user group ownership"
-msgstr ""
+msgstr "사용자의 그룹 소유 여부로 필터링"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:181
 #: res/app/src/features/settings/users/UsersSettings.tsx:109
 msgid "Filters"
-msgstr ""
+msgstr "필터"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:188
 msgid "Find Device"
-msgstr ""
+msgstr "장치 찾기"
 
 #: res/app/src/ui/modals.tsx:183
 msgid "Fingerprint"
-msgstr ""
+msgstr "지문"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:218
 msgid "FPS"
-msgstr ""
+msgstr "FPS"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:289
 msgid "Frequency"
-msgstr ""
+msgstr "속도"
 
 #: res/app/src/core/devices/enhance.ts:57
 msgid "Full"
-msgstr ""
+msgstr "전체"
 
 #: res/app/src/features/settings/SettingsPage.tsx:36
 msgid "General"
-msgstr ""
+msgstr "일반"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:159
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:164
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:57
 msgid "Generate Access Token"
-msgstr ""
+msgstr "액세스 토큰 생성"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:70
 msgid "Generate New Token"
-msgstr ""
+msgstr "새로운 토큰 생성"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Get"
-msgstr ""
+msgstr "시작"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:61
 msgid "Get clipboard contents"
-msgstr ""
+msgstr "클립보드 내용을 가져옵니다"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:159
 msgid "Get ready"
-msgstr ""
+msgstr "준비 완료로 전환"
 
 #: res/app/src/features/docs/DocsPage.tsx:83
 #: res/app/src/features/docs/DocsPage.tsx:88
 msgid "Go Back"
-msgstr ""
+msgstr "뒤로 이동"
 
 #: res/app/src/features/control/ControlPage.tsx:121
 msgid "Go to Device List"
-msgstr ""
+msgstr "단말기 목록으로 이동"
 
 #: res/app/src/core/devices/enhance.ts:41
 msgid "Good"
-msgstr ""
+msgstr "양호"
 
 #: res/app/src/features/device-list/columns.tsx:245
 msgid "Group Class"
-msgstr ""
+msgstr "그룹 클래스"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:131
 msgid "Group device selection"
-msgstr ""
+msgstr "그룹 단말기 선택"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:113
 msgid "Group devices"
-msgstr ""
+msgstr "그룹 단말기"
 
 #: res/app/src/features/settings/groups/rules.ts:108
 msgid "Group duration quotas is reached"
-msgstr ""
+msgstr "그룹 기간 할당량에 도달했습니다"
 
 #: res/app/src/features/device-list/columns.tsx:252
 msgid "Group Expiration Date"
-msgstr ""
+msgstr "그룹 만료일"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:121
 msgid "Group list"
-msgstr ""
+msgstr "그룹 목록"
 
 #: res/app/src/features/device-list/columns.tsx:244
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:15
 msgid "Group Name"
-msgstr ""
+msgstr "그룹 이름"
 
 #: res/app/src/features/device-list/columns.tsx:256
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:226
 #: res/app/src/features/settings/groups/GroupDevices.tsx:42
 msgid "Group Origin"
-msgstr ""
+msgstr "원본 그룹"
 
 #: res/app/src/features/device-list/columns.tsx:248
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:17
 #: res/app/src/features/settings/users/UsersSettings.tsx:120
 msgid "Group Owner"
-msgstr ""
+msgstr "그룹 소유자"
 
 #: res/app/src/features/device-list/columns.tsx:254
 msgid "Group Repetitions"
-msgstr ""
+msgstr "그룹 반복 횟수"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:94
 #: res/app/src/features/settings/groups/GroupList.tsx:147
 msgid "Group selection"
-msgstr ""
+msgstr "그룹 선택"
 
 #: res/app/src/features/device-list/columns.tsx:253
 msgid "Group Starting Date"
-msgstr ""
+msgstr "그룹 시작일"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:90
 msgid "Group user selection"
-msgstr ""
+msgstr "그룹 사용자 선택"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:73
 msgid "Group users"
-msgstr ""
+msgstr "그룹 사용자"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:51
 #: res/app/src/features/settings/groups/GroupList.tsx:48
@@ -828,51 +834,51 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:299
 #: res/app/src/ui/AppLayout.tsx:214
 msgid "Groups"
-msgstr ""
+msgstr "그룹"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:103
 msgid "Groups duration quota is reached"
-msgstr ""
+msgstr "그룹 기간 할당량에 도달했습니다"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:124
 msgid "Groups number quota is reached"
-msgstr ""
+msgstr "그룹 수 할당량에 도달했습니다"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:343
 msgid "Groups Quotas"
-msgstr ""
+msgstr "그룹 할당량"
 
 #: res/app/src/core/common.ts:26
 msgid "Halfyearly"
-msgstr ""
+msgstr "반기별"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:258
 msgid "Hardware"
-msgstr ""
+msgstr "하드웨어"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:202
 msgid "Health"
-msgstr ""
+msgstr "상태"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:220
 msgid "Height"
-msgstr ""
+msgstr "높이"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
 #: res/app/src/features/docs/DocsPage.tsx:28
 #: res/app/src/ui/AppLayout.tsx:289
 #: res/app/src/ui/AppLayout.tsx:295
 msgid "Help"
-msgstr ""
+msgstr "도움말"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Hide Manifest"
-msgstr ""
+msgstr "매니페스트 숨기기"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
 msgid "Hide Screen"
-msgstr ""
+msgstr "화면 숨김"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:85
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:31
@@ -880,238 +886,238 @@ msgstr ""
 #: res/app/src/features/docs/DocsPage.tsx:64
 #: res/app/src/features/docs/DocsPage.tsx:95
 msgid "Home"
-msgstr ""
+msgstr "홈"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:101
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:110
 msgid "Host"
-msgstr ""
+msgstr "호스트"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:118
 msgid "Hostname"
-msgstr ""
+msgstr "호스트이름"
 
 #: res/app/src/core/common.ts:21
 msgid "Hourly"
-msgstr ""
+msgstr "매시간"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:253
 msgid "ICCID"
-msgstr ""
+msgstr "ICCID"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:221
 msgid "ID"
-msgstr ""
+msgstr "ID"
 
 #: res/app/src/features/group-list/columns.tsx:66
 #: res/app/src/features/settings/groups/GroupDetail.tsx:144
 msgid "Identifier"
-msgstr ""
+msgstr "식별자"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:251
 msgid "IMEI"
-msgstr ""
+msgstr "IMEI"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:252
 msgid "IMSI"
-msgstr ""
+msgstr "IMSI"
 
 #: res/app/src/features/settings/groups/rules.ts:157
 msgid "Inactive"
-msgstr ""
+msgstr "비활성"
 
 #: res/app/src/features/auth/SignInForm.tsx:86
 msgid "Incorrect login details"
-msgstr ""
+msgstr "잘못된 로그인 정보"
 
 #: res/app/src/features/control/ControlPage.tsx:91
 msgid "Info"
-msgstr ""
+msgstr "단말기 정보"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:23
 msgid "Information"
-msgstr ""
+msgstr "정보"
 
 #: res/app/src/core/install.ts:159
 msgid "Installation canceled by user."
-msgstr ""
+msgstr "사용자가 설치를 취소했습니다"
 
 #: res/app/src/core/install.ts:157
 msgid "Installation failed due to an unknown error."
-msgstr ""
+msgstr "알 수 없는 오류로 설치가 실패했습니다"
 
 #: res/app/src/core/install.ts:156
 #: res/app/src/features/control/device-control/install-file.ts:32
 msgid "Installation succeeded."
-msgstr ""
+msgstr "설치가 성공했습니다"
 
 #: res/app/src/core/install.ts:158
 msgid "Installation timed out."
-msgstr ""
+msgstr "설치 시간 초과"
 
 #: res/app/src/core/install.ts:57
 msgid "Installing app..."
-msgstr ""
+msgstr "앱 설치중..."
 
 #: res/app/src/ui/Pager.tsx:61
 msgid "Items per page"
-msgstr ""
+msgstr "페이지당 항목 수"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:97
 msgid "Key"
-msgstr ""
+msgstr "키"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:181
 msgid "Keyboard"
-msgstr ""
+msgstr "키보드"
 
 #: res/app/src/features/settings/SettingsPage.tsx:37
 msgid "Keys"
-msgstr ""
+msgstr "키"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:93
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:97
 msgid "Landscape"
-msgstr ""
+msgstr "가로"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:22
 #: res/app/src/features/settings/general/GeneralSettings.tsx:25
 msgid "Language"
-msgstr ""
+msgstr "언어"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:120
 msgid "Launch Activity"
-msgstr ""
+msgstr "액티비티 실행"
 
 #: res/app/src/core/install.ts:58
 msgid "Launching activity..."
-msgstr ""
+msgstr "액티비티 실행중..."
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
 msgid "LDAP Username"
-msgstr ""
+msgstr "LDAP 사용자 이름"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:205
 #: res/app/src/features/control/panes/logs/LogTable.tsx:133
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:87
 msgid "Level"
-msgstr ""
+msgstr "수준"
 
 #: res/app/src/ui/AppLayout.tsx:301
 msgid "Light"
-msgstr ""
+msgstr "라이트"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:90
 msgid "Local Settings"
-msgstr ""
+msgstr "로컬 설정"
 
 #: res/app/src/features/device-list/columns.tsx:325
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:225
 #: res/app/src/features/settings/groups/GroupDevices.tsx:40
 msgid "Location"
-msgstr ""
+msgstr "위치"
 
 #: res/app/src/features/auth/SignInForm.tsx:156
 msgid "Log In"
-msgstr ""
+msgstr "로그인"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:102
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:103
 msgid "Logcat Level"
-msgstr ""
+msgstr "Logcat 수준"
 
 #: res/app/src/ui/AppLayout.tsx:313
 #: res/app/src/ui/AppLayout.tsx:319
 msgid "Logout"
-msgstr ""
+msgstr "로그아웃"
 
 #: res/app/src/features/control/ControlPage.tsx:60
 msgid "Logs"
-msgstr ""
+msgstr "로그"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:23
 msgid "Maintenance"
-msgstr ""
+msgstr "유지 관리"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:90
 msgid "Make sure to copy your access token now. You won't be able to see it again."
-msgstr ""
+msgstr "지금 액세스 토큰을 복사해 두세요. 다시 확인할 수 없습니다."
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:52
 msgid "Manage Apps"
-msgstr ""
+msgstr "앱 관리"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:103
 msgid "Manner Mode"
-msgstr ""
+msgstr "매너 모드"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:262
 #: res/app/src/features/device-list/columns.tsx:294
 #: res/app/src/features/settings/groups/GroupDevices.tsx:22
 msgid "Manufacturer"
-msgstr ""
+msgstr "제조사"
 
 #: res/app/src/features/device-list/columns.tsx:295
 #: res/app/src/features/settings/groups/GroupDevices.tsx:38
 msgid "Market name"
-msgstr ""
+msgstr "판매명"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:49
 msgid "Media"
-msgstr ""
+msgstr "미디어"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:294
 msgid "Memory"
-msgstr ""
+msgstr "메모리"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:79
 msgid "Menu"
-msgstr ""
+msgstr "메뉴"
 
 #: res/app/src/core/devices/enhance.ts:74
 msgid "Mobile"
-msgstr ""
+msgstr "모바일"
 
 #: res/app/src/core/devices/enhance.ts:75
 msgid "Mobile DUN"
-msgstr ""
+msgstr "모바일 DUN"
 
 #: res/app/src/core/devices/enhance.ts:76
 msgid "Mobile High Priority"
-msgstr ""
+msgstr "모바일 높은 우선순위"
 
 #: res/app/src/core/devices/enhance.ts:77
 msgid "Mobile MMS"
-msgstr ""
+msgstr "모바일 MMS"
 
 #: res/app/src/core/devices/enhance.ts:78
 msgid "Mobile SUPL"
-msgstr ""
+msgstr "모바일 SUPL"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:264
 #: res/app/src/features/device-list/columns.tsx:258
 #: res/app/src/features/settings/groups/GroupDevices.tsx:15
 msgid "Model"
-msgstr ""
+msgstr "모델"
 
 #: res/app/src/core/common.ts:24
 msgid "Monthly"
-msgstr ""
+msgstr "매월"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:147
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:154
 msgid "More about Access Tokens"
-msgstr ""
+msgstr "액세스 토큰에 대해 자세히 알아보기"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:143
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:150
 msgid "More about ADB Keys"
-msgstr ""
+msgstr "좀 더 자세하게 ADB 키에 대해서 확인하기"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:43
 msgid "Mute"
-msgstr ""
+msgstr "음소거"
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
@@ -1126,178 +1132,178 @@ msgstr ""
 #: res/app/src/features/settings/users/CreateUserForm.tsx:57
 #: res/app/src/features/settings/users/UsersSettings.tsx:296
 msgid "Name"
-msgstr ""
+msgstr "이름"
 
 #: res/app/src/ui/AppLayout.tsx:270
 msgid "Native"
-msgstr ""
+msgstr "네이티브"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:54
 msgid "Navigation"
-msgstr ""
+msgstr "탐색"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:230
 #: res/app/src/features/control/panes/info/InfoPane.tsx:249
 #: res/app/src/features/device-list/columns.tsx:280
 #: res/app/src/features/settings/groups/GroupDevices.tsx:19
 msgid "Network"
-msgstr ""
+msgstr "네트워크"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:55
 msgid "Next"
-msgstr ""
+msgstr "다음"
 
 #: res/app/src/core/devices/enhance.ts:100
 msgid "No"
-msgstr ""
+msgstr "아니오"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:191
 msgid "No access tokens"
-msgstr ""
+msgstr "등록된 액세스 토큰이 없습니다"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:174
 msgid "No ADB keys"
-msgstr ""
+msgstr "등록된 ADB 키가 없습니다"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:173
 msgid "No available devices"
-msgstr ""
+msgstr "사용 가능한 단말기가 없습니다"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:134
 msgid "No available users"
-msgstr ""
+msgstr "사용 가능한 사용자가 없습니다"
 
 #: res/app/src/features/settings/groups/rules.ts:91
 #: res/app/src/features/settings/users/QuotasForm.tsx:24
 msgid "No change"
-msgstr ""
+msgstr "변경 사항 없음"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:25
 #: res/app/src/features/control/screen/screen-keyboard.ts:38
 msgid "No clipboard data"
-msgstr ""
+msgstr "클립보드 데이터가 없습니다"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:160
 msgid "No device screen"
-msgstr ""
+msgstr "단말기 화면이 없습니다"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:140
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:265
 msgid "No Devices"
-msgstr ""
+msgstr "단말기가 없습니다"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:103
 msgid "No devices connected"
-msgstr ""
+msgstr "연결된 단말기가 없습니다"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:132
 msgid "No group devices"
-msgstr ""
+msgstr "그룹 단말기가 없습니다"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:91
 msgid "No group users"
-msgstr ""
+msgstr "그룹 사용자가 없습니다"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:87
 #: res/app/src/features/settings/groups/GroupList.tsx:200
 msgid "No Groups"
-msgstr ""
+msgstr "그룹이 없습니다"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:28
 msgid "No log entries match the filters"
-msgstr ""
+msgstr "필터와 일치하는 로그 항목이 없습니다"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:98
 msgid "No output"
-msgstr ""
+msgstr "출력 없음"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:104
 msgid "No photo available"
-msgstr ""
+msgstr "이용 가능한 사진이 없습니다"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:94
 msgid "No Ports Forwarded"
-msgstr ""
+msgstr "포트 포워딩 설정이 없습니다"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:117
 #: res/app/src/features/group-list/GroupListPage.tsx:161
 #: res/app/src/features/group-list/GroupMembers.tsx:90
 msgid "No results"
-msgstr ""
+msgstr "결과 없음"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:118
 msgid "No screenshots taken"
-msgstr ""
+msgstr "저장된 스크린샷이 없습니다"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:289
 msgid "No Users"
-msgstr ""
+msgstr "사용자가 없습니다"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:34
 msgid "Normal Mode"
-msgstr ""
+msgstr "표준 모드"
 
 #: res/app/src/core/devices/enhance.ts:58
 msgid "Not Charging"
-msgstr ""
+msgstr "충전 안함"
 
 #: res/app/src/features/docs/DocsPage.tsx:62
 #: res/app/src/features/user/UserPage.tsx:54
 msgid "Not Found"
-msgstr ""
+msgstr "찾을 수 없음"
 
 #: res/app/src/features/device-list/cells.tsx:132
 #: res/app/src/features/device-list/cells.tsx:162
 #: res/app/src/features/device-list/columns.tsx:326
 msgid "Notes"
-msgstr ""
+msgstr "메모"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:250
 msgid "Number"
-msgstr ""
+msgstr "전화번호"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:54
 msgid "Number of groups"
-msgstr ""
+msgstr "그룹 수"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:80
 msgid "Number of repetitions per group"
-msgstr ""
+msgstr "그룹당 반복 횟수"
 
 #: res/app/src/core/devices/enhance.ts:21
 #: res/app/src/core/devices/enhance.ts:8
 msgid "Offline"
-msgstr ""
+msgstr "오프라인"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:111
 #: res/app/src/ui/modals.tsx:67
 #: res/app/src/ui/modals.tsx:88
 msgid "OK"
-msgstr ""
+msgstr "확인"
 
 #: res/app/src/core/common.ts:20
 msgid "Once"
-msgstr ""
+msgstr "1회"
 
 #: res/app/src/features/control/device-control/install-file.ts:38
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:108
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:105
 #: res/app/src/ui/notify.ts:8
 msgid "Oops!"
-msgstr ""
+msgstr "웁스!"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:98
 msgid "Open"
-msgstr ""
+msgstr "열기"
 
 #: res/app/src/features/device-list/columns.tsx:304
 #: res/app/src/features/settings/groups/GroupDevices.tsx:34
 msgid "OpenGL ES version"
-msgstr ""
+msgstr "OpenGL ES 버전"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:222
 msgid "Orientation"
-msgstr ""
+msgstr "화면 방향"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:275
 #: res/app/src/features/device-list/columns.tsx:276
@@ -1305,226 +1311,226 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:222
 #: res/app/src/features/settings/groups/GroupDevices.tsx:18
 msgid "OS"
-msgstr ""
+msgstr "운영체제"
 
 #: res/app/src/core/devices/enhance.ts:43
 msgid "Over Voltage"
-msgstr ""
+msgstr "과전압"
 
 #: res/app/src/core/devices/enhance.ts:44
 msgid "Overheat"
-msgstr ""
+msgstr "과열"
 
 #: res/app/src/features/group-list/columns.tsx:71
 #: res/app/src/features/settings/groups/GroupDetail.tsx:145
 msgid "Owner"
-msgstr ""
+msgstr "소유자"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:102
 msgid "Package"
-msgstr ""
+msgstr "패키지"
 
 #: res/app/src/features/auth/SignInForm.tsx:144
 #: res/app/src/features/auth/SignInForm.tsx:145
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:117
 msgid "Password"
-msgstr ""
+msgstr "비밀번호"
 
 #: res/app/src/ui/mail.ts:18
 msgid "Paste the email addresses from the clipboard!"
-msgstr ""
+msgstr "클립보드에서 이메일 주소를 붙여넣으세요!"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:71
 msgid "Paste to device"
-msgstr ""
+msgstr "단말기에 붙여넣기"
 
 #: res/app/src/features/group-list/columns.tsx:35
 #: res/app/src/features/settings/groups/rules.ts:152
 msgid "Pending"
-msgstr ""
+msgstr "보류 중"
 
 #: res/app/src/features/group-list/GroupStats.tsx:46
 msgid "Pending groups"
-msgstr ""
+msgstr "보류 중인 그룹"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:231
 msgid "Permissions"
-msgstr ""
+msgstr "권한"
 
 #: res/app/src/features/device-list/columns.tsx:305
 msgid "Phone"
-msgstr ""
+msgstr "휴대폰"
 
 #: res/app/src/features/device-list/columns.tsx:308
 msgid "Phone ICCID"
-msgstr ""
+msgstr "휴대폰 ICCID"
 
 #: res/app/src/features/device-list/columns.tsx:306
 #: res/app/src/features/settings/groups/GroupDevices.tsx:39
 msgid "Phone IMEI"
-msgstr ""
+msgstr "휴대폰 IMEI"
 
 #: res/app/src/features/device-list/columns.tsx:307
 msgid "Phone IMSI"
-msgstr ""
+msgstr "휴대폰 IMSI"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:183
 msgid "Physical Device"
-msgstr ""
+msgstr "물리 단말기"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:110
 #: res/app/src/features/control/panes/logs/LogTable.tsx:137
 msgid "PID"
-msgstr ""
+msgstr "PID"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:192
 msgid "Place"
-msgstr ""
+msgstr "위치"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:271
 msgid "Platform"
-msgstr ""
+msgstr "플랫폼"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:53
 msgid "Play/Pause"
-msgstr ""
+msgstr "재생/일시 중지"
 
 #: res/app/src/features/auth/SignInForm.tsx:49
 msgid "Please enter a valid email"
-msgstr ""
+msgstr "유효한 이메일 주소를 입력하세요"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:124
 msgid "Please enter your Store password"
-msgstr ""
+msgstr "앱 스토어 비밀번호를 입력하세요"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:108
 msgid "Please enter your Store username"
-msgstr ""
+msgstr "앱 스토어 아이디를 입력하세요"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:117
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:120
 msgid "Port"
-msgstr ""
+msgstr "포트"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:27
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:75
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:83
 msgid "Port Forwarding"
-msgstr ""
+msgstr "포트 포워딩"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:82
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:86
 msgid "Portrait"
-msgstr ""
+msgstr "세로"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:34
 msgid "Power"
-msgstr ""
+msgstr "전력"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:203
 msgid "Power Source"
-msgstr ""
+msgstr "전력원"
 
 #: res/app/src/core/devices/enhance.ts:10
 #: res/app/src/core/devices/enhance.ts:23
 #: res/app/src/features/control/ControlPage.tsx:288
 msgid "Preparing"
-msgstr ""
+msgstr "준비중"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Present"
-msgstr ""
+msgstr "연결됨"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:33
 msgid "Press Get to start logging"
-msgstr ""
+msgstr "'시작'을 눌러 로깅을 시작하세요"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"
-msgstr ""
+msgstr "이전"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:215
 #: res/app/src/features/settings/groups/GroupUsers.tsx:24
 #: res/app/src/features/settings/users/UsersSettings.tsx:298
 msgid "Privilege"
-msgstr ""
+msgstr "권한"
 
 #: res/app/src/core/install.ts:55
 msgid "Processing..."
-msgstr ""
+msgstr "처리중..."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:263
 #: res/app/src/features/device-list/columns.tsx:263
 msgid "Product"
-msgstr ""
+msgstr "제품명"
 
 #: res/app/src/core/install.ts:56
 msgid "Pushing app..."
-msgstr ""
+msgstr "앱 전송중..."
 
 #: res/app/src/core/common.ts:25
 msgid "Quaterly"
-msgstr ""
+msgstr "분기별"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:298
 msgid "RAM"
-msgstr ""
+msgstr "RAM"
 
 #: res/app/src/core/devices/enhance.ts:11
 #: res/app/src/core/devices/enhance.ts:24
 #: res/app/src/features/group-list/columns.tsx:37
 msgid "Ready"
-msgstr ""
+msgstr "준비 완료"
 
 #: res/app/src/features/group-list/GroupStats.tsx:44
 msgid "Ready groups"
-msgstr ""
+msgstr "준비 완료 그룹"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:112
 msgid "Really delete this device?"
-msgstr ""
+msgstr "이 단말기를 삭제하시겠습니까?"
 
 #: res/app/src/features/settings/groups/actions.ts:62
 msgid "Really delete this group?"
-msgstr ""
+msgstr "이 그룹을 삭제하시겠습니까?"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:123
 msgid "Really delete this selection of devices?"
-msgstr ""
+msgstr "선택한 단말기를 삭제하시겠습니까?"
 
 #: res/app/src/features/settings/groups/actions.ts:70
 msgid "Really delete this selection of groups?"
-msgstr ""
+msgstr "선택한 그룹을 삭제하시겠습니까?"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:166
 msgid "Really delete this selection of users?"
-msgstr ""
+msgstr "선택한 사용자를 삭제하시겠습니까?"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:158
 msgid "Really delete this user?"
-msgstr ""
+msgstr "이 사용자를 삭제하시겠습니까?"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:34
 msgid "Recents"
-msgstr ""
+msgstr "최근 앱"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
-msgstr ""
+msgstr "정규식 구문"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr ""
+msgstr "릴리즈"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
-msgstr ""
+msgstr "다시 로드"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:67
 msgid "Remote debug"
-msgstr ""
+msgstr "원격 디버그"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:126
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:207
@@ -1540,105 +1546,105 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:283
 #: res/app/src/features/settings/users/UsersSettings.tsx:348
 msgid "Remove"
-msgstr ""
+msgstr "제거"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:197
 msgid "Remove the device selection"
-msgstr ""
+msgstr "선택한 단말기 제거"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:184
 msgid "Remove the group selection"
-msgstr ""
+msgstr "선택한 그룹 제거"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:275
 msgid "Remove the user selection"
-msgstr ""
+msgstr "선택한 사용자 제거"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:71
 #: res/app/src/features/settings/users/UsersSettings.tsx:115
 msgid "Removing filters"
-msgstr ""
+msgstr "제거 필터"
 
 #: res/app/src/features/group-list/columns.tsx:86
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:71
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:81
 #: res/app/src/features/settings/users/UsersSettings.tsx:301
 msgid "Repetitions"
-msgstr ""
+msgstr "반복 횟수"
 
 #: res/app/src/features/settings/groups/rules.ts:94
 msgid "Repetitions must be > 0 for this Class"
-msgstr ""
+msgstr "이 클래스에서는 반복 횟수가 0보다 커야 합니다"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:65
 #: res/app/src/features/settings/general/GeneralSettings.tsx:104
 #: res/app/src/ui/ColumnChoice.tsx:87
 msgid "Reset"
-msgstr ""
+msgstr "초기화"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:56
 msgid "Reset all browser settings"
-msgstr ""
+msgstr "모든 브라우저 설정 초기화"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:93
 msgid "Reset Settings"
-msgstr ""
+msgstr "설정 초기화"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:47
 msgid "Restart and Keep Device"
-msgstr ""
+msgstr "재시작 후 단말기 계속 사용"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:35
 msgid "Restart Device"
-msgstr ""
+msgstr "단말기 재시작"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:167
 msgid "Retry"
-msgstr ""
+msgstr "재시도"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:51
 msgid "Rewind"
-msgstr ""
+msgstr "되감기"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:237
 msgid "Roaming"
-msgstr ""
+msgstr "로밍"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:299
 msgid "ROM"
-msgstr ""
+msgstr "ROM"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:38
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:106
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:110
 msgid "Rotate Left"
-msgstr ""
+msgstr "왼쪽으로 회전"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:44
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:116
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:120
 msgid "Rotate Right"
-msgstr ""
+msgstr "오른쪽으로 회전"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:77
 msgid "Run"
-msgstr ""
+msgstr "실행"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
 msgid "Run the following on your command line to debug the device from your Browser"
-msgstr ""
+msgstr "아래의 명령줄을 실행하여 브라우저에서 디버그를 실행하세요"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
 msgid "Run the following on your command line to debug the device from your IDE"
-msgstr ""
+msgstr "아래의 명령줄을 실행하여 IDE에서 디버그를 실행하세요"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Run this command to copy the key to your clipboard"
-msgstr ""
+msgstr "이 명령을 실행하여 키를 클립보드에 복사하세요"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:68
 msgid "Sample of log format"
-msgstr ""
+msgstr "로그 형식 예시"
 
 #: res/app/src/features/device-list/cells.tsx:143
 #: res/app/src/features/settings/groups/GroupDetail.tsx:100
@@ -1646,47 +1652,47 @@ msgstr ""
 #: res/app/src/features/settings/users/CreateUserForm.tsx:83
 #: res/app/src/features/settings/users/QuotasForm.tsx:95
 msgid "Save"
-msgstr ""
+msgstr "저장"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:134
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:139
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:80
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:90
 msgid "Save Logs"
-msgstr ""
+msgstr "로그 저장"
 
 #: res/app/src/features/control/device-control/device-commands.ts:23
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:48
 msgid "Save ScreenShot"
-msgstr ""
+msgstr "스크린 샷 저장"
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:115
 msgid "Saving will also get ready the group!"
-msgstr ""
+msgstr "저장하면 그룹도 준비 완료 상태가 됩니다!"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:196
 msgid "Schedule"
-msgstr ""
+msgstr "일정"
 
 #: res/app/src/features/device-list/columns.tsx:281
 #: res/app/src/features/group-list/GroupMembers.tsx:153
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:223
 #: res/app/src/features/settings/groups/GroupDevices.tsx:20
 msgid "Screen"
-msgstr ""
+msgstr "화면"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
 msgid "Screenshot"
-msgstr ""
+msgstr "스크린 샷"
 
 #: res/app/src/features/control/ControlPage.tsx:67
 msgid "Screenshots"
-msgstr ""
+msgstr "스크린 샷"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:300
 msgid "SD Card Mounted"
-msgstr ""
+msgstr "SD카드 마운트"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:277
 #: res/app/src/features/device-list/columns.tsx:297
@@ -1694,19 +1700,19 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:224
 #: res/app/src/features/settings/groups/GroupDevices.tsx:26
 msgid "SDK"
-msgstr ""
+msgstr "SDK"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:37
 #: res/app/src/features/device-list/DeviceListPage.tsx:134
 #: res/app/src/ui/Pager.tsx:38
 msgid "Search"
-msgstr ""
+msgstr "검색"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:154
 #: res/app/src/features/settings/groups/shared/ObjectsTable.tsx:137
 #: res/app/src/features/settings/users/UsersSettings.tsx:232
 msgid "Select all"
-msgstr ""
+msgstr "모두 선택"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:265
 #: res/app/src/features/device-list/columns.tsx:293
@@ -1715,131 +1721,131 @@ msgstr ""
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:12
 #: res/app/src/features/settings/groups/GroupDevices.tsx:16
 msgid "Serial"
-msgstr ""
+msgstr "일련 번호"
 
 #: res/app/src/features/auth/SignInForm.tsx:87
 msgid "Server error. Check log output."
-msgstr ""
+msgstr "서버 에러. 로그를 확인하세요"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:171
 msgid "Set filters for device removing"
-msgstr ""
+msgstr "단말기 제거 필터 설정"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:101
 msgid "Set filters for user removing"
-msgstr ""
+msgstr "사용자 제거 필터 설정"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:251
 msgid "Set groups quotas for new users"
-msgstr ""
+msgstr "새 사용자의 그룹 할당량 설정"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:34
 #: res/app/src/features/settings/SettingsPage.tsx:56
 #: res/app/src/features/settings/SettingsPage.tsx:79
 #: res/app/src/ui/AppLayout.tsx:215
 msgid "Settings"
-msgstr ""
+msgstr "설정"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:101
 msgid "Settings cleared"
-msgstr ""
+msgstr "설정이 초기화되었습니다"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:46
 msgid "Shell"
-msgstr ""
+msgstr "셸"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Show Manifest"
-msgstr ""
+msgstr "매니페스트 표시"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
 msgid "Show Screen"
-msgstr ""
+msgstr "화면 표시"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:157
 msgid "Sign In"
-msgstr ""
+msgstr "로그인"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in to continue"
-msgstr ""
+msgstr "계속하려면 로그인하세요"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in with your LDAP account"
-msgstr ""
+msgstr "LDAP 계정으로 로그인하세요"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:188
 msgid "Sign Out"
-msgstr ""
+msgstr "로그아웃"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:32
 msgid "Silent Mode"
-msgstr ""
+msgstr "음소거"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:244
 msgid "SIM"
-msgstr ""
+msgstr "SIM"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:229
 #: res/app/src/features/control/panes/info/InfoPane.tsx:216
 msgid "Size"
-msgstr ""
+msgstr "크기"
 
 #: res/app/src/features/auth/SignInForm.tsx:95
 msgid "Smartphone Test Farm"
-msgstr ""
+msgstr "Smartphone Test Farm"
 
 #: res/app/src/ui/AppLayout.tsx:109
 msgid "Socket connection was lost"
-msgstr ""
+msgstr "소켓 연결이 끊겼습니다"
 
 #: res/app/src/core/devices/enhance.ts:33
 msgid "Someone stole your device."
-msgstr ""
+msgstr "다른 사용자가 단말기를 가로챘습니다."
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"
-msgstr ""
+msgstr "특수 키"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
-msgstr ""
+msgstr "표준"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:90
 msgid "Start"
-msgstr ""
+msgstr "시작"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:86
 msgid "Start/Stop Logging"
-msgstr ""
+msgstr "시작/종료 로깅"
 
 #: res/app/src/features/group-list/columns.tsx:93
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:13
 #: res/app/src/features/settings/groups/GroupDetail.tsx:146
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:92
 msgid "Starting Date"
-msgstr ""
+msgstr "시작일"
 
 #: res/app/src/features/settings/groups/rules.ts:97
 msgid "Starting date >= Expiration date"
-msgstr ""
+msgstr "시작일이 만료일과 같거나 이후입니다"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:204
 #: res/app/src/features/device-list/columns.tsx:238
 #: res/app/src/features/group-list/columns.tsx:51
 msgid "Status"
-msgstr ""
+msgstr "상태"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:54
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:79
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Stop"
-msgstr ""
+msgstr "정지"
 
 #: res/app/src/core/devices/enhance.ts:15
 msgid "Stop Automation"
-msgstr ""
+msgstr "자동화 중지"
 
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
@@ -1847,375 +1853,375 @@ msgstr ""
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:146
 #: res/app/src/features/control/device-control/use-device-actions.ts:67
 msgid "Stop Using"
-msgstr ""
+msgstr "사용 종료"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:63
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:76
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:82
 msgid "Store Account"
-msgstr ""
+msgstr "스토어 계정"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:239
 msgid "Sub Type"
-msgstr ""
+msgstr "하위 유형"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:36
 msgid "Switch Charset"
-msgstr ""
+msgstr "문자 집합 변경"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:112
 #: res/app/src/features/control/panes/logs/LogTable.tsx:139
 msgid "Tag"
-msgstr ""
+msgstr "태그"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
-msgstr ""
+msgstr "스크린샷 캡처"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
-msgstr ""
+msgstr "온도"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:113
 #: res/app/src/features/control/panes/logs/LogTable.tsx:142
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:61
 msgid "Text"
-msgstr ""
+msgstr "텍스트"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:163
 msgid "The current view is marked secure and cannot be viewed remotely."
-msgstr ""
+msgstr "현재 화면은 보안 화면으로 설정되어 있어 원격으로 볼 수 없습니다."
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
-msgstr ""
+msgstr "이 단말기는 잠시동안 사용 할 수 없습니다."
 
 #: res/app/src/core/install.ts:168
 msgid "The existing package could not be deleted."
-msgstr ""
+msgstr "기존 패키지를 삭제 할 수 없습니다."
 
 #: res/app/src/core/install.ts:180
 msgid "The new package couldn't be installed because the verification did not succeed."
-msgstr ""
+msgstr "검증되지 않은 새로운 패키지는 설치 할 수 없습니다."
 
 #: res/app/src/core/install.ts:179
 msgid "The new package couldn't be installed because the verification timed out."
-msgstr ""
+msgstr "검증 시간이 초과하여 새로운 패키지를 설치 할 수 없습니다."
 
 #: res/app/src/core/install.ts:178
 msgid "The new package couldn't be installed in the specified install location because the media is not available."
-msgstr ""
+msgstr "미디어를 사용할 수 없어 지정한 위치에 새로운 패키지를 설치 할 수 없습니다."
 
 #: res/app/src/core/install.ts:177
 msgid "The new package couldn't be installed in the specified install location."
-msgstr ""
+msgstr "지정한 위치에 새로운 패키지를 설치 할 수 없습니다."
 
 #: res/app/src/core/install.ts:171
 msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr ""
+msgstr "시스템에 이미 설치된 프로바이더와 동일한 authority를 가진 콘텐츠 프로바이더가 포함되어 있어 새로운 패키지를 설치할 수 없습니다."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr ""
+msgstr "새로운 패키지가 테스트 전용 패키지로 지정되어 있지만 호출자가 INSTALL_ALLOW_TEST 플래그를 제공하지 않아 설치할 수 없습니다."
 
 #: res/app/src/core/install.ts:172
 msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr ""
+msgstr "SDK 버전이 높아 새로운 패키지를 설치 할 수 없습니다."
 
 #: res/app/src/core/install.ts:170
 msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr ""
+msgstr "SDK 버전이 낮아 새로운 패키지를 설치 할 수 없습니다."
 
 #: res/app/src/core/install.ts:169
 msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
-msgstr ""
+msgstr "저장 공간이 부족하거나 검증에 실패하여 새로운 패키지의 dex 파일 최적화 및 검증 중 설치에 실패했습니다."
 
 #: res/app/src/core/install.ts:183
 msgid "The new package has an older version code than the currently installed package."
-msgstr ""
+msgstr "새로운 패키지의 버전 코드가 현재 설치된 패키지보다 낮습니다."
 
 #: res/app/src/core/install.ts:182
 msgid "The new package is assigned a different UID than it previously held."
-msgstr ""
+msgstr "새로운 패키지는 이전 패키지와 다른 UID가 할당 됐습니다."
 
 #: res/app/src/core/install.ts:175
 msgid "The new package uses a feature that is not available."
-msgstr ""
+msgstr "새로운 패키지가 사용할 수 없는 기능을 사용합니다."
 
 #: res/app/src/core/install.ts:167
 msgid "The new package uses a shared library that is not available."
-msgstr ""
+msgstr "새로운 패키지가 사용할 수 없는 공유 라이브러리를 사용합니다."
 
 #: res/app/src/core/install.ts:161
 msgid "The package archive file is invalid."
-msgstr ""
+msgstr "패키지 아카이브 파일이 잘못 되었습니다."
 
 #: res/app/src/core/install.ts:174
 msgid "The package being installed contains native code, but none that is compatible with the device's CPU_ABI."
-msgstr ""
+msgstr "설치하려는 패키지에 네이티브 코드가 포함되어 있지만 단말기의 CPU_ABI와 호환되는 코드가 없습니다."
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."
-msgstr ""
+msgstr "패키지가 호출한 프로그램이 예상한 것과 다르게 변경되었습니다."
 
 #: res/app/src/core/install.ts:160
 msgid "The package is already installed."
-msgstr ""
+msgstr "패키지가 이미 설치 되어 있습니다."
 
 #: res/app/src/core/install.ts:163
 msgid "The package manager service found that the device didn't have enough storage space to install the app."
-msgstr ""
+msgstr "패키지 관리자 서비스에서 단말기에 앱을 설치할 저장 공간이 부족한 것을 확인했습니다."
 
 #: res/app/src/core/install.ts:193
 msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
-msgstr ""
+msgstr "매니페스트에서 유효한 태그(instrumentation 또는 application)를 찾지 못했습니다."
 
 #: res/app/src/core/install.ts:187
 msgid "The parser did not find any certificates in the .apk."
-msgstr ""
+msgstr ".apk에서 인증서를 찾지 못했습니다."
 
 #: res/app/src/core/install.ts:190
 msgid "The parser encountered a bad or missing package name in the manifest."
-msgstr ""
+msgstr "매니페스트에 잘못되거나 누락된 패키지 이름을 발견했습니다."
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr ""
+msgstr "매니페스트에서 잘못된 공유 사용자 ID 이름을 발견했습니다."
 
 #: res/app/src/core/install.ts:189
 msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr ""
+msgstr ".apk 파일 중 하나에서 CertificateEncodingException이 발생했습니다."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
-msgstr ""
+msgstr "예상하지 못한 예외가 발생하였습니다."
 
 #: res/app/src/core/install.ts:192
 msgid "The parser encountered some structural problem in the manifest."
-msgstr ""
+msgstr "매니페스트에 몇 가지 구조적인 문제가 발생 했습니다."
 
 #: res/app/src/core/install.ts:188
 msgid "The parser found inconsistent certificates on the files in the .apk."
-msgstr ""
+msgstr ".apk 파일에서 일치하지 않은 인증서를 발견 했습니다."
 
 #: res/app/src/core/install.ts:184
 msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
-msgstr ""
+msgstr "전달된 경로가 파일이 아니거나 예상된 '.apk' 확장자로 끝나지 않습니다."
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
-msgstr ""
+msgstr "AndroidManifest.xml 파일을 가져올 수 없습니다."
 
 #: res/app/src/core/install.ts:165
 msgid "The requested shared user does not exist."
-msgstr ""
+msgstr "요청된 공용 사용자가 존재하지 않습니다."
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:56
 msgid "The schedule can only be changed while the group is pending"
-msgstr ""
+msgstr "일정은 그룹이 보류 중일 때만 변경할 수 있습니다"
 
 #: res/app/src/core/install.ts:196
 msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
-msgstr ""
+msgstr "패키지의 네이티브 코드가 시스템에서 지원하는 어떤 ABI와도 일치하지 않아 패키지를 설치하지 못했습니다."
 
 #: res/app/src/core/install.ts:194
 msgid "The system failed to install the package because of system issues."
-msgstr ""
+msgstr "시스템 문제로 인해 패키지를 설치하지 못했습니다."
 
 #: res/app/src/core/install.ts:195
 msgid "The system failed to install the package because the user is restricted from installing apps."
-msgstr ""
+msgstr "사용자의 앱 설치가 제한되어 있어 패키지를 설치하지 못했습니다."
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."
-msgstr ""
+msgstr "전달된 URI가 잘못되었습니다."
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265
 msgid "This folder is empty"
-msgstr ""
+msgstr "폴더가 비어 있습니다"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:111
 #: res/app/src/features/control/panes/logs/LogTable.tsx:138
 msgid "TID"
-msgstr ""
+msgstr "TID"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:109
 #: res/app/src/features/control/panes/logs/LogTable.tsx:134
 msgid "Time"
-msgstr ""
+msgstr "시간"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Tip:"
-msgstr ""
+msgstr "팁:"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:61
 msgid "Title"
-msgstr ""
+msgstr "제목"
 
 #: res/app/src/features/device-list/DeviceStats.tsx:39
 msgid "Total Devices"
-msgstr ""
+msgstr "총 단말기 수"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:66
 msgid "Total duration of groups (ms)"
-msgstr ""
+msgstr "그룹 총 기간 (ms)"
 
 #: res/app/src/features/group-list/GroupStats.tsx:38
 msgid "Total groups"
-msgstr ""
+msgstr "총 그룹 수"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:44
 msgid "True"
-msgstr ""
+msgstr "네"
 
 #: res/app/src/features/control/ControlPage.tsx:118
 #: res/app/src/ui/modals.tsx:141
 msgid "Try to reconnect"
-msgstr ""
+msgstr "다시 연결"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:238
 msgid "Type"
-msgstr ""
+msgstr "유형"
 
 #: res/app/src/core/devices/enhance.ts:22
 #: res/app/src/core/devices/enhance.ts:9
 msgid "Unauthorized"
-msgstr ""
+msgstr "미인증"
 
 #: res/app/src/features/settings/groups/rules.ts:105
 msgid "Unauthorized class while device list is not empty"
-msgstr ""
+msgstr "단말기 목록이 비어 있지 않으면 이 클래스를 사용할 수 없습니다"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:73
 msgid "Uninstall"
-msgstr ""
+msgstr "설치 제거"
 
 #: res/app/src/core/devices/enhance.ts:84
 #: res/app/src/core/devices/enhance.ts:88
 msgid "Unknown"
-msgstr ""
+msgstr "알 수 없음"
 
 #: res/app/src/core/devices/enhance.ts:92
 msgid "Unknown reason."
-msgstr ""
+msgstr "알 수 없는 이유"
 
 #: res/app/src/core/devices/enhance.ts:45
 msgid "Unspecified Failure"
-msgstr ""
+msgstr "지정되지 않은 오류"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:205
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:206
 msgid "Upload From Link"
-msgstr ""
+msgstr "링크로 업로드"
 
 #: res/app/src/core/install.ts:54
 #: res/app/src/features/control/device-control/install-file.ts:17
 msgid "Uploading..."
-msgstr ""
+msgstr "업로드중..."
 
 #: res/app/src/features/device-list/DeviceStats.tsx:40
 msgid "Usable Devices"
-msgstr ""
+msgstr "사용 가능한 단말기"
 
 #: res/app/src/core/devices/enhance.ts:50
 msgid "USB"
-msgstr ""
+msgstr "USB"
 
 #: res/app/src/core/devices/enhance.ts:14
 msgid "Use"
-msgstr ""
+msgstr "사용"
 
 #: res/app/src/features/device-list/columns.tsx:330
 #: res/app/src/features/user/UserPage.tsx:46
 #: res/app/src/features/user/UserPage.tsx:88
 msgid "User"
-msgstr ""
+msgstr "사용자"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:182
 msgid "User list"
-msgstr ""
+msgstr "사용자 목록"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:177
 #: res/app/src/features/settings/users/UsersSettings.tsx:226
 msgid "User selection"
-msgstr ""
+msgstr "사용자 선택"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:101
 msgid "Username"
-msgstr ""
+msgstr "사용자 이름"
 
 #: res/app/src/features/group-list/columns.tsx:81
 #: res/app/src/features/settings/groups/GroupDetail.tsx:193
 #: res/app/src/features/settings/SettingsPage.tsx:40
 msgid "Users"
-msgstr ""
+msgstr "사용자"
 
 #: res/app/src/core/devices/enhance.ts:25
 msgid "Using"
-msgstr ""
+msgstr "사용중"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:236
 msgid "Using Fallback"
-msgstr ""
+msgstr "대체"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:276
 msgid "Version"
-msgstr ""
+msgstr "버전"
 
 #: res/app/src/ui/modals.tsx:151
 msgid "Version Update"
-msgstr ""
+msgstr "버전 업데이트"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:33
 msgid "Vibrate Mode"
-msgstr ""
+msgstr "진동"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
-msgstr ""
+msgstr "전압"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:41
 msgid "Volume"
-msgstr ""
+msgstr "음량"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:44
 msgid "Volume Down"
-msgstr ""
+msgstr "음량 줄이기"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:45
 msgid "Volume Up"
-msgstr ""
+msgstr "음량 올리기"
 
 #: res/app/src/features/group-list/columns.tsx:36
 msgid "Waiting"
-msgstr ""
+msgstr "대기 중"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:31
 msgid "Waiting for log entries"
-msgstr ""
+msgstr "로그 항목을 기다리는 중"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:24
 #: res/app/src/features/settings/groups/actions.ts:33
 #: res/app/src/features/settings/users/UsersSettings.tsx:158
 #: res/app/src/features/settings/users/UsersSettings.tsx:166
 msgid "Warning"
-msgstr ""
+msgstr "경고"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:88
 msgid "Warning:"
-msgstr ""
+msgstr "경고"
 
 #: res/app/src/ui/AppLayout.tsx:269
 msgid "Web"
-msgstr ""
+msgstr "웹"
 
 #: res/app/src/core/common.ts:23
 msgid "Weekly"
-msgstr ""
+msgstr "매주"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:219
 msgid "Width"
-msgstr ""
+msgstr "너비"
 
 #: res/app/src/core/devices/enhance.ts:79
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:124
@@ -2223,61 +2229,61 @@ msgstr ""
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:46
 #: res/app/src/features/control/panes/info/InfoPane.tsx:41
 msgid "WiFi"
-msgstr ""
+msgstr "WiFi"
 
 #: res/app/src/core/devices/enhance.ts:80
 msgid "WiMAX"
-msgstr ""
+msgstr "WiMAX"
 
 #: res/app/src/core/devices/enhance.ts:51
 msgid "Wireless"
-msgstr ""
+msgstr "무선"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:148
 msgid "Write a mail to the available user selection"
-msgstr ""
+msgstr "선택한 사용 가능한 사용자에게 메일 보내기"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:108
 msgid "Write a mail to the group user selection"
-msgstr ""
+msgstr "선택한 그룹 사용자에게 메일 보내기"
 
 #: res/app/src/features/auth/SignInForm.tsx:163
 msgid "Write a mail to the support team"
-msgstr ""
+msgstr "지원팀에 메일 보내기"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:120
 #: res/app/src/features/settings/groups/GroupList.tsx:162
 msgid "Write an email to the group owner selection"
-msgstr ""
+msgstr "선택한 그룹 소유자에게 이메일 보내기"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:189
 msgid "Write an email to the group user selection"
-msgstr ""
+msgstr "선택한 그룹 사용자에게 이메일 보내기"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:240
 msgid "Write an email to the user selection"
-msgstr ""
+msgstr "선택한 사용자에게 이메일 보내기"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:224
 msgid "X DPI"
-msgstr ""
+msgstr "X DPI"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:225
 msgid "Y DPI"
-msgstr ""
+msgstr "Y DPI"
 
 #: res/app/src/core/common.ts:27
 msgid "Yearly"
-msgstr ""
+msgstr "매년"
 
 #: res/app/src/core/devices/enhance.ts:97
 msgid "Yes"
-msgstr ""
+msgstr "네"
 
 #: res/app/src/features/user/UserPage.tsx:72
 msgid "You"
-msgstr ""
+msgstr "본인"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr ""
+msgstr "당신(혹은 다른 누군가)이 단말기를 사용 종료 하였습니다."

@@ -15,8 +15,8 @@ const languageOptions = Object.entries(languages).map(([value, label]) => ({valu
 const defaultEmailAddressSeparator = ','
 
 function LanguageSetting() {
-  const {t} = useTranslation()
-  const [language, setLanguage] = useSetting<string>(languageSettingKey, detectLanguage())
+  const {language, t} = useTranslation()
+  const [, setLanguage] = useSetting<string>(languageSettingKey, detectLanguage())
 
   return (
     <SettingRow icon={<IconLanguage size={20} />} label={t('Language')} className='stf-language'>

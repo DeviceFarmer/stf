@@ -1,9 +1,9 @@
 [main]
-host = https://www.transifex.com
+host = https://app.transifex.com
 
-[stf.ui]
+[o:devicefarmer:p:stf-main:r:enpo]
 file_filter = res/common/lang/po/stf.<lang>.po
 source_file = res/common/lang/po/stf.pot
 source_lang = en
 type = PO
-
+minimum_perc = 80

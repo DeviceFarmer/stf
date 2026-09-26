@@ -1,274 +1,280 @@
 msgid ""
 msgstr ""
-"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: STF\n"
+"Language-Team: Russian (https://app.transifex.com/devicefarmer/teams/110261/ru/)\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3);\n"
 
 #: res/app/src/features/settings/groups/rules.ts:101
 msgid "(Expiration date - Starting date) must be <= Class duration"
-msgstr ""
+msgstr "(Дата окончания - Дата начала) должна быть <= длительности класса"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:153
 #: res/app/src/features/settings/groups/shared/ObjectsTable.tsx:195
 #: res/app/src/features/settings/users/UsersSettings.tsx:231
 msgid "{{count}} selected"
-msgstr ""
+msgstr "Выбрано: {{count}}"
 
 #: res/app/src/features/group-list/GroupStats.tsx:102
 msgid "{{user.name}} groups duration use"
-msgstr ""
+msgstr "{{user.name}}: использование квоты длительности групп"
 
 #: res/app/src/features/group-list/GroupStats.tsx:97
 msgid "{{user.name}} groups number use"
-msgstr ""
+msgstr "{{user.name}}: использование квоты количества групп"
 
 #: res/app/src/ui/modals.tsx:155
 msgid "A new version of STF is available"
-msgstr ""
+msgstr "Доступна новая версия STF"
 
 #: res/app/src/core/install.ts:164
 msgid "A package is already installed with the same name."
-msgstr ""
+msgstr "Пакет уже установлен с таким же названием."
 
 #: res/app/src/core/install.ts:166
 msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr ""
+msgstr "Ранее установленный пакет с таким же названием имеет отличающуюся цифровую подпись (также не удалены данные старого пакета)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
-msgstr ""
+msgstr "Точка монтирования защищенного контейнера недоступна на внешнем носителе."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:278
 #: res/app/src/features/device-list/columns.tsx:302
 #: res/app/src/features/settings/groups/GroupDevices.tsx:27
 msgid "ABI"
-msgstr ""
+msgstr "ABI"
 
 #: res/app/src/core/devices/enhance.ts:49
 msgid "AC"
-msgstr ""
+msgstr "Переменный Ток"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:144
 msgid "Access Tokens"
-msgstr ""
+msgstr "Токены доступа"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:167
 msgid "Account"
-msgstr ""
+msgstr "Учетная запись"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:108
 msgid "Action"
-msgstr ""
+msgstr "Действие"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:168
 msgid "Actions"
-msgstr ""
+msgstr "Действия"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:74
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:82
 msgid "Activation"
-msgstr ""
+msgstr "Активация"
 
 #: res/app/src/features/group-list/columns.tsx:34
 #: res/app/src/features/settings/groups/rules.ts:155
 msgid "Active"
-msgstr ""
+msgstr "Активна"
 
 #: res/app/src/features/group-list/GroupStats.tsx:39
 msgid "Active groups"
-msgstr ""
+msgstr "Активные группы"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:107
 msgid "Activity"
-msgstr ""
+msgstr "Деятельность"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:140
 msgid "ADB Keys"
-msgstr ""
+msgstr "Ключи ADB"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:182
 #: res/app/src/features/settings/groups/GroupDevices.tsx:209
 #: res/app/src/features/settings/groups/GroupUsers.tsx:139
 #: res/app/src/features/settings/groups/GroupUsers.tsx:160
 msgid "Add"
-msgstr ""
+msgstr "Добавить"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:155
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:160
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:82
 msgid "Add ADB Key"
-msgstr ""
+msgstr "Добавить ADB ключ"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:124
 #: res/app/src/ui/modals.tsx:201
 msgid "Add Key"
-msgstr ""
+msgstr "Добавить ключ"
 
 #: res/app/src/ui/modals.tsx:176
 msgid "Add the following ADB Key to STF?"
-msgstr ""
+msgstr "Добавить ADB ключ к STF?"
 
 #: res/app/src/ui/AppLayout.tsx:83
 msgid "Admin mode has been disabled."
-msgstr ""
+msgstr "Режим администратора отключен."
 
 #: res/app/src/ui/AppLayout.tsx:82
 msgid "Admin mode has been enabled."
-msgstr ""
+msgstr "Режим администратора включен."
 
 #: res/app/src/features/control/ControlPage.tsx:79
 msgid "Advanced"
-msgstr ""
+msgstr "Расширенный"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:64
 msgid "Advanced Input"
-msgstr ""
+msgstr "Расширенный ввод"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:235
 msgid "Airplane Mode"
-msgstr ""
+msgstr "Режим В самолёте"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:56
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:67
 msgid "Alert Message"
-msgstr ""
+msgstr "Оповещение"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:75
 msgid "Alert message activation"
-msgstr ""
+msgstr "Включение оповещения"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:88
 msgid "Alert message level"
-msgstr ""
+msgstr "Уровень оповещения"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Annotated"
-msgstr ""
+msgstr "С записями"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:46
 msgid "Any"
-msgstr ""
+msgstr "Любое"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:87
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:40
 msgid "App Store"
-msgstr ""
+msgstr "Play Маркет"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:88
 msgid "App switch"
-msgstr ""
+msgstr "Переключение приложений"
 
 #: res/app/src/features/control/device-control/install-file.ts:14
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:151
 msgid "App Upload"
-msgstr ""
+msgstr "Загрузка приложения"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:69
 msgid "Apps"
-msgstr ""
+msgstr "Приложения"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
 msgid "Are you sure you want to reboot this device and keep using it afterwards?"
-msgstr ""
+msgstr "Вы уверены, что хотите перезагрузить устройство и продолжить использовать его после этого?"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
-msgstr ""
+msgstr "Вы уверены, что хотите перезагрузить устройство?"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:117
 msgid "Auto Scroll"
-msgstr ""
+msgstr "Автопрокрутка"
 
 #: res/app/src/core/devices/enhance.ts:28
 msgid "Automating"
-msgstr ""
+msgstr "Автоматизация"
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
-msgstr ""
+msgstr "Автоматизация"
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
-msgstr ""
+msgstr "Доступен"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:172
 msgid "Available device selection"
-msgstr ""
+msgstr "Выбор доступных устройств"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:120
 msgid "Available devices"
-msgstr ""
+msgstr "Доступные устройства"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:133
 msgid "Available user selection"
-msgstr ""
+msgstr "Выбор доступных пользователей"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:80
 msgid "Available users"
-msgstr ""
+msgstr "Доступные пользователи"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:82
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:28
 msgid "Back"
-msgstr ""
+msgstr "Назад"
 
 #: res/app/src/features/settings/groups/rules.ts:83
 #: res/app/src/features/settings/users/QuotasForm.tsx:20
 msgid "Bad syntax"
-msgstr ""
+msgstr "Неверный синтаксис"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:198
 msgid "Battery"
-msgstr ""
+msgstr "Аккумулятор"
 
 #: res/app/src/features/device-list/columns.tsx:309
 msgid "Battery Health"
-msgstr ""
+msgstr "Состояние батареи"
 
 #: res/app/src/features/device-list/columns.tsx:316
 msgid "Battery Level"
-msgstr ""
+msgstr "Уровень зарядки аккумулятора"
 
 #: res/app/src/features/device-list/columns.tsx:311
 msgid "Battery Source"
-msgstr ""
+msgstr "Источник Энергии"
 
 #: res/app/src/features/device-list/columns.tsx:313
 msgid "Battery Status"
-msgstr ""
+msgstr "Состояние Батареи"
 
 #: res/app/src/features/device-list/columns.tsx:321
 msgid "Battery Temp"
-msgstr ""
+msgstr "Температура аккумулятора"
 
 #: res/app/src/core/devices/enhance.ts:71
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:140
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:162
 msgid "Bluetooth"
-msgstr ""
+msgstr "Bluetooth"
 
 #: res/app/src/core/common.ts:29
 msgid "Bookable"
-msgstr ""
+msgstr "Бронируемый"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:51
 msgid "Booked"
-msgstr ""
+msgstr "Забронировано"
 
 #: res/app/src/features/device-list/columns.tsx:287
 msgid "Browser"
-msgstr ""
+msgstr "Браузер"
 
 #: res/app/src/core/devices/enhance.ts:13
 #: res/app/src/core/devices/enhance.ts:26
 msgid "Busy"
-msgstr ""
+msgstr "Занято"
 
 #: res/app/src/features/device-list/DeviceStats.tsx:41
 msgid "Busy Devices"
-msgstr ""
+msgstr "Используемые устройства"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:35
 msgid "Camera"
-msgstr ""
+msgstr "Камера"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:78
 #: res/app/src/features/device-list/cells.tsx:146
@@ -279,35 +285,35 @@ msgstr ""
 #: res/app/src/ui/modals.tsx:57
 #: res/app/src/ui/modals.tsx:89
 msgid "Cancel"
-msgstr ""
+msgstr "Отменить"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:248
 #: res/app/src/features/device-list/columns.tsx:273
 #: res/app/src/features/settings/groups/GroupDevices.tsx:17
 msgid "Carrier"
-msgstr ""
+msgstr "Оператор"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:111
 msgid "Category"
-msgstr ""
+msgstr "Категория"
 
 #: res/app/src/core/devices/enhance.ts:55
 msgid "Charging"
-msgstr ""
+msgstr "Заряжается"
 
 #: res/app/src/features/auth/SignInForm.tsx:85
 msgid "Check errors below"
-msgstr ""
+msgstr "Проверьте сообщения об ошибках ниже"
 
 #: res/app/src/features/group-list/columns.tsx:85
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:62
 msgid "Class"
-msgstr ""
+msgstr "Класс"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:141
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:146
 msgid "Clean Bluetooth bonded devices"
-msgstr ""
+msgstr "Очистить сопряжённые Bluetooth-устройства"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:161
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:57
@@ -317,177 +323,177 @@ msgstr ""
 #: res/app/src/features/device-list/DeviceListPage.tsx:139
 #: res/app/src/ui/Pager.tsx:46
 msgid "Clear"
-msgstr ""
+msgstr "Очистить"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:41
 msgid "Clipboard"
-msgstr ""
+msgstr "Буфер обмена"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:46
 msgid "Close"
-msgstr ""
+msgstr "Закрыть"
 
 #: res/app/src/core/devices/enhance.ts:40
 msgid "Cold"
-msgstr ""
+msgstr "Холодно"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:194
 #: res/app/src/features/settings/groups/GroupList.tsx:177
 #: res/app/src/features/settings/users/UsersSettings.tsx:268
 msgid "Confirm Remove"
-msgstr ""
+msgstr "Подтверждение удаления"
 
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:35
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:36
 #: res/app/src/features/settings/groups/GroupDetail.tsx:200
 msgid "Conflicts"
-msgstr ""
+msgstr "Конфликты"
 
 #: res/app/src/core/devices/enhance.ts:20
 #: res/app/src/core/devices/enhance.ts:7
 #: res/app/src/features/control/panes/info/InfoPane.tsx:234
 msgid "Connected"
-msgstr ""
+msgstr "Подключено"
 
 #: res/app/src/ui/AppLayout.tsx:104
 msgid "Connected successfully."
-msgstr ""
+msgstr "Подключено успешно."
 
 #: res/app/src/features/group-list/GroupListPage.tsx:128
 #: res/app/src/features/settings/groups/GroupList.tsx:165
 msgid "Contact Owners"
-msgstr ""
+msgstr "Связаться с владельцами"
 
 #: res/app/src/features/auth/SignInForm.tsx:165
 #: res/app/src/features/auth/SignInForm.tsx:168
 #: res/app/src/ui/AppLayout.tsx:276
 #: res/app/src/ui/AppLayout.tsx:283
 msgid "Contact Support"
-msgstr ""
+msgstr "Связаться с поддержкой"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:197
 #: res/app/src/features/settings/groups/GroupUsers.tsx:45
 #: res/app/src/features/settings/users/UsersSettings.tsx:248
 msgid "Contact Users"
-msgstr ""
+msgstr "Связаться с пользователями"
 
 #: res/app/src/ui/AppLayout.tsx:211
 msgid "Control"
-msgstr ""
+msgstr "Контроль"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Controlled"
-msgstr ""
+msgstr "Под управлением"
 
 #: res/app/src/ui/CopyButton.tsx:30
 msgid "Copied"
-msgstr ""
+msgstr "Скопировано"
 
 #: res/app/src/ui/CopyButton.tsx:30
 #: res/app/src/ui/CopyButton.tsx:38
 msgid "Copy to clipboard"
-msgstr ""
+msgstr "Копировать в буфер обмена"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:288
 msgid "Cores"
-msgstr ""
+msgstr "Ядер"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:283
 msgid "CPU"
-msgstr ""
+msgstr "Процессор"
 
 #: res/app/src/features/device-list/columns.tsx:303
 #: res/app/src/features/settings/groups/GroupDevices.tsx:29
 msgid "CPU Platform"
-msgstr ""
+msgstr "Платформа процессора"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:134
 msgid "Create"
-msgstr ""
+msgstr "Создать"
 
 #: res/app/src/features/settings/users/CreateUserForm.tsx:42
 #: res/app/src/features/settings/users/UsersSettings.tsx:192
 msgid "Create new user"
-msgstr ""
+msgstr "Создать нового пользователя"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:25
 msgid "Critical"
-msgstr ""
+msgstr "Критический"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:75
 msgid "Current rotation:"
-msgstr ""
+msgstr "Ориентация сейчас:"
 
 #: res/app/src/ui/ColumnChoice.tsx:47
 #: res/app/src/ui/ColumnChoice.tsx:48
 #: res/app/src/ui/ColumnChoice.tsx:54
 msgid "Customize"
-msgstr ""
+msgstr "Настроить"
 
 #: res/app/src/core/common.ts:22
 msgid "Daily"
-msgstr ""
+msgstr "Ежедневно"
 
 #: res/app/src/ui/AppLayout.tsx:301
 msgid "Dark"
-msgstr ""
+msgstr "Тёмная"
 
 #: res/app/src/features/control/ControlPage.tsx:54
 msgid "Dashboard"
-msgstr ""
+msgstr "Приборная панель"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:116
 msgid "Data"
-msgstr ""
+msgstr "Данные"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:230
 msgid "Date"
-msgstr ""
+msgstr "Дата"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:44
 #: res/app/src/features/settings/general/GeneralSettings.tsx:49
 msgid "Date format"
-msgstr ""
+msgstr "Формат даты"
 
 #: res/app/src/core/devices/enhance.ts:42
 msgid "Dead"
-msgstr ""
+msgstr "Неисправность"
 
 #: res/app/src/core/common.ts:28
 msgid "Debug"
-msgstr ""
+msgstr "Отладка"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:203
 msgid "Default groups quotas"
-msgstr ""
+msgstr "Квоты групп по умолчанию"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:259
 msgid "Default Groups Quotas"
-msgstr ""
+msgstr "Квоты групп по умолчанию"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:62
 msgid "Define your own alert message"
-msgstr ""
+msgstr "Задайте собственный текст оповещения"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:45
 msgid "Define your own Date format"
-msgstr ""
+msgstr "Задайте собственный формат даты"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:68
 msgid "Define your own Email address separator"
-msgstr ""
+msgstr "Задайте собственный разделитель адресов электронной почты"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:217
 msgid "Density"
-msgstr ""
+msgstr "Плотность"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:177
 msgid "Details"
-msgstr ""
+msgstr "Детали"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:58
 msgid "Developer"
-msgstr ""
+msgstr "Разработчик"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:109
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:97
@@ -495,61 +501,61 @@ msgstr ""
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:114
 #: res/app/src/ui/modals.tsx:187
 msgid "Device"
-msgstr ""
+msgstr "Устройство"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:51
 msgid "Device booking state"
-msgstr ""
+msgstr "Состояние бронирования устройства"
 
 #: res/app/src/features/device-list/device-actions.ts:38
 msgid "Device cannot get kicked from the group"
-msgstr ""
+msgstr "Устройство не может быть исключено из группы"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:53
 msgid "Device controlling state"
-msgstr ""
+msgstr "Состояние управления устройством"
 
 #: res/app/src/core/devices/enhance.ts:35
 msgid "Device is not present anymore for some reason."
-msgstr ""
+msgstr "Подключение к устройству отсутствует по неизвестной причине."
 
 #: res/app/src/core/devices/enhance.ts:36
 msgid "Device is present but offline."
-msgstr ""
+msgstr "Устройство подключено, но не активно."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:275
 msgid "Device list"
-msgstr ""
+msgstr "Список устройств"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Device notes state"
-msgstr ""
+msgstr "Наличие записей у устройства"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
-msgstr ""
+msgstr "Фото устройства"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Device presence state"
-msgstr ""
+msgstr "Состояние присутствия устройства"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:126
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:153
 msgid "Device selection"
-msgstr ""
+msgstr "Выбор устройств"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:101
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:45
 msgid "Device Settings"
-msgstr ""
+msgstr "Настройки устройства"
 
 #: res/app/src/features/control/ControlPage.tsx:109
 msgid "Device was disconnected"
-msgstr ""
+msgstr "Устройство было отключено"
 
 #: res/app/src/core/devices/enhance.ts:34
 msgid "Device was kicked by automatic timeout."
-msgstr ""
+msgstr "Устройство было отключено по таймауту."
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:168
 #: res/app/src/features/device-list/DeviceListPage.tsx:49
@@ -558,52 +564,52 @@ msgstr ""
 #: res/app/src/features/settings/SettingsPage.tsx:39
 #: res/app/src/ui/AppLayout.tsx:213
 msgid "Devices"
-msgstr ""
+msgstr "Устройства"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:154
 msgid "Disable Bluetooth"
-msgstr ""
+msgstr "Отключить Bluetooth"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Disable WiFi"
-msgstr ""
+msgstr "Отключить WiFi"
 
 #: res/app/src/core/devices/enhance.ts:56
 msgid "Discharging"
-msgstr ""
+msgstr "Разряжается"
 
 #: res/app/src/core/devices/enhance.ts:19
 #: res/app/src/core/devices/enhance.ts:6
 #: res/app/src/ui/modals.tsx:127
 msgid "Disconnected"
-msgstr ""
+msgstr "Отключено"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:212
 msgid "Display"
-msgstr ""
+msgstr "Экран"
 
 #: res/app/src/core/install.ts:53
 msgid "Downloading..."
-msgstr ""
+msgstr "Скачивается..."
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:184
 msgid "Drop file to upload"
-msgstr ""
+msgstr "Перетащите файл для загрузки"
 
 #: res/app/src/core/devices/enhance.ts:72
 msgid "Dummy"
-msgstr ""
+msgstr "Макет"
 
 #: res/app/src/features/group-list/columns.tsx:88
 #: res/app/src/features/settings/groups/GroupList.tsx:51
 #: res/app/src/features/settings/users/UsersSettings.tsx:300
 msgid "Duration"
-msgstr ""
+msgstr "Длительность"
 
 #: res/app/src/features/auth/SignInForm.tsx:128
 #: res/app/src/features/auth/SignInForm.tsx:129
 msgid "E-mail"
-msgstr ""
+msgstr "Эл. почта"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:214
 #: res/app/src/features/settings/groups/GroupUsers.tsx:19
@@ -611,36 +617,36 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:297
 #: res/app/src/features/user/UserPage.tsx:80
 msgid "Email"
-msgstr ""
+msgstr "Эл. почта"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:67
 #: res/app/src/features/settings/general/GeneralSettings.tsx:72
 msgid "Email address separator"
-msgstr ""
+msgstr "Разделитель адресов электронной почты"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:154
 msgid "Enable Bluetooth"
-msgstr ""
+msgstr "Включить Bluetooth"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:127
 msgid "Enable WiFi"
-msgstr ""
+msgstr "Включить WiFi"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:184
 msgid "Enable/Disable confirmation for device removing"
-msgstr ""
+msgstr "Включить/отключить подтверждение удаления устройств"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:173
 msgid "Enable/Disable confirmation for group removing"
-msgstr ""
+msgstr "Включить/отключить подтверждение удаления групп"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:263
 msgid "Enable/Disable confirmation for user removing"
-msgstr ""
+msgstr "Включить/отключить подтверждение удаления пользователей"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:223
 msgid "Encrypted"
-msgstr ""
+msgstr "Зашифровано"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
@@ -648,179 +654,179 @@ msgstr ""
 #: res/app/src/ui/AppLayout.tsx:110
 #: res/app/src/ui/AppLayout.tsx:111
 msgid "Error"
-msgstr ""
+msgstr "Ошибка"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:28
 #: res/app/src/features/control/screen/screen-keyboard.ts:41
 #: res/app/src/features/control/screen/screen-keyboard.ts:45
 msgid "Error while getting data"
-msgstr ""
+msgstr "Ошибка во время получения данных"
 
 #: res/app/src/core/devices/enhance.ts:73
 msgid "Ethernet"
-msgstr ""
+msgstr "Проводная сеть"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:47
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:92
 msgid "Executes remote shell commands"
-msgstr ""
+msgstr "Выполняет удалённые команды shell"
 
 #: res/app/src/features/group-list/columns.tsx:98
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:14
 #: res/app/src/features/settings/groups/GroupDetail.tsx:147
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:102
 msgid "Expiration Date"
-msgstr ""
+msgstr "Дата окончания"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:160
 msgid "Failed to download file"
-msgstr ""
+msgstr "Не удалось загрузить файл"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:45
 msgid "False"
-msgstr ""
+msgstr "Нет"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:56
 msgid "Fast Forward"
-msgstr ""
+msgstr "Перемотка вперёд"
 
 #: res/app/src/features/control/ControlPage.tsx:85
 msgid "File Explorer"
-msgstr ""
+msgstr "Проводник"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:50
 msgid "File Name"
-msgstr ""
+msgstr "Имя файла"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:119
 msgid "Filter on user group ownership"
-msgstr ""
+msgstr "Фильтр по владению группами"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:181
 #: res/app/src/features/settings/users/UsersSettings.tsx:109
 msgid "Filters"
-msgstr ""
+msgstr "Фильтры"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:188
 msgid "Find Device"
-msgstr ""
+msgstr "Обнаружить устройство"
 
 #: res/app/src/ui/modals.tsx:183
 msgid "Fingerprint"
-msgstr ""
+msgstr "Отпечаток пальца"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:218
 msgid "FPS"
-msgstr ""
+msgstr "FPS"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:289
 msgid "Frequency"
-msgstr ""
+msgstr "Частота"
 
 #: res/app/src/core/devices/enhance.ts:57
 msgid "Full"
-msgstr ""
+msgstr "Полный"
 
 #: res/app/src/features/settings/SettingsPage.tsx:36
 msgid "General"
-msgstr ""
+msgstr "Общие"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:159
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:164
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:57
 msgid "Generate Access Token"
-msgstr ""
+msgstr "Сгенерировать токен доступа"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:70
 msgid "Generate New Token"
-msgstr ""
+msgstr "Сгенерировать новый токен доступа"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Get"
-msgstr ""
+msgstr "Получить"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:61
 msgid "Get clipboard contents"
-msgstr ""
+msgstr "Получить содержимое буфера обмена"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:159
 msgid "Get ready"
-msgstr ""
+msgstr "Сделать готовой"
 
 #: res/app/src/features/docs/DocsPage.tsx:83
 #: res/app/src/features/docs/DocsPage.tsx:88
 msgid "Go Back"
-msgstr ""
+msgstr "Назад"
 
 #: res/app/src/features/control/ControlPage.tsx:121
 msgid "Go to Device List"
-msgstr ""
+msgstr "Открыть список устройств"
 
 #: res/app/src/core/devices/enhance.ts:41
 msgid "Good"
-msgstr ""
+msgstr "Хорошее"
 
 #: res/app/src/features/device-list/columns.tsx:245
 msgid "Group Class"
-msgstr ""
+msgstr "Класс группы"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:131
 msgid "Group device selection"
-msgstr ""
+msgstr "Выбор устройств группы"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:113
 msgid "Group devices"
-msgstr ""
+msgstr "Устройства группы"
 
 #: res/app/src/features/settings/groups/rules.ts:108
 msgid "Group duration quotas is reached"
-msgstr ""
+msgstr "Достигнута квота длительности групп"
 
 #: res/app/src/features/device-list/columns.tsx:252
 msgid "Group Expiration Date"
-msgstr ""
+msgstr "Дата окончания группы"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:121
 msgid "Group list"
-msgstr ""
+msgstr "Список групп"
 
 #: res/app/src/features/device-list/columns.tsx:244
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:15
 msgid "Group Name"
-msgstr ""
+msgstr "Название группы"
 
 #: res/app/src/features/device-list/columns.tsx:256
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:226
 #: res/app/src/features/settings/groups/GroupDevices.tsx:42
 msgid "Group Origin"
-msgstr ""
+msgstr "Исходная группа"
 
 #: res/app/src/features/device-list/columns.tsx:248
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:17
 #: res/app/src/features/settings/users/UsersSettings.tsx:120
 msgid "Group Owner"
-msgstr ""
+msgstr "Владелец группы"
 
 #: res/app/src/features/device-list/columns.tsx:254
 msgid "Group Repetitions"
-msgstr ""
+msgstr "Повторения группы"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:94
 #: res/app/src/features/settings/groups/GroupList.tsx:147
 msgid "Group selection"
-msgstr ""
+msgstr "Выбор групп"
 
 #: res/app/src/features/device-list/columns.tsx:253
 msgid "Group Starting Date"
-msgstr ""
+msgstr "Дата начала группы"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:90
 msgid "Group user selection"
-msgstr ""
+msgstr "Выбор пользователей группы"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:73
 msgid "Group users"
-msgstr ""
+msgstr "Пользователи группы"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:51
 #: res/app/src/features/settings/groups/GroupList.tsx:48
@@ -828,51 +834,51 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:299
 #: res/app/src/ui/AppLayout.tsx:214
 msgid "Groups"
-msgstr ""
+msgstr "Группы"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:103
 msgid "Groups duration quota is reached"
-msgstr ""
+msgstr "Достигнута квота длительности групп"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:124
 msgid "Groups number quota is reached"
-msgstr ""
+msgstr "Достигнута квота количества групп"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:343
 msgid "Groups Quotas"
-msgstr ""
+msgstr "Квоты групп"
 
 #: res/app/src/core/common.ts:26
 msgid "Halfyearly"
-msgstr ""
+msgstr "Раз в полгода"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:258
 msgid "Hardware"
-msgstr ""
+msgstr "Железо"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:202
 msgid "Health"
-msgstr ""
+msgstr "Состояние"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:220
 msgid "Height"
-msgstr ""
+msgstr "Высота"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
 #: res/app/src/features/docs/DocsPage.tsx:28
 #: res/app/src/ui/AppLayout.tsx:289
 #: res/app/src/ui/AppLayout.tsx:295
 msgid "Help"
-msgstr ""
+msgstr "Помощь"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Hide Manifest"
-msgstr ""
+msgstr "Скрыть манифест"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
 msgid "Hide Screen"
-msgstr ""
+msgstr "Спрятать экран"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:85
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:31
@@ -880,238 +886,238 @@ msgstr ""
 #: res/app/src/features/docs/DocsPage.tsx:64
 #: res/app/src/features/docs/DocsPage.tsx:95
 msgid "Home"
-msgstr ""
+msgstr "Домашний экран"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:101
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:110
 msgid "Host"
-msgstr ""
+msgstr "Хост"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:118
 msgid "Hostname"
-msgstr ""
+msgstr "Имя хоста"
 
 #: res/app/src/core/common.ts:21
 msgid "Hourly"
-msgstr ""
+msgstr "Ежечасно"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:253
 msgid "ICCID"
-msgstr ""
+msgstr "ICCID SIM-карты"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:221
 msgid "ID"
-msgstr ""
+msgstr "Идентификатор"
 
 #: res/app/src/features/group-list/columns.tsx:66
 #: res/app/src/features/settings/groups/GroupDetail.tsx:144
 msgid "Identifier"
-msgstr ""
+msgstr "Идентификатор"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:251
 msgid "IMEI"
-msgstr ""
+msgstr "IMEI"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:252
 msgid "IMSI"
-msgstr ""
+msgstr "IMSI"
 
 #: res/app/src/features/settings/groups/rules.ts:157
 msgid "Inactive"
-msgstr ""
+msgstr "Неактивна"
 
 #: res/app/src/features/auth/SignInForm.tsx:86
 msgid "Incorrect login details"
-msgstr ""
+msgstr "Некорректные логин или пароль"
 
 #: res/app/src/features/control/ControlPage.tsx:91
 msgid "Info"
-msgstr ""
+msgstr "Инфо"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:23
 msgid "Information"
-msgstr ""
+msgstr "Информация"
 
 #: res/app/src/core/install.ts:159
 msgid "Installation canceled by user."
-msgstr ""
+msgstr "Установка отменена пользователем."
 
 #: res/app/src/core/install.ts:157
 msgid "Installation failed due to an unknown error."
-msgstr ""
+msgstr "Установка не удалась по неизвестной причине."
 
 #: res/app/src/core/install.ts:156
 #: res/app/src/features/control/device-control/install-file.ts:32
 msgid "Installation succeeded."
-msgstr ""
+msgstr "Установка прошла успешно."
 
 #: res/app/src/core/install.ts:158
 msgid "Installation timed out."
-msgstr ""
+msgstr "Время установки истекло."
 
 #: res/app/src/core/install.ts:57
 msgid "Installing app..."
-msgstr ""
+msgstr "Устанавливаем приложение..."
 
 #: res/app/src/ui/Pager.tsx:61
 msgid "Items per page"
-msgstr ""
+msgstr "Элементов на странице"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:97
 msgid "Key"
-msgstr ""
+msgstr "Ключ"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:181
 msgid "Keyboard"
-msgstr ""
+msgstr "Клавиатура"
 
 #: res/app/src/features/settings/SettingsPage.tsx:37
 msgid "Keys"
-msgstr ""
+msgstr "Ключи"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:93
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:97
 msgid "Landscape"
-msgstr ""
+msgstr "Ландшафт"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:22
 #: res/app/src/features/settings/general/GeneralSettings.tsx:25
 msgid "Language"
-msgstr ""
+msgstr "Язык"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:120
 msgid "Launch Activity"
-msgstr ""
+msgstr "Запустить приложение"
 
 #: res/app/src/core/install.ts:58
 msgid "Launching activity..."
-msgstr ""
+msgstr "Приложение запускается..."
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
 msgid "LDAP Username"
-msgstr ""
+msgstr "Имя пользователя LDAP"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:205
 #: res/app/src/features/control/panes/logs/LogTable.tsx:133
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:87
 msgid "Level"
-msgstr ""
+msgstr "Уровень"
 
 #: res/app/src/ui/AppLayout.tsx:301
 msgid "Light"
-msgstr ""
+msgstr "Светлая"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:90
 msgid "Local Settings"
-msgstr ""
+msgstr "Локальные настройки"
 
 #: res/app/src/features/device-list/columns.tsx:325
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:225
 #: res/app/src/features/settings/groups/GroupDevices.tsx:40
 msgid "Location"
-msgstr ""
+msgstr "Местоположение"
 
 #: res/app/src/features/auth/SignInForm.tsx:156
 msgid "Log In"
-msgstr ""
+msgstr "Войти"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:102
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:103
 msgid "Logcat Level"
-msgstr ""
+msgstr "Уровень Logcat"
 
 #: res/app/src/ui/AppLayout.tsx:313
 #: res/app/src/ui/AppLayout.tsx:319
 msgid "Logout"
-msgstr ""
+msgstr "Выйти"
 
 #: res/app/src/features/control/ControlPage.tsx:60
 msgid "Logs"
-msgstr ""
+msgstr "Журнал"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:23
 msgid "Maintenance"
-msgstr ""
+msgstr "Обслуживание"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:90
 msgid "Make sure to copy your access token now. You won't be able to see it again."
-msgstr ""
+msgstr "Обязательно скопируйте токен доступа. Вы не увидите его снова."
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:52
 msgid "Manage Apps"
-msgstr ""
+msgstr "Управление приложениями"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:103
 msgid "Manner Mode"
-msgstr ""
+msgstr "Бесшумный режим"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:262
 #: res/app/src/features/device-list/columns.tsx:294
 #: res/app/src/features/settings/groups/GroupDevices.tsx:22
 msgid "Manufacturer"
-msgstr ""
+msgstr "Производитель"
 
 #: res/app/src/features/device-list/columns.tsx:295
 #: res/app/src/features/settings/groups/GroupDevices.tsx:38
 msgid "Market name"
-msgstr ""
+msgstr "Коммерческое название"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:49
 msgid "Media"
-msgstr ""
+msgstr "Медиа"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:294
 msgid "Memory"
-msgstr ""
+msgstr "Память"
 
 #: res/app/src/features/control/device-control/DeviceControlPanel.tsx:79
 msgid "Menu"
-msgstr ""
+msgstr "Меню"
 
 #: res/app/src/core/devices/enhance.ts:74
 msgid "Mobile"
-msgstr ""
+msgstr "Мобильный"
 
 #: res/app/src/core/devices/enhance.ts:75
 msgid "Mobile DUN"
-msgstr ""
+msgstr "DUN"
 
 #: res/app/src/core/devices/enhance.ts:76
 msgid "Mobile High Priority"
-msgstr ""
+msgstr "Mobile High Priority"
 
 #: res/app/src/core/devices/enhance.ts:77
 msgid "Mobile MMS"
-msgstr ""
+msgstr "Мобильный MMS"
 
 #: res/app/src/core/devices/enhance.ts:78
 msgid "Mobile SUPL"
-msgstr ""
+msgstr "SUPL"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:264
 #: res/app/src/features/device-list/columns.tsx:258
 #: res/app/src/features/settings/groups/GroupDevices.tsx:15
 msgid "Model"
-msgstr ""
+msgstr "Модель"
 
 #: res/app/src/core/common.ts:24
 msgid "Monthly"
-msgstr ""
+msgstr "Ежемесячно"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:147
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:154
 msgid "More about Access Tokens"
-msgstr ""
+msgstr "Подробнее о ключах доступа"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:143
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:150
 msgid "More about ADB Keys"
-msgstr ""
+msgstr "Подробнее о ADB ключах"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:43
 msgid "Mute"
-msgstr ""
+msgstr "Выключить звук"
 
 #: res/app/src/features/auth/SignInForm.tsx:110
 #: res/app/src/features/auth/SignInForm.tsx:111
@@ -1126,178 +1132,178 @@ msgstr ""
 #: res/app/src/features/settings/users/CreateUserForm.tsx:57
 #: res/app/src/features/settings/users/UsersSettings.tsx:296
 msgid "Name"
-msgstr ""
+msgstr "Имя"
 
 #: res/app/src/ui/AppLayout.tsx:270
 msgid "Native"
-msgstr ""
+msgstr "Нативный"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:54
 msgid "Navigation"
-msgstr ""
+msgstr "Навигация"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:230
 #: res/app/src/features/control/panes/info/InfoPane.tsx:249
 #: res/app/src/features/device-list/columns.tsx:280
 #: res/app/src/features/settings/groups/GroupDevices.tsx:19
 msgid "Network"
-msgstr ""
+msgstr "Сеть"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:55
 msgid "Next"
-msgstr ""
+msgstr "Следующий"
 
 #: res/app/src/core/devices/enhance.ts:100
 msgid "No"
-msgstr ""
+msgstr "Нет"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:191
 msgid "No access tokens"
-msgstr ""
+msgstr "Ключи доступа отсутствуют"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:174
 msgid "No ADB keys"
-msgstr ""
+msgstr "ADB ключи отсутствуют"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:173
 msgid "No available devices"
-msgstr ""
+msgstr "Нет доступных устройств"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:134
 msgid "No available users"
-msgstr ""
+msgstr "Нет доступных пользователей"
 
 #: res/app/src/features/settings/groups/rules.ts:91
 #: res/app/src/features/settings/users/QuotasForm.tsx:24
 msgid "No change"
-msgstr ""
+msgstr "Нет изменений"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:25
 #: res/app/src/features/control/screen/screen-keyboard.ts:38
 msgid "No clipboard data"
-msgstr ""
+msgstr "В буфере обмена нет данных"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:160
 msgid "No device screen"
-msgstr ""
+msgstr "Экран устройства недоступен"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:140
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:265
 msgid "No Devices"
-msgstr ""
+msgstr "Нет устройств"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:103
 msgid "No devices connected"
-msgstr ""
+msgstr "Нет подключенных устройств"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:132
 msgid "No group devices"
-msgstr ""
+msgstr "В группе нет устройств"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:91
 msgid "No group users"
-msgstr ""
+msgstr "В группе нет пользователей"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:87
 #: res/app/src/features/settings/groups/GroupList.tsx:200
 msgid "No Groups"
-msgstr ""
+msgstr "Нет групп"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:28
 msgid "No log entries match the filters"
-msgstr ""
+msgstr "Нет записей журнала, соответствующих фильтрам"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:98
 msgid "No output"
-msgstr ""
+msgstr "Нет вывода"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:104
 msgid "No photo available"
-msgstr ""
+msgstr "Отсутствует фото"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:94
 msgid "No Ports Forwarded"
-msgstr ""
+msgstr "Отсутствуют перенаправленные порты"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:117
 #: res/app/src/features/group-list/GroupListPage.tsx:161
 #: res/app/src/features/group-list/GroupMembers.tsx:90
 msgid "No results"
-msgstr ""
+msgstr "Нет результатов"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:118
 msgid "No screenshots taken"
-msgstr ""
+msgstr "Снимки экрана отсутствуют"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:289
 msgid "No Users"
-msgstr ""
+msgstr "Нет пользователей"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:34
 msgid "Normal Mode"
-msgstr ""
+msgstr "Нормальный режим"
 
 #: res/app/src/core/devices/enhance.ts:58
 msgid "Not Charging"
-msgstr ""
+msgstr "Не заряжается"
 
 #: res/app/src/features/docs/DocsPage.tsx:62
 #: res/app/src/features/user/UserPage.tsx:54
 msgid "Not Found"
-msgstr ""
+msgstr "Не найдено"
 
 #: res/app/src/features/device-list/cells.tsx:132
 #: res/app/src/features/device-list/cells.tsx:162
 #: res/app/src/features/device-list/columns.tsx:326
 msgid "Notes"
-msgstr ""
+msgstr "Записи"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:250
 msgid "Number"
-msgstr ""
+msgstr "Номер"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:54
 msgid "Number of groups"
-msgstr ""
+msgstr "Количество групп"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:80
 msgid "Number of repetitions per group"
-msgstr ""
+msgstr "Количество повторений на группу"
 
 #: res/app/src/core/devices/enhance.ts:21
 #: res/app/src/core/devices/enhance.ts:8
 msgid "Offline"
-msgstr ""
+msgstr "Не в сети"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:111
 #: res/app/src/ui/modals.tsx:67
 #: res/app/src/ui/modals.tsx:88
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: res/app/src/core/common.ts:20
 msgid "Once"
-msgstr ""
+msgstr "Однократно"
 
 #: res/app/src/features/control/device-control/install-file.ts:38
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:108
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:105
 #: res/app/src/ui/notify.ts:8
 msgid "Oops!"
-msgstr ""
+msgstr "Ой!"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:98
 msgid "Open"
-msgstr ""
+msgstr "Открыть"
 
 #: res/app/src/features/device-list/columns.tsx:304
 #: res/app/src/features/settings/groups/GroupDevices.tsx:34
 msgid "OpenGL ES version"
-msgstr ""
+msgstr "Версия OpenGL ES"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:222
 msgid "Orientation"
-msgstr ""
+msgstr "Ориентация"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:275
 #: res/app/src/features/device-list/columns.tsx:276
@@ -1305,226 +1311,226 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:222
 #: res/app/src/features/settings/groups/GroupDevices.tsx:18
 msgid "OS"
-msgstr ""
+msgstr "ОС"
 
 #: res/app/src/core/devices/enhance.ts:43
 msgid "Over Voltage"
-msgstr ""
+msgstr "Перенапряжение"
 
 #: res/app/src/core/devices/enhance.ts:44
 msgid "Overheat"
-msgstr ""
+msgstr "Перегрев"
 
 #: res/app/src/features/group-list/columns.tsx:71
 #: res/app/src/features/settings/groups/GroupDetail.tsx:145
 msgid "Owner"
-msgstr ""
+msgstr "Владелец"
 
 #: res/app/src/features/control/panes/dashboard/install/ActivityLauncher.tsx:102
 msgid "Package"
-msgstr ""
+msgstr "Пакет"
 
 #: res/app/src/features/auth/SignInForm.tsx:144
 #: res/app/src/features/auth/SignInForm.tsx:145
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:117
 msgid "Password"
-msgstr ""
+msgstr "Пароль"
 
 #: res/app/src/ui/mail.ts:18
 msgid "Paste the email addresses from the clipboard!"
-msgstr ""
+msgstr "Вставьте адреса электронной почты из буфера обмена!"
 
 #: res/app/src/features/control/panes/dashboard/clipboard/ClipboardCard.tsx:71
 msgid "Paste to device"
-msgstr ""
+msgstr "Вставить на устройство"
 
 #: res/app/src/features/group-list/columns.tsx:35
 #: res/app/src/features/settings/groups/rules.ts:152
 msgid "Pending"
-msgstr ""
+msgstr "В ожидании"
 
 #: res/app/src/features/group-list/GroupStats.tsx:46
 msgid "Pending groups"
-msgstr ""
+msgstr "Группы в ожидании"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:231
 msgid "Permissions"
-msgstr ""
+msgstr "Разрешения"
 
 #: res/app/src/features/device-list/columns.tsx:305
 msgid "Phone"
-msgstr ""
+msgstr "Телефон"
 
 #: res/app/src/features/device-list/columns.tsx:308
 msgid "Phone ICCID"
-msgstr ""
+msgstr "ICCID SIM-карты"
 
 #: res/app/src/features/device-list/columns.tsx:306
 #: res/app/src/features/settings/groups/GroupDevices.tsx:39
 msgid "Phone IMEI"
-msgstr ""
+msgstr "IMEI телефона"
 
 #: res/app/src/features/device-list/columns.tsx:307
 msgid "Phone IMSI"
-msgstr ""
+msgstr "IMSI SIM-карты"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:183
 msgid "Physical Device"
-msgstr ""
+msgstr "Физическое устройство"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:110
 #: res/app/src/features/control/panes/logs/LogTable.tsx:137
 msgid "PID"
-msgstr ""
+msgstr "PID"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:192
 msgid "Place"
-msgstr ""
+msgstr "Место"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:271
 msgid "Platform"
-msgstr ""
+msgstr "Платформа"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:53
 msgid "Play/Pause"
-msgstr ""
+msgstr "Воспроизведение/Пауза"
 
 #: res/app/src/features/auth/SignInForm.tsx:49
 msgid "Please enter a valid email"
-msgstr ""
+msgstr "Пожалуйста, введите корректный email"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:124
 msgid "Please enter your Store password"
-msgstr ""
+msgstr "Пожалуйста, введите пароль для Хранилища"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:108
 msgid "Please enter your Store username"
-msgstr ""
+msgstr "Пожалуйста введите ваше имя пользователя для Хранилища"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:117
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:120
 msgid "Port"
-msgstr ""
+msgstr "Порт"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:27
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:75
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:83
 msgid "Port Forwarding"
-msgstr ""
+msgstr "Перенаправление портов"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:82
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:86
 msgid "Portrait"
-msgstr ""
+msgstr "Портретный"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:34
 msgid "Power"
-msgstr ""
+msgstr "Энергия"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:203
 msgid "Power Source"
-msgstr ""
+msgstr "Источник энергии"
 
 #: res/app/src/core/devices/enhance.ts:10
 #: res/app/src/core/devices/enhance.ts:23
 #: res/app/src/features/control/ControlPage.tsx:288
 msgid "Preparing"
-msgstr ""
+msgstr "Подготовка"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:50
 msgid "Present"
-msgstr ""
+msgstr "Присутствует"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:33
 msgid "Press Get to start logging"
-msgstr ""
+msgstr "Нажмите «Получить», чтобы начать журналирование"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:52
 msgid "Previous"
-msgstr ""
+msgstr "Предыдущий"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:215
 #: res/app/src/features/settings/groups/GroupUsers.tsx:24
 #: res/app/src/features/settings/users/UsersSettings.tsx:298
 msgid "Privilege"
-msgstr ""
+msgstr "Привилегии"
 
 #: res/app/src/core/install.ts:55
 msgid "Processing..."
-msgstr ""
+msgstr "Обрабатываю..."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:263
 #: res/app/src/features/device-list/columns.tsx:263
 msgid "Product"
-msgstr ""
+msgstr "Продукт"
 
 #: res/app/src/core/install.ts:56
 msgid "Pushing app..."
-msgstr ""
+msgstr "Загружаю приложение на устройство..."
 
 #: res/app/src/core/common.ts:25
 msgid "Quaterly"
-msgstr ""
+msgstr "Ежеквартально"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:298
 msgid "RAM"
-msgstr ""
+msgstr "Оперативная память"
 
 #: res/app/src/core/devices/enhance.ts:11
 #: res/app/src/core/devices/enhance.ts:24
 #: res/app/src/features/group-list/columns.tsx:37
 msgid "Ready"
-msgstr ""
+msgstr "Готово"
 
 #: res/app/src/features/group-list/GroupStats.tsx:44
 msgid "Ready groups"
-msgstr ""
+msgstr "Готовые группы"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:112
 msgid "Really delete this device?"
-msgstr ""
+msgstr "Действительно удалить это устройство?"
 
 #: res/app/src/features/settings/groups/actions.ts:62
 msgid "Really delete this group?"
-msgstr ""
+msgstr "Действительно удалить эту группу?"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:123
 msgid "Really delete this selection of devices?"
-msgstr ""
+msgstr "Действительно удалить выбранные устройства?"
 
 #: res/app/src/features/settings/groups/actions.ts:70
 msgid "Really delete this selection of groups?"
-msgstr ""
+msgstr "Действительно удалить выбранные группы?"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:166
 msgid "Really delete this selection of users?"
-msgstr ""
+msgstr "Действительно удалить выбранных пользователей?"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:158
 msgid "Really delete this user?"
-msgstr ""
+msgstr "Действительно удалить этого пользователя?"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:34
 msgid "Recents"
-msgstr ""
+msgstr "Недавние"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
-msgstr ""
+msgstr "Синтаксис регулярных выражений"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:266
 #: res/app/src/features/device-list/columns.tsx:274
 msgid "Released"
-msgstr ""
+msgstr "Дата выпуска"
 
 #: res/app/src/ui/modals.tsx:165
 msgid "Reload"
-msgstr ""
+msgstr "Перезагрузить"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:67
 msgid "Remote debug"
-msgstr ""
+msgstr "Удалённая отладка"
 
 #: res/app/src/features/control/panes/advanced/PortForwardingCard.tsx:126
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:207
@@ -1540,105 +1546,105 @@ msgstr ""
 #: res/app/src/features/settings/users/UsersSettings.tsx:283
 #: res/app/src/features/settings/users/UsersSettings.tsx:348
 msgid "Remove"
-msgstr ""
+msgstr "Удалить"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:197
 msgid "Remove the device selection"
-msgstr ""
+msgstr "Удалить выбранные устройства"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:184
 msgid "Remove the group selection"
-msgstr ""
+msgstr "Удалить выбранные группы"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:275
 msgid "Remove the user selection"
-msgstr ""
+msgstr "Удалить выбранных пользователей"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:71
 #: res/app/src/features/settings/users/UsersSettings.tsx:115
 msgid "Removing filters"
-msgstr ""
+msgstr "Фильтры удаления"
 
 #: res/app/src/features/group-list/columns.tsx:86
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:71
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:81
 #: res/app/src/features/settings/users/UsersSettings.tsx:301
 msgid "Repetitions"
-msgstr ""
+msgstr "Повторения"
 
 #: res/app/src/features/settings/groups/rules.ts:94
 msgid "Repetitions must be > 0 for this Class"
-msgstr ""
+msgstr "Для этого класса количество повторений должно быть > 0"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:65
 #: res/app/src/features/settings/general/GeneralSettings.tsx:104
 #: res/app/src/ui/ColumnChoice.tsx:87
 msgid "Reset"
-msgstr ""
+msgstr "Сбросить"
 
 #: res/app/src/features/control/panes/dashboard/navigation/NavigationCard.tsx:56
 msgid "Reset all browser settings"
-msgstr ""
+msgstr "Сбросить все настройки браузера"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:93
 msgid "Reset Settings"
-msgstr ""
+msgstr "Сбросить настройки"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:47
 msgid "Restart and Keep Device"
-msgstr ""
+msgstr "Перезагрузить, не освобождая"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:35
 msgid "Restart Device"
-msgstr ""
+msgstr "Перезагрузить устройство"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:167
 msgid "Retry"
-msgstr ""
+msgstr "Повторить"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:51
 msgid "Rewind"
-msgstr ""
+msgstr "Перемотать назад"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:237
 msgid "Roaming"
-msgstr ""
+msgstr "Роуминг"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:299
 msgid "ROM"
-msgstr ""
+msgstr "ПЗУ"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:38
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:106
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:110
 msgid "Rotate Left"
-msgstr ""
+msgstr "Повернуть влево"
 
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:44
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:116
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:120
 msgid "Rotate Right"
-msgstr ""
+msgstr "Повернуть вправо"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:77
 msgid "Run"
-msgstr ""
+msgstr "Выполнить"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
 msgid "Run the following on your command line to debug the device from your Browser"
-msgstr ""
+msgstr "Выполните эту команду, чтобы отладить устройство из вашего Браузера"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
 msgid "Run the following on your command line to debug the device from your IDE"
-msgstr ""
+msgstr "Выполните эту команду, чтобы отладить устройство из вашего IDE"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Run this command to copy the key to your clipboard"
-msgstr ""
+msgstr "Выполните эту команду, чтобы скопировать ключ в буфер обмена"
 
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:68
 msgid "Sample of log format"
-msgstr ""
+msgstr "Пример формата журнала"
 
 #: res/app/src/features/device-list/cells.tsx:143
 #: res/app/src/features/settings/groups/GroupDetail.tsx:100
@@ -1646,47 +1652,47 @@ msgstr ""
 #: res/app/src/features/settings/users/CreateUserForm.tsx:83
 #: res/app/src/features/settings/users/QuotasForm.tsx:95
 msgid "Save"
-msgstr ""
+msgstr "Сохранить"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:134
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:139
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:80
 #: res/app/src/features/control/panes/logs/SaveLogModal.tsx:90
 msgid "Save Logs"
-msgstr ""
+msgstr "Сохранить журнал"
 
 #: res/app/src/features/control/device-control/device-commands.ts:23
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:48
 msgid "Save ScreenShot"
-msgstr ""
+msgstr "Сохранить скриншот"
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:115
 msgid "Saving will also get ready the group!"
-msgstr ""
+msgstr "Сохранение также переведёт группу в состояние готовности!"
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:196
 msgid "Schedule"
-msgstr ""
+msgstr "Расписание"
 
 #: res/app/src/features/device-list/columns.tsx:281
 #: res/app/src/features/group-list/GroupMembers.tsx:153
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:223
 #: res/app/src/features/settings/groups/GroupDevices.tsx:20
 msgid "Screen"
-msgstr ""
+msgstr "Экран"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
 msgid "Screenshot"
-msgstr ""
+msgstr "Снимок экрана"
 
 #: res/app/src/features/control/ControlPage.tsx:67
 msgid "Screenshots"
-msgstr ""
+msgstr "Снимки экрана"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:300
 msgid "SD Card Mounted"
-msgstr ""
+msgstr "SD карта подключена"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:277
 #: res/app/src/features/device-list/columns.tsx:297
@@ -1694,19 +1700,19 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:224
 #: res/app/src/features/settings/groups/GroupDevices.tsx:26
 msgid "SDK"
-msgstr ""
+msgstr "SDK"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:37
 #: res/app/src/features/device-list/DeviceListPage.tsx:134
 #: res/app/src/ui/Pager.tsx:38
 msgid "Search"
-msgstr ""
+msgstr "Поиск"
 
 #: res/app/src/features/settings/groups/GroupList.tsx:154
 #: res/app/src/features/settings/groups/shared/ObjectsTable.tsx:137
 #: res/app/src/features/settings/users/UsersSettings.tsx:232
 msgid "Select all"
-msgstr ""
+msgstr "Выбрать все"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:265
 #: res/app/src/features/device-list/columns.tsx:293
@@ -1715,131 +1721,131 @@ msgstr ""
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:12
 #: res/app/src/features/settings/groups/GroupDevices.tsx:16
 msgid "Serial"
-msgstr ""
+msgstr "Серийный номер"
 
 #: res/app/src/features/auth/SignInForm.tsx:87
 msgid "Server error. Check log output."
-msgstr ""
+msgstr "Ошибка сервера. Проверьте log."
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:171
 msgid "Set filters for device removing"
-msgstr ""
+msgstr "Задать фильтры для удаления устройств"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:101
 msgid "Set filters for user removing"
-msgstr ""
+msgstr "Задать фильтры для удаления пользователей"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:251
 msgid "Set groups quotas for new users"
-msgstr ""
+msgstr "Задать квоты групп для новых пользователей"
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:34
 #: res/app/src/features/settings/SettingsPage.tsx:56
 #: res/app/src/features/settings/SettingsPage.tsx:79
 #: res/app/src/ui/AppLayout.tsx:215
 msgid "Settings"
-msgstr ""
+msgstr "Настройки"
 
 #: res/app/src/features/settings/general/GeneralSettings.tsx:101
 msgid "Settings cleared"
-msgstr ""
+msgstr "Настройки сброшены"
 
 #: res/app/src/features/control/panes/dashboard/shell/ShellCard.tsx:46
 msgid "Shell"
-msgstr ""
+msgstr "Командная оболочка"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:85
 msgid "Show Manifest"
-msgstr ""
+msgstr "Показать манифест"
 
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:128
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:133
 msgid "Show Screen"
-msgstr ""
+msgstr "Показать экран"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:157
 msgid "Sign In"
-msgstr ""
+msgstr "Войти"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in to continue"
-msgstr ""
+msgstr "Войдите, чтобы продолжить"
 
 #: res/app/src/features/auth/SignInForm.tsx:97
 msgid "Sign in with your LDAP account"
-msgstr ""
+msgstr "Войдите с помощью учетной записи LDAP"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:188
 msgid "Sign Out"
-msgstr ""
+msgstr "Выйти"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:32
 msgid "Silent Mode"
-msgstr ""
+msgstr "Тихий режим"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:244
 msgid "SIM"
-msgstr ""
+msgstr "SIM-карта"
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:229
 #: res/app/src/features/control/panes/info/InfoPane.tsx:216
 msgid "Size"
-msgstr ""
+msgstr "Размер"
 
 #: res/app/src/features/auth/SignInForm.tsx:95
 msgid "Smartphone Test Farm"
-msgstr ""
+msgstr "Smartphone Test Farm"
 
 #: res/app/src/ui/AppLayout.tsx:109
 msgid "Socket connection was lost"
-msgstr ""
+msgstr "Подключение через socket потеряно"
 
 #: res/app/src/core/devices/enhance.ts:33
 msgid "Someone stole your device."
-msgstr ""
+msgstr "Кто-то утащил ваше устройство"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:32
 msgid "Special Keys"
-msgstr ""
+msgstr "Специальные кнопки"
 
 #: res/app/src/core/common.ts:30
 msgid "Standard"
-msgstr ""
+msgstr "Стандартный"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:90
 msgid "Start"
-msgstr ""
+msgstr "Запустить"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:86
 msgid "Start/Stop Logging"
-msgstr ""
+msgstr "Начать/Остановить журналирование"
 
 #: res/app/src/features/group-list/columns.tsx:93
 #: res/app/src/features/settings/groups/GroupConflicts.tsx:13
 #: res/app/src/features/settings/groups/GroupDetail.tsx:146
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:92
 msgid "Starting Date"
-msgstr ""
+msgstr "Дата начала"
 
 #: res/app/src/features/settings/groups/rules.ts:97
 msgid "Starting date >= Expiration date"
-msgstr ""
+msgstr "Дата начала >= даты окончания"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:204
 #: res/app/src/features/device-list/columns.tsx:238
 #: res/app/src/features/group-list/columns.tsx:51
 msgid "Status"
-msgstr ""
+msgstr "Статус"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:54
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:79
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:95
 msgid "Stop"
-msgstr ""
+msgstr "Стоп"
 
 #: res/app/src/core/devices/enhance.ts:15
 msgid "Stop Automation"
-msgstr ""
+msgstr "Остановить автоматизацию"
 
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
@@ -1847,375 +1853,375 @@ msgstr ""
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:146
 #: res/app/src/features/control/device-control/use-device-actions.ts:67
 msgid "Stop Using"
-msgstr ""
+msgstr "Освободить"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:63
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:76
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:82
 msgid "Store Account"
-msgstr ""
+msgstr "Учетная запись магазина приложений"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:239
 msgid "Sub Type"
-msgstr ""
+msgstr "Подтип"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:36
 msgid "Switch Charset"
-msgstr ""
+msgstr "Переключить кодировку"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:112
 #: res/app/src/features/control/panes/logs/LogTable.tsx:139
 msgid "Tag"
-msgstr ""
+msgstr "Тег"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
-msgstr ""
+msgstr "Сделать снимок экрана"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
-msgstr ""
+msgstr "Температура"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:113
 #: res/app/src/features/control/panes/logs/LogTable.tsx:142
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:61
 msgid "Text"
-msgstr ""
+msgstr "Текст"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:163
 msgid "The current view is marked secure and cannot be viewed remotely."
-msgstr ""
+msgstr "Текущий просмотр отмечен как безопасный и к нему нельзя получить доступ удалённо."
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
-msgstr ""
+msgstr "Устройство будет временно недоступно."
 
 #: res/app/src/core/install.ts:168
 msgid "The existing package could not be deleted."
-msgstr ""
+msgstr "Существующий пакет не может быть удалён."
 
 #: res/app/src/core/install.ts:180
 msgid "The new package couldn't be installed because the verification did not succeed."
-msgstr ""
+msgstr "Пакет не может быть установлен из-за ошибки верификации."
 
 #: res/app/src/core/install.ts:179
 msgid "The new package couldn't be installed because the verification timed out."
-msgstr ""
+msgstr "Пакет не может быть установлен из-за превышения времени верификации."
 
 #: res/app/src/core/install.ts:178
 msgid "The new package couldn't be installed in the specified install location because the media is not available."
-msgstr ""
+msgstr "Пакет не может быть установлен в указанное место поскольку оно недоступно."
 
 #: res/app/src/core/install.ts:177
 msgid "The new package couldn't be installed in the specified install location."
-msgstr ""
+msgstr "Пакет не может быть установлен в указанное место."
 
 #: res/app/src/core/install.ts:171
 msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr ""
+msgstr "Не удаётся установить новый пакет потому что он содержит поставщик услуг с тем же авторитетом как тот который уже установлен на системе."
 
 #: res/app/src/core/install.ts:173
 msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr ""
+msgstr "Новый пакет не установлен, поскольку отмечен как test-only и при запуске не указан флаг INSTALL_ALLOW_TEST"
 
 #: res/app/src/core/install.ts:172
 msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr ""
+msgstr "Новый пакет не установлен, поскольку текущая версия SDK новее, чем требуемая пакетом."
 
 #: res/app/src/core/install.ts:170
 msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr ""
+msgstr "Новый пакет не установлен, поскольку текущая версия SDK старее, чем требуемая пакетом."
 
 #: res/app/src/core/install.ts:169
 msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
-msgstr ""
+msgstr "Установка нового пакета не удалась при оптимизации и валидации dex-файлов, поскольку либо не хватило места, либо из-за ошибки валидации."
 
 #: res/app/src/core/install.ts:183
 msgid "The new package has an older version code than the currently installed package."
-msgstr ""
+msgstr "Новый пакет имеет более старую версию, чем уже установленный."
 
 #: res/app/src/core/install.ts:182
 msgid "The new package is assigned a different UID than it previously held."
-msgstr ""
+msgstr "Новому пакету назначен UID, отличающийся от ранее присвоенного."
 
 #: res/app/src/core/install.ts:175
 msgid "The new package uses a feature that is not available."
-msgstr ""
+msgstr "Пакет использует функцию которая не доступна."
 
 #: res/app/src/core/install.ts:167
 msgid "The new package uses a shared library that is not available."
-msgstr ""
+msgstr "Пакет использует общую библиотеку которая не доступна."
 
 #: res/app/src/core/install.ts:161
 msgid "The package archive file is invalid."
-msgstr ""
+msgstr "Файл архива программы повреждён."
 
 #: res/app/src/core/install.ts:174
 msgid "The package being installed contains native code, but none that is compatible with the device's CPU_ABI."
-msgstr ""
+msgstr "Установленный пакет содержит нативный код, не поддерживаемый процессором устройства."
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."
-msgstr ""
+msgstr "Пакет изменился и не соответствует тому, что ожидает вызывающая программа."
 
 #: res/app/src/core/install.ts:160
 msgid "The package is already installed."
-msgstr ""
+msgstr "Пакет уже установлен."
 
 #: res/app/src/core/install.ts:163
 msgid "The package manager service found that the device didn't have enough storage space to install the app."
-msgstr ""
+msgstr "Сервис управления пакетами обнаружил, что в устройстве недостаточно места для установки приложения."
 
 #: res/app/src/core/install.ts:193
 msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
-msgstr ""
+msgstr "Парсер не обнаружил тэгов действий (instrumentation или application) в манифесте."
 
 #: res/app/src/core/install.ts:187
 msgid "The parser did not find any certificates in the .apk."
-msgstr ""
+msgstr "Парсер не нашел сертификатов в apk-файле."
 
 #: res/app/src/core/install.ts:190
 msgid "The parser encountered a bad or missing package name in the manifest."
-msgstr ""
+msgstr "Парсер столкнулся с недопустимым или отсутствующим именем пакета в манифесте."
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr ""
+msgstr "Парсер столкнулся с недопустимым разделяемым именем идентификатором пользователя  в манифесте."
 
 #: res/app/src/core/install.ts:189
 msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr ""
+msgstr "Парсер столкнулся с ошибкой CertificateEncodingException в одном из файлов в apk-файле."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
-msgstr ""
+msgstr "Возникла непредвиденная исключительная ситуация во время работы синтаксического анализатора."
 
 #: res/app/src/core/install.ts:192
 msgid "The parser encountered some structural problem in the manifest."
-msgstr ""
+msgstr "Синтаксический анализатор обнаружил структурные проблемы в манифесте."
 
 #: res/app/src/core/install.ts:188
 msgid "The parser found inconsistent certificates on the files in the .apk."
-msgstr ""
+msgstr "Синтаксический анализатор обнаружил несовместимый сертификат в .apk файле"
 
 #: res/app/src/core/install.ts:184
 msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
-msgstr ""
+msgstr "Синтаксическому анализатору был передан не путь к файлу, или имя файла не заканчивается на '.apk'."
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
-msgstr ""
+msgstr "Синтаксический анализатор не смог получить файл AndroidManifest.xml"
 
 #: res/app/src/core/install.ts:165
 msgid "The requested shared user does not exist."
-msgstr ""
+msgstr "Требуемый общий пользователь не существует."
 
 #: res/app/src/features/settings/groups/GroupSchedule.tsx:56
 msgid "The schedule can only be changed while the group is pending"
-msgstr ""
+msgstr "Расписание можно изменить, только пока группа в ожидании"
 
 #: res/app/src/core/install.ts:196
 msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
-msgstr ""
+msgstr "Не удалось установить пакет, так как содержащийся нативный код не соответствует ни одному из ABI, поддерживаемым системой."
 
 #: res/app/src/core/install.ts:194
 msgid "The system failed to install the package because of system issues."
-msgstr ""
+msgstr "Не удалось установить пакет по причине системной ошибки"
 
 #: res/app/src/core/install.ts:195
 msgid "The system failed to install the package because the user is restricted from installing apps."
-msgstr ""
+msgstr "Не удалось установить пакет, так как данному пользователю запрещена установка приложений."
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."
-msgstr ""
+msgstr "Невалидный URI."
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265
 msgid "This folder is empty"
-msgstr ""
+msgstr "Эта папка пуста"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:111
 #: res/app/src/features/control/panes/logs/LogTable.tsx:138
 msgid "TID"
-msgstr ""
+msgstr "TID"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:109
 #: res/app/src/features/control/panes/logs/LogTable.tsx:134
 msgid "Time"
-msgstr ""
+msgstr "Время"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
 msgid "Tip:"
-msgstr ""
+msgstr "Подсказка:"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:61
 msgid "Title"
-msgstr ""
+msgstr "Заглавие"
 
 #: res/app/src/features/device-list/DeviceStats.tsx:39
 msgid "Total Devices"
-msgstr ""
+msgstr "Всего устройств"
 
 #: res/app/src/features/settings/users/QuotasForm.tsx:66
 msgid "Total duration of groups (ms)"
-msgstr ""
+msgstr "Общая длительность групп (мс)"
 
 #: res/app/src/features/group-list/GroupStats.tsx:38
 msgid "Total groups"
-msgstr ""
+msgstr "Всего групп"
 
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:44
 msgid "True"
-msgstr ""
+msgstr "Да"
 
 #: res/app/src/features/control/ControlPage.tsx:118
 #: res/app/src/ui/modals.tsx:141
 msgid "Try to reconnect"
-msgstr ""
+msgstr "Попробовать подключиться"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:238
 msgid "Type"
-msgstr ""
+msgstr "Тип"
 
 #: res/app/src/core/devices/enhance.ts:22
 #: res/app/src/core/devices/enhance.ts:9
 msgid "Unauthorized"
-msgstr ""
+msgstr "Неавторизован"
 
 #: res/app/src/features/settings/groups/rules.ts:105
 msgid "Unauthorized class while device list is not empty"
-msgstr ""
+msgstr "Недопустимый класс, пока список устройств не пуст"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:73
 msgid "Uninstall"
-msgstr ""
+msgstr "Удалить"
 
 #: res/app/src/core/devices/enhance.ts:84
 #: res/app/src/core/devices/enhance.ts:88
 msgid "Unknown"
-msgstr ""
+msgstr "Неизвестный"
 
 #: res/app/src/core/devices/enhance.ts:92
 msgid "Unknown reason."
-msgstr ""
+msgstr "Неизвестная причина."
 
 #: res/app/src/core/devices/enhance.ts:45
 msgid "Unspecified Failure"
-msgstr ""
+msgstr "Неизвестная неисправность"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:205
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:206
 msgid "Upload From Link"
-msgstr ""
+msgstr "Загрузить по ссылке"
 
 #: res/app/src/core/install.ts:54
 #: res/app/src/features/control/device-control/install-file.ts:17
 msgid "Uploading..."
-msgstr ""
+msgstr "Загружается..."
 
 #: res/app/src/features/device-list/DeviceStats.tsx:40
 msgid "Usable Devices"
-msgstr ""
+msgstr "Доступные устройства"
 
 #: res/app/src/core/devices/enhance.ts:50
 msgid "USB"
-msgstr ""
+msgstr "USB"
 
 #: res/app/src/core/devices/enhance.ts:14
 msgid "Use"
-msgstr ""
+msgstr "Использовать"
 
 #: res/app/src/features/device-list/columns.tsx:330
 #: res/app/src/features/user/UserPage.tsx:46
 #: res/app/src/features/user/UserPage.tsx:88
 msgid "User"
-msgstr ""
+msgstr "Пользователь"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:182
 msgid "User list"
-msgstr ""
+msgstr "Список пользователей"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:177
 #: res/app/src/features/settings/users/UsersSettings.tsx:226
 msgid "User selection"
-msgstr ""
+msgstr "Выбор пользователей"
 
 #: res/app/src/features/control/panes/automation/StoreAccountCard.tsx:101
 msgid "Username"
-msgstr ""
+msgstr "Имя пользователя"
 
 #: res/app/src/features/group-list/columns.tsx:81
 #: res/app/src/features/settings/groups/GroupDetail.tsx:193
 #: res/app/src/features/settings/SettingsPage.tsx:40
 msgid "Users"
-msgstr ""
+msgstr "Пользователи"
 
 #: res/app/src/core/devices/enhance.ts:25
 msgid "Using"
-msgstr ""
+msgstr "Используется"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:236
 msgid "Using Fallback"
-msgstr ""
+msgstr "Используется резервный вариант"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:276
 msgid "Version"
-msgstr ""
+msgstr "Версия"
 
 #: res/app/src/ui/modals.tsx:151
 msgid "Version Update"
-msgstr ""
+msgstr "Обновление версии"
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:33
 msgid "Vibrate Mode"
-msgstr ""
+msgstr "Режим вибрации"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
-msgstr ""
+msgstr "Напряжение"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:41
 msgid "Volume"
-msgstr ""
+msgstr "Звук"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:44
 msgid "Volume Down"
-msgstr ""
+msgstr "Тише"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:45
 msgid "Volume Up"
-msgstr ""
+msgstr "Громче"
 
 #: res/app/src/features/group-list/columns.tsx:36
 msgid "Waiting"
-msgstr ""
+msgstr "Ожидает"
 
 #: res/app/src/features/control/panes/logs/LogsPane.tsx:31
 msgid "Waiting for log entries"
-msgstr ""
+msgstr "Ожидание записей журнала"
 
 #: res/app/src/features/settings/general/AlertMessageSettings.tsx:24
 #: res/app/src/features/settings/groups/actions.ts:33
 #: res/app/src/features/settings/users/UsersSettings.tsx:158
 #: res/app/src/features/settings/users/UsersSettings.tsx:166
 msgid "Warning"
-msgstr ""
+msgstr "Предупреждение"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:88
 msgid "Warning:"
-msgstr ""
+msgstr "Предупреждение:"
 
 #: res/app/src/ui/AppLayout.tsx:269
 msgid "Web"
-msgstr ""
+msgstr "Веб"
 
 #: res/app/src/core/common.ts:23
 msgid "Weekly"
-msgstr ""
+msgstr "Еженедельно"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:219
 msgid "Width"
-msgstr ""
+msgstr "Ширина"
 
 #: res/app/src/core/devices/enhance.ts:79
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:124
@@ -2223,61 +2229,61 @@ msgstr ""
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:46
 #: res/app/src/features/control/panes/info/InfoPane.tsx:41
 msgid "WiFi"
-msgstr ""
+msgstr "WiFi"
 
 #: res/app/src/core/devices/enhance.ts:80
 msgid "WiMAX"
-msgstr ""
+msgstr "WiMAX"
 
 #: res/app/src/core/devices/enhance.ts:51
 msgid "Wireless"
-msgstr ""
+msgstr "Беспроводное"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:148
 msgid "Write a mail to the available user selection"
-msgstr ""
+msgstr "Написать письмо выбранным доступным пользователям"
 
 #: res/app/src/features/settings/groups/GroupUsers.tsx:108
 msgid "Write a mail to the group user selection"
-msgstr ""
+msgstr "Написать письмо выбранным пользователям группы"
 
 #: res/app/src/features/auth/SignInForm.tsx:163
 msgid "Write a mail to the support team"
-msgstr ""
+msgstr "Написать письмо в службу поддержки"
 
 #: res/app/src/features/group-list/GroupListPage.tsx:120
 #: res/app/src/features/settings/groups/GroupList.tsx:162
 msgid "Write an email to the group owner selection"
-msgstr ""
+msgstr "Написать письмо выбранным владельцам групп"
 
 #: res/app/src/features/group-list/GroupMembers.tsx:189
 msgid "Write an email to the group user selection"
-msgstr ""
+msgstr "Написать письмо выбранным пользователям группы"
 
 #: res/app/src/features/settings/users/UsersSettings.tsx:240
 msgid "Write an email to the user selection"
-msgstr ""
+msgstr "Написать письмо выбранным пользователям"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:224
 msgid "X DPI"
-msgstr ""
+msgstr "X DPI"
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:225
 msgid "Y DPI"
-msgstr ""
+msgstr "Y DPI"
 
 #: res/app/src/core/common.ts:27
 msgid "Yearly"
-msgstr ""
+msgstr "Ежегодно"
 
 #: res/app/src/core/devices/enhance.ts:97
 msgid "Yes"
-msgstr ""
+msgstr "Да"
 
 #: res/app/src/features/user/UserPage.tsx:72
 msgid "You"
-msgstr ""
+msgstr "Вы"
 
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
-msgstr ""
+msgstr "Вы (или кто-то еще) отключили устройство."
