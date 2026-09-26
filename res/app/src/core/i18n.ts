@@ -39,7 +39,8 @@ export function normalizeLanguage(code: string | null | undefined): string | und
 }
 
 export function detectLanguage(): string {
-  const detected = typeof navigator !== 'undefined' ? navigator.languages || [navigator.language] : []
+  // navigator.languages can be empty while navigator.language is still set
+  const detected = typeof navigator === 'undefined' ? [] : [...(navigator.languages ?? []), navigator.language]
   for (const code of detected) {
     const language = normalizeLanguage(code)
     if (language) {

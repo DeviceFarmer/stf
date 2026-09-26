@@ -56,6 +56,14 @@ describe('i18n', () => {
     languages.mockRestore()
   })
 
+  it('detects navigator.language when navigator.languages is empty', () => {
+    const languages = vi.spyOn(navigator, 'languages', 'get').mockReturnValue([])
+    const language = vi.spyOn(navigator, 'language', 'get').mockReturnValue('ja')
+    expect(detectLanguage()).toBe('ja')
+    languages.mockRestore()
+    language.mockRestore()
+  })
+
   it('picks plural forms', () => {
     setLanguage('en')
     expect(translatePlural(1, '{{count}} device', '{{count}} devices')).toBe('1 device')
