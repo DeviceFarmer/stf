@@ -142,7 +142,7 @@ jobs:
           key: ${{ needs.build.outputs.cache-key }}
           fail-on-cache-miss: true
 
-      - name: eslint + jsonlint
+      - name: eslint + jsonlint + translations
         id: lint
         run: npm run lint
 
@@ -158,9 +158,9 @@ jobs:
         if: always()
         run: |
           bash .github/scripts/verdict.sh lint \
-            'Lint (eslint + jsonlint + workflow shell)' \
+            'Lint (eslint + jsonlint + translations + workflow shell)' \
             '${{ job.status }}' \
-            'lib/, res/ and root JS + JSON, and every workflow run: block'
+            'lib/, res/ and root JS + JSON, translation catalogs, and every workflow run: block'
 
       - name: Upload verdict
         if: always()
