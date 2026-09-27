@@ -8,7 +8,7 @@ const monthNames = [
 ]
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-const namedFormats: Record<string, string> = {
+const namedFormats: Record<string, string> & {mediumDate: string} = {
   medium: 'MMM d, y h:mm:ss a'
   , short: 'M/d/yy h:mm a'
   , fullDate: 'EEEE, MMMM d, y'
@@ -56,11 +56,11 @@ const tokens: Record<string, (date: Date) => string> = {
   yyyy: (date) => pad(date.getFullYear(), 4)
   , yy: (date) => pad(date.getFullYear(), 2, true)
   , y: (date) => pad(date.getFullYear(), 1)
-  , MMMM: (date) => monthNames[date.getMonth()]
-  , MMM: (date) => monthNames[date.getMonth()].slice(0, 3)
+  , MMMM: (date) => monthNames[date.getMonth()]!
+  , MMM: (date) => monthNames[date.getMonth()]!.slice(0, 3)
   , MM: (date) => pad(date.getMonth() + 1, 2)
   , M: (date) => String(date.getMonth() + 1)
-  , LLLL: (date) => monthNames[date.getMonth()]
+  , LLLL: (date) => monthNames[date.getMonth()]!
   , dd: (date) => pad(date.getDate(), 2)
   , d: (date) => String(date.getDate())
   , HH: (date) => pad(date.getHours(), 2)
@@ -72,8 +72,8 @@ const tokens: Record<string, (date: Date) => string> = {
   , ss: (date) => pad(date.getSeconds(), 2)
   , s: (date) => String(date.getSeconds())
   , sss: (date) => pad(date.getMilliseconds(), 3)
-  , EEEE: (date) => dayNames[date.getDay()]
-  , EEE: (date) => dayNames[date.getDay()].slice(0, 3)
+  , EEEE: (date) => dayNames[date.getDay()]!
+  , EEE: (date) => dayNames[date.getDay()]!.slice(0, 3)
   , a: (date) => (date.getHours() < 12 ? 'AM' : 'PM')
   , Z: timezone
   , ww: (date) => pad(weekOfYear(date), 2)

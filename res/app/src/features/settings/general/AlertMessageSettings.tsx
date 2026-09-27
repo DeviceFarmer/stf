@@ -92,7 +92,7 @@ export function AlertMessageSettings() {
           value={alertMessage.level}
           onChange={(value) => updateAlertMessage({level: value})}
           data={alertLevels.map((option) => ({value: option.value, label: t(option.label)}))}
-          color={levelColor}
+          {...(levelColor === undefined ? {} : {color: levelColor})}
         />
       </SettingRow>
       <div className={classes.preview}>

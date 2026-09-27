@@ -16,7 +16,7 @@ export const itemsPerPageOptions: ItemsPerPageOption[] = [
   , {name: '*', value: 0}
 ]
 
-export const defaultItemsPerPage = itemsPerPageOptions[2]
+export const defaultItemsPerPage = itemsPerPageOptions[2]!
 
 export function perPageOption(value: number): ItemsPerPageOption {
   return itemsPerPageOptions.find((option) => option.value === value) || defaultItemsPerPage

@@ -70,7 +70,7 @@ trap collect_logs EXIT
 
 # Anything we do not reach stays "skip". `image` seeds "pass" instead: reaching
 # this script proves the image exists, and ci.yml records the unpublished case.
-node .github/scripts/checks.js seed "$CHECKS_FILE"
+node .github/scripts/checks.mts seed "$CHECKS_FILE"
 
 note "waiting for $SERIAL to finish booting"
 adb -s "$SERIAL" wait-for-device
@@ -185,7 +185,7 @@ if ! bash .github/scripts/start-stf.sh "$SERIAL"; then
 fi
 
 note "waiting for STF to register the device"
-if node .github/scripts/stf-devices.js wait-count 1 "$STF_WAIT"; then
+if node .github/scripts/stf-devices.mts wait-count 1 "$STF_WAIT"; then
   set_check stf_device_present pass
 else
   echo "::error::STF never registered $SERIAL"
@@ -194,7 +194,7 @@ else
 fi
 
 note "waiting for STF to mark the device present and ready"
-if node .github/scripts/stf-devices.js wait-ready "$SERIAL" "$STF_WAIT"; then
+if node .github/scripts/stf-devices.mts wait-ready "$SERIAL" "$STF_WAIT"; then
   set_check stf_device_usable pass
 else
   echo "::error::$SERIAL never became present+ready in STF"
@@ -209,14 +209,14 @@ if [ "$sim_read" != "yes" ]; then
 elif [ "$sim_ready" != "yes" ]; then
   echo "::warning::no usable SIM on $SERIAL (gsm.sim.state=${sim_state:-unknown}), so there are no identifiers to read"
   set_check subscriber_properties pass
-elif node .github/scripts/stf-devices.js subscriber "$SERIAL"; then
+elif node .github/scripts/stf-devices.mts subscriber "$SERIAL"; then
   set_check subscriber_properties pass
 else
   echo "::error::the SIM identifiers never reached the device document on $SERIAL"
   set_check subscriber_properties fail
 fi
 
-node .github/scripts/stf-devices.js list > "$LOG_DIR/stf-devices.json" \
+node .github/scripts/stf-devices.mts list > "$LOG_DIR/stf-devices.json" \
   2> "$LOG_DIR/stf-devices.err" || true
 
 note "running the Playwright suite against $SERIAL"
@@ -228,11 +228,11 @@ note "running the Playwright suite against $SERIAL"
 ) || echo "::warning::playwright reported failures"
 
 note "merging Playwright results"
-node .github/scripts/playwright-checks.js \
+node .github/scripts/playwright-checks.mts \
   test-results/playwright/report.json \
   "$LOG_DIR/playwright-checks.json" || true
 
-node .github/scripts/merge-checks.js \
+node .github/scripts/merge-checks.mts \
   "$CHECKS_FILE" "$LOG_DIR/playwright-checks.json"
 
 exit 0

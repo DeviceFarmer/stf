@@ -56,9 +56,12 @@ jobs:
             const head_sha = context.payload.workflow_run.head_sha
             const {data: pr} = await github.rest.pulls.get(
               {owner, repo, pull_number: issue_number})
+            // A newer push cancels the older CI run, but that run still stages
+            // a report and triggers this workflow. Its report is stale, and the
+            // newer run will post its own, so skip it without failing.
             if (pr.head.sha !== head_sha) {
-              core.setFailed(
-                `PR #${issue_number} is at ${pr.head.sha}, run is at ${head_sha}`)
+              core.notice(
+                `skipped stale report: PR #${issue_number} is at ${pr.head.sha}, run is at ${head_sha}`)
               return
             }
 

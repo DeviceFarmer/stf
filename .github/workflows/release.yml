@@ -68,7 +68,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          node .github/scripts/changelog.js --extract CHANGELOG.md "$VERSION" > notes.md
+          node .github/scripts/changelog.mts --extract CHANGELOG.md "$VERSION" > notes.md
           cat notes.md
 
       - name: Tag and publish

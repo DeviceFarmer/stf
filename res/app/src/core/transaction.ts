@@ -235,7 +235,7 @@ export function createMultiTransaction<S extends Record<string, any>>(
     , progress: (data) => pending[data.source]?.progress(data)
     , cancel: (data) => {
       for (const source of Object.keys(pending)) {
-        pending[source].cancel(data)
+        pending[source]!.cancel(data)
       }
     }
   })

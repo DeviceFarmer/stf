@@ -98,7 +98,7 @@ docker compose cp provider:/app/node_modules/@devicefarmer/stfservice-prebuilt/p
 
 check_services() {
   docker compose ps --all --quiet | xargs docker inspect > test-results/compose/services.json
-  node .github/scripts/compose-services.js test-results/compose/services.json
+  node .github/scripts/compose-services.mts test-results/compose/services.json
 }
 
 check_services
@@ -106,12 +106,12 @@ check_services
 (
   cd test/playwright
   ADB_SERVER_SOCKET=tcp:127.0.0.1:15037 STF_URL=http://127.0.0.1:7100 STF_COMPOSE=1 \
-    npx playwright test ui.spec.js device.spec.js compose.spec.js --retries=0
+    npx playwright test ui.spec.ts device.spec.ts compose.spec.ts --retries=0
 )
 
 check_services
 
-node .github/scripts/playwright-checks.js \
+node .github/scripts/playwright-checks.mts \
   test-results/playwright/report.json test-results/compose/playwright-checks.json
 
 node -e '

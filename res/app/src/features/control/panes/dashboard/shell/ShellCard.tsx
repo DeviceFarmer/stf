@@ -34,7 +34,7 @@ export function ShellCard({control}: {control: Control}) {
     }
     else {
       historyIndex.current = next
-      setShellCommand(serial, shell.history[next])
+      setShellCommand(serial, shell.history[next]!)
     }
   }
 

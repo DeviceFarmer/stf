@@ -102,7 +102,7 @@ export function BrowserIcons({apps}: {apps: DeviceBrowserApp[]}) {
   )
 }
 
-export function ExternalLink({label, href}: {label: string, href?: string}) {
+export function ExternalLink({label, href}: {label: string, href?: string | undefined}) {
   if (!href) {
     return <>{label}</>
   }

@@ -50,7 +50,7 @@ export function formatPermissionMode(mode: number | null | undefined): string {
   const bits: string[] = []
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
-      bits.unshift((mode >> (i * 3 + j)) & 1 ? symbols[j] : '-')
+      bits.unshift((mode >> (i * 3 + j)) & 1 ? symbols[j]! : '-')
     }
   }
   if (fileType(mode) === S_IFDIR) {

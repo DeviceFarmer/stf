@@ -39,12 +39,12 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
   function activateFinger(index: number, x: number, y: number, pressure: number) {
     const scale = 0.5 + pressure
-    fingers[index].classList.add('active')
-    fingers[index].style.transform = `translate3d(${x}px,${y}px,0) scale(${scale},${scale})`
+    fingers[index]!.classList.add('active')
+    fingers[index]!.style.transform = `translate3d(${x}px,${y}px,0) scale(${scale},${scale})`
   }
 
   function deactivateFinger(index: number) {
-    fingers[index].classList.remove('active')
+    fingers[index]!.classList.remove('active')
   }
 
   function deactivateFingers() {
@@ -192,13 +192,15 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
     for (const touch of Array.from(e.changedTouches)) {
       const slot = slotted[touch.identifier]
-      const x = touch.pageX - screen.bounds.x
-      const y = touch.pageY - screen.bounds.y
-      const pressure = touch.force || 0.5
-      const scaled = scale(x, y)
+      if (typeof slot !== 'undefined') {
+        const x = touch.pageX - screen.bounds.x
+        const y = touch.pageY - screen.bounds.y
+        const pressure = touch.force || 0.5
+        const scaled = scale(x, y)
 
-      control.touchMove(nextSeq(), slot, scaled.xP, scaled.yP, pressure)
-      activateFinger(slot, x, y, pressure)
+        control.touchMove(nextSeq(), slot, scaled.xP, scaled.yP, pressure)
+        activateFinger(slot, x, y, pressure)
+      }
     }
 
     control.touchCommit(nextSeq())
@@ -255,7 +257,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
     if (Object.keys(slotted).some((id) => !(id in currentTouches))) {
       Object.keys(slotted).forEach((id) => {
-        slots.push(slotted[id])
+        slots.push(slotted[id]!)
         delete slotted[id]
       })
       slots.sort().reverse()

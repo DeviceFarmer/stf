@@ -2287,3 +2287,12 @@ msgstr "あなた"
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr "この実機はキックされました。"
+
+msgid "File Name"
+msgstr "ファイル名"
+
+msgid "Sample of log format"
+msgstr "ログ形式のサンプル"
+
+msgid "Save Logs"
+msgstr "ログを保存する"
