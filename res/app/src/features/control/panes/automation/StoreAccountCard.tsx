@@ -41,7 +41,7 @@ export function StoreAccountCard({control}: Pick<PaneProps, 'control'>) {
   const [password, setPassword] = useState('')
   const [dirty, setDirty] = useState({username: false, password: false})
   const [addingAccount, setAddingAccount] = useState(false)
-  const storeAccountType = deviceAppStores[currentAppStore].package
+  const storeAccountType = deviceAppStores[currentAppStore]!.package
   const invalid = !username || !password
   const readAccounts = useCallback(
     (target: Control) => target.getAccounts(storeAccountType)

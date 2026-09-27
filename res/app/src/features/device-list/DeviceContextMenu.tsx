@@ -13,7 +13,7 @@ export function DeviceContextMenu({device, control, onStopUsing, disabled, child
 }) {
   return (
     <Menu shadow='md' width={200} withinPortal>
-      <Menu.ContextMenu disabled={disabled}>
+      <Menu.ContextMenu {...(disabled === undefined ? {} : {disabled})}>
         {children}
       </Menu.ContextMenu>
       <Menu.Dropdown className='stf-device-context-menu'>

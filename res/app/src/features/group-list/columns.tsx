@@ -23,7 +23,7 @@ export interface ColumnDefinition {
   render: (row: GroupRow) => ReactNode
 }
 
-const statusColors: Record<string, string> = {
+const statusColors: Record<GroupStatus, string> = {
   Active: 'green'
   , Pending: 'red'
   , Ready: 'orange'

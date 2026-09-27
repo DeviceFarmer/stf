@@ -120,8 +120,8 @@ export interface Device {
   enhancedBatterySource?: string
   enhancedBatteryStatus?: string
   enhancedBatteryTemp?: string
-  enhancedUserProfileUrl?: string
+  enhancedUserProfileUrl?: string | undefined
   enhancedUserName?: string
-  enhancedGroupOwnerProfileUrl?: string
+  enhancedGroupOwnerProfileUrl?: string | undefined
   [key: string]: any
 }

@@ -6,7 +6,7 @@ import {formatDate, getDateFormat} from '@/core/date-format'
 import {gettext, translate} from '@/core/i18n'
 import {BrowserIcons, ExternalLink, ModelCell, NameLink, NoteCell, StatusButton} from './cells'
 import type {DeviceActions} from './device-actions'
-import type {QueryTerm} from './query-parser'
+import type {QueryOp, QueryTerm} from './query-parser'
 
 export type SortOrder = 'asc' | 'desc'
 
@@ -28,7 +28,7 @@ export interface DeviceColumn {
 
 type Operator = (value: any, filterValue: any) => boolean
 
-const filterOps: Record<string, Operator> = {
+const filterOps: Record<QueryOp | '=', Operator> = {
   '<': (value, filterValue) => value !== null && value < filterValue
   , '<=': (value, filterValue) => value !== null && value <= filterValue
   , '>': (value, filterValue) => value !== null && value > filterValue
@@ -36,7 +36,7 @@ const filterOps: Record<string, Operator> = {
   , '=': (value, filterValue) => value !== null && value === filterValue
 }
 
-function operator(op: string | null): Operator {
+function operator(op: QueryOp | null): Operator {
   return filterOps[op || '=']
 }
 
@@ -65,7 +65,7 @@ function translated(language: string, value?: string | null): string {
 }
 
 function lookup(language: string, table: Record<string, string>, key?: string): string {
-  return key && Object.hasOwn(table, key) ? translate(table[key], undefined, language) : '-'
+  return key && Object.hasOwn(table, key) ? translate(table[key]!, undefined, language) : '-'
 }
 
 function dateNumber(date: Date | null): number {
@@ -168,8 +168,8 @@ function compareVersions(deviceA: Device, deviceB: Device): number {
   const va = versionParts(deviceA.version)
   const vb = versionParts(deviceB.version)
   for (let i = 0, l = Math.max(va.length, vb.length); i < l; ++i) {
-    const a = i < va.length ? parseInt(va[i], 10) : 0
-    const b = i < vb.length ? parseInt(vb[i], 10) : 0
+    const a = i < va.length ? parseInt(va[i]!, 10) : 0
+    const b = i < vb.length ? parseInt(vb[i]!, 10) : 0
     const diff = Number.isNaN(a - b) ? compareRespectCase(va[i], vb[i]) : a - b
     if (diff !== 0) {
       return diff
@@ -192,8 +192,8 @@ function filterVersion(device: Device, term: QueryTerm): boolean {
   }
 
   for (let i = 0, l = Math.min(va.length, vb.length); i < l; ++i) {
-    const a = parseInt(va[i], 10)
-    const b = parseInt(vb[i], 10)
+    const a = parseInt(va[i]!, 10)
+    const b = parseInt(vb[i]!, 10)
     const matched = Number.isNaN(a) || Number.isNaN(b) ? op(va[i], vb[i]) : op(a, b)
     if (!matched) {
       return false

@@ -1559,3 +1559,12 @@ msgstr "はい"
 #: app/components/stf/device/device-info-filter/index.js:35
 msgid "You (or someone else) kicked the device."
 msgstr "この実機はキックされました。"
+
+msgid "File Name"
+msgstr "ファイル名"
+
+msgid "Sample of log format"
+msgstr "ログ形式のサンプル"
+
+msgid "Save Logs"
+msgstr "ログを保存する"

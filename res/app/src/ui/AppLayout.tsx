@@ -146,7 +146,7 @@ function useAlertMessage(): AlertMessage | null {
 
 function logout() {
   for (const part of document.cookie.split(';')) {
-    const name = part.split('=')[0].trim()
+    const name = part.split('=')[0]!.trim()
     if (name) {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
     }
@@ -159,7 +159,7 @@ function NavItem({to, icon, label, accessKey}: {
   to: string
   icon: React.ReactNode
   label: string
-  accessKey?: string
+  accessKey?: string | undefined
 }) {
   return (
     <NavLink

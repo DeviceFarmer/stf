@@ -69,6 +69,6 @@ describe('createTransaction', () => {
 
     const results = await tx.promise
     expect(results.map((result) => [result.source.serial, result.success])).toEqual([['a', true], ['b', false]])
-    expect(results[1].error).toBe('nope')
+    expect(results[1]!.error).toBe('nope')
   })
 })

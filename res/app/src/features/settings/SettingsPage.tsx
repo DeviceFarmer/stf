@@ -57,7 +57,7 @@ export default function SettingsPage() {
 
   if (!current) {
     const remembered = tabs.find((tab) => tab.title === getSetting<string>(settingsTabsKey))
-    return <Navigate to={`/settings/${(remembered || tabs[0]).id}`} replace />
+    return <Navigate to={`/settings/${(remembered || tabs[0]!).id}`} replace />
   }
 
   function select(id: string | null) {

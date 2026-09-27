@@ -1560,3 +1560,12 @@ msgstr ""
 #: app/components/stf/device/device-info-filter/index.js:35
 msgid "You (or someone else) kicked the device."
 msgstr "你 (或別人) 把裝置踢掉了."
+
+msgid "File Name"
+msgstr "文件名"
+
+msgid "Sample of log format"
+msgstr "日誌格式示例"
+
+msgid "Save Logs"
+msgstr "保存日誌"

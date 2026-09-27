@@ -194,7 +194,7 @@ msgstr "Nie można uzyskać dostępu do podanego adresu URL"
 #: app/control-panes/info/info.html:1
 #: app/device-list/column/device-column-service.js:43
 msgid "Carrier"
-msgstr "Kariera"
+msgstr "Operator"
 
 #: app/control-panes/dashboard/install/activities/activities.html:1
 msgid "Category"
@@ -213,7 +213,7 @@ msgstr "Zwróć uwagę na błędy"
 #: app/control-panes/advanced/run-js/run-js.html:1
 #: app/control-panes/logs/logs.html:1
 msgid "Clear"
-msgstr "Czysty"
+msgstr "Wyczyść logi"
 
 #: app/control-panes/dashboard/clipboard/clipboard.html:1
 msgid "Clipboard"
@@ -243,7 +243,7 @@ msgstr "Ciasteczka"
 
 #: app/control-panes/info/info.html:1
 msgid "Cores"
-msgstr "Rdzenia"
+msgstr "Liczba Rdzeni"
 
 #: app/control-panes/info/info.html:1
 #: app/control-panes/performance/cpu/cpu.html:1
@@ -463,7 +463,7 @@ msgstr "Wygeneruj nowy token"
 #: app/control-panes/logs/logs.html:1
 #: app/control-panes/resources/resources.html:1
 msgid "Get"
-msgstr "Weź"
+msgstr "Pobierz"
 
 #: app/control-panes/dashboard/clipboard/clipboard.html:1
 msgid "Get clipboard contents"
@@ -839,7 +839,7 @@ msgstr "PID"
 
 #: app/control-panes/info/info.html:1
 msgid "Place"
-msgstr ""
+msgstr "Lokalizacja"
 
 #: app/control-panes/info/info.html:1
 msgid "Platform"
@@ -1098,7 +1098,7 @@ msgstr ""
 
 #: app/control-panes/dashboard/apps/apps.html:1 app/menu/menu.html:1
 msgid "Settings"
-msgstr ""
+msgstr "Ustawienia"
 
 #: app/control-panes/dashboard/shell/shell.html:1
 msgid "Shell"
@@ -1127,7 +1127,7 @@ msgstr ""
 #: app/control-panes/explorer/explorer.html:1
 #: app/control-panes/info/info.html:1
 msgid "Size"
-msgstr ""
+msgstr "Rozmiar"
 
 #: app/components/stf/socket/socket-state/socket-state-directive.js:26
 msgid "Socket connection was lost"
@@ -1187,7 +1187,7 @@ msgstr ""
 
 #: app/control-panes/info/info.html:1
 msgid "Temperature"
-msgstr ""
+msgstr "Temperatura"
 
 #: app/control-panes/logs/logs.html:1
 msgid "Text"
@@ -1471,7 +1471,7 @@ msgstr ""
 
 #: app/device-list/column/device-column-service.js:262
 msgid "User"
-msgstr ""
+msgstr "Użytkownik"
 
 #: app/control-panes/automation/store-account/store-account.html:1
 msgid "Username"
@@ -1487,7 +1487,7 @@ msgstr ""
 
 #: app/control-panes/info/info.html:1
 msgid "Version"
-msgstr ""
+msgstr "Wersja"
 
 #: app/components/stf/common-ui/modals/version-update/version-update.html:1
 msgid "Version Update"
@@ -1527,7 +1527,7 @@ msgstr ""
 
 #: app/control-panes/info/info.html:1
 msgid "Width"
-msgstr ""
+msgstr "Szerokość"
 
 #: app/components/stf/device/device-info-filter/index.js:105
 #: app/components/stf/device/device-info-filter/index.js:97
@@ -1559,3 +1559,12 @@ msgstr ""
 #: app/components/stf/device/device-info-filter/index.js:35
 msgid "You (or someone else) kicked the device."
 msgstr ""
+
+msgid "File Name"
+msgstr "Nazwa pliku"
+
+msgid "Sample of log format"
+msgstr "Przykładowy zapis logów"
+
+msgid "Save Logs"
+msgstr "Zapisz logi"

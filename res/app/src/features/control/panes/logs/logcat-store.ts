@@ -56,7 +56,7 @@ function flushEntries(): void {
     const devices = {...state.devices}
     Object.keys(batch).forEach((serial) => {
       const current = devices[serial] || {...emptyDeviceLogs, started: true}
-      const merged = current.entries.concat(batch[serial])
+      const merged = current.entries.concat(batch[serial]!)
       devices[serial] = {
         ...current
         , entries: merged.length > maxEntries ? merged.slice(merged.length - maxEntries) : merged

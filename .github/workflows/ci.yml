@@ -36,9 +36,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
       - name: Read the Android matrix
         id: plan
-        run: node .github/scripts/plan-matrix.js
+        run: node .github/scripts/plan-matrix.mts
 
   build:
     name: Build
@@ -83,12 +87,11 @@ jobs:
         if: steps.deps.outputs.cache-hit != 'true'
         run: npm install $NPM_INSTALL_FLAGS
 
-      # gulp's own `build` task races clean against webpack:build, so run the
-      # two halves in order instead.
+      - name: Compile lib
+        run: node build.mts compile
+
       - name: Build front-end bundle
-        run: |
-          npx gulp clean
-          npx gulp webpack:build
+        run: node build.mts clean webpack
 
       - name: Smoke check the CLI
         run: ./bin/stf -V
@@ -152,7 +155,7 @@ jobs:
       - name: 'Shell-parse every run: block'
         id: runblocks
         if: always()
-        run: node .github/scripts/check-run-blocks.js
+        run: node .github/scripts/check-run-blocks.mts
 
       - name: Record verdict
         if: always()
@@ -317,6 +320,9 @@ jobs:
           name: stf-bundle
           path: res/build
 
+      - name: Compile lib
+        run: node build.mts compile
+
       - name: Put adb on PATH
         run: |
           if [ -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}/platform-tools" ]; then
@@ -341,8 +347,8 @@ jobs:
         id: fakedevice
         run: |
           node lib/cli/index.js generate-fake-device 'Nexus 5' -n 2
-          node .github/scripts/stf-devices.js wait-count 2 120
-          node .github/scripts/stf-devices.js list
+          node .github/scripts/stf-devices.mts wait-count 2 120
+          node .github/scripts/stf-devices.mts list
 
       # `playwright install --with-deps` shells out to apt for the browser
       # libraries, so it inherits every apt flake the runtime steps have and
@@ -355,13 +361,16 @@ jobs:
           bash ../../.github/scripts/retry.sh 3 npm install --no-audit --no-fund
           bash ../../.github/scripts/retry.sh 3 npx playwright install --with-deps chromium
 
+      - name: Type-check the Playwright suite
+        run: npx tsc -p test/playwright/tsconfig.json
+
       - name: Playwright web UI suite (no device)
         id: e2e
         env:
           STF_URL: http://127.0.0.1:7100
         run: |
           cd test/playwright
-          npx playwright test ui.spec.js
+          npx playwright test ui.spec.ts
 
       - name: Start SeaweedFS for the s3 storage backend
         if: always()
@@ -381,14 +390,14 @@ jobs:
         if: always()
         id: checks
         run: |
-          node .github/scripts/playwright-checks.js \
+          node .github/scripts/playwright-checks.mts \
             test-results/playwright/report.json playwright-checks.json
 
       - name: Collect logs
         if: always()
         run: |
           mkdir -p stf-logs
-          node .github/scripts/stf-devices.js list > stf-logs/stf-devices.json \
+          node .github/scripts/stf-devices.mts list > stf-logs/stf-devices.json \
             2> stf-logs/stf-devices.err || true
           if [ -f stf-logs/stf.pid ]; then
             kill "$(cat stf-logs/stf.pid)" 2>/dev/null || true
@@ -504,6 +513,9 @@ jobs:
           name: stf-bundle
           path: res/build
 
+      - name: Compile lib
+        run: node build.mts compile
+
       # `playwright install --with-deps` shells out to apt for the browser
       # libraries, so it inherits every apt flake the runtime steps have and
       # reports it as a bare "Installation process exited with code: 100".
@@ -514,6 +526,9 @@ jobs:
           cd test/playwright
           bash ../../.github/scripts/retry.sh 3 npm install --no-audit --no-fund
           bash ../../.github/scripts/retry.sh 3 npx playwright install --with-deps chromium
+
+      - name: Type-check the Playwright suite
+        run: npx tsc -p test/playwright/tsconfig.json
 
       - name: Wait for RethinkDB
         run: bash .github/scripts/wait-for-port.sh 28015 60 rethinkdb
@@ -618,7 +633,7 @@ jobs:
           ANDROID_TARGET: ${{ matrix.target }}
           ANDROID_ARCH: ${{ matrix.arch }}
           EMULATOR_OUTCOME: ${{ steps.emulator.outcome }}
-        run: node .github/scripts/android-verdict.js
+        run: node .github/scripts/android-verdict.mts
 
       # The matrix is 20 legs wide and every one of them gates the run, so a 1%
       # per-leg flake rate reds one run in five however healthy STF is. Each
@@ -694,7 +709,7 @@ jobs:
           ANDROID_ARCH: ${{ matrix.arch }}
           EMULATOR_OUTCOME: ${{ steps.emulator_retry.outcome }}
           LEG_ATTEMPT: '2'
-        run: node .github/scripts/android-verdict.js
+        run: node .github/scripts/android-verdict.mts
 
       - name: Upload logs
         if: always()
@@ -828,7 +843,7 @@ jobs:
         if: always()
         id: checks
         run: |
-          node .github/scripts/playwright-checks.js \
+          node .github/scripts/playwright-checks.mts \
             test-results/playwright/report.json test-results/compose/playwright-checks.json
 
       - name: Upload logs and Playwright evidence
@@ -897,7 +912,7 @@ jobs:
           # adding a leg cannot leave it unenforced.
           EXPECTED_TIERS: build lint unit component integration compose
           EXPECTED_ANDROID_FILE: .github/android-matrix.json
-        run: node .github/scripts/render-report.js verdicts report.md
+        run: node .github/scripts/render-report.mts verdicts report.md
 
       - name: Job summary
         if: always()

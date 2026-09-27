@@ -21,7 +21,7 @@ export function WidgetCard({title, icon: Icon, color, actions, help, flush, clas
           <Group justify='space-between' wrap='nowrap' gap='xs'>
             <Group gap='sm' wrap='nowrap' miw={0}>
               {Icon && (
-                <ThemeIcon variant='light' color={color} size='md' radius='md'>
+                <ThemeIcon variant='light' {...(color === undefined ? {} : {color})} size='md' radius='md'>
                   <Icon size={18} stroke={1.8} />
                 </ThemeIcon>
               )}

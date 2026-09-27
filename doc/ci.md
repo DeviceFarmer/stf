@@ -15,7 +15,7 @@ described under Releasing below.
 |---|---|
 | `plan` | `.github/android-matrix.json` is well formed, and produces the Android matrix |
 | `build` | `npm install` and the webpack bundle all succeed, and `stf -V` runs |
-| `lint` | `gulp lint` (eslint over `lib/`, the React/TypeScript UI in `res/app/src`, root JS, a `tsc` typecheck, plus jsonlint) |
+| `lint` | `node build.mts lint` (eslint over `lib/`, the React/TypeScript UI in `res/app/src`, root JS, a `tsc` typecheck, plus jsonlint) |
 | `unit` | `mocha` over `test/` (`lib/util`, `lib/wire`) |
 | `component` | `vitest` + jsdom over the UI specs in `res/app/src/**/*.test.ts(x)` |
 | `integration` | `stf local` boots against a RethinkDB service, fake devices round-trip through STF's own db layer, and the Playwright web UI suite passes without any device |
@@ -51,7 +51,7 @@ minimum.
 
 Each leg walks these layers in order and records the result of each, so the
 report names the layer that broke rather than showing one opaque cross.
-`.github/scripts/checks.js` is where they are defined: the order, which ones
+`.github/scripts/checks.mts` is where they are defined: the order, which ones
 gate a leg, how a failure is worded and the report's legend all come from there,
 so adding a layer is one edit rather than four.
 
@@ -251,11 +251,11 @@ npm run test:unit
 npm run test:component
 ```
 
-`npm test` was `gulp test`, which is `gulp.parallel('lint',
-'run:checkversion')`: it ran eslint and `stf -V` and nothing else, so the mocha
-specs under `test/` existed but `npm test` never ran them and still passed. It
-now runs that same gulp task and then the mocha specs, so it still needs no
-browser and works anywhere, which is what CONTRIBUTING asks of it.
+`npm test` used to run only the lint tasks and `stf -V`, so the mocha specs
+under `test/` existed but `npm test` never ran them and still passed. It now
+runs `node build.mts test` (compile, lint and `stf -V`) and then the mocha
+specs, so it still needs no browser and works anywhere, which is what
+CONTRIBUTING asks of it.
 
 `test:component` is the Vitest tier. It runs in jsdom and needs no browser; CI
 still runs it as its own job so the report shows it as a separate line.
@@ -278,15 +278,15 @@ For the Playwright suite you need a running `stf local`:
 ```bash
 docker run -d --name rethinkdb -p 28015:28015 rethinkdb:2.4.2
 bash .github/scripts/start-stf.sh            # add a serial to limit it to one device
-node .github/scripts/stf-devices.js list     # what STF thinks it has
+node .github/scripts/stf-devices.mts list     # what STF thinks it has
 
 cd test/playwright
 npm install && npx playwright install chromium
-npx playwright test ui.spec.js               # no device needed
+npx playwright test ui.spec.ts               # no device needed
 STF_DEVICE_SERIAL=emulator-5554 npx playwright test
 ```
 
-`device.spec.js` skips itself unless `STF_DEVICE_SERIAL` is set.
+`device.spec.ts` skips itself unless `STF_DEVICE_SERIAL` is set.
 
 ## The report
 

@@ -6,9 +6,10 @@ const mapping: Record<number, Record<number, number>> = {
 }
 
 function normalize(rotation: number): number {
-  return rotation < 0 ? 360 + rotation % 360 : rotation % 360
+  const quarter = Math.round(rotation / 90) * 90 % 360
+  return quarter < 0 ? 360 + quarter : quarter
 }
 
 export function rotator(oldRotation: number, newRotation: number): number {
-  return mapping[normalize(oldRotation)][normalize(newRotation)]
+  return mapping[normalize(oldRotation)]?.[normalize(newRotation)] ?? 0
 }

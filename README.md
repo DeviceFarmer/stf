@@ -160,6 +160,12 @@ First, fetch all NPM modules:
 npm install
 ```
 
+Then compile the TypeScript sources in `lib/`, which `bin/stf` runs from:
+
+```bash
+node build.mts compile
+```
+
 You may also wish to link the module so that you'll be able to access the `stf` command directly from the command line:
 
 ```bash
@@ -229,7 +235,7 @@ stf local --public-ip <your_internal_network_ip_here>
 
 ## Updating
 
-To update your development version, simply pull the repo and run `npm install` again. You may occasionally have to remove the whole `node_modules` folder to prevent NPM from complaining about version mismatches.
+To update your development version, simply pull the repo and run `npm install` and `node build.mts compile` again. You may occasionally have to remove the whole `node_modules` folder to prevent NPM from complaining about version mismatches.
 
 ## FAQ
 
@@ -436,7 +442,7 @@ For updating the source and all the translation files first you have to install 
 
 Then just run:
 ```bash
-gulp translate
+node build.mts translate
 ```
 
 It will do the following:
@@ -451,7 +457,7 @@ Then in order to add it officially (only needs to be done once):
 
 1. Add the language to `res/common/lang/langs.json`.
 2. Pull the specific language `tx pull -l <lang>`.
-3. Run `gulp translate`.
+3. Run `node build.mts translate`.
 
 ## Testing
 

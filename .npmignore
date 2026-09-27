@@ -12,12 +12,14 @@
 /.python-version
 /.travis.yml
 /Dockerfile
+/build.mts
 /component.json
 /docker
-/gulpfile.js
+/eslint.config.mts
 /npm-debug.log
 /rethinkdb_data/
 /temp/
 /test/
 /tmp/
-/webpack.config.js
+/tsconfig.json
+/webpack.config.mts

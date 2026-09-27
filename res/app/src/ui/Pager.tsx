@@ -23,7 +23,7 @@ export function SearchInput({value, onChange, label, className, w}: {
   value: string
   onChange: (value: string) => void
   label: string
-  className?: string
+  className?: string | undefined
   w?: number
 }) {
   const {t} = useTranslation()
@@ -51,7 +51,7 @@ export function SearchInput({value, onChange, label, className, w}: {
 export function PerPageSelect({value, onChange, inPopover}: {
   value: number
   onChange: (value: number) => void
-  inPopover?: boolean
+  inPopover?: boolean | undefined
 }) {
   const {t} = useTranslation()
   return (

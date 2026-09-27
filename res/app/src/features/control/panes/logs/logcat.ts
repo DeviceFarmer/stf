@@ -45,7 +45,7 @@ export const levelNumbers = priorityLabels
   .slice(2, 8)
 
 export const defaultFilters: LogFilters = {
-  priority: levelNumbers[0].number
+  priority: levelNumbers[0]!.number
   , date: ''
   , pid: ''
   , tid: ''
@@ -72,7 +72,7 @@ export function enhanceEntry(data: LogcatMessage, id: number): LogEntry {
     , dateLabel: `${pad(date.getHours(), 2)}:${pad(date.getMinutes(), 2)}:${pad(date.getSeconds(), 2)}` +
       `.${pad(date.getMilliseconds(), 3)}`
     , deviceLabel: 'Android'
-    , priorityLabel: priorityLabels[data.priority] || priorityLabels[0]
+    , priorityLabel: priorityLabels[data.priority] || priorityLabels[0]!
   }
 }
 
@@ -178,8 +178,8 @@ export function formatLogs(
       .join('')
   }
   return JSON.stringify({
-    deviceOS: lines.length ? lines[0].deviceLabel : 'Android'
-    , serial: lines.length ? lines[0].serial : serial
+    deviceOS: lines.length ? lines[0]!.deviceLabel : 'Android'
+    , serial: lines.length ? lines[0]!.serial : serial
     , logs: lines.map((line) => ({
       date: line.date
       , pid: line.pid
