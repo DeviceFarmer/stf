@@ -177,7 +177,7 @@
     "@types/split": "^1.0.5",
     "@types/temp": "^0.9.4",
     "@types/yargs": "^17.0.35",
-    "@types/yauzl": "^2.10.3",
+    "@types/yauzl": "^3.4.0",
     "@typescript/native": "npm:typescript@~7.0.2",
     "async": "^3.2.6",
     "chai": "^6.2.2",
