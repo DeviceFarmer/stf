@@ -26,7 +26,7 @@ export function normalizeLanguage(code: string | null | undefined): string | und
     return undefined
   }
   const key = languageKey(legacyLanguages[code] || code)
-  const base = key.split('-')[0]
+  const base = key.split('-')[0]!
   if (languagesByKey.has(key)) {
     return languagesByKey.get(key)
   }
