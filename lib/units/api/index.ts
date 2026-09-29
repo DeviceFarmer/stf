@@ -109,7 +109,7 @@ export default function(options: ApiUnitOptions) {
   , swaggerFile: path.resolve(import.meta.dirname, 'swagger', 'api_v1.yaml')
   }
 
-  if (typeof util.isError !== 'function') {
+  if (!('isError' in util)) {
     Object.assign(util, {
       isError: function(value: unknown) {
         return value instanceof Error ||
