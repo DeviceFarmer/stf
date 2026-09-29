@@ -20,7 +20,7 @@ import {importFresh, mockModule} from '../helpers/module-mock.mts'
 interface UploadFile {
   field?: string
   name: string
-  bytes: Buffer | string
+  bytes: Buffer<ArrayBuffer> | string
 }
 
 interface Resource {
