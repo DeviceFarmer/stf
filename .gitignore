@@ -17,3 +17,4 @@ yarn.lock
 /lib/**/*.js
 /lib/types/wire.d.ts
 /lib/types/stfservice-wire.d.ts
+/res/common/lang/translations/

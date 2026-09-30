@@ -28,7 +28,7 @@
   "scripts": {
     "test": "node build.mts test && npm run test:unit",
     "prepare": "not-in-install && node build.mts build || in-install",
-    "prelocal": "node build.mts compile",
+    "prelocal": "node build.mts compile translate-compile",
     "local": "node lib/cli/index.js local",
     "lint": "node build.mts lint",
     "pretest:unit": "node build.mts compile",
