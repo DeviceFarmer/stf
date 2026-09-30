@@ -352,7 +352,8 @@ async function translateCompile() {
       Object.keys(po.translations[context]!).forEach(function(msgid) {
         var entry = po.translations[context]![msgid]!
         var translated = entry.msgstr.filter(Boolean)
-        if (msgid && translated.length) {
+        var fuzzy = /\bfuzzy\b/.test(entry.comments && entry.comments.flag || '')
+        if (msgid && translated.length && !fuzzy) {
           strings[msgid] = entry.msgid_plural ? entry.msgstr : entry.msgstr[0]!
         }
       })

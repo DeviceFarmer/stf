@@ -32,7 +32,7 @@ import {
 import {alertLevelColors, type AlertMessage} from '@/core/alert-message'
 import {appState, isAdmin} from '@/core/app-state'
 import {useContactEmail} from '@/core/contact'
-import {gettext, languageSettingKey, detectLanguage, setLanguage, useTranslation} from '@/core/i18n'
+import {gettext, languageSettingKey, setLanguage, useTranslation} from '@/core/i18n'
 import {getSocket, onSocket, useSocketEvent} from '@/core/socket'
 import {useSetting, useSettingsStore} from '@/core/settings'
 import {acceptAdbKey} from '@/core/user'
@@ -59,7 +59,7 @@ function useLanguageSync() {
   const selected = useSettingsStore((state) => state.settings[languageSettingKey]) as
     string | undefined
   useEffect(() => {
-    setLanguage(selected || detectLanguage())
+    setLanguage(selected)
   }, [selected])
 }
 
