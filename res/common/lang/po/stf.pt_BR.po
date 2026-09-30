@@ -270,7 +270,7 @@ msgstr "Ocupado"
 
 #: res/app/src/features/device-list/DeviceStats.tsx:41
 msgid "Busy Devices"
-msgstr "Devices Ocupados"
+msgstr "Dispositivos Ocupados"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:35
 msgid "Camera"
@@ -1194,7 +1194,7 @@ msgstr "Nenhum Dispositivo"
 
 #: res/app/src/features/device-list/DeviceListPage.tsx:103
 msgid "No devices connected"
-msgstr "Nenhum device conectado"
+msgstr "Nenhum dispositivo conectado"
 
 #: res/app/src/features/settings/groups/GroupDevices.tsx:132
 msgid "No group devices"
