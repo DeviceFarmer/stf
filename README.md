@@ -438,6 +438,8 @@ Translations are managed in the [STF Transifex project](https://app.transifex.co
 
 Transifex language codes are used as-is for the files in `res/common/lang/po` and the keys in `res/common/lang/langs.json`.
 
+See [doc/TRANSLATING.md](doc/TRANSLATING.md) for the file layout, the status of machine translations and the list of previous translators.
+
 For updating the source and all the translation files, first install the [Transifex client](https://developers.transifex.com/docs/cli) and provide an API token, e.g. in the `TX_TOKEN` environment variable.
 
 Then just run:
