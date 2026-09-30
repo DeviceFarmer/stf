@@ -21,26 +21,23 @@ In 2026 the strings added by the React UI were filled in with machine translatio
 
 ## Translators
 
-The `po` files pulled from the current Transifex project carry no `# Translators:` header, because the project does not export one. The people who translated STF in the original OpenSTF project (2015–2020) are therefore credited here, per language. Anonymous accounts, which Transifex lists by a hash, are omitted.
+The `po` files pulled from the current Transifex project carry no `# Translators:` header, because the project does not export one. The people who translated STF in the original OpenSTF project (2015–2020) are therefore credited here, per language. This covers every language of that project, shipped in STF or not, and is not updated any more. Email addresses are written as `user(at)domain`, and anonymous accounts, which Transifex lists by a hash, are omitted.
 
 Translations made in the current project record their translator in Transifex itself.
 
-- **German (`de`)**: 000 777 <jannicbru@gmail.com>, Dominic Wittke <dominicwittke@gmx.de>, Felix <felix.meyner@i-c-analytics.com>, Uli Wucherer <u.wucherer@gmail.com>
-- **Spanish (`es`)**: Gunther Brunner, lodopidolo, Luis Calvo <lcalvo@paradigmadigital.com>, takeshimiya <takeshimiya@gmail.com>
-- **French (`fr`)**: ctest 06 <ctestappleid@gmail.com>, Guillaume Chertier <gchertier.ext@orange.com>
-- **Japanese (`ja`)**: Gunther Brunner, takeshimiya <takeshimiya@gmail.com>
-- **Korean (`ko`)**: Dongwoo Lee <kysersoze.lee@gmail.com>, Eugene <miss0110@naver.com>
-- **Polish (`pl`)**: Jacek Dwulit <jacky29@wp.pl>, Jakub Mucha <biuro@muchastudio.com.pl>, koral__, Mateusz Bartos <mbartos@wikia-inc.com>
-- **Portuguese, Brazil (`pt_BR`)**: Joao Pereira <joao@jpereira.me>, John Voloski <johnvoloski@gmail.com>, Luiz Esmiralha <luiz.esmiralha@protonmail.com>, Luiz Lohn <luiz.lohn@gmail.com>
-- **Russian (`ru`)**: Gumar Minibaev <gminibaev@gmail.com>, Gunnar Korneev <testgkor@gmail.com>, Kirill Kuzmichev <kkuzmichev@yandex.ru>, Kirill Zhukov <zhukov.kirill.96@gmail.com>, Petro Bilyi <whitipet@gmail.com>, Vyacheslav Frolov <frolov78@gmail.com>
-- **Turkish (`tr`)**: Mucahid Gecimli <alimucahid.gecimli@egemsoft.net>, Çetin Turan <cetinturan@gmail.com>
-- **Ukrainian (`uk`)**: Petro Bilyi <whitipet@gmail.com>
-- **Chinese, Simplified (`zh_CN`)**: Jon Liang <jonqchk@gmail.com>, Joyyang <956090321@qq.com>, LearnShare <learnshare@126.com>, Peng Wang <buaawp@gmail.com>, qingliangcn <qing.liang.cn@gmail.com>, shengxiang <codeskyblue@gmail.com>, Ye Yorick <yexiali0791@163.com>, 培昊 何 <hepeihao524@163.com>, 戴龙飞 <dailongfei@conew.com>
-- **Chinese, Traditional (`zh-Hant`)**: Can Yu <fineaisa@gmail.com>, dq wang <newbiner@gmail.com>
-
-Some languages are in the Transifex project but not shipped in STF yet, because they are below the 80% translated that `.tx/config` requires. Their translators from the original project:
-
-- **Czech (`cs`)**: Jiří Podhorecký <jirka.p@volny.cz>, Roman Hosek <romanhosekcz@gmail.com>
-- **Danish (`da`)**: Kristian Rossen Kristensen <krossenk@gmail.com>
-- **Dutch (`nl`)**: Mitchel Nijkamp <mitchelnijkamp1@msn.com>
-- **Chinese, Simplified, alternative wording (`zh-Hans`)**: Booth Wang <wangbaomi@qq.com>, glovebx <ruinning@163.com>, 知秋 叶落 <droathzhiqiu90@gmail.com>
+- **Chinese, Simplified (`zh_CN`)**: Jon Liang (jonqchk(at)gmail.com), Joyyang (956090321(at)qq.com), LearnShare (learnshare(at)126.com), Peng Wang (buaawp(at)gmail.com), qingliangcn (qing.liang.cn(at)gmail.com), shengxiang (codeskyblue(at)gmail.com), Ye Yorick (yexiali0791(at)163.com), 培昊 何 (hepeihao524(at)163.com), 戴龙飞 (dailongfei(at)conew.com)
+- **Chinese, Simplified (alternative wording) (`zh-Hans`)**: Booth Wang (wangbaomi(at)qq.com), glovebx (ruinning(at)163.com), 知秋 叶落 (droathzhiqiu90(at)gmail.com)
+- **Chinese, Traditional (`zh-Hant`)**: Can Yu (fineaisa(at)gmail.com), dq wang (newbiner(at)gmail.com)
+- **Czech (`cs`)**: Jiří Podhorecký (jirka.p(at)volny.cz), Roman Hosek (romanhosekcz(at)gmail.com)
+- **Danish (`da`)**: Kristian Rossen Kristensen (krossenk(at)gmail.com)
+- **Dutch (`nl`)**: Mitchel Nijkamp (mitchelnijkamp1(at)msn.com)
+- **French (`fr`)**: ctest 06 (ctestappleid(at)gmail.com), Guillaume Chertier (gchertier.ext(at)orange.com)
+- **German (`de`)**: 000 777 (jannicbru(at)gmail.com), Dominic Wittke (dominicwittke(at)gmx.de), Felix (felix.meyner(at)i-c-analytics.com), Uli Wucherer (u.wucherer(at)gmail.com)
+- **Japanese (`ja`)**: Gunther Brunner, takeshimiya (takeshimiya(at)gmail.com)
+- **Korean (`ko`)**: Dongwoo Lee (kysersoze.lee(at)gmail.com), Eugene (miss0110(at)naver.com)
+- **Polish (`pl`)**: Jacek Dwulit (jacky29(at)wp.pl), Jakub Mucha (biuro(at)muchastudio.com.pl), koral__, Mateusz Bartos (mbartos(at)wikia-inc.com)
+- **Portuguese, Brazil (`pt_BR`)**: Joao Pereira (joao(at)jpereira.me), John Voloski (johnvoloski(at)gmail.com), Luiz Esmiralha (luiz.esmiralha(at)protonmail.com), Luiz Lohn (luiz.lohn(at)gmail.com)
+- **Russian (`ru`)**: Gumar Minibaev (gminibaev(at)gmail.com), Gunnar Korneev (testgkor(at)gmail.com), Kirill Kuzmichev (kkuzmichev(at)yandex.ru), Kirill Zhukov (zhukov.kirill.96(at)gmail.com), Petro Bilyi (whitipet(at)gmail.com), Vyacheslav Frolov (frolov78(at)gmail.com)
+- **Spanish (`es`)**: Gunther Brunner, lodopidolo, Luis Calvo (lcalvo(at)paradigmadigital.com), takeshimiya (takeshimiya(at)gmail.com)
+- **Turkish (`tr`)**: Mucahid Gecimli (alimucahid.gecimli(at)egemsoft.net), Çetin Turan (cetinturan(at)gmail.com)
+- **Ukrainian (`uk`)**: Petro Bilyi (whitipet(at)gmail.com)
