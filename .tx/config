@@ -1,7 +1,7 @@
 [main]
 host = https://app.transifex.com
 
-[o:devicefarmer:p:stf-main:r:enpo]
+[o:devicefarmer:p:stf-main:r:ec7e411575b0c3a867983b0a7e0113d9]
 file_filter = res/common/lang/po/stf.<lang>.po
 source_file = res/common/lang/po/stf.pot
 source_lang = en
