@@ -2,7 +2,7 @@
 
 ## Where translations live
 
-Translations are managed in the [STF Transifex project](https://app.transifex.com/devicefarmer/stf-main) (`devicefarmer/stf-main`, resource `enpo`). Please translate there rather than editing the `po` files directly, so that your work is not overwritten by the next sync.
+Translations are managed in the [STF Transifex project](https://app.transifex.com/devicefarmer/stf-main) (`devicefarmer/stf-main`, resource `res..po/stf.pot (master)`, which the Transifex GitHub integration created and keeps in sync with `master`). Please translate there rather than editing the `po` files directly, so that your work is not overwritten by the next sync.
 
 | File | Role |
 | --- | --- |
