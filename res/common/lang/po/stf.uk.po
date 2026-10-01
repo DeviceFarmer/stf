@@ -1,11 +1,12 @@
+# Translators:
+# Karol Wrótniak, 2026
+# 
 msgid ""
 msgstr ""
-"Project-Id-Version: STF\n"
+"Last-Translator: Karol Wrótniak, 2026\n"
 "Language-Team: Ukrainian (https://app.transifex.com/devicefarmer/teams/110261/uk/)\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: uk\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n % 10 == 1 && n % 100 != 11 ? 0 : n % 1 == 0 && n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 1 : n % 1 == 0 && (n % 10 ==0 || (n % 10 >=5 && n % 10 <=9) || (n % 100 >=11 && n % 100 <=14 )) ? 2: 3);\n"
 
 #: res/app/src/features/settings/groups/rules.ts:101
@@ -35,12 +36,18 @@ msgid "A package is already installed with the same name."
 msgstr "Пакет з такою назвою вже установлено."
 
 #: res/app/src/core/install.ts:166
-msgid "A previously installed package of the same name has a different signature than the new package (and the old package's data was not removed)."
-msgstr "Раніше установлений пакет з таким іменем має інший цифровий підпис (дані старого пакету також не видалені)."
+msgid ""
+"A previously installed package of the same name has a different signature "
+"than the new package (and the old package's data was not removed)."
+msgstr ""
+"Раніше установлений пакет з таким іменем має інший цифровий підпис (дані "
+"старого пакету також не видалені)."
 
 #: res/app/src/core/install.ts:176
 msgid "A secure container mount point couldn't be accessed on external media."
-msgstr "Точка монтування захищеного контейнера не може бути доступна на зовнішніх носіях."
+msgstr ""
+"Точка монтування захищеного контейнера не може бути доступна на зовнішніх "
+"носіях."
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:278
 #: res/app/src/features/device-list/columns.tsx:302
@@ -172,8 +179,11 @@ msgid "Apps"
 msgstr "Додатки"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:43
-msgid "Are you sure you want to reboot this device and keep using it afterwards?"
-msgstr "Ви впевнені, що хочете перезавантажити цей пристрій і продовжити ним користуватися?"
+msgid ""
+"Are you sure you want to reboot this device and keep using it afterwards?"
+msgstr ""
+"Ви впевнені, що хочете перезавантажити цей пристрій і продовжити ним "
+"користуватися?"
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:31
 msgid "Are you sure you want to reboot this device?"
@@ -281,8 +291,7 @@ msgstr "Камера"
 #: res/app/src/features/settings/groups/GroupDetail.tsx:107
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:69
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:123
-#: res/app/src/ui/modals.tsx:192
-#: res/app/src/ui/modals.tsx:57
+#: res/app/src/ui/modals.tsx:192 res/app/src/ui/modals.tsx:57
 #: res/app/src/ui/modals.tsx:89
 msgid "Cancel"
 msgstr "Скасувати"
@@ -366,8 +375,7 @@ msgstr "Зв'язатися з власниками"
 
 #: res/app/src/features/auth/SignInForm.tsx:165
 #: res/app/src/features/auth/SignInForm.tsx:168
-#: res/app/src/ui/AppLayout.tsx:276
-#: res/app/src/ui/AppLayout.tsx:283
+#: res/app/src/ui/AppLayout.tsx:276 res/app/src/ui/AppLayout.tsx:283
 msgid "Contact Support"
 msgstr "Зв'язатися з підтримкою"
 
@@ -389,8 +397,7 @@ msgstr "Керовані"
 msgid "Copied"
 msgstr "Скопійовано"
 
-#: res/app/src/ui/CopyButton.tsx:30
-#: res/app/src/ui/CopyButton.tsx:38
+#: res/app/src/ui/CopyButton.tsx:30 res/app/src/ui/CopyButton.tsx:38
 msgid "Copy to clipboard"
 msgstr "Копіювати в буфер обміну"
 
@@ -424,8 +431,7 @@ msgstr "Критичний"
 msgid "Current rotation:"
 msgstr "Поточна орієнтація:"
 
-#: res/app/src/ui/ColumnChoice.tsx:47
-#: res/app/src/ui/ColumnChoice.tsx:48
+#: res/app/src/ui/ColumnChoice.tsx:47 res/app/src/ui/ColumnChoice.tsx:48
 #: res/app/src/ui/ColumnChoice.tsx:54
 msgid "Customize"
 msgstr "Налаштувати"
@@ -579,8 +585,7 @@ msgid "Discharging"
 msgstr "Розряджається"
 
 #: res/app/src/core/devices/enhance.ts:19
-#: res/app/src/core/devices/enhance.ts:6
-#: res/app/src/ui/modals.tsx:127
+#: res/app/src/core/devices/enhance.ts:6 res/app/src/ui/modals.tsx:127
 msgid "Disconnected"
 msgstr "Відключено"
 
@@ -651,8 +656,7 @@ msgstr "Зашифровано"
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:218
 #: res/app/src/features/device-list/device-actions.ts:32
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:64
-#: res/app/src/ui/AppLayout.tsx:110
-#: res/app/src/ui/AppLayout.tsx:111
+#: res/app/src/ui/AppLayout.tsx:110 res/app/src/ui/AppLayout.tsx:111
 msgid "Error"
 msgstr "Помилка"
 
@@ -865,8 +869,7 @@ msgid "Height"
 msgstr "Висота"
 
 #: res/app/src/features/docs/DocsPage.tsx:108
-#: res/app/src/features/docs/DocsPage.tsx:28
-#: res/app/src/ui/AppLayout.tsx:289
+#: res/app/src/features/docs/DocsPage.tsx:28 res/app/src/ui/AppLayout.tsx:289
 #: res/app/src/ui/AppLayout.tsx:295
 msgid "Help"
 msgstr "Допомога"
@@ -1027,8 +1030,7 @@ msgstr "Увійти"
 msgid "Logcat Level"
 msgstr "Рівень logcat"
 
-#: res/app/src/ui/AppLayout.tsx:313
-#: res/app/src/ui/AppLayout.tsx:319
+#: res/app/src/ui/AppLayout.tsx:313 res/app/src/ui/AppLayout.tsx:319
 msgid "Logout"
 msgstr "Вийти"
 
@@ -1041,7 +1043,8 @@ msgid "Maintenance"
 msgstr "Підтримка"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:90
-msgid "Make sure to copy your access token now. You won't be able to see it again."
+msgid ""
+"Make sure to copy your access token now. You won't be able to see it again."
 msgstr "Збережіть токен доступу зараз. Ви не зможете побачити його знову."
 
 #: res/app/src/features/control/panes/dashboard/apps/AppsCard.tsx:52
@@ -1276,8 +1279,7 @@ msgid "Offline"
 msgstr "Offline"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:111
-#: res/app/src/ui/modals.tsx:67
-#: res/app/src/ui/modals.tsx:88
+#: res/app/src/ui/modals.tsx:67 res/app/src/ui/modals.tsx:88
 msgid "OK"
 msgstr "OK"
 
@@ -1631,11 +1633,13 @@ msgid "Run"
 msgstr "Виконати"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:33
-msgid "Run the following on your command line to debug the device from your Browser"
+msgid ""
+"Run the following on your command line to debug the device from your Browser"
 msgstr "Виконайте цю команду, щоб налагодити пристрій з вашого браузера"
 
 #: res/app/src/features/control/panes/dashboard/remote-debug/RemoteDebugCard.tsx:32
-msgid "Run the following on your command line to debug the device from your IDE"
+msgid ""
+"Run the following on your command line to debug the device from your IDE"
 msgstr "Виконайте цю команду, щоб налагодити пристрій з вашої IDE"
 
 #: res/app/src/features/settings/keys/AdbKeysCard.tsx:86
@@ -1890,7 +1894,9 @@ msgstr "Текст"
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:163
 msgid "The current view is marked secure and cannot be viewed remotely."
-msgstr "Поточний перегляд відмічений як безпечний і до нього не можна отримати доступ віддалено."
+msgstr ""
+"Поточний перегляд відмічений як безпечний і до нього не можна отримати "
+"доступ віддалено."
 
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
@@ -1901,43 +1907,75 @@ msgid "The existing package could not be deleted."
 msgstr "Існуючий пакет не може бути видалений."
 
 #: res/app/src/core/install.ts:180
-msgid "The new package couldn't be installed because the verification did not succeed."
-msgstr "Новий пакет не може бути встановлений, тому що перевірка не пройшла успішно."
+msgid ""
+"The new package couldn't be installed because the verification did not "
+"succeed."
+msgstr ""
+"Новий пакет не може бути встановлений, тому що перевірка не пройшла успішно."
 
 #: res/app/src/core/install.ts:179
-msgid "The new package couldn't be installed because the verification timed out."
+msgid ""
+"The new package couldn't be installed because the verification timed out."
 msgstr "Новий пакет не може бути встановлений, тому що вийшов час перевірки."
 
 #: res/app/src/core/install.ts:178
-msgid "The new package couldn't be installed in the specified install location because the media is not available."
-msgstr "Новий пакет не може бути встановлений в вказане місце оскільки воно недоступне."
+msgid ""
+"The new package couldn't be installed in the specified install location "
+"because the media is not available."
+msgstr ""
+"Новий пакет не може бути встановлений в вказане місце оскільки воно "
+"недоступне."
 
 #: res/app/src/core/install.ts:177
-msgid "The new package couldn't be installed in the specified install location."
+msgid ""
+"The new package couldn't be installed in the specified install location."
 msgstr "Новий пакет не може бути встановлений в вказане місце."
 
 #: res/app/src/core/install.ts:171
-msgid "The new package failed because it contains a content provider with thesame authority as a provider already installed in the system."
-msgstr "Не вдалося встановити новий пакет, оскільки він містить постачальника вмісту з таким самим authority, як у вже встановленого в системі постачальника."
+msgid ""
+"The new package failed because it contains a content provider with thesame "
+"authority as a provider already installed in the system."
+msgstr ""
+"Не вдалося встановити новий пакет, оскільки він містить постачальника вмісту"
+" з таким самим authority, як у вже встановленого в системі постачальника."
 
 #: res/app/src/core/install.ts:173
-msgid "The new package failed because it has specified that it is a test-only package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
-msgstr "Не вдалося встановити новий пакет, оскільки він позначений як пакет лише для тестування, а програма, що викликає, не передала прапорець INSTALL_ALLOW_TEST."
+msgid ""
+"The new package failed because it has specified that it is a test-only "
+"package and the caller has not supplied the INSTALL_ALLOW_TEST flag."
+msgstr ""
+"Не вдалося встановити новий пакет, оскільки він позначений як пакет лише для"
+" тестування, а програма, що викликає, не передала прапорець "
+"INSTALL_ALLOW_TEST."
 
 #: res/app/src/core/install.ts:172
-msgid "The new package failed because the current SDK version is newer than that required by the package."
-msgstr "Не вдалося встановити новий пакет, оскільки поточна версія SDK новіша, ніж вимагає пакет."
+msgid ""
+"The new package failed because the current SDK version is newer than that "
+"required by the package."
+msgstr ""
+"Не вдалося встановити новий пакет, оскільки поточна версія SDK новіша, ніж "
+"вимагає пакет."
 
 #: res/app/src/core/install.ts:170
-msgid "The new package failed because the current SDK version is older than that required by the package."
-msgstr "Не вдалося встановити новий пакет, оскільки поточна версія SDK старіша, ніж вимагає пакет."
+msgid ""
+"The new package failed because the current SDK version is older than that "
+"required by the package."
+msgstr ""
+"Не вдалося встановити новий пакет, оскільки поточна версія SDK старіша, ніж "
+"вимагає пакет."
 
 #: res/app/src/core/install.ts:169
-msgid "The new package failed while optimizing and validating its dex files, either because there was not enough storage or the validation failed."
-msgstr "Не вдалося встановити новий пакет під час оптимізації та перевірки його DEX-файлів: недостатньо місця для зберігання або перевірка не вдалася."
+msgid ""
+"The new package failed while optimizing and validating its dex files, either"
+" because there was not enough storage or the validation failed."
+msgstr ""
+"Не вдалося встановити новий пакет під час оптимізації та перевірки його DEX-"
+"файлів: недостатньо місця для зберігання або перевірка не вдалася."
 
 #: res/app/src/core/install.ts:183
-msgid "The new package has an older version code than the currently installed package."
+msgid ""
+"The new package has an older version code than the currently installed "
+"package."
 msgstr "Новий пакет має старішу версію, ніж вже встановлений."
 
 #: res/app/src/core/install.ts:182
@@ -1957,23 +1995,34 @@ msgid "The package archive file is invalid."
 msgstr "Файл архіву програми пошкоджений."
 
 #: res/app/src/core/install.ts:174
-msgid "The package being installed contains native code, but none that is compatible with the device's CPU_ABI."
-msgstr "Пакет який встановлюється містить нативний код, але він не сумісний з CPU_ABI пристрою."
+msgid ""
+"The package being installed contains native code, but none that is "
+"compatible with the device's CPU_ABI."
+msgstr ""
+"Пакет який встановлюється містить нативний код, але він не сумісний з "
+"CPU_ABI пристрою."
 
 #: res/app/src/core/install.ts:181
 msgid "The package changed from what the calling program expected."
-msgstr "Пакет відрізняється від того, що очікувала програма, яка його викликала."
+msgstr ""
+"Пакет відрізняється від того, що очікувала програма, яка його викликала."
 
 #: res/app/src/core/install.ts:160
 msgid "The package is already installed."
 msgstr "Пакет вже встановлено."
 
 #: res/app/src/core/install.ts:163
-msgid "The package manager service found that the device didn't have enough storage space to install the app."
-msgstr "Менеджер пакетів виявив, що на пристрії не достатньо місця, щоб встановити додаток."
+msgid ""
+"The package manager service found that the device didn't have enough storage"
+" space to install the app."
+msgstr ""
+"Менеджер пакетів виявив, що на пристрії не достатньо місця, щоб встановити "
+"додаток."
 
 #: res/app/src/core/install.ts:193
-msgid "The parser did not find any actionable tags (instrumentation or application) in the manifest."
+msgid ""
+"The parser did not find any actionable tags (instrumentation or application)"
+" in the manifest."
 msgstr "Парсер не знайшов діючих тегів (інструмента або додатку) в маніфесті."
 
 #: res/app/src/core/install.ts:187
@@ -1986,15 +2035,22 @@ msgstr "Аналізатор виявив невірне або відсутнє
 
 #: res/app/src/core/install.ts:191
 msgid "The parser encountered a bad shared user id name in the manifest."
-msgstr "Аналізатор виявив неправильне ім'я спільного ідентифікатора користувача (shared user id) в маніфесті."
+msgstr ""
+"Аналізатор виявив неправильне ім'я спільного ідентифікатора користувача "
+"(shared user id) в маніфесті."
 
 #: res/app/src/core/install.ts:189
-msgid "The parser encountered a CertificateEncodingException in one of the files in the .apk."
-msgstr "Аналізатор виявив CertificateEncodingException в одному з файлів в .apk."
+msgid ""
+"The parser encountered a CertificateEncodingException in one of the files in"
+" the .apk."
+msgstr ""
+"Аналізатор виявив CertificateEncodingException в одному з файлів в .apk."
 
 #: res/app/src/core/install.ts:186
 msgid "The parser encountered an unexpected exception."
-msgstr "Виникла непередбачена виняткова ситуація під час роботи синтаксичного аналізатора."
+msgstr ""
+"Виникла непередбачена виняткова ситуація під час роботи синтаксичного "
+"аналізатора."
 
 #: res/app/src/core/install.ts:192
 msgid "The parser encountered some structural problem in the manifest."
@@ -2005,8 +2061,12 @@ msgid "The parser found inconsistent certificates on the files in the .apk."
 msgstr "Синтаксичний аналізатор виявив несумісний сертифікат в .apk файлі"
 
 #: res/app/src/core/install.ts:184
-msgid "The parser was given a path that is not a file, or does not end with the expected '.apk' extension."
-msgstr "Синтаксичному аналізатору був переданий не шлях до файлу, або ім'я файлу не закінчується на '.apk'."
+msgid ""
+"The parser was given a path that is not a file, or does not end with the "
+"expected '.apk' extension."
+msgstr ""
+"Синтаксичному аналізатору був переданий не шлях до файлу, або ім'я файлу не "
+"закінчується на '.apk'."
 
 #: res/app/src/core/install.ts:185
 msgid "The parser was unable to retrieve the AndroidManifest.xml file."
@@ -2021,16 +2081,24 @@ msgid "The schedule can only be changed while the group is pending"
 msgstr "Розклад можна змінити, лише поки група в підготовці"
 
 #: res/app/src/core/install.ts:196
-msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
-msgstr "Системі не вдалося встановити пакет, оскільки його нативний код не відповідає жодній ABI підтримуваній системі."
+msgid ""
+"The system failed to install the package because its packaged native code "
+"did not match any of the ABIs supported by the system."
+msgstr ""
+"Системі не вдалося встановити пакет, оскільки його нативний код не "
+"відповідає жодній ABI підтримуваній системі."
 
 #: res/app/src/core/install.ts:194
 msgid "The system failed to install the package because of system issues."
 msgstr "Не вдалося встановити пакет через системні помилки"
 
 #: res/app/src/core/install.ts:195
-msgid "The system failed to install the package because the user is restricted from installing apps."
-msgstr "Не вдалося встановити пакет, оскільки цьому користувачеві заборонена установка додатків."
+msgid ""
+"The system failed to install the package because the user is restricted from"
+" installing apps."
+msgstr ""
+"Не вдалося встановити пакет, оскільки цьому користувачеві заборонена "
+"установка додатків."
 
 #: res/app/src/core/install.ts:162
 msgid "The URI passed in is invalid."

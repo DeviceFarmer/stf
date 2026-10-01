@@ -44,7 +44,7 @@ var CHECK_ICON: Record<string, string> = {
 // changes depending on whether the job lived long enough to report.
 var CORE_LABELS: Record<string, string> = {
   build: 'Build (npm + webpack)'
-, lint: 'Lint (eslint + jsonlint + workflow shell)'
+, lint: 'Lint (eslint + jsonlint + translations + workflow shell)'
 , unit: 'Unit tests (mocha)'
 , component: 'Component tests (vitest + React)'
 , integration:

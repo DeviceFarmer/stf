@@ -8,7 +8,7 @@ Translations are managed in the [STF Transifex project](https://app.transifex.co
 | --- | --- |
 | `res/common/lang/po/stf.pot` | Source strings, extracted from the UI sources. Pushed to Transifex. |
 | `res/common/lang/po/stf.<lang>.po` | One catalog per language, as pulled from Transifex. |
-| `res/common/lang/translations/stf.<lang>.json` | Compiled catalogs loaded by the UI. Generated from the `po` files. |
+| `res/common/lang/translations/stf.<lang>.json` | Compiled catalogs loaded by the UI. Generated from the `po` files by `node build.mts translate-compile`, which the build runs, and not committed. |
 | `res/common/lang/langs.json` | Languages offered in the UI. |
 
 Transifex language codes are used as-is for file names and `langs.json` keys. The repository used `ru_RU` and `ko_KR` before; they are now `ru` and `ko`.
@@ -21,9 +21,30 @@ In 2026 the strings added by the React UI were filled in with machine translatio
 
 ## Translators
 
-The `po` files pulled from the current Transifex project carry no `# Translators:` header, because the project does not export one. The people who translated STF in the original OpenSTF project (2015–2020) are therefore credited here, per language. This covers every language of that project, shipped in STF or not, and is not updated any more. Email addresses are written as `user(at)domain`, and anonymous accounts, which Transifex lists by a hash, are omitted.
+Translators are credited here rather than only in the `po` headers, in two lists: the people who translate in the current Transifex project, and those who translated in the original OpenSTF project.
 
-Translations made in the current project record their translator in Transifex itself.
+### Current translators
+
+Transifex writes the people who translated, reviewed or proofread a language into the `# Translators:` comment at the top of its `po` file. This list is generated from those comments by `node build.mts translate-contributors`, so please do not edit it by hand. Email addresses are written the same way as below. Run it after merging translations from Transifex; `lint` does not check it, since the po files Transifex sends do not update it. Strings imported in bulk are credited to whoever imported them.
+
+<!-- translators:start -->
+- **German (`de`)**: Karol Wrótniak
+- **Spanish (`es`)**: Karol Wrótniak
+- **French (`fr`)**: Karol Wrótniak
+- **Japanese (`ja`)**: Karol Wrótniak
+- **Korean (`ko`)**: Karol Wrótniak
+- **Polish (`pl`)**: Karol Wrótniak
+- **Brazilian Portuguese (`pt_BR`)**: Karol Wrótniak
+- **Russian (`ru`)**: Karol Wrótniak
+- **Turkish (`tr`)**: Karol Wrótniak
+- **Ukrainian (`uk`)**: Karol Wrótniak
+- **Traditional Chinese (`zh-Hant`)**: Karol Wrótniak
+- **Chinese (China) (`zh_CN`)**: Karol Wrótniak
+<!-- translators:end -->
+
+### Previous translators
+
+The people who translated STF in the original OpenSTF project (2015–2020), per language, for every language of that project whether or not it ships in STF. This list is not updated any more. Email addresses are written as `user(at)domain`, and anonymous accounts, which Transifex lists by a hash, are omitted.
 
 - **Chinese, Simplified (`zh_CN`)**: Jon Liang (jonqchk(at)gmail.com), Joyyang (956090321(at)qq.com), LearnShare (learnshare(at)126.com), Peng Wang (buaawp(at)gmail.com), qingliangcn (qing.liang.cn(at)gmail.com), shengxiang (codeskyblue(at)gmail.com), Ye Yorick (yexiali0791(at)163.com), 培昊 何 (hepeihao524(at)163.com), 戴龙飞 (dailongfei(at)conew.com)
 - **Chinese, Simplified (alternative wording) (`zh-Hans`)**: Booth Wang (wangbaomi(at)qq.com), glovebx (ruinning(at)163.com), 知秋 叶落 (droathzhiqiu90(at)gmail.com)

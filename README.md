@@ -438,11 +438,20 @@ Translations are managed in the [STF Transifex project](https://app.transifex.co
 
 Transifex language codes are used as-is for the files in `res/common/lang/po` and the keys in `res/common/lang/langs.json`.
 
-See [doc/TRANSLATING.md](doc/TRANSLATING.md) for the file layout, the status of machine translations and the list of previous translators.
+See [doc/TRANSLATING.md](doc/TRANSLATING.md) for the file layout, the status of machine translations and the list of translators.
 
-For updating the source and all the translation files, first install the [Transifex client](https://developers.transifex.com/docs/cli) and provide an API token, e.g. in the `TX_TOKEN` environment variable.
+The `json` catalogs the UI loads are not committed. `node build.mts webpack`, and so `npm install` and `node build.mts build`, compiles them from the `po` files first; run `node build.mts translate-compile` yourself if you serve the UI through webpack without building it.
 
-Then just run:
+When you add or change a translatable string in the UI, run `node build.mts translate-extract` and commit the updated `stf.pot`. `node build.mts lint`, and so CI, runs `node build.mts translate-check`, which fails when `stf.pot` does not match the sources, when `langs.json` and the catalogs disagree, or when a translation uses a placeholder its source string does not have.
+
+The [Transifex GitHub integration](https://help.transifex.com/en/articles/6265125-github-installation-and-configuration), configured in [`transifex.yml`](transifex.yml), does the rest:
+
+1. A new `stf.pot` on `master` is sent to Transifex.
+2. Translations are sent back as a pull request that updates the `po` files. Run `node build.mts translate-contributors` after merging one to refresh the list of translators in `doc/TRANSLATING.md`.
+
+A language Transifex sends that is not in `langs.json` fails `translate-check`, so it can be added together with its label in the same pull request.
+
+To sync by hand instead, install the [Transifex client](https://developers.transifex.com/docs/cli), provide an API token in the `TX_TOKEN` environment variable and run:
 ```bash
 node build.mts translate
 ```
@@ -452,13 +461,13 @@ It will do the following:
 1. Extract all translatable strings from the UI sources to `stf.pot`.
 2. Push `stf.pot` to Transifex.
 3. Pull from Transifex the translations of every language that has a `po` file.
-4. Compile all `po` files to `json`.
+4. Compile all `po` files to the `json` catalogs the UI loads.
+5. Update the list of current translators in `doc/TRANSLATING.md` from the `po` headers.
 
 Then in order to add a language officially (only needs to be done once):
 
 1. Add the language to `res/common/lang/langs.json`.
 2. Pull the specific language with `tx pull -l <lang>`.
-3. Run `node build.mts translate`.
 
 ## Testing
 

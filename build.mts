@@ -315,7 +315,13 @@ async function webpackOthers() {
   await runWebpack('webpack-others', config)
 }
 
-async function translateExtract() {
+var poDir = './res/common/lang/po'
+var potFile = path.join(poDir, 'stf.pot')
+var translationsDir = './res/common/lang/translations'
+var langsFile = './res/common/lang/langs.json'
+var translatingDoc = './doc/TRANSLATING.md'
+
+async function extractTranslations() {
   var GettextExtractor = (await import('gettext-extractor')).default.GettextExtractor
   var JsExtractors = (await import('gettext-extractor')).default.JsExtractors
   var extractor = new GettextExtractor()
@@ -332,40 +338,219 @@ async function translateExtract() {
       ignore: ['./res/app/src/**/*.test.@(ts|tsx)']
     })
 
-  extractor.savePotFile('./res/common/lang/po/stf.pot')
+  return extractor
 }
 
-async function translateCompile() {
-  var gettextParser = await import('gettext-parser')
-
-  var poDir = './res/common/lang/po'
-  fs.readdirSync(poDir).filter(function(name) {
+function poFiles() {
+  return fs.readdirSync(poDir).filter(function(name) {
     return /\.po$/.test(name)
-  }).forEach(function(name) {
-    var file = path.join(poDir, name)
-    var po = gettextParser.po.parse(fs.readFileSync(file))
-    var language = po.headers.Language ||
-      path.basename(file, '.po').replace(/^stf\./, '')
-    var strings: Record<string, string | string[]> = {}
+  }).map(function(name) {
+    return path.join(poDir, name)
+  })
+}
 
-    Object.keys(po.translations).forEach(function(context) {
-      Object.keys(po.translations[context]!).forEach(function(msgid) {
-        var entry = po.translations[context]![msgid]!
-        var translated = entry.msgstr.filter(Boolean)
-        var fuzzy = /\bfuzzy\b/.test(entry.comments && entry.comments.flag || '')
-        if (msgid && translated.length && !fuzzy) {
-          strings[msgid] = entry.msgid_plural ? entry.msgstr : entry.msgstr[0]!
-        }
+// strings is what translations/stf.<language>.json stores under the language
+async function compileCatalog(file: string) {
+  var gettextParser = await import('gettext-parser')
+  var po = gettextParser.po.parse(fs.readFileSync(file))
+  var language = po.headers.Language ||
+    path.basename(file, '.po').replace(/^stf\./, '')
+  var strings: Record<string, string | string[]> = {}
+
+  Object.keys(po.translations).forEach(function(context) {
+    Object.keys(po.translations[context]!).forEach(function(msgid) {
+      var entry = po.translations[context]![msgid]!
+      var translated = entry.msgstr.filter(Boolean)
+      var fuzzy = /\bfuzzy\b/.test(entry.comments && entry.comments.flag || '')
+      if (msgid && translated.length && !fuzzy) {
+        strings[msgid] = entry.msgid_plural ? entry.msgstr : entry.msgstr[0]!
+      }
+    })
+  })
+
+  return {language: language, strings: strings, po: po}
+}
+
+function catalogFile(language: string) {
+  return path.join(translationsDir, 'stf.' + language + '.json')
+}
+
+async function translateExtract() {
+  (await extractTranslations()).savePotFile(potFile)
+}
+
+// The catalogs are build output, so a pull from Transifex only changes po files.
+// Clearing them first keeps a removed language out of the bundle.
+async function translateCompile() {
+  fs.rmSync(translationsDir, {recursive: true, force: true})
+  fs.mkdirSync(translationsDir, {recursive: true})
+  for (var file of poFiles()) {
+    var catalog = await compileCatalog(file)
+    var output: Record<string, typeof catalog.strings> = {}
+    output[catalog.language] = catalog.strings
+    fs.writeFileSync(catalogFile(catalog.language), JSON.stringify(output))
+  }
+}
+
+var translatorsStart = '<!-- translators:start -->'
+var translatorsEnd = '<!-- translators:end -->'
+
+// Entries of the "# Translators:" comment Transifex writes at the top of each
+// po file, as "Name (user(at)domain)" without the years. Anonymous accounts show up
+// there as hashes and are left out.
+function poTranslators(file: string) {
+  var hash = /^[0-9a-f]{20,}(_[0-9a-f]+)?$/
+  var names = new Set<string>()
+  var inBlock = false
+  for (var line of fs.readFileSync(file, 'utf8').split('\n')) {
+    if (!line.startsWith('#')) {
+      break
+    }
+    if (line.startsWith('# Translators:')) {
+      inBlock = true
+    }
+    else if (inBlock) {
+      var entry = /^#\s*(.*?)\s*(?:<([^>]*)>)?\s*(?:,\s*[\d-]+)?\s*$/.exec(line)
+      var name = entry && entry[1]
+      var email = entry && entry[2]
+      if (name && !hash.test(name)) {
+        names.add(email && !hash.test(email) ?
+          name + ' (' + email.replace('@', '(at)') + ')' : name)
+      }
+    }
+  }
+  return Array.from(names).sort(function(a, b) {
+    return a.toLowerCase().localeCompare(b.toLowerCase())
+  })
+}
+
+async function renderTranslators() {
+  var displayNames = new Intl.DisplayNames(['en'], {type: 'language'})
+  var lines: string[] = []
+  for (var file of poFiles()) {
+    var language = (await compileCatalog(file)).language
+    var names = poTranslators(file)
+    if (names.length) {
+      var label = displayNames.of(language.replace('_', '-'))
+      lines.push('- **' + label + ' (`' + language + '`)**: ' + names.join(', '))
+    }
+  }
+  return lines.length ? lines.join('\n') : '_No translators are recorded in the po files yet._'
+}
+
+function splitTranslatingDoc(doc: string) {
+  var start = doc.indexOf(translatorsStart)
+  var end = doc.indexOf(translatorsEnd)
+  if (start < 0 || end < start) {
+    throw new Error(translatingDoc + ' has no ' + translatorsStart + ' ... ' +
+      translatorsEnd + ' section')
+  }
+  return {
+    head: doc.slice(0, start + translatorsStart.length)
+  , current: doc.slice(start + translatorsStart.length, end).trim()
+  , tail: doc.slice(end)
+  }
+}
+
+// Rewrites the list of current translators in doc/TRANSLATING.md
+async function translateContributors() {
+  var doc = splitTranslatingDoc(fs.readFileSync(translatingDoc, 'utf8'))
+  fs.writeFileSync(translatingDoc, doc.head + '\n' + await renderTranslators() + '\n' + doc.tail)
+}
+
+// An unknown placeholder renders as an empty string
+function unknownPlaceholders(file: string, po: {translations: Record<string, Record<string, {
+  msgid_plural?: string, msgstr: string[]
+}>>}) {
+  function placeholders(text: string) {
+    return (text.match(/\{\{\s*[\w.]+\s*\}\}/g) || []).map(function(placeholder) {
+      return placeholder.replace(/[{}\s]/g, '')
+    })
+  }
+
+  var problems: string[] = []
+  Object.keys(po.translations).forEach(function(context) {
+    Object.keys(po.translations[context]!).filter(Boolean).forEach(function(msgid) {
+      var entry = po.translations[context]![msgid]!
+      var known = new Set(placeholders(msgid).concat(placeholders(entry.msgid_plural || '')))
+      entry.msgstr.forEach(function(msgstr) {
+        placeholders(msgstr).filter(function(name) {
+          return !known.has(name)
+        }).forEach(function(name) {
+          problems.push(file + ': unknown placeholder {{' + name + '}} in the translation of "' +
+            msgid + '"')
+        })
       })
     })
-
-    var output: Record<string, typeof strings> = {}
-    output[language] = strings
-    fs.writeFileSync(
-      path.join('./res/common/lang/translations', 'stf.' + language + '.json')
-    , JSON.stringify(output)
-    )
   })
+  return problems
+}
+
+// Fails when stf.pot or langs.json is out of date, or
+// when a translation uses a placeholder its source string does not have
+async function translateCheck() {
+  var gettextParser = await import('gettext-parser')
+  var problems: string[] = []
+
+  // Compare messages only, since the #: references move with every code edit
+  function messageKey(
+    context: string | null | undefined
+  , text: string | null
+  , textPlural: string | null | undefined
+  ) {
+    return JSON.stringify([context || '', text, textPlural || ''])
+  }
+  var extracted = new Set((await extractTranslations()).getMessages().map(function(message) {
+    return messageKey(message.context, message.text, message.textPlural)
+  }))
+  var pot = gettextParser.po.parse(fs.readFileSync(potFile)).translations
+  var committed = new Set<string>()
+  Object.keys(pot).forEach(function(context) {
+    Object.keys(pot[context]!).filter(Boolean).forEach(function(msgid) {
+      committed.add(messageKey(context, msgid, pot[context]![msgid]!.msgid_plural))
+    })
+  })
+  var missing = Array.from(extracted).filter(function(key) {
+    return !committed.has(key)
+  })
+  var stale = Array.from(committed).filter(function(key) {
+    return !extracted.has(key)
+  })
+  if (missing.length || stale.length) {
+    problems.push(potFile + ' is out of date, run `node build.mts translate-extract`' +
+      missing.map(function(key) {
+        return '\n  missing: ' + JSON.parse(key)[1]
+      }).join('') +
+      stale.map(function(key) {
+        return '\n  no longer in the sources: ' + JSON.parse(key)[1]
+      }).join(''))
+  }
+
+  var languages: Record<string, string> = JSON.parse(fs.readFileSync(langsFile, 'utf8'))
+  var compiled = new Set<string>()
+  for (var file of poFiles()) {
+    var catalog = await compileCatalog(file)
+    compiled.add(catalog.language)
+
+    if (!languages[catalog.language]) {
+      problems.push(file + ': ' + catalog.language + ' is missing from langs.json')
+    }
+
+    problems.push(...unknownPlaceholders(file, catalog.po))
+  }
+
+  Object.keys(languages).filter(function(language) {
+    return language !== 'en' && !compiled.has(language)
+  }).forEach(function(language) {
+    problems.push('langs.json lists ' + language + ' but ' + poDir + ' has no catalog for it')
+  })
+
+  if (problems.length) {
+    problems.forEach(function(problem) {
+      console.error(problem)
+    })
+    throw new Error(problems.length + ' translation problem(s)')
+  }
 }
 
 async function translatePush() {
@@ -375,7 +560,8 @@ async function translatePush() {
 
 async function translatePull() {
   console.log('Pulling translations from Transifex...')
-  await runCommand('tx', ['pull'])
+  // A fresh checkout is newer than Transifex, which tx would otherwise skip
+  await runCommand('tx', ['pull', '--translations', '--force'])
 }
 
 var tasks: Record<string, Array<string | (() => Promise<void>)>> = {
@@ -385,16 +571,24 @@ var tasks: Record<string, Array<string | (() => Promise<void>)>> = {
 , 'wire-types': [wireTypes]
 , compile: ['wire-types', compile]
 , clean: [clean]
-, webpack: [webpackBuild]
+, webpack: ['translate-compile', webpackBuild]
 , 'webpack-others': [webpackOthers]
 , checkversion: [checkversion]
 , 'translate-extract': [translateExtract]
 , 'translate-compile': [translateCompile]
 , 'translate-push': [translatePush]
 , 'translate-pull': [translatePull]
-, translate: ['translate-extract', 'translate-push', 'translate-pull', 'translate-compile']
+, 'translate-check': [translateCheck]
+, 'translate-contributors': [translateContributors]
+, translate: [
+    'translate-extract'
+  , 'translate-push'
+  , 'translate-pull'
+  , 'translate-compile'
+  , 'translate-contributors'
+  ]
 , build: ['compile', 'clean', 'webpack']
-, lint: ['jsonlint', 'eslint', 'typecheck']
+, lint: ['jsonlint', 'eslint', 'typecheck', 'translate-check']
 , test: ['compile', 'lint', 'checkversion']
 }
 

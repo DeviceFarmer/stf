@@ -1,0 +1,12 @@
+# Configuration of the Transifex GitHub integration, which pushes stf.pot to
+# Transifex when it changes on master and opens pull requests with the
+# translated po files. See doc/TRANSLATING.md.
+git:
+  filters:
+    - filter_type: file
+      file_format: PO
+      source_language: en
+      source_file: res/common/lang/po/stf.pot
+      translation_files_expression: 'res/common/lang/po/stf.<lang>.po'
+  settings:
+    pr_branch_name: transifex/translations_<br_unique_id>
