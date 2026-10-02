@@ -93,6 +93,38 @@ export default syrup.serial()
               resolve_(target)
             }
 
+            var waitingForDeviceFile = false
+            function waitForDeviceFile(size: number) {
+              if (waitingForDeviceFile) {
+                return
+              }
+              waitingForDeviceFile = true
+              var deadline = Date.now() + 60000
+              ;(function check() {
+                adb.stat(options.serial, target)
+                  .then(function(fileStats) {
+                    if (fileStats.size === size) {
+                      endListener()
+                    }
+                    else if (Date.now() > deadline) {
+                      reject_(new Error(
+                        'Device has ' + fileStats.size + ' of ' + size + ' bytes of ' + target))
+                    }
+                    else {
+                      setTimeout(check, 250)
+                    }
+                  })
+                  .catch(function(err: Error) {
+                    if (Date.now() > deadline) {
+                      reject_(err)
+                    }
+                    else {
+                      setTimeout(check, 250)
+                    }
+                  })
+              })()
+            }
+
             function progressListener(stats: PushTransfer['stats']) {
               if (contentLength) {
                 // Progress 0% to 70%
@@ -103,10 +135,11 @@ export default syrup.serial()
                   , stats.bytesTransferred / contentLength
                   ))
                 )
-                // temporary workaround as the 'end' event is never fired
+                // 'end' never fires on Node >= 16, and bytesTransferred counts bytes handed to adb, not bytes
+                // written on the device: wait for the file to reach its full size before installing it.
                 if ((stats.bytesTransferred / contentLength) === 1 &&
                      (process.versions.node.split('.')[0] as unknown as number) >= 16) {
-                  endListener()
+                  waitForDeviceFile(contentLength)
                 }
               }
             }
