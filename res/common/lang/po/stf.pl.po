@@ -57,7 +57,7 @@ msgstr "ABI"
 
 #: res/app/src/core/devices/enhance.ts:49
 msgid "AC"
-msgstr "Prąd zmienny"
+msgstr "Ładowarka"
 
 #: res/app/src/features/settings/keys/AccessTokensCard.tsx:144
 msgid "Access Tokens"
@@ -129,7 +129,7 @@ msgstr "Tryb admina został włączony."
 
 #: res/app/src/features/control/ControlPage.tsx:79
 msgid "Advanced"
-msgstr "Zaawansowany"
+msgstr "Zaawansowane"
 
 #: res/app/src/features/control/panes/advanced/AdvancedInputCard.tsx:64
 msgid "Advanced Input"
