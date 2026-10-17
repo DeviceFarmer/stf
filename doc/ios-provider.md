@@ -4,6 +4,9 @@ The provider registers an iPhone in the existing STF device list and uses STF
 ownership, groups and transactions for browser control. A Mac is used to build
 and sign WebDriverAgent (WDA) and test apps; it is not a runtime node.
 
+See the [recorded demonstration](ios-media/README.md) for real STF screenshots,
+short videos and GIFs of IPA installation, Shake and lock/unlock.
+
 For a local installation without Kubernetes, start with the
 [Linux Compose/native quick start](../docker/ios/README.md). It builds matching
 images, accepts a shared device configuration and generates private local state.
