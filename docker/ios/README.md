@@ -11,7 +11,7 @@ also exercised on a clean Ubuntu 26.04 VM with the 13 Pro, including signed IPA
 installation and browser-protocol control. Compose was tested alongside a Galaxy
 A55/Android 16 and with two additional configured but absent iPhones. This does
 not establish simultaneous multi-iPhone hardware support in Compose; the earlier
-three-phone trial used Kubernetes. See the [local validation record](../../doc/ios-local-validation-2026-10-17.md).
+three-phone trial used Kubernetes. See the [verified behavior and limits](../../doc/ios-provider.md#hardware-coverage-and-limits).
 
 ## Prepare the phone
 
@@ -19,7 +19,7 @@ three-phone trial used Kubernetes. See the [local validation record](../../doc/i
    tested source is [WebDriverAgent v16.15.0](https://github.com/appium/WebDriverAgent/tree/v16.15.0).
    Select `WebDriverAgentRunner`, your signing team and the actual phone, then
    Product → Test. Stop the Xcode test before letting STF control the device.
-   See [the signing walkthrough](../../doc/ios-prototype.md#prepare-wda-without-a-paid-developer-membership).
+   See [the signing walkthrough](#build-and-sign-webdriveragent).
 2. Enable **Developer Mode** and, separately, **Settings → Developer → Enable UI
    Automation**. Confirm developer certificate trust in Settings → General →
    VPN & Device Management if requested.
@@ -29,11 +29,63 @@ three-phone trial used Kubernetes. See the [local validation record](../../doc/i
    For a VM, pass each phone through to that VM. A phone cannot be assigned to
    both the existing cluster VM and this local VM at once.
 
-An Apple Developer Program subscription is not required for the tested Personal
-Team workflow, but its profiles expire after seven days. Renew by rebuilding and
-reinstalling WDA with the same bundle identifier on the signing Mac. No Apple
-private key or account password is needed on Linux. See
-[Apple's Personal Team limits](https://developer.apple.com/help/account/basics/about-your-developer-account).
+## Build and sign WebDriverAgent
+
+
+A free Apple Account can use an Xcode **Personal Team** for testing on a personal
+device. Apple limits this to three apps per device, and the provisioning profile
+expires after seven days; rebuild and reinstall WDA after expiry. This is a
+manual signing workflow, not unattended profile renewal. See Apple's
+[Personal Team requirements](https://developer.apple.com/help/account/basics/about-your-developer-account).
+
+Use a Mac with a compatible Xcode for signing and initial installation. The
+Linux host will run the installed runner afterwards. No Mac node or Mac process
+is part of the documented Linux runtime. No certificate/private key needs to
+be copied to the Linux host.
+
+The tested source is
+[Appium WebDriverAgent v16.15.0](https://github.com/appium/WebDriverAgent/tree/v16.15.0),
+commit `e7e2665a00633dc174d7fc579f7e606bc9ba782a`. On the preparation Mac:
+
+```sh
+git clone --branch v16.15.0 --depth 1 https://github.com/appium/WebDriverAgent.git \
+  tmp/ios-wda/WebDriverAgent
+```
+
+1. In Xcode Settings → Accounts, sign in to your Apple Account yourself. Complete
+   any Apple agreement and two-factor authentication it requests.
+2. Connect the unlocked iPhone to the Mac by USB, accept Trust, and enable
+   Developer Mode. Also enable Settings → Developer → Enable UI Automation.
+   These are separate switches. Let Xcode finish preparing the device.
+3. Open `tmp/ios-wda/WebDriverAgent/WebDriverAgent.xcodeproj`. Select the
+   `WebDriverAgentRunner` target, enable Automatically manage signing, and select
+   your Personal Team. Set a unique runner bundle ID, for example
+   `YOUR_UNIQUE_PREFIX.stf.WebDriverAgentRunner`. Resolve any signing errors Xcode
+   reports; configure the library target's team too if requested.
+4. Select the `WebDriverAgentRunner` scheme and the actual iPhone as destination.
+   Use Product → Test to build, install and start the runner. Complete on-device
+   developer trust prompts if requested. Stop this Xcode test before moving the
+   phone to Linux.
+
+For a reproducible artifact after configuring signing, run from the STF root
+(replace the UDID with the real device identifier):
+
+```sh
+xcodebuild build-for-testing \
+  -project tmp/ios-wda/WebDriverAgent/WebDriverAgent.xcodeproj \
+  -scheme WebDriverAgentRunner -configuration Debug \
+  -destination 'id=YOUR_UDID' \
+  -derivedDataPath tmp/ios-wda/DerivedData \
+  -allowProvisioningUpdates -allowProvisioningDeviceRegistration
+```
+
+The device artifact is
+`tmp/ios-wda/DerivedData/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app`.
+Inspect its `Info.plist` for the **installed** `CFBundleIdentifier` (Xcode normally
+adds `.xctrunner`) and verify `PlugIns/WebDriverAgentRunner.xctest` exists.
+Use this installed identifier for `--wda-bundle-id`, not a guessed value.
+Signing profiles, DerivedData and this local WDA checkout stay outside Git.
+If Xcode already installed the runner, do not copy the artifact just to run it.
 
 ## Prepare Linux
 
@@ -179,7 +231,7 @@ stf local --ios-config ./ios.local.json
 For a source checkout use `npm run local -- --ios-config ./ios.local.json`.
 This mode additionally requires host `ios`/go-ios v1.3.2, `iproxy` and
 `pymobiledevice3` 11.32.0 on PATH. Follow the dependency links in the
-[runtime guide](../../doc/ios-prototype.md#requirements-and-verified-sources).
+[runtime dependency reference](../../doc/ios-provider.md#runtime-dependencies).
 The usual native STF database/service prerequisites still apply.
 On Ubuntu 26.04, installing pymobiledevice3 into the system Python 3.14 venv
 required `build-essential` and `python3-dev` to build its `pylzss` dependency.

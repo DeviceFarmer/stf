@@ -9,7 +9,7 @@ on:
       - docker/compose/**
       - docker-compose.yaml
       - .github/workflows/ios-prototype.yml
-      - doc/ios-prototype.md
+      - doc/ios-provider.md
       - package.json
       - lib/**
       - res/app/src/**

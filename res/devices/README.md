@@ -5,6 +5,7 @@ created with the built-in imagegen tool on 2026-10-16/17. They are not manufactu
 photographs or screenshots from connected phones. Wallpapers are illustrative;
 the artwork is intended for identifying devices, not measuring their hardware.
 The prompts and final background-extraction instructions are in `prompts.json`.
+It retains the original front-reference prompts used to create the active pairs.
 These project assets are supplied under the repository's Apache-2.0 license.
 The separate legacy device-db assets retain their existing license and notices.
 
@@ -19,12 +20,14 @@ The separate legacy device-db assets retain their existing license and notices.
 | Redmi Note 13 | Xiaomi or Redmi / Android / 23124RA7EO; product sapphiren | redmi-note-13-v2.webp |
 | Huawei nova 12i | Huawei / Android / CTR-L81; product HWCTRN-Q | huawei-nova-12i-v2.webp |
 
-The nova 12i identity was confirmed by the owner of the connected device.
-Both A55 phones use the same model asset. Regional variants are added explicitly;
-the resolver does not guess a nearby model from a partial identifier.
-The owner confirmed a gold 13 Pro and black 14 Plus/16 Plus; the new front
-illustrations use those representative finishes. Colour is not yet selected
-automatically, and these model assets do not assert the finish of every unit.
+Regional variants are added explicitly; the resolver does not guess a nearby
+model from a partial identifier. Both A55 variants use the same artwork.
+Finishes are representative model defaults (gold 13 Pro, black 14 Plus/16 Plus),
+not automatic per-unit color detection.
+
+Each illustration pairs the front on the left with the rear on the right at
+all three sizes. Cards use a 104 px photo area; table/toolbar icons reserve
+36 × 24 CSS pixels. The transparent background supports light and dark themes.
 
 ## Serving and maintenance
 
@@ -49,39 +52,3 @@ aliases, all three image sizes and provenance/prompt information. Run the unit
 and component suites, check the packed npm artifact includes the assets, and
 inspect the image on both light and dark backgrounds. A failed image request
 falls back through the shared `DeviceImage` component.
-
-## Paired previews and colour — 2026-10-17
-
-The active v2 illustrations pair the front on the left and the rear on the
-right at **all three sizes**, including `icon/x24`, as a trial requested by the
-owner. Cards keep their 104 px photo area; table and toolbar icons reserve
-36 × 24 CSS pixels so both views remain visible. Transparent alpha is preserved
-on both themes. v1 front-only assets remain available for an easy rollback.
-The image colours are model defaults, not automatic per-unit detection. The
-owner confirmed gold for 13 Pro and black for 14 Plus/16 Plus. The Huawei
-colour was observed through its vendor properties; remaining Android finishes
-are illustrative. `prompts.json` records each pair and its hardware references.
-
-An actual targeted `DeviceEnclosureColor` lockdown query returned values absent
-from the bulk go-ios information. The owner confirmed these exact finishes:
-
-| Product type | DeviceColor | DeviceEnclosureColor | Confirmed body |
-| --- | --- | --- | --- |
-| iPhone14,2 (13 Pro) | 1 | 3 | Gold |
-| iPhone14,8 (14 Plus) | 1 | 1 | Black |
-| iPhone17,4 (16 Plus) | 1 | 1 | Black |
-
-Use `(product type, enclosure code)` mappings; do not treat `DeviceColor` or
-the enclosure code alone as a universal colour name. Colour queries need no Mac
-runtime. Keep raw values/source and an unknown fallback; a manual per-device
-override should take precedence over detected metadata. Software cannot identify
-an aftermarket replacement housing or a case.
-
-On the connected Android inventory, Huawei nova 12i reports
-`ro.config.backcolor=black` and `ro.config.devicecolor=black`. Redmi Note 13 and
-Galaxy A55 did not expose a useful body-colour property in the checked values;
-Mi A2's `sys.panel.color` is not proof of its housing colour. Do not use display
-colour-management properties as body colours. AOSP includes
-[`ro.boot.hardware.color`](https://android.googlesource.com/platform/system/sepolicy/+/main/private/property_contexts),
-but the checked phones do not supply it. Android therefore needs vendor-specific
-readers plus manual selection where no verified value is available.

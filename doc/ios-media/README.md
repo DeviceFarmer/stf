@@ -54,7 +54,6 @@ successful IPA installation, alongside the live test app.
 
 ![Installed test app and iPhone dashboard](ipa-install-success.png)
 
-See the [provider guide](../ios-provider.md),
-[three-phone hardware record](../ios-fleet-validation-2026-10-16.md) and
-[local Compose/native validation](../ios-local-validation-2026-10-17.md) for
-the implementation, test coverage and remaining limitations.
+See the [provider guide](../ios-provider.md) for implementation details,
+[test coverage and hardware limits](../ios-provider.md#verification), and the
+[local installation guide](../../docker/ios/README.md) to reproduce the setup.
