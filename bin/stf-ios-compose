@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+if ! node -e 'if (!process.features.typescript) process.exit(1)' 2>/dev/null; then
+  printf '%s\n' 'Use an official Node.js 22.18+ or 24 build with native TypeScript support.' >&2
+  printf '%s\n' 'Some distribution Node.js packages disable it; check: node -p process.features.typescript' >&2
+  exit 1
+fi
+
+stf_ios_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec node "$stf_ios_root/tools/ios-prototype/compose.mts" "$@"

@@ -7,6 +7,7 @@ import util from 'util'
 
 import db from './index.js'
 import wireutil from '../wire/util.js'
+import type {IosDeviceStatus} from '../util/ios-device-status.js'
 
 var dbapi: DbApi = Object.create(null)
 
@@ -170,6 +171,7 @@ interface DbApi {
   setDeviceConnectUrl(serial: string, url: string): Promise<r.WriteResult>
   unsetDeviceConnectUrl(serial: string): Promise<r.WriteResult>
   saveDeviceStatus(serial: string, status: number, statusTimeStamp: number): Promise<r.WriteResult>
+  setDeviceIosStatus(serial: string, status: IosDeviceStatus): Promise<r.WriteResult>
   setDeviceOwner(serial: string, owner: DeviceOwner): Promise<r.WriteResult>
   unsetDeviceOwner(serial: string): Promise<r.WriteResult>
   reserveDeviceOwner(serial: string): Promise<r.WriteResult>
@@ -1776,6 +1778,11 @@ dbapi.setDeviceReady = function(serial, channel) {
   , owner: null
   , reverseForwards: []
   }, {returnChanges: 'always'}))
+}
+
+dbapi.setDeviceIosStatus = function(serial, status) {
+  return db.run(r.table('devices').getAll(serial)
+    .filter({platform: 'iOS'}).update({ios: status}))
 }
 
 dbapi.saveDeviceIdentity = function(serial, identity) {

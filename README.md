@@ -26,6 +26,10 @@ Thank you to all the people who have already contributed to STF!
     * Supports Wear 5.1 (but not 5.0 due to missing permissions)
     * Supports Fire OS, CyanogenMod, and other heavily Android based distributions
     * `root` is **not** required for any current functionality
+  - Experimental iOS on a Linux USB host
+    * Live screen, touch/text/Home, signed IPA installation, device health and iPhone controls
+    * [Local Compose/native setup](docker/ios/README.md) and [provider behavior and limits](doc/ios-provider.md)
+    * Requires a signed WebDriverAgent prepared with Xcode; no Mac runtime node is needed
 * Remote control any device from your browser
   - Real-time screen view
     * Refresh speed can reach 30-40 FPS depending on specs and Android version. See [minicap](https://github.com/devicefarmer/minicap) for more information.
@@ -105,7 +109,7 @@ Here are some things we are planning to address ASAP.
 
 ### Long term goals
 
-1. iOS support
+1. Expand experimental iOS support (landscape, multi-touch and Appium integration)
 
 ## A quick note about security
 

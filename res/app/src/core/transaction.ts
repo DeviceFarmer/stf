@@ -196,7 +196,7 @@ export interface MultiTransaction<S> {
   promise: ProgressPromise<Array<TransactionResult<S>>>
 }
 
-export function createTransaction<S = any>(target: S): SingleTransaction<S> {
+export function createTransaction<S = any>(target: S, timeoutMs?: number): SingleTransaction<S> {
   const channel = createChannel()
   let notify: ((result: TransactionResult<S>) => void) | null = null
   const result = createResult(target)
@@ -208,8 +208,15 @@ export function createTransaction<S = any>(target: S): SingleTransaction<S> {
   })
 
   const promise = pending.promise
-    .finally(unlisten)
+    .finally(() => {
+      clearTimeout(timer)
+      unlisten()
+    })
     .then(() => result)
+  const timer = timeoutMs ? setTimeout(() => pending.cancel({
+    source: String((target as {serial?: string})?.serial || ''), seq: 0
+    , success: false, data: 'IOS_INSTALL_STATUS_UNAVAILABLE'
+  }), timeoutMs) : undefined
 
   return {
     channel

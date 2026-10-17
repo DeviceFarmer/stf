@@ -256,9 +256,9 @@
 
 .smallImage {
   display: block;
-  height: 20px;
-  min-width: 10px;
-  max-width: 16px;
+  height: 24px;
+  min-width: 36px;
+  max-width: 36px;
   object-fit: contain;
 }
 

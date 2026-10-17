@@ -71,4 +71,19 @@ describe('createTransaction', () => {
     expect(results.map((result) => [result.source.serial, result.success])).toEqual([['a', true], ['b', false]])
     expect(results[1]!.error).toBe('nope')
   })
+
+  it('bounds iOS status transactions and removes listeners on timeout', async() => {
+    vi.useFakeTimers()
+    try {
+      const tx = createTransaction({serial: 'ios'}, 1000)
+      const error = tx.promise.catch(caught => caught)
+      await vi.advanceTimersByTimeAsync(1000)
+      expect((await error).code).toBe('IOS_INSTALL_STATUS_UNAVAILABLE')
+      expect(handlers.get('tx.done')?.size).toBe(0)
+      expect(emitted).toContainEqual(['tx.cleanup', tx.channel])
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
 })

@@ -4,6 +4,7 @@
 /.dockerignore
 /.editorconfig
 /.env
+/ios.local.json
 /.gitignore
 /.idea/
 /.jscsrc

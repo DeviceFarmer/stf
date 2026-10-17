@@ -230,7 +230,8 @@ function productValue(device: Device): string {
 }
 
 function batteryLevel(device: Device): number | null {
-  return device.battery ? Math.floor(device.battery.level / device.battery.scale * 100) : null
+  return device.ios?.battery?.level ??
+    (device.battery ? Math.floor(device.battery.level / device.battery.scale * 100) : null)
 }
 
 const definitions: Record<string, DeviceColumn> = {

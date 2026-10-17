@@ -23,6 +23,8 @@ import zmqutil from '../../util/zmqutil.js'
 import cookieSession from './middleware/cookie-session.js'
 import ip from './middleware/remote-ip.js'
 import auth from './middleware/auth.js'
+import {allowIosPacket} from './ios-access.js'
+import {readIosProperties} from '../../util/ios-device-status.js'
 import jwtutil from '../../util/jwtutil.js'
 
 import apiutil from '../../util/apiutil.js'
@@ -94,6 +96,7 @@ interface InstallData {
   href: string
   launch?: boolean
   manifest: unknown
+  requestId?: string
 }
 
 type ChannelEvent<D> = (channel: string, data: D) => void
@@ -145,6 +148,12 @@ interface WebsocketClientEvents {
   'shell.command': TransactionDataEvent<ShellCommandMessageFields>
   'shell.keepalive': ChannelEvent<ShellKeepAliveMessageFields>
   'device.install': TransactionDataEvent<InstallData>
+  'device.install.status': TransactionDataEvent<{id?: string}>
+  'device.install.cancel': TransactionDataEvent<{id: string}>
+  'device.shake': TransactionDataEvent<Record<string, never>>
+  'device.unlock': TransactionDataEvent<Record<string, never>>
+  'device.lock': TransactionDataEvent<Record<string, never>>
+  'device.iosPower': TransactionDataEvent<{action: string}>
   'device.uninstall': TransactionDataEvent<UninstallMessageFields>
   'storage.upload': TransactionDataEvent<{url: string}>
   'forward.test': TransactionDataEvent<ForwardTestMessageFields>
@@ -231,6 +240,26 @@ export default function(options: WebsocketOptions) {
     var user = req.user
     var channels: string[] = []
     var messageListener: MessageListener
+
+    let iosPackets = Promise.resolve()
+    // Preserve touch ordering while checking ownership before forwarding iOS controls.
+    socket.use((packet, next) => {
+      if (typeof packet[1] !== 'string' || !packet[1].startsWith('ios:')) {
+        return next()
+      }
+      iosPackets = iosPackets
+        .then(() => allowIosPacket(packet[0], packet[1], user, dbapi.loadDeviceBySerial))
+        .then(allowed => {
+          if (allowed) {
+            return next()
+          }
+          else {
+            return next(new Error('Device access denied'))
+          }
+        })
+        .catch(() => next(new Error('Device access unavailable')))
+    })
+    socket.on('error', error => log.warn('Socket request rejected: %s', error.message))
 
     user.ip = socket.handshake.query.uip as string | undefined || req.ip
     socket.emit('socket.ip', user.ip)
@@ -437,6 +466,12 @@ export default function(options: WebsocketOptions) {
           important: true
         , data: message
         })
+      })
+      .on(wire.DevicePropertiesMessage, function(_channel, message) {
+        const ios = readIosProperties(message.properties)
+        if (ios) {
+          socket.emit('device.change', {important: false, data: {serial: message.serial, ios}})
+        }
       })
       .on(wire.TransactionProgressMessage, function(channel, message) {
         socket.emit('tx.progress', channel.toString(), message)
@@ -1004,9 +1039,55 @@ export default function(options: WebsocketOptions) {
                 data.href
               , data.launch === true
               , JSON.stringify(data.manifest)
+              , data.requestId
               )
             )
           ])
+        })
+        .on('device.shake', function(channel, responseChannel) {
+          if (!channel.startsWith('ios:')) {
+            return
+          }
+          joinChannel(responseChannel)
+          push.send([channel, wireutil.transaction(responseChannel, new wire.IosShakeMessage())])
+        })
+        .on('device.unlock', function(channel, responseChannel) {
+          if (!channel.startsWith('ios:')) {
+            return
+          }
+          joinChannel(responseChannel)
+          push.send([channel, wireutil.transaction(responseChannel, new wire.IosUnlockMessage())])
+        })
+        .on('device.lock', function(channel, responseChannel) {
+          if (!channel.startsWith('ios:')) {
+            return
+          }
+          joinChannel(responseChannel)
+          push.send([channel, wireutil.transaction(responseChannel, new wire.IosLockMessage())])
+        })
+        .on('device.iosPower', function(channel, responseChannel, data) {
+          if (!channel.startsWith('ios:') || !['reboot', 'shutdown'].includes(data?.action)) {
+            return
+          }
+          joinChannel(responseChannel)
+          push.send([channel, wireutil.transaction(responseChannel,
+            new wire.IosPowerMessage(data.action))])
+        })
+        .on('device.install.status', function(channel, responseChannel, data) {
+          if (!channel.startsWith('ios:')) {
+            return
+          }
+          joinChannel(responseChannel)
+          push.send([channel, wireutil.transaction(responseChannel,
+            new wire.IosInstallStatusMessage(data))])
+        })
+        .on('device.install.cancel', function(channel, responseChannel, data) {
+          if (!channel.startsWith('ios:')) {
+            return
+          }
+          joinChannel(responseChannel)
+          push.send([channel, wireutil.transaction(responseChannel,
+            new wire.IosInstallCancelMessage(data))])
         })
         .on('device.uninstall', function(channel, responseChannel, data) {
           joinChannel(responseChannel)

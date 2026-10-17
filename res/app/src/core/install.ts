@@ -39,6 +39,10 @@ export interface Installation {
   success: boolean
   error: string | null
   manifest: Manifest | null
+  jobId?: string
+  indeterminate?: boolean
+  outcomeUncertain?: boolean
+  launchError?: boolean
 }
 
 interface StoredResource {
@@ -55,7 +59,9 @@ const installStateLabels: Record<string, string> = {
   , processing: gettext('Processing...')
   , pushing_app: gettext('Pushing app...')
   , installing_app: gettext('Installing app...')
-  , launching_app: gettext('Launching activity...')
+  , launching_app: gettext('Launching app...')
+  , validating_app: gettext('Checking IPA...')
+  , verifying_app: gettext('Verifying installation...')
 }
 
 let installationCounter = 0
@@ -91,6 +97,74 @@ function startInstallation(serial: string, state: string, onChange?: Installatio
 }
 
 type Tracker = ReturnType<typeof startInstallation>
+
+interface IosJob {
+  id: string
+  state: string
+  settled: boolean
+  progress: number | null
+  manifest: Manifest | null
+  error: string | null
+  outcomeUncertain: boolean
+  launchError: boolean
+}
+
+const iosWatching = new Map<string, Promise<Installation>>()
+
+function applyIosJob(tracker: Tracker, job: IosJob) {
+  tracker.patch({jobId: job.id, state: job.state, settled: job.settled
+    , progress: job.progress ?? 0, indeterminate: job.progress === null
+    , manifest: job.manifest, error: job.error, success: job.state === 'installed'
+    , outcomeUncertain: job.outcomeUncertain, launchError: job.launchError})
+}
+
+function watchIosJob(control: Control, tracker: Tracker, initial: IosJob): Promise<Installation> {
+  const serial = control.target.serial
+  const running = iosWatching.get(serial)
+  if (running) {
+    return running
+  }
+  applyIosJob(tracker, initial)
+  const watch = (async() => {
+    let failures = 0
+    const deadline = Date.now() + 420000
+    while (!tracker.current().settled) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      try {
+        const {body} = await control.iosInstallStatus(initial.id)
+        if (!body) {
+          throw new Error('IOS_INSTALL_NOT_FOUND')
+        }
+        applyIosJob(tracker, body as IosJob)
+        failures = 0
+      }
+      catch (error) {
+        if (++failures >= 3 || Date.now() > deadline) {
+          tracker.patch({settled: true, success: false, indeterminate: false
+            , error: failureCode(error), outcomeUncertain: true})
+        }
+      }
+      if (!tracker.current().settled && Date.now() > deadline) {
+        tracker.patch({settled: true, success: false, error: 'IOS_INSTALL_STATUS_UNAVAILABLE', outcomeUncertain: true})
+      }
+    }
+    return tracker.current()
+  })().finally(() => iosWatching.delete(serial))
+  iosWatching.set(serial, watch)
+  return watch
+}
+
+export async function restoreIosInstallation(control: Control): Promise<void> {
+  const serial = control.target.serial
+  if (iosWatching.has(serial) || (installationStore.get(serial) && !installationStore.get(serial)?.settled)) {
+    return
+  }
+  const {body} = await control.iosInstallStatus()
+  if (body) {
+    const job = body as IosJob
+    await watchIosJob(control, startInstallation(serial, job.state), job)
+  }
+}
 
 async function fetchManifest(href: string): Promise<Manifest> {
   const response = await api.get<{success: boolean, manifest?: Manifest}>(`${href}/manifest`)
@@ -129,16 +203,44 @@ export async function installFile(
 , files: File[]
 , onChange?: InstallationListener
 ): Promise<Installation> {
+  const existing = installationStore.get(control.target.serial)
+  if (existing && !existing.settled) {
+    return {...existing, settled: true, success: false, error: 'IOS_INSTALL_BUSY'}
+  }
   const installation = startInstallation(control.target.serial, 'uploading', onChange)
   const ios = control.target.platform === 'iOS'
   try {
-    const response = await storeFiles<{resources: {file: StoredResource}}>('apk', files, {
+    if (ios && (files.length !== 1 || !/\.ipa$/i.test(files[0]!.name))) {
+      throw new Error('IOS_IPA_INVALID')
+    }
+    if (ios && files[0]!.size > 1024 ** 3) {
+      throw new Error('IOS_IPA_TOO_LARGE')
+    }
+    const response = await storeFiles<{resources: {file: StoredResource}}>(ios ? 'blob' : 'apk', files, {
       filter: (file) => (ios ? /\.(ipa)$/i : /\.(apk|aab)$/i).test(file.name)
-      , onProgress: (progress) => installation.update(progress.loaded / progress.total * 100 / 2, 'uploading')
+      , onProgress: (progress) => installation.update(progress.loaded / progress.total * (ios ? 100 : 50), 'uploading')
     })
     installation.update(100 / 2, 'processing')
     const href = response.resources.file.href
-    const manifest = ios ? {application: {activities: {}}} : await fetchManifest(href)
+    if (ios) {
+      const requestId = crypto.randomUUID()
+      installation.patch({jobId: requestId, indeterminate: true})
+      let job: IosJob
+      try {
+        job = (await control.install({href, manifest: {}, launch: true, requestId})).body as IosJob
+      }
+      catch (error) {
+        // A lost acknowledgement must not submit the same installation twice.
+        const status = await control.iosInstallStatus(requestId).catch(() => null)
+        if (!status?.body) {
+          installation.patch({outcomeUncertain: true})
+          throw error
+        }
+        job = status.body as IosJob
+      }
+      return await watchIosJob(control, installation, job)
+    }
+    const manifest = await fetchManifest(href)
     await installStored(control, installation, href, manifest)
     installation.okay('installed')
   }
@@ -153,7 +255,25 @@ export function clearInstallation(serial: string) {
 }
 
 const installErrors: Record<string, string> = {
-  INSTALL_SUCCEEDED: gettext('Installation succeeded.')
+  IOS_IPA_INVALID: gettext('Select a valid IPA for a physical iPhone.')
+  , IOS_IPA_TOO_LARGE: gettext('The IPA exceeds the 1 GiB limit.')
+  , IOS_IPA_PLATFORM: gettext('This app is not compatible with a physical iPhone.')
+  , IOS_IPA_OS_VERSION: gettext('This app requires a newer iOS version.')
+  , IOS_IPA_SIGNING: gettext('The IPA signature or provisioning profile is invalid. Upload a signed development, ad hoc, or enterprise IPA.')
+  , IOS_IPA_PROFILE_EXPIRED: gettext('The provisioning profile has expired. Sign the IPA again.')
+  , IOS_IPA_DEVICE_NOT_PROVISIONED: gettext('This iPhone is not included in the provisioning profile.')
+  , IOS_INSTALL_WDA_PROTECTED: gettext('Replacing WebDriverAgent from this panel is not allowed.')
+  , IOS_INSTALL_BUSY: gettext('Another installation is in progress. Wait for it to finish.')
+  , IOS_INSTALL_INVALID_REQUEST: gettext('The installation request is invalid.')
+  , IOS_INSTALL_ARTIFACT_MISSING: gettext('The uploaded file is no longer available. Upload it again.')
+  , IOS_INSTALL_NOT_FOUND: gettext('No installation was found in the current device session.')
+  , IOS_INSTALL_STATUS_UNAVAILABLE: gettext('Installation status is unavailable. Check the status again before retrying.')
+  , IOS_INSTALL_INTERRUPTED: gettext('Installation was interrupted by a device or session disconnect.')
+  , IOS_INSTALL_CANCELED: gettext('Installation canceled by user.')
+  , IOS_INSTALL_NO_SPACE: gettext('There is not enough free space on the iPhone.')
+  , IOS_INSTALL_VERIFY_FAILED: gettext('The app was not found on the iPhone after installation.')
+  , IOS_INSTALL_FAILED: gettext('The iPhone could not install this IPA.')
+  , INSTALL_SUCCEEDED: gettext('Installation succeeded.')
   , INSTALL_ERROR_UNKNOWN: gettext('Installation failed due to an unknown error.')
   , INSTALL_ERROR_TIMEOUT: gettext('Installation timed out.')
   , INSTALL_CANCELED_BY_USER: gettext('Installation canceled by user.')

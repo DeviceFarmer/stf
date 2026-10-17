@@ -17,6 +17,7 @@ import zmqutil from '../../util/zmqutil.js'
 import type {DeviceDocument, UserIdentity} from '../../types/stf.js'
 import type {WriteResult} from 'rethinkdb'
 import adbutil from '../../util/adbutil.js'
+import {readIosProperties} from '../../util/ios-device-status.js'
 
 var adb = adbutil()
 
@@ -351,6 +352,13 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     .on(wire.DeviceIdentityMessage, function(channel, message, data) {
       dbapi.saveDeviceIdentity(message.serial, message)
       appDealer.send([channel, data])
+    })
+    .on(wire.DevicePropertiesMessage, function(channel, message, data) {
+      const status = readIosProperties(message.properties)
+      if (status) {
+        dbapi.setDeviceIosStatus(message.serial, status)
+        appDealer.send([channel, data])
+      }
     })
     .on(wire.TransactionProgressMessage, function(channel, message, data) {
       appDealer.send([channel, data])

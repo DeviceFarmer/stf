@@ -2,6 +2,7 @@
 *.tgz
 .DS_Store
 .env
+ios.local.json
 .git/
 .idea/
 node_modules/

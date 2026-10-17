@@ -8,6 +8,7 @@ import {useTranslation} from '@/core/i18n'
 import {stateClass, stateColor} from '@/ui/device-state'
 import {canStartUsing, controlHref, type DeviceActions} from './device-actions'
 import classes from './DeviceList.module.css'
+import {DeviceImage} from '@/ui/DeviceImage'
 
 export function canShowPhoto(device: Device): boolean {
   return Boolean(device.name && device.image)
@@ -73,8 +74,9 @@ export function ModelCell({device, label, onImage}: {
   return (
     <Group gap={8} wrap='nowrap'>
       <span className='device-small-image'>
-        <img
+        <DeviceImage
           src={device.enhancedImage24}
+          w={36} h={24}
           alt=''
           loading='lazy'
           className={`device-small-image-img ${classes.smallImage} ${zoomable ? classes.zoomable : ''}`}

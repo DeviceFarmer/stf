@@ -6,6 +6,8 @@ import deviceData from '@devicefarmer/stf-device-db'
 import browserData from '@devicefarmer/stf-browser-db'
 
 import deviceutil from './deviceutil.js'
+import {findCatalogDevice} from './device-catalog.js'
+import {fallbackDeviceImage} from './device-image-paths.js'
 import type {DeviceDisplayMessageFields} from '../types/wire.js'
 
 interface DisplayView extends Partial<DeviceDisplayMessageFields> {
@@ -22,6 +24,8 @@ interface DeviceView extends deviceutil.Claimable {
   claimed?: boolean
   model?: string | null
   product?: string | null
+  platform?: string | null
+  manufacturer?: string | null
   name?: string
   releasedAt?: string
   image?: string
@@ -44,6 +48,12 @@ interface DataUtil {
 var datautil: DataUtil = Object.create(null)
 
 datautil.applyData = function<D extends DeviceView>(device: D) {
+  var local = findCatalogDevice(device)
+  if (local) {
+    device.name = local.name
+    device.image = local.image
+    return device
+  }
   var match = deviceData.find({
     model: device.model
   , name: device.product
@@ -59,6 +69,10 @@ datautil.applyData = function<D extends DeviceView>(device: D) {
       device.display = device.display || {}
       device.display.inches = match.display.s
     }
+  }
+
+  if (!device.image) {
+    device.image = fallbackDeviceImage
   }
 
   return device

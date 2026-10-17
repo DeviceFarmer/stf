@@ -1,0 +1,9 @@
+{
+  "publicOrigin": "http://localhost:7100",
+  "wdaBundleId": "com.example.WebDriverAgentRunner.xctrunner",
+  "devices": [
+    {
+      "udid": "00000000-0000000000000001"
+    }
+  ]
+}

@@ -63,8 +63,10 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   const devicePixelRatio = window.devicePixelRatio || 1
   const frontBackRatio = devicePixelRatio / vendorBackingStorePixelRatio(g)
 
-  let ws: WebSocket | null = new WebSocket(options.url)
-  ws.binaryType = 'blob'
+  let ws: WebSocket | null = null
+  let stopped = false
+  let retry: ReturnType<typeof setTimeout> | null = null
+  let retryAttempt = 0
 
   let adjustedBoundSize: BoundSize | null = null
   let cachedEnabled = false
@@ -263,25 +265,50 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       .catch(() => undefined)
   }
 
-  ws.onmessage = (message: MessageEvent) => {
-    const display = getDevice().display
-    screen.rotation = display ? display.rotation : 0
+  function connect() {
+    const socket = new WebSocket(options.url)
+    socket.binaryType = 'blob'
+    ws = socket
+    socket.onmessage = (message: MessageEvent) => {
+      const display = getDevice().display
+      screen.rotation = display ? display.rotation : 0
 
-    if (message.data instanceof Blob) {
-      if (shouldUpdateScreen()) {
-        drawFrame(message.data)
+      if (message.data instanceof Blob) {
+        if (shouldUpdateScreen()) {
+          drawFrame(message.data)
+        }
+      }
+      else if (/^start /.test(message.data)) {
+        applyQuirks(JSON.parse(message.data.slice('start '.length)))
+      }
+      else if (message.data === 'secure_on') {
+        setDisplayError('secure')
       }
     }
-    else if (/^start /.test(message.data)) {
-      applyQuirks(JSON.parse(message.data.slice('start '.length)))
-    }
-    else if (message.data === 'secure_on') {
-      setDisplayError('secure')
-    }
-  }
 
-  ws.onopen = () => {
-    checkEnabled()
+    socket.onopen = () => {
+      retryAttempt = 0
+      cachedEnabled = false
+      checkEnabled()
+    }
+    socket.onclose = () => {
+      if (ws !== socket || stopped) {
+        return
+      }
+      ws = null
+      cachedEnabled = false
+      const device = getDevice()
+      // A recovered iPhone may register before Kubernetes has restored its screen route.
+      if (device.platform === 'iOS' && device.using && device.present && device.ready) {
+        retry = setTimeout(() => {
+          retry = null
+          const current = getDevice()
+          if (!stopped && current.using && current.present && current.ready) {
+            connect()
+          }
+        }, Math.min(5000, 500 * 2 ** Math.min(4, retryAttempt++)))
+      }
+    }
   }
 
   function resize() {
@@ -290,6 +317,11 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   }
 
   function stop() {
+    stopped = true
+    if (retry) {
+      clearTimeout(retry)
+      retry = null
+    }
     if (!ws) {
       return
     }
@@ -299,6 +331,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     socket.close()
   }
 
+  connect()
   resize()
 
   return {checkEnabled, resize, stop}

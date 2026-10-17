@@ -43,14 +43,14 @@
 
 .deviceImage {
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 36px;
+  height: 24px;
   object-fit: contain;
 }
 
 .menuDeviceImage {
-  width: 18px;
-  height: 18px;
+  width: 36px;
+  height: 24px;
   object-fit: contain;
 }
 

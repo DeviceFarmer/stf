@@ -6,6 +6,7 @@
 .python-version
 /*.tgz
 /.env
+/ios.local.json
 /node_modules/
 /res/build/
 /rethinkdb_data/

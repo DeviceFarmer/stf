@@ -26,7 +26,8 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
   const [dragOver, setDragOver] = useState(false)
   const actions = useDeviceActions(device, control)
 
-  useControlHotkeys(control, actions)
+  const ios = device.platform === 'iOS'
+  useControlHotkeys(control, actions, ios)
 
   function onDragOver(event: DragEvent) {
     if (hasFiles(event)) {
@@ -76,18 +77,19 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
       {stage}
       <div className={`${classes.bottom} stf-vnc-bottom`}>
         <div className={`${classes.navPill} controls`}>
-          <DeviceControlKey control={control} deviceKey='menu' title={t('Menu')}>
+          {!ios && <><DeviceControlKey control={control} deviceKey='menu' title={t('Menu')}>
             <IconMenu2 size={18} className={classes.navMenuKey} />
           </DeviceControlKey>
           <DeviceControlKey control={control} deviceKey='back' title={t('Back')}>
             <IconTriangle size={18} style={{transform: 'rotate(-90deg)'}} />
           </DeviceControlKey>
+          </>}
           <DeviceControlKey control={control} deviceKey='home' title={t('Home')}>
             <IconCircle size={20} />
           </DeviceControlKey>
-          <DeviceControlKey control={control} deviceKey='app_switch' title={t('App switch')}>
+          {!ios && <DeviceControlKey control={control} deviceKey='app_switch' title={t('App switch')}>
             <IconSquare size={17} />
-          </DeviceControlKey>
+          </DeviceControlKey>}
         </div>
       </div>
     </div>

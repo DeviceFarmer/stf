@@ -5,7 +5,6 @@ import {
   , Button
   , Center
   , Group
-  , Image
   , Loader
   , Modal
   , ScrollArea
@@ -35,6 +34,7 @@ import {setSetting, useSetting} from '@/core/settings'
 import {basicMode, useStandalone} from '@/ui/modes'
 import {usePageTitle} from '@/ui/page-title'
 import {stateColor} from '@/ui/device-state'
+import {DeviceImage} from '@/ui/DeviceImage'
 import {ControlRedirect} from './ControlRedirect'
 import DeviceControlPanel from './device-control/DeviceControlPanel'
 import type {PaneProps} from './types'
@@ -110,7 +110,7 @@ function DeviceLostModal({device, onReconnect, onLeave, onDismiss}: {
     >
       <Stack align='center' gap='sm' className='stf-fatal-message'>
         <Text fw={500} ta='center'>{likelyLeaveReason(device.likelyLeaveReason)}</Text>
-        <Image src={device.enhancedImage120} w={96} h={96} fit='contain' alt='' />
+        <DeviceImage src={device.enhancedImage120} w={96} h={96} alt='' />
         <Text fw={600}>{device.enhancedName}</Text>
         <Text c={stateColor(device.state)} fw={500}>{t(device.enhancedStatePassive)}</Text>
         <Group justify='space-between' w='100%' mt='md'>
@@ -161,7 +161,9 @@ function ControlWorkspace({device, control}: PaneProps) {
   const {t} = useTranslation()
   const [activePane, setActivePane] = useSetting<string>('controlActivePane', 'dashboard')
   const split = useSplit(Math.round(window.innerWidth * 0.34))
-  const current = panes.some((pane) => pane.id === activePane) ? activePane : 'dashboard'
+  const visiblePanes = device.platform === 'iOS' ?
+    panes.filter(pane => ['dashboard', 'screenshots', 'info'].includes(pane.id)) : panes
+  const current = visiblePanes.some((pane) => pane.id === activePane) ? activePane : 'dashboard'
 
   return (
     <div className={classes.workspace}>
@@ -182,13 +184,13 @@ function ControlWorkspace({device, control}: PaneProps) {
         variant='outline'
       >
         <Tabs.List className={classes.tabList}>
-          {panes.map(({id, title, icon: Icon}) => (
+          {visiblePanes.map(({id, title, icon: Icon}) => (
             <Tabs.Tab key={id} value={id} leftSection={<Icon size={16} />}>
               {t(title)}
             </Tabs.Tab>
           ))}
         </Tabs.List>
-        {panes.map(({id, component: Pane, fill}) => {
+        {visiblePanes.map(({id, component: Pane, fill}) => {
           const content = (
             <Suspense fallback={<Center p='xl'><Loader /></Center>}>
               <Pane device={device} control={control} />
