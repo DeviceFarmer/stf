@@ -110,14 +110,15 @@ async function fixture() {
   await wda.open()
   const runtime = new IosRuntime(options, {wda, log: () => null})
   runtime.state = 'ready'
-  const api = await listen(createServer(runtime, token))
+  const server = createServer(runtime, token)
+  const api = await listen(server)
   const request = (route: string, value?: unknown, headers: Record<string, string> = {}) =>
     fetch(api + route, {
       method: typeof value === 'undefined' ? 'GET' : 'POST'
     , headers: {Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', ...headers}
     , ...(typeof value === 'undefined' ? {} : {body: JSON.stringify(value)})
     })
-  return {runtime, calls, wda, api, request, image, asleep: () => asleep, sleep: () => {
+  return {runtime, calls, wda, api, server, request, image, asleep: () => asleep, sleep: () => {
     asleep = true
     locked = false
     runtime.telemetry.status.locked = false
@@ -293,6 +294,61 @@ describe('iOS prototype HTTP and WDA integration', () => {
     f.runtime.generation += 1
     await assert.rejects(pending, /not ready/)
     assert.equal(executed, false)
+  })
+
+  it('drops queued HTTP controls when their client disconnects', async() => {
+    const f = await fixture()
+    let release!: () => void
+    const blocked = f.runtime.execute(() => new Promise<void>(resolve => {
+      release = resolve
+    }))
+    await until(() => Boolean(release))
+    const execute = f.runtime.execute.bind(f.runtime)
+    let submitted = 0
+    f.runtime.execute = ((...args: Parameters<IosRuntime['execute']>) => {
+      submitted++
+      return execute(...args)
+    }) as IosRuntime['execute']
+    const abort = new AbortController()
+    // Observe the real HTTP disconnect before unblocking the runtime queue.
+    const closed = new Promise<void>(resolve => {
+      f.server.once('request', (_req, res) => res.once('close', resolve))
+    })
+    const request = fetch(f.api + '/text', {
+      method: 'POST', signal: abort.signal
+    , headers: {Authorization: 'Bearer ' + token, 'Content-Type': 'application/json'}
+    , body: JSON.stringify({text: 'previous owner'})
+    })
+    const rejected = assert.rejects(request, {name: 'AbortError'})
+    await until(() => submitted === 1)
+    abort.abort()
+    await rejected
+    await closed
+    release()
+    await blocked
+    await f.runtime.execute(async() => {})
+    assert.equal(f.calls.some(call => call.path.endsWith('/wda/keys')), false)
+    assert.equal((await f.request('/text', {text: 'current owner'})).status, 200)
+    assert.deepEqual(f.calls.at(-1)!.body, {value: ['current owner']})
+  })
+
+  it('cancels queued lock, unlock and power operations before touching the device', async() => {
+    const f = await fixture()
+    const power: string[] = []
+    const runtime = new IosRuntime(options, {wda: f.wda, power: async(_binary, args) => {
+      power.push(...args)
+    }})
+    runtime.state = 'ready'
+    const abort = new AbortController()
+    const pending = [runtime.lock(abort.signal), runtime.unlock(abort.signal)
+      , runtime.power('reboot', abort.signal)]
+    abort.abort()
+    for (const operation of pending) {
+      await assert.rejects(operation, {name: 'AbortError'})
+    }
+    assert.equal(f.calls.length, 1)
+    assert.deepEqual(power, [])
+    assert.equal(runtime.state, 'ready')
   })
 
   it('proxies MJPEG and closes the upstream when the viewer disconnects', async() => {

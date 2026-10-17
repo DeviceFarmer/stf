@@ -69,6 +69,12 @@ export function createServer(
       json(403, {error: 'browser_origin_not_allowed'})
       return
     }
+    const abort = new AbortController()
+    res.once('close', () => {
+      if (!res.writableEnded) {
+        abort.abort()
+      }
+    })
     const route = req.method + ' ' + req.url
     try {
       if (route === 'GET /health') {
@@ -125,7 +131,8 @@ export function createServer(
         return
       }
       if (route === 'GET /screenshot') {
-        const {value} = await runtime.execute(wda => wda.call('GET', '/screenshot'), true)
+        const {value} = await runtime.execute((wda, signal) =>
+          wda.call('GET', '/screenshot', undefined, signal), true, abort.signal)
         if (typeof value !== 'string') {
           throw new Error('WDA did not return an image')
         }
@@ -147,63 +154,53 @@ export function createServer(
       }
       const input = await body(req)
       switch (req.url) {
-      case '/lock': {
-        const abort = new AbortController()
-        res.once('close', () => {
-          if (!res.writableEnded) {
-            abort.abort()
-          }
-        })
+      case '/lock':
         json(200, await runtime.lock(abort.signal))
         return
-      }
       case '/power':
         if (!['reboot', 'shutdown'].includes(input.action)) {
           throw new InputError('action must be reboot or shutdown')
         }
-        json(200, await runtime.power(input.action))
+        json(200, await runtime.power(input.action, abort.signal))
         return
       case '/unlock':
-        json(200, await runtime.unlock())
+        json(200, await runtime.unlock(abort.signal))
         return
-      case '/shake': {
-        const abort = new AbortController()
-        res.once('close', () => {
-          if (!res.writableEnded) {
-            abort.abort()
-          }
-        })
+      case '/shake':
         await runtime.shake(abort.signal)
         break
-      }
       case '/tap': {
         const position = point(input)
-        await runtime.execute(wda => wda.gesture(position), true)
+        await runtime.execute((wda, signal) =>
+          wda.gesture(position, null, 50, signal), true, abort.signal)
         break
       }
       case '/swipe': {
         const from = point(input.from)
         const to = point(input.to)
         const duration = number(input.durationMs ?? 500, 50, 5000)
-        await runtime.execute(wda => wda.gesture(from, to, duration), true)
+        await runtime.execute((wda, signal) =>
+          wda.gesture(from, to, duration, signal), true, abort.signal)
         break
       }
       case '/text':
         if (typeof input.text !== 'string' || input.text.length > 4096) {
           throw new InputError('text must be a string of at most 4096 characters')
         }
-        await runtime.execute(wda => wda.call('POST', '/wda/keys', {value: [input.text]}), true)
+        await runtime.execute((wda, signal) =>
+          wda.call('POST', '/wda/keys', {value: [input.text]}, signal), true, abort.signal)
         break
       case '/home':
-        await runtime.execute(wda => wda.request('POST', '/wda/homescreen', {}), true)
+        await runtime.execute((wda, signal) =>
+          wda.request('POST', '/wda/homescreen', {}, signal), true, abort.signal)
         break
       case '/apps/activate':
         if (typeof input.bundleId !== 'string' || !/^[\w.-]{1,255}$/.test(input.bundleId)) {
           throw new InputError('bundleId must be an application identifier')
         }
-        await runtime.execute(wda => wda.call('POST', '/wda/apps/activate', {
+        await runtime.execute((wda, signal) => wda.call('POST', '/wda/apps/activate', {
           bundleId: input.bundleId
-        }))
+        }, signal), false, abort.signal)
         break
       default:
         json(404, {error: 'not_found'})

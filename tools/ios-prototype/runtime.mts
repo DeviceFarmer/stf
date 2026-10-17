@@ -231,19 +231,18 @@ export class IosRuntime {
   }
 
   shake(signal: AbortSignal): Promise<void> {
-    return this.execute(wda => this.assistiveTouch.perform(wda,
-      AbortSignal.any([this.abort.signal, signal, AbortSignal.timeout(45000)])))
+    return this.execute((wda, active) => this.assistiveTouch.perform(wda, active), false,
+      AbortSignal.any([signal, AbortSignal.timeout(45000)]))
   }
 
   lock(signal: AbortSignal): Promise<{locked: boolean}> {
-    return this.execute(async wda => {
-      if ((await this.lockState()).locked) {
+    return this.execute(async(wda, active) => {
+      if ((await this.lockState(active)).locked) {
         return {locked: true}
       }
       const reportedVersion = (this.info as {ProductVersion?: string})?.ProductVersion || '27'
       const version = Number.parseInt(reportedVersion, 10)
       if (version < 27) {
-        const active = AbortSignal.any([this.abort.signal, signal, AbortSignal.timeout(45000)])
         try {
           await this.assistiveTouch.perform(wda, active, 'lock')
         }
@@ -259,22 +258,24 @@ export class IosRuntime {
         }
       }
       else {
-        await wda.call('POST', '/wda/performIoHidEvent', {page: 12, usage: 48, duration: 0.5})
+        await wda.call('POST', '/wda/performIoHidEvent', {
+          page: 12, usage: 48, duration: 0.5
+        }, active)
       }
       const deadline = Date.now() + 5000
       while (Date.now() < deadline) {
-        const result = await this.lockState()
+        const result = await this.lockState(active)
         if (result.locked) {
           return result
         }
-        await this.sleep(200)
+        await delay(200, undefined, {signal: active})
       }
       throw new Error('IOS_LOCK_FAILED')
-    }, true)
+    }, true, AbortSignal.any([signal, AbortSignal.timeout(45000)]))
   }
 
-  private async lockState(): Promise<{locked: boolean}> {
-    const {value: locked} = await this.wda.call('GET', '/wda/locked')
+  private async lockState(signal: AbortSignal): Promise<{locked: boolean}> {
+    const {value: locked} = await this.wda.call('GET', '/wda/locked', undefined, signal)
     if (typeof locked !== 'boolean') {
       throw new Error('IOS_LOCK_STATE_UNAVAILABLE')
     }
@@ -283,23 +284,23 @@ export class IosRuntime {
     return {locked}
   }
 
-  power(action: 'reboot' | 'shutdown'): Promise<{accepted: boolean}> {
-    return this.execute(async() => {
-      await this.dependencies.power(this.options.goIos, this.args(action), this.abort.signal)
+  power(action: 'reboot' | 'shutdown', signal?: AbortSignal): Promise<{accepted: boolean}> {
+    return this.execute(async(_wda, active) => {
+      await this.dependencies.power(this.options.goIos, this.args(action), active)
       this.state = 'waiting'
       this.generation++
       this.telemetry.phase('recovering', 'provider_unavailable')
       return {accepted: true}
-    }, true)
+    }, true, signal)
   }
 
-  unlock(): Promise<{locked: boolean}> {
-    return this.execute(async wda => {
+  unlock(signal?: AbortSignal): Promise<{locked: boolean}> {
+    return this.execute(async(wda, active) => {
       // Activating the system home screen wakes the real iOS 26 display;
       // pressButton(Home) alone may leave it asleep despite a false lock flag.
       for (const path of ['/wda/homescreen', '/wda/unlock']) {
         try {
-          await wda.request('POST', path, {})
+          await wda.request('POST', path, {}, active)
         }
         catch (error) {
           // Protected locks may reject app activation or automatic dismissal.
@@ -309,19 +310,24 @@ export class IosRuntime {
           }
         }
       }
-      return this.lockState()
-    }, true)
+      return this.lockState(active)
+    }, true, signal)
   }
 
-  execute<T>(action: (wda: WdaClient) => Promise<T>, allowLocked = false): Promise<T> {
+  execute<T>(
+    action: (wda: WdaClient, signal: AbortSignal) => Promise<T>
+  , allowLocked = false, signal?: AbortSignal
+  ): Promise<T> {
     const generation = this.generation
+    const active = AbortSignal.any([this.abort.signal, ...(signal ? [signal] : [])])
     const work = this.queue.then(async() => {
+      active.throwIfAborted()
       if (this.state !== 'ready' || (!allowLocked && this.telemetry.status.locked) ||
           generation !== this.generation) {
         throw new Error('iPhone is not ready')
       }
       this.checkChildren()
-      return action(this.wda)
+      return action(this.wda, active)
     })
     this.queue = work.catch(() => null)
     return work

@@ -316,17 +316,19 @@ export class Installations {
       if (launch) {
         job.state = 'launching_app'
         try {
-          await this.runtime.execute(async wda => {
+          await this.runtime.execute(async(wda, operationSignal) => {
             signal.throwIfAborted()
             if (!this.current(job)) {
               throw new Error('Session changed')
             }
-            await wda.call('POST', '/wda/apps/activate', {bundleId: job.manifest!.package})
-            const active = await wda.call('GET', '/wda/activeAppInfo')
+            await wda.call('POST', '/wda/apps/activate', {
+              bundleId: job.manifest!.package
+            }, operationSignal)
+            const active = await wda.call('GET', '/wda/activeAppInfo', undefined, operationSignal)
             if ((active.value as {bundleId?: string})?.bundleId !== job.manifest!.package) {
               throw new Error('Installed app did not stay in the foreground')
             }
-          })
+          }, false, signal)
         }
         catch {
           signal.throwIfAborted()

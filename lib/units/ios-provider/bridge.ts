@@ -35,7 +35,7 @@ export class IosBridge {
   private installId: string | null = null
   private lastObservation: IosDeviceState | null = null
   private lastHealth = ''
-  private actionAbort: AbortController | null = null
+  private ownerAbort = new AbortController()
   private readonly route: ReturnType<ReturnType<typeof wirerouter>['handler']>
 
   constructor(
@@ -128,6 +128,8 @@ export class IosBridge {
           if (!artifact || !message.requestId || !this.state?.instance) {
             throw new Error('IOS_INSTALL_INVALID_REQUEST')
           }
+          // Keep the acknowledgement alive so a job accepted during release can
+          // still be cancelled by its ID below.
           const job = await (await this.client.request('/installations/start', {
             id: message.requestId, lease, artifact: {id: artifact[1], name: artifact[2]}
           , launch: message.launch, instance: this.state.instance, generation: this.state.generation
@@ -142,42 +144,24 @@ export class IosBridge {
       })
       .on(wire.IosShakeMessage, channel => {
         const epoch = this.epoch
-        this.transaction(String(channel), () => this.enqueue(epoch, async() => {
-          const abort = new AbortController()
-          this.actionAbort = abort
-          try {
-            await this.client.request('/shake', {},
-              AbortSignal.any([abort.signal, AbortSignal.timeout(60000)]))
-          }
-          finally {
-            this.actionAbort = null
-          }
+        this.transaction(String(channel), () => this.enqueue(epoch, async signal => {
+          await this.ownedRequest('/shake', {}, signal, 60000)
         }))
       })
       .on(wire.IosUnlockMessage, channel => {
-        this.transaction(String(channel), () => this.enqueue(this.epoch, async() =>
-          (await this.client.request('/unlock', {})).json(), true))
+        this.transaction(String(channel), () => this.enqueue(this.epoch, async signal =>
+          (await this.ownedRequest('/unlock', {}, signal)).json(), true))
       })
       .on(wire.IosLockMessage, channel => {
-        this.transaction(String(channel), () => this.enqueue(this.epoch, async() => {
-          const abort = new AbortController()
-          this.actionAbort = abort
-          try {
-            return await (await this.client.request('/lock', {},
-              AbortSignal.any([abort.signal, AbortSignal.timeout(60000)]))).json()
-          }
-          finally {
-            this.actionAbort = null
-          }
-        }, true))
+        this.transaction(String(channel), () => this.enqueue(this.epoch, async signal =>
+          (await this.ownedRequest('/lock', {}, signal, 60000)).json(), true))
       })
       .on(wire.IosPowerMessage, (channel, message) => {
-        this.transaction(String(channel), () => this.enqueue(this.epoch, async() => {
+        this.transaction(String(channel), () => this.enqueue(this.epoch, async signal => {
           if (!['reboot', 'shutdown'].includes(message.action)) {
             throw new Error('IOS_POWER_INVALID_ACTION')
           }
-          return (await this.client.request('/power', {action: message.action},
-            AbortSignal.timeout(20000))).json()
+          return (await this.ownedRequest('/power', {action: message.action}, signal, 20000)).json()
         }, true))
       })
       .on(wire.IosInstallStatusMessage, (channel, message) => {
@@ -188,15 +172,16 @@ export class IosBridge {
       })
       .on(wire.ScreenCaptureMessage, channel => {
         const epoch = this.epoch
-        this.transaction(String(channel), () => this.enqueue(epoch, async() => {
-          const image = await this.client.request('/screenshot')
+        this.transaction(String(channel), () => this.enqueue(epoch, async signal => {
+          const image = await this.ownedRequest('/screenshot', undefined, signal)
           const bytes = await image.arrayBuffer()
           const form = new FormData()
           form.append('file', new Blob([bytes], {
             type: image.headers.get('content-type') || 'image/png'
           }), 'ios-screenshot.png')
           const response = await fetch(new URL('/s/upload/image', options.storageUrl), {
-            method: 'POST', body: form, signal: AbortSignal.timeout(15000), redirect: 'error'
+            method: 'POST', body: form
+          , signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]), redirect: 'error'
           })
           if (response.status !== 201) {
             await response.body?.cancel()
@@ -216,9 +201,9 @@ export class IosBridge {
   private installationCommand(channel: string, path: string, id?: string) {
     const epoch = this.epoch
     const lease = this.lease
-    this.transaction(channel, () => this.enqueue(epoch, async() => {
-      const job = await (await this.client.request(path, {lease, ...(id ? {id} : {})})).json() as
-        {id: string, settled: boolean} | null
+    this.transaction(channel, () => this.enqueue(epoch, async signal => {
+      const response = await this.ownedRequest(path, {lease, ...(id ? {id} : {})}, signal)
+      const job = await response.json() as {id: string, settled: boolean} | null
       if (epoch !== this.epoch || lease !== this.lease) {
         throw new Error('IOS_INSTALL_INTERRUPTED')
       }
@@ -242,8 +227,8 @@ export class IosBridge {
   }
 
   private command(path: string, body: unknown, replyChannel?: string) {
-    const operation = () => this.enqueue(this.epoch, async() => {
-      await this.client.request(path, body)
+    const operation = () => this.enqueue(this.epoch, async signal => {
+      await this.ownedRequest(path, body, signal)
     }, ['/tap', '/swipe', '/home', '/text'].includes(path))
     if (replyChannel) {
       this.transaction(replyChannel, operation)
@@ -253,8 +238,16 @@ export class IosBridge {
     }
   }
 
-  private enqueue<T>(epoch: number, operation: () => Promise<T>, allowLocked = false): Promise<T> {
+  private ownedRequest(path: string, body: unknown, signal: AbortSignal, timeout = 15000) {
+    return this.client.request(path, body, AbortSignal.any([signal, AbortSignal.timeout(timeout)]))
+  }
+
+  private enqueue<T>(
+    epoch: number, operation: (signal: AbortSignal) => Promise<T>, allowLocked = false
+  ): Promise<T> {
+    const signal = this.ownerAbort.signal
     const result = this.queue.then(async() => {
+      signal.throwIfAborted()
       if (!this.owner || epoch !== this.epoch) {
         throw new Error('Device session ended')
       }
@@ -267,7 +260,10 @@ export class IosBridge {
       if (current.instance !== this.state?.instance) {
         throw new Error('Device session changed')
       }
-      return operation()
+      signal.throwIfAborted()
+      const value = await operation(signal)
+      signal.throwIfAborted()
+      return value
     })
     this.queue = result.then(() => {}, () => {})
     return result
@@ -286,6 +282,7 @@ export class IosBridge {
       throw new Error('Device already owned')
     }
     if (!this.owner) {
+      this.ownerAbort = new AbortController()
       this.owner = owner
       this.lease = randomUUID()
       this.epoch++
@@ -298,7 +295,7 @@ export class IosBridge {
   }
 
   leave(reason: string) {
-    this.actionAbort?.abort()
+    this.ownerAbort.abort()
     const owner = this.owner
     const id = this.installId
     const lease = this.lease

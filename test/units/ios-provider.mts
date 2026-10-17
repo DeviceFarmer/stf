@@ -40,12 +40,13 @@ describe('Linux iOS integration', function() {
     }
   })
 
-  async function fixture(marketName = 'iPhone 16 Plus') {
+  async function fixture(marketName = 'iPhone 16 Plus', holdFirstText = false) {
     const state: IosDeviceState = {
       udid: serial, state: 'ready', generation: 1, instance: 'backend-instance'
     , info: {ProductType: 'iPhone17,4', ProductVersion: '27.0.1'}
     }
     const requests: {path: string, body: any}[] = []
+    let cancelled = false
     const sent: {channel: string, envelope: ReturnType<typeof wire.Envelope.decode>}[] = []
     const png = Buffer.alloc(24)
     Buffer.from('89504e470d0a1a0a', 'hex').copy(png)
@@ -73,6 +74,13 @@ describe('Linux iOS integration', function() {
           chunks.push(chunk)
         }
         requests.push({path: req.url!, body: JSON.parse(Buffer.concat(chunks).toString())})
+        if (holdFirstText && req.url === '/text' &&
+            requests.filter(item => item.path === '/text').length === 1) {
+          res.once('close', () => {
+            cancelled = true
+          })
+          return
+        }
         let response = {success: true} as object
         if (req.url?.startsWith('/installations/')) {
           response = {id: requests.at(-1)!.body.id || 'job', settled: false}
@@ -105,8 +113,23 @@ describe('Linux iOS integration', function() {
       ]), true)
       await until(() => bridge.owner !== null)
     }
-    return {bridge, client, state, requests, sent, send, join, disconnects: () => disconnects}
+    return {bridge, client, state, requests, sent, send, join
+      , disconnects: () => disconnects, cancelled: () => cancelled}
   }
+
+  it('aborts forwarded input on release and permits a new session', async function() {
+    const f = await fixture('iPhone 16 Plus', true)
+    await f.join()
+    f.send(new wire.PasteMessage('previous owner'), true)
+    await until(() => f.requests.length === 1)
+    f.send(new wire.PasteMessage('stale queued input'), true)
+    f.bridge.leave('ungroup_request')
+    await until(f.cancelled)
+    await f.join()
+    f.send(new wire.PasteMessage('current owner'), true)
+    await until(() => f.requests.length === 2)
+    assert.deepEqual(f.requests.map(item => item.body.text), ['previous owner', 'current owner'])
+  })
 
   it('registers iOS identity and translates STF input and transactions', async function() {
     const f = await fixture()
