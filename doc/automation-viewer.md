@@ -56,3 +56,5 @@ end access to that stream.
 Android uses its existing minicap transport. The STF viewer stops that stream
 when automation ends; the Android transport does not gain the iOS server's
 periodic identity and ownership checks in this feature.
+
+See the [recorded Android and iPhone demonstrations](automation-media/README.md).
