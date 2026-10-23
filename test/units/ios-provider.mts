@@ -8,9 +8,9 @@ import {IosBridge} from '../../lib/units/ios-provider/bridge.js'
 import {PrototypeClient, type IosDeviceState} from '../../lib/units/ios-provider/client.js'
 import type {IosDeviceStatus} from '../../lib/util/ios-device-status.js'
 import {MjpegDecoder} from '../../lib/units/ios-provider/mjpeg.js'
-import {authorizeScreen, type IosOwner} from '../../lib/units/ios-provider/access.js'
+import {authorizeScreen} from '../../lib/units/ios-provider/access.js'
 import {createScreenServer} from '../../lib/units/ios-provider/screen.js'
-import {allowIosPacket} from '../../lib/units/websocket/ios-access.js'
+import {allowIosPacket, createIosPacketGuard} from '../../lib/units/websocket/ios-access.js'
 
 const serial = 'TEST-IPHONE'
 const owner = {email: 'owner@example.test', name: 'Owner', group: 'owner-group'}
@@ -47,6 +47,13 @@ describe('Linux iOS integration', function() {
     }
     const requests: {path: string, body: any}[] = []
     let cancelled = false
+    let failKeepalive = false
+    const errors: unknown[] = []
+    const screens: http.ServerResponse[] = []
+    const frame = Buffer.concat([
+      Buffer.from('--frame\r\nContent-Type: image/jpeg\r\nContent-Length: 6\r\n\r\n')
+    , Buffer.from('ffd80102ffd9', 'hex'), Buffer.from('\r\n\r\n')
+    ])
     const sent: {channel: string, envelope: ReturnType<typeof wire.Envelope.decode>}[] = []
     const png = Buffer.alloc(24)
     Buffer.from('89504e470d0a1a0a', 'hex').copy(png)
@@ -63,10 +70,8 @@ describe('Linux iOS integration', function() {
       }
       else if (req.url === '/screen') {
         res.setHeader('Content-Type', 'multipart/x-mixed-replace;boundary=frame')
-        res.write('--frame\r\nContent-Type: image/jpeg\r\nContent-Length: 6\r\n\r\n')
-        res.write(Buffer.from('ffd80102ffd9', 'hex'))
-        res.write('\r\n\r\n--frame\r\nContent-Type: image/jpeg\r\nContent-Length: 6\r\n\r\n')
-        res.write(Buffer.from('ffd80102ffd9', 'hex'))
+        screens.push(res)
+        res.write(Buffer.concat([frame, frame]))
       }
       else {
         const chunks: Buffer[] = []
@@ -74,6 +79,11 @@ describe('Linux iOS integration', function() {
           chunks.push(chunk)
         }
         requests.push({path: req.url!, body: JSON.parse(Buffer.concat(chunks).toString())})
+        if (req.url === '/installations/keepalive' && failKeepalive) {
+          failKeepalive = false
+          res.writeHead(502).end('{}')
+          return
+        }
         if (holdFirstText && req.url === '/text' &&
             requests.filter(item => item.path === '/text').length === 1) {
           res.once('close', () => {
@@ -100,7 +110,7 @@ describe('Linux iOS integration', function() {
     }, client, (channel, data) => sent.push({channel, envelope: wire.Envelope.decode(data)}),
     () => {
  disconnects++
-}, () => {})
+}, error => errors.push(error))
     function send(message: wireutil.Message, transaction = false, channel = bridge.channel) {
       bridge.handle(channel, transaction ?
         wireutil.transaction('reply', message) : wireutil.envelope(message))
@@ -113,7 +123,11 @@ describe('Linux iOS integration', function() {
       ]), true)
       await until(() => bridge.owner !== null)
     }
-    return {bridge, client, state, requests, sent, send, join
+    return {bridge, client, state, requests, sent, send, join, errors
+      , failKeepalive: () => {
+ failKeepalive = true
+}
+      , pushFrames: () => screens.forEach(res => res.write(Buffer.concat([frame, frame])))
       , disconnects: () => disconnects, cancelled: () => cancelled}
   }
 
@@ -265,6 +279,74 @@ describe('Linux iOS integration', function() {
     assert.equal(f.requests.length, 1)
   })
 
+  it('allows locked install status and cancel but rejects stale runtimes', async function() {
+    const f = await fixture()
+    await f.join()
+    f.sent.length = 0
+    f.send(new wire.InstallMessage('/s/blob/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/' +
+      'a'.repeat(32), true, '{}', 'request'), true)
+    await until(() => f.sent.some(item => item.channel === 'reply' &&
+      item.envelope.type === wire.TransactionDoneMessage.$code))
+    f.state.ios = {reason: 'locked', locked: true} as IosDeviceStatus
+    f.send(new wire.IosInstallStatusMessage('request'), true)
+    f.send(new wire.IosInstallCancelMessage('request'), true)
+    await until(() => f.requests.length === 3)
+    assert.deepEqual(f.requests.map(req => req.path), [
+      '/installations/start', '/installations/status', '/installations/cancel'
+    ])
+    assert.ok(f.requests.every(req => req.body.lease === f.requests[0]!.body.lease))
+    f.state.instance = 'replacement'
+    f.send(new wire.IosInstallCancelMessage('request'), true)
+    await new Promise(resolve => setTimeout(resolve, 30))
+    assert.equal(f.requests.length, 3)
+  })
+
+  it('retains ownership after a transient install keepalive failure', async function() {
+    const f = await fixture()
+    await f.join()
+    f.sent.length = 0
+    f.send(new wire.InstallMessage('/s/blob/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/' +
+      'a'.repeat(32), true, '{}', 'request'), true)
+    await until(() => f.sent.some(item => item.channel === 'reply' &&
+      item.envelope.type === wire.TransactionDoneMessage.$code))
+    const disconnects = f.disconnects()
+    f.failKeepalive()
+    await f.bridge.poll()
+    assert.equal(f.bridge.owner?.email, owner.email)
+    assert.equal(f.disconnects(), disconnects)
+    assert.equal(f.errors.length, 1)
+    assert.ok(!f.sent.some(item => item.envelope.type === wire.DeviceAbsentMessage.$code))
+    await f.bridge.poll()
+    assert.equal(f.requests.filter(req => req.path === '/installations/keepalive').length, 2)
+    assert.ok(!f.requests.some(req => req.path === '/installations/cancel'))
+  })
+
+  it('publishes health changes except observation timestamps alone', async function() {
+    const f = await fixture()
+    f.state.ios = {reason: 'ready', updatedAt: '2026-10-23T10:00:00Z'
+      , telemetryAt: '2026-10-23T10:00:00Z', locked: false} as IosDeviceStatus
+    const count = () => f.sent.filter(item =>
+      item.envelope.type === wire.DevicePropertiesMessage.$code).length
+    await f.bridge.poll()
+    assert.equal(count(), 1)
+    f.state.ios.updatedAt = '2026-10-23T10:00:05Z'
+    await f.bridge.poll()
+    assert.equal(count(), 1)
+    f.state.ios.telemetryAt = '2026-10-23T10:01:00Z'
+    await f.bridge.poll()
+    assert.equal(count(), 2)
+    f.state.ios.locked = true
+    f.state.ios.reason = 'locked'
+    await f.bridge.poll()
+    assert.equal(count(), 3)
+    const property = f.sent.filter(item =>
+      item.envelope.type === wire.DevicePropertiesMessage.$code).at(-1)!
+    const message = wire.DevicePropertiesMessage.decode(property.envelope.message)
+    const health = JSON.parse(message.properties[0]!.value)
+    assert.equal(health.updatedAt, '2026-10-23T10:00:05Z')
+    assert.equal(health.locked, true)
+  })
+
   it('retains lock-screen access until a real disconnect', async function() {
     const f = await fixture()
     await f.join()
@@ -349,14 +431,76 @@ describe('Linux iOS integration', function() {
     assert.equal(await allowIosPacket('input.keyPress', device.channel, user, load), true)
     assert.equal(await allowIosPacket('group.kick', device.channel,
       {...user, email: 'other@example.test'}, load), false)
+    const admin = {...user, email: 'admin@example.test', privilege: 'admin'}
+    assert.equal(await allowIosPacket('group.kick', device.channel, admin, load), true)
+    assert.equal(await allowIosPacket('device.lock', device.channel, admin, load), true)
+    assert.equal(await allowIosPacket('device.lock', device.channel,
+      {...admin, groups: {subscribed: []}}, load), false)
     assert.equal(await allowIosPacket('group.invite', device.channel,
       {...user, groups: {subscribed: []}}, load), false)
     device.ready = false
+    assert.equal(await allowIosPacket('device.lock', device.channel, admin, load), false)
     assert.equal(await allowIosPacket('input.keyPress', device.channel, user, load), false)
     assert.equal(await allowIosPacket('input.keyPress', 'android-channel', user,
       () => {
  throw new Error('Android must not query the iOS guard')
 }), true)
+  })
+
+  it('cancels transactions on denied access and failed lookups', async function() {
+    const user = {email: owner.email, groups: {subscribed: ['root']}}
+    const cancelled: unknown[][] = []
+    let fail = false
+    const guard = createIosPacketGuard(user, async() => {
+      if (fail) {
+        throw new Error('database unavailable')
+      }
+      return null
+    }, (...args) => cancelled.push(args))
+    const dispatch = (packet: unknown[]) => new Promise<Error | undefined>(resolve =>
+      guard(packet, resolve))
+    assert.equal((await dispatch(['device.lock', 'ios:' + serial, 'tx.denied']))?.message,
+      'Device access denied')
+    fail = true
+    assert.equal((await dispatch(['group.kick', 'ios:' + serial, 'tx.lookup']))?.message,
+      'Device access unavailable')
+    await dispatch(['input.touchDown', 'ios:' + serial])
+    assert.equal(cancelled.length, 2)
+    assert.deepEqual(cancelled[0], ['tx.denied', {
+      source: serial, seq: 0, success: false, data: 'Device access denied'
+    }])
+    assert.equal((cancelled[1]![1] as {data: string}).data, 'Device access unavailable')
+    assert.equal(await dispatch(['input.keyPress', 'android-channel', 'tx.android']), undefined)
+  })
+
+  it('preserves input order while an iOS authorization lookup is pending', async function() {
+    let release!: () => void
+    const pending = new Promise<void>(resolve => {
+ release = resolve
+})
+    let lookups = 0
+    const delivered: string[] = []
+    const user = {email: owner.email, groups: {subscribed: ['root']}}
+    const guard = createIosPacketGuard(user, async() => {
+      if (++lookups === 1) {
+        await pending
+      }
+      return {serial, platform: 'iOS', channel: 'ios:' + serial, present: true
+        , ready: true, owner, group: {id: 'root'}}
+    }, () => assert.fail('Owned input must not be rejected'))
+    guard(['input.touchDown', 'ios:' + serial], error => {
+      assert.ifError(error)
+      delivered.push('down')
+    })
+    guard(['input.touchUp', 'ios:' + serial], error => {
+      assert.ifError(error)
+      delivered.push('up')
+    })
+    await until(() => lookups === 1)
+    assert.deepEqual(delivered, [])
+    release()
+    await until(() => delivered.length === 2)
+    assert.deepEqual(delivered, ['down', 'up'])
   })
 
   it('reassembles split MJPEG frames and rejects missing or oversized lengths', function() {
@@ -402,10 +546,10 @@ describe('Linux iOS integration', function() {
       viewer = 'admin@example.test'
       assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
       viewer = owner.email
-      let currentOwner: IosOwner | null = owner
+      await f.join(20000)
       const screen = createScreenServer({
         client: f.client, apiUrl, publicOrigin: origin, serial
-      , owner: () => currentOwner, keepalive: () => {}
+      , owner: () => f.bridge.owner
       })
       const url = (await listen(screen.server)).replace('http:', 'ws:')
       const ws = new WebSocket(url, {headers})
@@ -420,7 +564,18 @@ describe('Linux iOS integration', function() {
           Buffer.from('ffd80102ffd9', 'hex'))
         allowed = false
         assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
-        currentOwner = null
+        const now = Date.now
+        const future = now() + 21000
+        try {
+          Date.now = () => future
+          f.pushFrames()
+          await new Promise(resolve => setTimeout(resolve, 20))
+          await f.bridge.poll()
+          assert.equal(f.bridge.owner, null, 'Screen frames must not renew device ownership')
+        }
+        finally {
+          Date.now = now
+        }
         const closed = once(ws, 'close')
         ws.send('ping')
         await closed

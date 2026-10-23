@@ -209,7 +209,7 @@ export class IosBridge {
       }
       this.installId = job && !job.settled ? job.id : null
       return job
-    }))
+    }, true))
   }
 
   private resetTouch() {
@@ -407,11 +407,16 @@ export class IosBridge {
       }
       if (this.owner && this.installId) {
         const epoch = this.epoch
-        const job = await (await this.client.request('/installations/keepalive', {
-          lease: this.lease, id: this.installId
-        })).json() as {settled: boolean}
-        if (epoch === this.epoch && job.settled) {
-          this.installId = null
+        try {
+          const job = await (await this.client.request('/installations/keepalive', {
+            lease: this.lease, id: this.installId
+          })).json() as {settled: boolean}
+          if (epoch === this.epoch && job.settled) {
+            this.installId = null
+          }
+        }
+        catch (error) {
+          this.report(error)
         }
       }
     }
@@ -430,11 +435,13 @@ export class IosBridge {
       return
     }
     const value = JSON.stringify(state.ios)
-    if (value !== this.lastHealth) {
+    const {updatedAt: _updatedAt, ...health} = state.ios
+    const comparable = JSON.stringify(health)
+    if (comparable !== this.lastHealth) {
       this.broadcast(new wire.DevicePropertiesMessage(this.options.serial, [
         new wire.DeviceProperty('stf.ios.status', value)
       ]))
-      this.lastHealth = value
+      this.lastHealth = comparable
     }
   }
 

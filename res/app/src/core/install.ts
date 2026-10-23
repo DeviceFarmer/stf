@@ -1,4 +1,5 @@
 import {api} from './api'
+import {v4 as uuidv4} from 'uuid'
 import type {Control} from './control'
 import {createDeviceStore} from './device-store'
 import {gettext, translate} from './i18n'
@@ -203,12 +204,12 @@ export async function installFile(
 , files: File[]
 , onChange?: InstallationListener
 ): Promise<Installation> {
+  const ios = control.target.platform === 'iOS'
   const existing = installationStore.get(control.target.serial)
-  if (existing && !existing.settled) {
+  if (ios && existing && !existing.settled) {
     return {...existing, settled: true, success: false, error: 'IOS_INSTALL_BUSY'}
   }
   const installation = startInstallation(control.target.serial, 'uploading', onChange)
-  const ios = control.target.platform === 'iOS'
   try {
     if (ios && (files.length !== 1 || !/\.ipa$/i.test(files[0]!.name))) {
       throw new Error('IOS_IPA_INVALID')
@@ -223,7 +224,7 @@ export async function installFile(
     installation.update(100 / 2, 'processing')
     const href = response.resources.file.href
     if (ios) {
-      const requestId = crypto.randomUUID()
+      const requestId = uuidv4()
       installation.patch({jobId: requestId, indeterminate: true})
       let job: IosJob
       try {

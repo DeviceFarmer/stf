@@ -23,7 +23,7 @@ export default async function(options: BridgeOptions & {
     () => screen.disconnect(), error => log.warn('iOS operation failed: %s', String(error)))
   const screen = createScreenServer({
     client, apiUrl: options.apiUrl, publicOrigin: options.publicOrigin, serial: options.serial
-  , owner: () => bridge.owner, keepalive: () => bridge.keepalive()
+  , owner: () => bridge.owner
   , onError: error => log.warn('iOS screen failed: %s', String(error))
   })
   sub.subscribe(bridge.channel)

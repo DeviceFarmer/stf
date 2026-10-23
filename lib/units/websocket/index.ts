@@ -23,7 +23,7 @@ import zmqutil from '../../util/zmqutil.js'
 import cookieSession from './middleware/cookie-session.js'
 import ip from './middleware/remote-ip.js'
 import auth from './middleware/auth.js'
-import {allowIosPacket} from './ios-access.js'
+import {createIosPacketGuard} from './ios-access.js'
 import {readIosProperties} from '../../util/ios-device-status.js'
 import jwtutil from '../../util/jwtutil.js'
 
@@ -241,24 +241,9 @@ export default function(options: WebsocketOptions) {
     var channels: string[] = []
     var messageListener: MessageListener
 
-    let iosPackets = Promise.resolve()
-    // Preserve touch ordering while checking ownership before forwarding iOS controls.
-    socket.use((packet, next) => {
-      if (typeof packet[1] !== 'string' || !packet[1].startsWith('ios:')) {
-        return next()
-      }
-      iosPackets = iosPackets
-        .then(() => allowIosPacket(packet[0], packet[1], user, dbapi.loadDeviceBySerial))
-        .then(allowed => {
-          if (allowed) {
-            return next()
-          }
-          else {
-            return next(new Error('Device access denied'))
-          }
-        })
-        .catch(() => next(new Error('Device access unavailable')))
-    })
+    socket.use(createIosPacketGuard(user, dbapi.loadDeviceBySerial, (channel, failure) => {
+      socket.emit('tx.cancel', channel, failure)
+    }))
     socket.on('error', error => log.warn('Socket request rejected: %s', error.message))
 
     user.ip = socket.handshake.query.uip as string | undefined || req.ip

@@ -20,9 +20,50 @@ beforeEach(() => {
   installationStore.set(serial, null)
   storeFiles.mockResolvedValue({resources: {file: {href: '/s/blob/id/hash'}}})
 })
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
 
 describe('iPhone IPA installation', () => {
+  it('creates a request ID on plain HTTP where crypto.randomUUID is unavailable', async() => {
+    const getRandomValues = vi.fn(crypto.getRandomValues.bind(crypto))
+    vi.stubGlobal('crypto', {getRandomValues})
+    expect(crypto.randomUUID).toBeUndefined()
+    const c = control()
+    expect((await installFile(c, [new File(['ipa'], 'Test.ipa')])).success).toBe(true)
+    expect(c.install).toHaveBeenCalledWith(expect.objectContaining({
+      requestId: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    }))
+    expect(getRandomValues).toHaveBeenCalled()
+  })
+
+  it('prevents a second iOS upload while preserving its current job', async() => {
+    const busy = {id: 42, state: 'installing_app', settled: false, success: false
+      , progress: 0, error: null, manifest: null}
+    installationStore.set(serial, busy)
+    const result = await installFile(control(), [new File(['ipa'], 'Test.ipa')])
+    expect(result.error).toBe('IOS_INSTALL_BUSY')
+    expect(installationStore.get(serial)).toEqual(busy)
+    expect(storeFiles).not.toHaveBeenCalled()
+  })
+
+  it('allows retrying an Android upload after a stalled installation', async() => {
+    const androidSerial = 'test-android'
+    installationStore.set(androidSerial, {id: 42, state: 'installing_app', settled: false
+      , success: false, progress: 0, error: null, manifest: null})
+    get.mockResolvedValue({success: true, manifest: {package: 'test.android.app'}})
+    const installed = Object.assign(Promise.resolve({}), {progressed: vi.fn().mockReturnThis()})
+    const c = {target: {serial: androidSerial, platform: 'Android'}
+      , install: vi.fn().mockReturnValue(installed)} as unknown as Control
+    const result = await installFile(c, [new File(['apk'], 'Test.apk')])
+    expect(result.success).toBe(true)
+    expect(storeFiles.mock.calls[0]![0]).toBe('apk')
+    expect(c.install).toHaveBeenCalledOnce()
+    expect(get).toHaveBeenCalledWith('/s/blob/id/hash/manifest')
+    expect(installationStore.get(androidSerial)?.success).toBe(true)
+  })
+
   it('uploads a blob and uses server metadata without asking the APK manifest service', async() => {
     const c = control()
     const result = await installFile(c, [new File(['ipa'], 'Test.ipa')])

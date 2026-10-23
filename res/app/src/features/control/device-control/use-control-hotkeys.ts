@@ -9,15 +9,18 @@ const allowInInputs = ['SELECT']
 export function useControlHotkeys(control: Control, actions: DeviceActions, ios = false) {
   const navigate = useNavigate()
   const [platform, setPlatform] = usePlatform()
+  const androidOnly: Parameters<typeof useHotkeys>[0] = ios ? [] : [
+    ['shift+space', () => control.keyPress('switch_charset')]
+    , ['meta+ArrowLeft', () => actions.rotateBy(-90)]
+    , ['meta+ArrowRight', () => actions.rotateBy(90)]
+    , ['meta+shift+M', () => control.menu()]
+    , ['meta+shift+B', () => control.back()]
+  ]
 
   useHotkeys([
     ['meta+shift+D', () => navigate('/devices')]
-    , ['shift+space', () => !ios && control.keyPress('switch_charset')]
-    , ['meta+ArrowLeft', () => !ios && actions.rotateBy(-90)]
-    , ['meta+ArrowRight', () => !ios && actions.rotateBy(90)]
-    , ['meta+shift+M', () => !ios && control.menu()]
     , ['meta+shift+H', () => control.home()]
-    , ['meta+shift+B', () => !ios && control.back()]
     , ['shift+W', () => setPlatform(platform === 'web' ? 'native' : 'web'), {preventDefault: false}]
+    , ...androidOnly
   ], allowInInputs)
 }

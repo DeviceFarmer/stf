@@ -86,4 +86,15 @@ describe('createTransaction', () => {
       vi.useRealTimers()
     }
   })
+
+  it.each(['Device access denied', 'Device access unavailable'])(
+    'settles denied socket transactions immediately: %s', async(reason) => {
+      const tx = createTransaction({serial: 'iphone'})
+      const result = tx.promise.catch(error => error)
+      fire('tx.cancel', tx.channel, {source: 'iphone', seq: 0, success: false, data: reason})
+      expect((await result).code).toBe(reason)
+      expect(handlers.get('tx.cancel')?.size).toBe(0)
+      expect(handlers.get('tx.done')?.size).toBe(0)
+      expect(emitted).toContainEqual(['tx.cleanup', tx.channel])
+    })
 })

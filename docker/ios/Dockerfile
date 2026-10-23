@@ -12,8 +12,11 @@ RUN curl -fL --retry 3 https://github.com/danielpaulus/go-ios/releases/download/
     && unzip -q /tmp/go-ios.zip -d /tmp/go-ios \
     && install -m 755 /tmp/go-ios/ios-${TARGETARCH} /usr/local/bin/ios \
     && rm -rf /tmp/go-ios /tmp/go-ios.zip
-RUN python3 -m venv /opt/pymobiledevice3 \
-    && /opt/pymobiledevice3/bin/pip install --no-cache-dir pymobiledevice3==11.32.0
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev python3-dev libssl-dev \
+    && python3 -m venv /opt/pymobiledevice3 \
+    && /opt/pymobiledevice3/bin/pip install --no-cache-dir pymobiledevice3==11.32.0 \
+    && apt-get purge -y --auto-remove gcc libc6-dev python3-dev libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/opt/pymobiledevice3/bin:${PATH}"
 COPY tools/ios-prototype /opt/stf/tools/ios-prototype

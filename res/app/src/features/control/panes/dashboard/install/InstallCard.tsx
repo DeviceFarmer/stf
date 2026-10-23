@@ -177,7 +177,7 @@ export function InstallCard({control}: {control: Control}) {
           color='red'
           variant='subtle'
           leftSection={<IconTrash size={14} />}
-          disabled={!installation || busy}
+          disabled={!installation || (ios && busy)}
           onClick={() => clearInstallation(serial)}
         >
           {t('Clear')}
