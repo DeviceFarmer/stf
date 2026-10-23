@@ -576,6 +576,10 @@ msgstr ""
 msgid "Device notes state"
 msgstr "Наличие записей у устройства"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx
+msgid "Device offline"
+msgstr "Устройство недоступно"
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
 msgstr "Фото устройства"
@@ -1611,6 +1615,10 @@ msgstr "Действительно удалить этого пользоват�
 msgid "Recents"
 msgstr "Недавние"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx
+msgid "Reconnecting…"
+msgstr "Переподключение…"
+
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
@@ -1793,6 +1801,10 @@ msgstr "Расписание"
 #: res/app/src/features/settings/groups/GroupDevices.tsx:20
 msgid "Screen"
 msgstr "Экран"
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx
+msgid "Screen disconnected"
+msgstr "Видеопоток прерван"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75

@@ -1,5 +1,5 @@
 import {lazy, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type ComponentType} from 'react'
-import {useNavigate, useParams} from 'react-router'
+import {useNavigate, useParams, useSearchParams} from 'react-router'
 import {
   Alert
   , Box
@@ -29,13 +29,14 @@ import {createControl, type Control} from '@/core/control'
 import {useDevice} from '@/core/devices/store'
 import {isAutomated, likelyLeaveReason} from '@/core/devices/enhance'
 import type {Device} from '@/core/devices/types'
-import {inviteDevice} from '@/core/group'
+import {inviteDevice, kickDevice} from '@/core/group'
 import {gettext, useTranslation} from '@/core/i18n'
 import {setSetting, useSetting} from '@/core/settings'
 import {basicMode, useStandalone} from '@/ui/modes'
 import {usePageTitle} from '@/ui/page-title'
 import {stateColor} from '@/ui/device-state'
 import {DeviceImage} from '@/ui/DeviceImage'
+import {notifyFailure} from '@/ui/notify'
 import {ControlRedirect} from './ControlRedirect'
 import DeviceControlPanel from './device-control/DeviceControlPanel'
 import type {PaneProps} from './types'
@@ -221,17 +222,40 @@ export default function ControlPage() {
 function ControlSession() {
   const {serial} = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const watchMode = searchParams.get('mode') === 'watch'
+  const startedWatching = useRef(watchMode)
+  const sessionActive = useRef(false)
   const {t} = useTranslation()
   const standalone = useStandalone()
   const {device, loading, error} = useDevice(serial)
   const [joined, setJoined] = useState<Device | null>(null)
   const [lost, setLost] = useState(false)
-  const [watching, setWatching] = useState(false)
+  const [watching, setWatching] = useState(watchMode)
+  const [takingControl, setTakingControl] = useState(false)
   const previousState = useRef<string | null>(null)
   const loadedSerial = device?.serial
   const deviceState = device?.state
   const latestDevice = useEffectEvent(() => device)
   const leaveToDeviceList = useEffectEvent(() => navigate('/', {replace: true}))
+  const watch = useEffectEvent(() => {
+    startedWatching.current = true
+    setWatching(true)
+    if (!watchMode) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        next.set('mode', 'watch')
+        return next
+      }, {replace: true})
+    }
+  })
+
+  useEffect(() => {
+    sessionActive.current = true
+    return () => {
+      sessionActive.current = false
+    }
+  }, [])
 
   usePageTitle(joined ? device?.enhancedName || joined.enhancedName : null)
 
@@ -246,10 +270,9 @@ function ControlSession() {
     if (!target || joined) {
       return
     }
-    if (isAutomated(target)) {
-      setWatching(true)
+    if (watchMode || isAutomated(target)) {
+      watch()
       setJoined(target)
-      setSetting('lastUsedDevice', target.serial)
       return
     }
     let active = true
@@ -268,13 +291,24 @@ function ControlSession() {
     return () => {
       active = false
     }
-  }, [loadedSerial, joined])
+  }, [loadedSerial, joined, watchMode])
 
   useEffect(() => {
-    if (device && isAutomated(device)) {
-      setWatching(true)
+    if (device && (watchMode || isAutomated(device))) {
+      watch()
     }
-  }, [device, deviceState])
+  }, [device, deviceState, watchMode])
+
+  useEffect(() => {
+    if (!standalone || !startedWatching.current || watching || !device?.using || isAutomated(device)) {
+      return
+    }
+    const release = () => {
+      kickDevice(device).catch(() => undefined)
+    }
+    window.addEventListener('beforeunload', release)
+    return () => window.removeEventListener('beforeunload', release)
+  }, [standalone, watching, device])
 
   useEffect(() => {
     if (!deviceState || !joined) {
@@ -288,11 +322,44 @@ function ControlSession() {
     }
   }, [deviceState, joined, watching])
 
-  const readOnly = watching || !device?.using || Boolean(device && isAutomated(device))
+  const readOnly = watchMode || watching || !device?.using || Boolean(device && isAutomated(device))
   const control: Control | null = useMemo(
     () => (joined ? createControl(joined, joined.channel, () => readOnly) : null)
     , [joined, readOnly]
   )
+
+  function takeControl() {
+    if (!device || takingControl || !device.usable || device.owner) {
+      return
+    }
+    const target = device
+    setTakingControl(true)
+    inviteDevice(target)
+      .then(() => {
+        if (!sessionActive.current) {
+          return
+        }
+        previousState.current = null
+        setJoined(target)
+        setWatching(false)
+        setSetting('lastUsedDevice', target.serial)
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current)
+          next.delete('mode')
+          return next
+        }, {replace: true})
+      })
+      .catch((error) => {
+        if (sessionActive.current) {
+          notifyFailure(error, t('Error'))
+        }
+      })
+      .finally(() => {
+        if (sessionActive.current) {
+          setTakingControl(false)
+        }
+      })
+  }
 
   if (!serial) {
     return <ControlRedirect />
@@ -316,11 +383,9 @@ function ControlSession() {
           {isAutomated(device) ? t('View only. Controls are disabled while the test is running.') : (
             <Group justify='space-between'>
               <Text size='sm'>{t('The test has finished. Take control to interact with the device.')}</Text>
-              <Button disabled={!device.usable || Boolean(device.owner)} onClick={() => {
-                setWatching(false)
-                previousState.current = null
-                setJoined(null)
-              }}>{t('Use')}</Button>
+              <Button disabled={!device.usable || Boolean(device.owner)} loading={takingControl} onClick={takeControl}>
+                {t('Use')}
+              </Button>
             </Group>
           )}
         </Alert>

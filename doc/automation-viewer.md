@@ -19,18 +19,27 @@ reservation timeout.
 
 ## Watching a session
 
-Open an Automated device from its card, name or status. STF opens its live screen
-without sending an ownership request. Show/hide remains available, and the
-information pane can be read. Touch, keyboard, hardware buttons, rotation,
-uploads and interaction panes are disabled.
+Open an Automated device from its card, name or status. Its link includes
+`?mode=watch`, so opening it in a new tab or refreshing it retains view-only mode,
+even if the test finishes before the page loads. STF does not send an ownership
+request. Show/hide remains available, and the information pane can be read.
+Touch, keyboard, hardware buttons, rotation, uploads and interaction panes are
+disabled.
 
 These restrictions also apply when the viewer is the automation owner or an
 administrator. The runner continues through its test connection and can release
 the reservation through the STF API.
 
 After release, the viewer shows **Automation finished**. Press **Use** to request
-manual control when the device is free. STF does not acquire the device
-automatically, including when another test starts immediately afterwards.
+manual control when the device is free. The page leaves watch mode only after
+that request succeeds. STF does not acquire the device automatically, including
+when another test starts immediately afterwards.
+
+A lost iPhone screen connection shows **Reconnecting…** until a new frame arrives.
+Android shows **Screen disconnected**, and an unavailable device shows
+**Device offline**. These indicators distinguish a stopped stream from the last
+live frame. Intentionally hiding the screen or ending the reservation does not
+show a connection warning.
 
 ## Access and enforcement
 

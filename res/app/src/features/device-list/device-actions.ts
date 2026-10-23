@@ -16,7 +16,7 @@ export interface DeviceActions {
 }
 
 export function controlHref(device: Device): string {
-  return `#/control/${device.serial}`
+  return `#/control/${device.serial}${isAutomated(device) ? '?mode=watch' : ''}`
 }
 
 export function canStartUsing(device: Device): boolean {
@@ -73,9 +73,13 @@ export function useDeviceActions(): DeviceActions {
       adminMode
       , open(event, device) {
         if (isAutomated(device)) {
-          if (!event.metaKey && !event.ctrlKey && event.button === 0) {
+          if (event.shiftKey && !event.metaKey && !event.ctrlKey && event.button === 0) {
             event.preventDefault()
-            navigate(`/control/${device.serial}`)
+            openStandalone(device)
+          }
+          else if (!event.metaKey && !event.ctrlKey && event.button === 0) {
+            event.preventDefault()
+            navigate(controlHref(device).slice(1))
           }
           return undefined
         }
@@ -92,7 +96,12 @@ export function useDeviceActions(): DeviceActions {
       , status(event, device) {
         if (isAutomated(device)) {
           event.preventDefault()
-          navigate(`/control/${device.serial}`)
+          if (event.shiftKey) {
+            openStandalone(device)
+          }
+          else {
+            navigate(controlHref(device).slice(1))
+          }
           return undefined
         }
         const handled = modified(event, device)

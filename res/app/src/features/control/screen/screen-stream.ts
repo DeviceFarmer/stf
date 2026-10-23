@@ -1,5 +1,5 @@
 import type {Device} from '@/core/devices/types'
-import {canViewDevice} from '@/core/devices/enhance'
+import {canViewDevice, isAutomated} from '@/core/devices/enhance'
 import {rotator} from './rotator'
 
 export interface ScreenBounds {
@@ -15,6 +15,7 @@ export interface ScreenGeometry {
 }
 
 export type DisplayError = false | 'secure'
+export type ScreenStreamStatus = 'reconnecting' | 'disconnected' | 'offline' | null
 
 export interface ScreenStreamOptions {
   url: string
@@ -26,6 +27,7 @@ export interface ScreenStreamOptions {
   isShown: () => boolean
   onDisplayError: (error: DisplayError) => void
   onFirstFrame: () => void
+  onStatusChange: (status: ScreenStreamStatus) => void
 }
 
 export interface ScreenStream {
@@ -77,6 +79,9 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   let framesDrawn = 0
   let framesReceived = 0
   let newestDrawnFrame = 0
+  let frameGeneration = 0
+  let transportLost = false
+  let streamStatus: ScreenStreamStatus = null
 
   function isOpen(): boolean {
     return ws !== null && ws.readyState === WebSocket.OPEN
@@ -91,6 +96,32 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   function setDisplayError(error: DisplayError) {
     displayError = error
     options.onDisplayError(error)
+    updateStatus()
+  }
+
+  function updateStatus() {
+    const device = getDevice()
+    let next: ScreenStreamStatus = null
+    if (!stopped && options.isShown() && !document.hidden && !displayError &&
+      (device.using || isAutomated(device))) {
+      if (!device.present || device.status !== 3 || !device.ready) {
+        transportLost = true
+        next = 'offline'
+      }
+      else if (transportLost) {
+        next = device.platform === 'iOS' ? 'reconnecting' : 'disconnected'
+      }
+    }
+    if (next !== streamStatus) {
+      streamStatus = next
+      options.onStatusChange(next)
+    }
+  }
+
+  function clearFrame() {
+    frameGeneration += 1
+    g.clearRect(0, 0, canvas.width, canvas.height)
+    root.classList.remove('has-frame')
   }
 
   function adjustBoundedSize(w: number, h: number): BoundSize {
@@ -158,6 +189,8 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function checkEnabled() {
     const newEnabled = shouldUpdateScreen()
+    updateStatus()
+    scheduleRetry()
 
     if (newEnabled === cachedEnabled) {
       updateBounds()
@@ -169,7 +202,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       onScreenInterestGained()
     }
     else {
-      g.clearRect(0, 0, canvas.width, canvas.height)
+      clearFrame()
       onScreenInterestLost()
     }
 
@@ -240,17 +273,15 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     maybeFlipLetterbox()
   }
 
-  function drawFrame(data: Blob) {
-    if (displayError) {
-      setDisplayError(false)
-    }
-
+  function drawFrame(data: Blob, socket: WebSocket) {
     framesReceived += 1
     const frame = framesReceived
+    const generation = frameGeneration
 
     createImageBitmap(data)
       .then((bitmap) => {
-        if (!ws || frame < newestDrawnFrame) {
+        if (ws !== socket || generation !== frameGeneration || !shouldUpdateScreen() ||
+          frame < newestDrawnFrame) {
           bitmap.close()
           return
         }
@@ -258,8 +289,13 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         updateImageArea(bitmap)
         g.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height)
         bitmap.close()
+        transportLost = false
+        if (displayError) {
+          setDisplayError(false)
+        }
+        updateStatus()
+        root.classList.add('has-frame')
         if (framesDrawn++ === 0) {
-          root.classList.add('has-frame')
           options.onFirstFrame()
         }
       })
@@ -271,23 +307,30 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     socket.binaryType = 'blob'
     ws = socket
     socket.onmessage = (message: MessageEvent) => {
+      if (ws !== socket || stopped) {
+        return
+      }
       const display = getDevice().display
       screen.rotation = display ? display.rotation : 0
 
       if (message.data instanceof Blob) {
         if (shouldUpdateScreen()) {
-          drawFrame(message.data)
+          drawFrame(message.data, socket)
         }
       }
       else if (/^start /.test(message.data)) {
         applyQuirks(JSON.parse(message.data.slice('start '.length)))
       }
       else if (message.data === 'secure_on') {
+        clearFrame()
         setDisplayError('secure')
       }
     }
 
     socket.onopen = () => {
+      if (ws !== socket || stopped) {
+        return
+      }
       retryAttempt = 0
       cachedEnabled = false
       checkEnabled()
@@ -298,17 +341,30 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       }
       ws = null
       cachedEnabled = false
-      const device = getDevice()
-      // A recovered iPhone may register before Kubernetes has restored its screen route.
-      if (device.platform === 'iOS' && canViewDevice(device)) {
-        retry = setTimeout(() => {
-          retry = null
-          const current = getDevice()
-          if (!stopped && canViewDevice(current)) {
-            connect()
-          }
-        }, Math.min(5000, 500 * 2 ** Math.min(4, retryAttempt++)))
+      transportLost = true
+      clearFrame()
+      updateStatus()
+      scheduleRetry()
+    }
+    socket.onerror = () => {
+      if (ws === socket && !stopped) {
+        transportLost = true
+        clearFrame()
+        updateStatus()
       }
+    }
+  }
+
+  function scheduleRetry() {
+    const device = getDevice()
+    // A recovered iPhone may register before Kubernetes has restored its screen route.
+    if (!stopped && !ws && !retry && device.platform === 'iOS' && canViewDevice(device)) {
+      retry = setTimeout(() => {
+        retry = null
+        if (!stopped && canViewDevice(getDevice())) {
+          connect()
+        }
+      }, Math.min(5000, 500 * 2 ** Math.min(4, retryAttempt++)))
     }
   }
 
@@ -319,6 +375,8 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function stop() {
     stopped = true
+    clearFrame()
+    updateStatus()
     if (retry) {
       clearTimeout(retry)
       retry = null

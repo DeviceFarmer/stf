@@ -1,5 +1,6 @@
 import type {Device} from '@/core/devices/types'
 import {kickDevice} from '@/core/group'
+import {isAutomated} from '@/core/devices/enhance'
 import {scalingCoordinator} from '@/core/scaling'
 import {getSetting, setSetting} from '@/core/settings'
 
@@ -69,7 +70,9 @@ export function openStandalone(device: Device): Window | null {
     , 'resizable=yes'
   ].join(',')
 
-  const popup = window.open(`#/c/${device.serial}?standalone`, `STF-${device.serial}`, features)
+  const watching = isAutomated(device)
+  const mode = watching ? '&mode=watch' : ''
+  const popup = window.open(`#/c/${device.serial}?standalone${mode}`, `STF-${device.serial}`, features)
   if (!popup) {
     return null
   }
@@ -81,7 +84,9 @@ export function openStandalone(device: Device): Window | null {
   }, 400)
 
   popup.onbeforeunload = () => {
-    kickDevice(device).catch(() => undefined)
+    if (!watching) {
+      kickDevice(device).catch(() => undefined)
+    }
     setSetting(geometrySetting, {
       [device.serial]: {
         width: popup.innerWidth

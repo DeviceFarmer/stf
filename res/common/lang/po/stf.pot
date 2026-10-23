@@ -567,6 +567,10 @@ msgstr ""
 msgid "Device notes state"
 msgstr ""
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:31
+msgid "Device offline"
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
 msgstr ""
@@ -1603,6 +1607,10 @@ msgstr ""
 msgid "Recents"
 msgstr ""
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:30
+msgid "Reconnecting…"
+msgstr ""
+
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
@@ -1780,6 +1788,10 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:223
 #: res/app/src/features/settings/groups/GroupDevices.tsx:20
 msgid "Screen"
+msgstr ""
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:32
+msgid "Screen disconnected"
 msgstr ""
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58

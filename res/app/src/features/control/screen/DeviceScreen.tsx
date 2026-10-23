@@ -8,7 +8,8 @@ import {useTranslation} from '@/core/i18n'
 import {scalingCoordinator} from '@/core/scaling'
 import {NothingToShow} from '@/ui/NothingToShow'
 import {bindScreenKeyboard} from './screen-keyboard'
-import {startScreenStream, type DisplayError, type ScreenGeometry, type ScreenStream} from './screen-stream'
+import {startScreenStream, type DisplayError, type ScreenGeometry, type ScreenStream,
+  type ScreenStreamStatus} from './screen-stream'
 import {bindScreenTouch} from './screen-touch'
 import {useGuestOrientation} from './use-guest-orientation'
 import './DeviceScreen.css'
@@ -25,6 +26,11 @@ export interface DeviceScreenProps {
 
 export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const {t} = useTranslation()
+  const streamStatusMessages = {
+    reconnecting: t('Reconnecting…')
+    , offline: t('Device offline')
+    , disconnected: t('Screen disconnected')
+  }
   const rootRef = useRef<HTMLDivElement>(null)
   const positionerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -36,6 +42,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const screenRef = useRef<ScreenGeometry>({rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}})
   const [displayError, setDisplayError] = useState<DisplayError>(false)
   const [hasFrame, setHasFrame] = useState(false)
+  const [streamStatus, setStreamStatus] = useState<ScreenStreamStatus>(null)
 
   const readOnly = control.readOnly
   const url = device.display?.url
@@ -69,6 +76,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , isShown: () => showScreenRef.current
       , onDisplayError: setDisplayError
       , onFirstFrame: () => setHasFrame(true)
+      , onStatusChange: setStreamStatus
     })
     streamRef.current = stream
 
@@ -92,12 +100,13 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       streamRef.current = null
       root.classList.remove('has-frame')
       setHasFrame(false)
+      setStreamStatus(null)
     }
   }, [url])
 
   useEffect(() => {
     streamRef.current?.checkEnabled()
-  }, [device.using, device.usage, device.owner, showScreen, url])
+  }, [device.using, device.usage, device.owner, device.present, device.ready, device.status, showScreen, url])
 
   useEffect(() => {
     const root = rootRef.current
@@ -134,7 +143,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
         <canvas ref={canvasRef} className='screen' />
         <canvas className='hacky-stretcher' width={1} height={1} />
       </div>
-      {!hasFrame && showScreen && !displayError && (
+      {!hasFrame && showScreen && !displayError && !streamStatus && (
         <div className='screen-placeholder'>
           <Loader color='gray' type='dots' />
         </div>
@@ -142,6 +151,14 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       {!showScreen && (
         <div className='screen-placeholder'>
           <IconEyeOff size={40} stroke={1.3} />
+        </div>
+      )}
+      {showScreen && streamStatus && !displayError && (
+        <div className='screen-error screen-stream-status' role='status'>
+          <div className='screen-error-message'>
+            {streamStatus === 'reconnecting' ? <Loader color='gray' type='dots' /> : <IconEyeOff size={30} />}
+            <p>{streamStatusMessages[streamStatus]}</p>
+          </div>
         </div>
       )}
       {fingerIndexes.map((index) => (
