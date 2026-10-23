@@ -28,6 +28,9 @@ export function isDeviceCommand(event: unknown): boolean {
 export class DevicePacketAccess {
   private readonly channels = new Map<string, string>()
   private readonly automated = new Set<string>()
+  private readonly changed = new Map<string, number>()
+  private revision = 0
+  private subscriptionsChanged = 0
 
   constructor(
     private readonly loadVisible: (groups: string[]) => PromiseLike<DeviceAccess[]>
@@ -35,6 +38,7 @@ export class DevicePacketAccess {
   ) {}
 
   joined(serial: string, usage?: string | null) {
+    this.invalidate(serial)
     if (usage === 'automation') {
       this.automated.add(serial)
     }
@@ -44,7 +48,26 @@ export class DevicePacketAccess {
   }
 
   released(serial: string) {
+    this.invalidate(serial)
     this.automated.delete(serial)
+  }
+
+  invalidate(serial?: string) {
+    if (serial) {
+      this.changed.set(serial, ++this.revision)
+    }
+    else {
+      this.subscriptionsChanged = ++this.revision
+    }
+  }
+
+  checkpoint(): number {
+    return this.revision
+  }
+
+  current(channel: string, checkpoint: number): boolean {
+    return this.subscriptionsChanged <= checkpoint &&
+      (this.changed.get(this.source(channel)) || 0) <= checkpoint
   }
 
   source(channel: string): string {

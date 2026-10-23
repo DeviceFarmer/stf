@@ -37,9 +37,16 @@ automatically, including when another test starts immediately afterwards.
 The websocket unit checks the device group, current channel, readiness and
 automation state before forwarding manual device commands. Join notifications
 block input during the interval before ownership is stored in the database.
-Denied transactions receive a cancellation response; authorization checks retain
-input order. Ordinary iOS administrator access within subscribed groups remains
-available outside automation.
+Denied transactions receive a cancellation response. Packets waiting on one
+device lookup share its pending snapshot and retain their order within that
+device channel; the snapshot is discarded after the batch. Ownership, device
+and group notifications invalidate an in-flight batch. A slow device does not
+block input to another device.
+
+Authorization has bounded queues and a lookup deadline. A stalled or overloaded
+connection cancels queued requests and disconnects, so old gestures cannot build
+up indefinitely. Reconnect to resume manual control. Ordinary iOS administrator
+access within subscribed groups remains available outside automation.
 
 The iOS screen endpoint authenticates the viewer and checks the STF API. A
 non-owner must have access to the device group, and the reservation must still
