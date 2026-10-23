@@ -100,7 +100,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     sed -i'' -e '/phantomjs/d' package.json && \
     export VCPKG_FORCE_SYSTEM_BINARIES="arm" && \
     echo 'npm install --save-dev pnpm' | su stf -s /bin/bash && \
-    echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
+    echo 'npm install --python="/usr/bin/python3" --loglevel http' | su stf -s /bin/bash && \
     echo '--- Assembling app' && \
     echo 'npm pack' | su stf -s /bin/bash && \
     tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
