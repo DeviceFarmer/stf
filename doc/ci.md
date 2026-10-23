@@ -313,7 +313,11 @@ otherwise spend the whole step budget inside apt's own retries, and then retries
 the install three times, refreshing the indexes between the tries. The Playwright
 install is wrapped in `retry.sh`, since `playwright install --with-deps` shells
 out to apt as well and reports a failure there as a bare
-`Installation process exited with code: 100`.
+`Installation process exited with code: 100`. The Android SDK packages the
+emulator action needs (platform, emulator, system image) are installed ahead of
+it by `install-android-sdk.sh` under `retry.sh`, because the action downloads
+them once with no retry and a truncated archive from `dl.google.com` would
+otherwise fail the leg before the emulator starts.
 
 **From the emulator on**, the leg itself is retried once. The verdict is derived,
 and if it failed the leg runs a second time from a fresh AVD and the second

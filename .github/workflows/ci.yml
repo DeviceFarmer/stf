@@ -589,6 +589,18 @@ jobs:
         if: steps.probe.outputs.available != 'true'
         run: echo '{"image":"skip"}' > checks.json
 
+      # The emulator action downloads these itself with no retry, and a bad
+      # archive from dl.google.com then fails the leg before the emulator
+      # starts. Installed here, the action's own installs are no-ops.
+      - name: Install the Android SDK packages
+        if: steps.probe.outputs.available == 'true'
+        timeout-minutes: 20
+        run: >-
+          bash .github/scripts/retry.sh 3
+          bash .github/scripts/install-android-sdk.sh
+          '${{ matrix.api }}' '${{ matrix.target }}' '${{ matrix.arch }}'
+          '${{ matrix.channel == 'dev' && '2' || '0' }}'
+
       - name: Boot the emulator and run STF against it
         id: emulator
         if: steps.probe.outputs.available == 'true'
