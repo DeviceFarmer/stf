@@ -13,6 +13,7 @@ import type {Device} from '@/core/devices/types'
 import {useTranslation} from '@/core/i18n'
 import type {DeviceActions} from './use-device-actions'
 import classes from './DeviceControlPanel.module.css'
+import {DeviceImage} from '@/ui/DeviceImage'
 
 function DeviceNameMenu({device, actions}: {device: Device, actions: DeviceActions}) {
   const {groupDevices} = actions
@@ -22,7 +23,7 @@ function DeviceNameMenu({device, actions}: {device: Device, actions: DeviceActio
     <Menu position='bottom-start' width={280} shadow='md' disabled={!hasGroup} withinPortal>
       <Menu.Target>
         <UnstyledButton className={`${classes.deviceName} stf-vnc-device-name unselectable`}>
-          <img className={classes.deviceImage} src={device.enhancedImage24} alt='' />
+          <DeviceImage w={36} h={24} className={classes.deviceImage} src={device.enhancedImage24} alt='' />
           <Text size='sm' fw={600} truncate className='device-name-text'>{device.enhancedName}</Text>
           {hasGroup && <IconChevronDown size={14} className='caret' />}
         </UnstyledButton>
@@ -32,7 +33,8 @@ function DeviceNameMenu({device, actions}: {device: Device, actions: DeviceActio
           <Menu.Item
             key={groupDevice.serial}
             className='device-name-menu-element'
-            leftSection={<img className={classes.menuDeviceImage} src={groupDevice.enhancedImage24} alt='' />}
+            leftSection={<DeviceImage w={36} h={24} className={classes.menuDeviceImage}
+              src={groupDevice.enhancedImage24} alt='' />}
             rightSection={(
               <ActionIcon
                 component='span'
@@ -78,6 +80,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
     <div className={`${classes.toolbar} stf-vnc-navbar`}>
       <DeviceNameMenu device={device} actions={actions} />
       <Group gap={6} wrap='nowrap' className={`${classes.rightButtons} stf-vnc-right-buttons`}>
+        {device.platform !== 'iOS' && <>
         <ActionIcon.Group>
           <Tooltip label={`${t('Portrait')} ${rotationSuffix}`} position='bottom'>
             <ActionIcon
@@ -125,6 +128,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
           </Tooltip>
         </ActionIcon.Group>
         <Divider orientation='vertical' />
+        </>}
         <Tooltip label={showScreen ? t('Hide Screen') : t('Show Screen')} position='bottom'>
           <ActionIcon
             size='md'

@@ -11,7 +11,7 @@ import classes from '../Dashboard.module.css'
 
 const clipboardStore = createDeviceStore<string>('')
 
-export function ClipboardCard({control}: {control: Control}) {
+export function ClipboardCard({control, inputOnly = false}: {control: Control, inputOnly?: boolean}) {
   const {t} = useTranslation()
   const serial = control.target.serial
   const content = clipboardStore.useValue(serial)
@@ -38,7 +38,7 @@ export function ClipboardCard({control}: {control: Control}) {
   }
 
   return (
-    <WidgetCard className='stf-clipboard' icon={IconClipboardText} color='orange' title={t('Clipboard')}>
+    <WidgetCard className='stf-clipboard' icon={IconClipboardText} color='orange' title={inputOnly ? t('Paste to device') : t('Clipboard')}>
       <Textarea
         classNames={{input: `clipboard-textarea ${classes.monoInput}`}}
         value={content}
@@ -52,14 +52,14 @@ export function ClipboardCard({control}: {control: Control}) {
       />
       <Group justify='space-between' mt='sm' gap='xs'>
         <Group gap='xs'>
-          <Button
+          {!inputOnly && <Button
             size='xs'
             leftSection={<IconRefresh size={14} />}
             loading={loading}
             onClick={getClipboardContent}
           >
             {t('Get clipboard contents')}
-          </Button>
+          </Button>}
           <Button
             size='xs'
             variant='default'

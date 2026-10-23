@@ -26,13 +26,16 @@
     "stf": "./bin/stf"
   },
   "scripts": {
+    "ios:prototype": "node tools/ios-prototype/main.mts",
+    "ios:compose": "sh bin/stf-ios-compose",
+    "test:ios-prototype": "node --test tools/ios-prototype/test/*.test.mts",
     "test": "node build.mts test && npm run test:unit",
     "prepare": "not-in-install && node build.mts build || in-install",
     "prelocal": "node build.mts compile translate-compile",
     "local": "node lib/cli/index.js local",
     "lint": "node build.mts lint",
     "pretest:unit": "node build.mts compile",
-    "test:unit": "mocha --reporter spec --recursive --extension mts test/util test/wire test/db test/units",
+    "test:unit": "mocha --reporter spec --recursive --extension mts test/util test/wire test/db test/units && npm run test:ios-prototype",
     "build": "node build.mts build",
     "test:component": "vitest run --config res/app/vitest.config.ts"
   },

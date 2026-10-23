@@ -34,6 +34,11 @@ var builder = function(yargs: Argv) {
     , type: 'number'
     , default: process.env.PORT || 7100
     })
+    .option('ios-screen-routes', {
+      describe: 'Local iOS screen path to loopback backend mapping (JSON object).'
+    , type: 'string'
+    , default: '{}'
+    })
     .option('storage-plugin-apk-url', {
       describe: 'URL to the APK storage plugin unit.'
     , type: 'string'
@@ -72,6 +77,7 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   , storageUrl: argv.storageUrl
   , storagePluginImageUrl: argv.storagePluginImageUrl
   , storagePluginApkUrl: argv.storagePluginApkUrl
+  , iosScreenRoutes: JSON.parse(argv.iosScreenRoutes)
   })
 }
 

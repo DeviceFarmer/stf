@@ -45,3 +45,7 @@ environment, as demonstrated by [the CI override](../../test/compose/docker-comp
 
 The [Compose CI test](../../test/compose/README.md) exercises this topology with
 an Android 16 AVD, browser device control, and API/storage requests through Nginx.
+
+For physical iPhones on a Linux host, use the optional
+[local iOS launcher](../ios/README.md). It reuses this topology, selects devices
+from one JSON file and adds the USB tunnel/runtime/provider without Kubernetes.

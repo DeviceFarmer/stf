@@ -1,4 +1,5 @@
 import type {Expression, WriteResultWithChanges} from 'rethinkdb'
+import type {IosDeviceStatus} from '../util/ios-device-status.js'
 import type {
   DeviceBrowserAppMessageFields
 , DeviceDisplayMessageFields
@@ -93,6 +94,7 @@ export interface DeviceGroup {
 }
 
 export interface DeviceDocument {
+  ios?: IosDeviceStatus | null
   serial: string
   present: boolean
   ready: boolean

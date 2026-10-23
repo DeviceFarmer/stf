@@ -6,7 +6,7 @@ import {installFailureText, installFile, installStateText, type Installation} fr
 let notificationCounter = 0
 
 function progressMessage(installation: Installation): string {
-  return `${installStateText(installation.state)} (${installation.progress}%)`
+  return installStateText(installation.state) + (installation.indeterminate ? '' : ` (${installation.progress}%)`)
 }
 
 export function installDroppedFiles(control: Control, files: File[]): Promise<void> {

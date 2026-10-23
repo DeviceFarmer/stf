@@ -5,6 +5,7 @@
 import {createRequire} from 'module'
 import type {Argv} from 'yargs'
 import type {CommandArgv} from '../../types/cli.js'
+import {prepareLocalIos} from '../../units/ios-provider/local.js'
 
 var require = createRequire(import.meta.url)
 
@@ -183,6 +184,14 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: os.hostname()
     })
+    .option('ios-config', {
+      describe: 'JSON configuration of explicitly selected Linux USB iPhones.'
+    , type: 'string'
+    })
+    .option('ios-state-dir', {
+      describe: 'Private persistent iOS state directory (default ~/.stf-ios-local).'
+    , type: 'string'
+    })
     .option('provider-max-port', {
       describe: 'Highest port number for device workers to use.'
     , type: 'number'
@@ -274,7 +283,7 @@ var builder = function(yargs: Argv) {
 
 type CliArg = string | number
 
-var handler = function(argv: CommandArgv<typeof builder>) {
+var handler = async function(argv: CommandArgv<typeof builder>) {
   var util = require('util')
   var path = require('path')
 
@@ -287,6 +296,26 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   // Each forked process waits for signals to stop, and so we run over the
   // default limit of 10. So, it's not a leak, but a refactor wouldn't hurt.
   process.setMaxListeners(20)
+
+  const ios = argv.iosConfig ? await prepareLocalIos({
+    configFile: argv.iosConfig
+  , ...(argv.iosStateDir ? {stateDirectory: argv.iosStateDir} : {})
+  , apiPort: argv.apiPort, storagePort: argv.storagePort
+  , push: argv.bindDevPull, sub: argv.bindDevPub
+  , excludedPorts: [argv.port, argv.appPort, argv.apiPort, argv.authPort, argv.websocketPort
+    , argv.storagePort, argv.storagePluginImagePort, argv.storagePluginApkPort
+    , ...Array.from({length: Math.max(0, argv.providerMaxPort - argv.providerMinPort + 1)}
+      , (_, index) => argv.providerMinPort + index)]
+  }) : undefined
+  if (ios) {
+    const origin = new URL(ios.config.publicOrigin)
+    argv.port = Number(origin.port || 80)
+    argv.publicIp = origin.hostname
+    argv.websocketUrl = ios.config.publicOrigin + '/'
+    if (!ios.config.android) {
+      argv.provider = false
+    }
+  }
 
   function run() {
     var procs = [
@@ -439,6 +468,7 @@ var handler = function(argv: CommandArgv<typeof builder>) {
         , util.format('http://localhost:%d/', argv.storagePluginImagePort)
         , '--storage-plugin-apk-url'
         , util.format('http://localhost:%d/', argv.storagePluginApkPort)
+        , '--ios-screen-routes', JSON.stringify(ios?.routes || {})
         ])
     ]
 
@@ -470,24 +500,31 @@ var handler = function(argv: CommandArgv<typeof builder>) {
         .concat(argv.serial)))
     }
 
+    ios?.start().catch(error => {
+      log.fatal('Unable to start local iOS devices', error)
+      shutdown().then(() => process.exit(1))
+    })
+
     function shutdown() {
       log.info('Shutting down all child processes')
-      return Promise.all(procs.map(function(proc) {
+      return Promise.all([ios?.stop(), ...procs.map(function(proc) {
         return proc.stop()
-      }))
+      })])
     }
 
     process.on('SIGINT', function() {
       log.info('Received SIGINT, waiting for processes to terminate')
+      ios?.stop()
     })
 
     process.on('SIGTERM', function() {
       log.info('Received SIGTERM, waiting for processes to terminate')
+      ios?.stop()
     })
 
     return Promise.all(procs)
       .then(function() {
-        process.exit(0)
+        return shutdown().then(() => process.exit(0))
       })
       .catch(function(err) {
         log.fatal('Child process had an error', err.stack)
@@ -498,8 +535,13 @@ var handler = function(argv: CommandArgv<typeof builder>) {
       })
   }
 
-  return procutil.fork(path.resolve(import.meta.dirname, '..'), ['migrate'])
-    .done(run)
+  try {
+    await procutil.fork(path.resolve(import.meta.dirname, '..'), ['migrate'])
+    return await run()
+  }
+  finally {
+    await ios?.stop()
+  }
 }
 
 export {command, describe, builder, handler}

@@ -4,6 +4,7 @@
 /.dockerignore
 /.editorconfig
 /.env
+/ios.local.json
 /.gitignore
 /.idea/
 /.jscsrc
@@ -20,6 +21,8 @@
 /rethinkdb_data/
 /temp/
 /test/
+/tools/ios-prototype/test/
+/doc/ios-media/
 /tmp/
 /tsconfig.json
 /webpack.config.mts

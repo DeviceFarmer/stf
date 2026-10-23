@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 import {
   ActionIcon
   , Alert
@@ -34,6 +34,7 @@ import {
   , installStateText
   , installUrl
   , installationStore
+  , restoreIosInstallation
   , type Installation
 } from '@/core/install'
 import {notifyFailure} from '@/ui/notify'
@@ -45,6 +46,7 @@ function InstalledApp({control, installation}: {control: Control, installation: 
   const {t} = useTranslation()
   const [showManifest, setShowManifest] = useState(false)
   const packageName = installation.manifest?.package
+  const ios = control.target.platform === 'iOS'
 
   function uninstall() {
     if (packageName) {
@@ -62,7 +64,7 @@ function InstalledApp({control, installation}: {control: Control, installation: 
             <IconCircleCheck size={18} color='var(--mantine-color-teal-6)' />
             <Text fw={600} size='sm' truncate className='selectable'>{packageName || 'App'}</Text>
           </Group>
-          {installation.success && packageName && (
+          {!ios && installation.success && packageName && (
             <Button
               size='compact-xs'
               color='red'
@@ -74,7 +76,14 @@ function InstalledApp({control, installation}: {control: Control, installation: 
             </Button>
           )}
         </Group>
-        {installation.manifest && <ActivityLauncher control={control} manifest={installation.manifest} />}
+        {ios && <>
+          <Text size='sm'>{String(installation.manifest?.name || packageName)} · {String(installation.manifest?.version || '')}</Text>
+          {typeof installation.manifest?.profileExpiresAt === 'string' && <Text size='xs' c='dimmed'>
+            {t('Profile expires')}: {new Date(installation.manifest.profileExpiresAt).toLocaleString()}
+          </Text>}
+          {installation.launchError && <Alert color='yellow'>{t('The app was installed but could not be opened. Open it on the iPhone and check developer trust.')}</Alert>}
+        </>}
+        {!ios && installation.manifest && <ActivityLauncher control={control} manifest={installation.manifest} />}
         <div>
           <Button
             size='compact-xs'
@@ -111,6 +120,9 @@ function InstallationStatus({control, installation}: {control: Control, installa
         className='selectable'
       >
         {installFailureText(installation.error)}
+        {installation.outcomeUncertain && <Text size='sm' mt='xs'>
+          {t('The app may already be installed. Check the iPhone before retrying.')}
+        </Text>}
       </Alert>
     )
   }
@@ -123,9 +135,13 @@ function InstallationStatus({control, installation}: {control: Control, installa
     <Stack gap={6}>
       <Group justify='space-between' gap='xs'>
         <Text size='sm' fw={600}>{installStateText(installation.state)}</Text>
-        <Badge variant='light' size='sm'>{installation.progress}%</Badge>
+        {!installation.indeterminate && <Badge variant='light' size='sm'>{installation.progress}%</Badge>}
       </Group>
-      <Progress value={installation.progress} striped animated={!installation.settled} size='md' radius='xl' />
+      <Progress value={installation.indeterminate ? 100 : installation.progress} striped animated={!installation.settled} size='md' radius='xl' />
+      {control.target.platform === 'iOS' && installation.jobId && !installation.settled && <Button
+        size='compact-xs' variant='subtle' color='red'
+        onClick={() => control.cancelIosInstall(installation.jobId!).catch(notifyFailure)}
+      >{t('Cancel')}</Button>}
     </Stack>
   )
 }
@@ -136,6 +152,12 @@ export function InstallCard({control}: {control: Control}) {
   const installation = installationStore.useValue(serial)
   const [remoteUrl, setRemoteUrl] = useState('')
   const busy = Boolean(installation && !installation.settled)
+  const ios = control.target.platform === 'iOS'
+  useEffect(() => {
+    if (ios) {
+      restoreIosInstallation(control).catch(() => {})
+    }
+  }, [control, ios])
 
   function submitUrl() {
     if (remoteUrl) {
@@ -155,7 +177,7 @@ export function InstallCard({control}: {control: Control}) {
           color='red'
           variant='subtle'
           leftSection={<IconTrash size={14} />}
-          disabled={!installation}
+          disabled={!installation || (ios && busy)}
           onClick={() => clearInstallation(serial)}
         >
           {t('Clear')}
@@ -163,6 +185,7 @@ export function InstallCard({control}: {control: Control}) {
       )}
     >
       <Stack gap='sm'>
+        {ios && <Text size='xs' c='dimmed'>{t('Upload an IPA signed for this iPhone. STF does not sign apps.')}</Text>}
         <Dropzone
           className={`${classes.dropzone} drop-area`}
           onDrop={(files) => installFile(control, files)}
@@ -188,7 +211,7 @@ export function InstallCard({control}: {control: Control}) {
             </div>
           </Group>
         </Dropzone>
-        <form
+        {!ios && <form
           onSubmit={(event) => {
             event.preventDefault()
             submitUrl()
@@ -212,7 +235,10 @@ export function InstallCard({control}: {control: Control}) {
             spellCheck={false}
             autoComplete='url'
           />
-        </form>
+        </form>}
+        {ios && <Button size='compact-xs' variant='subtle' disabled={busy}
+          onClick={() => restoreIosInstallation(control).catch(notifyFailure)}
+        >{t('Check installation status')}</Button>}
         {installation && (
           <div className='upload-status'>
             <InstallationStatus control={control} installation={installation} />

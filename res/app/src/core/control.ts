@@ -32,8 +32,8 @@ export function createControl(target: Device, channel: string) {
     emit(action, channel, data)
   }
 
-  function sendTwoWay(action: string, data?: unknown): TxPromise {
-    const tx = createTransaction(target)
+  function sendTwoWay(action: string, data?: unknown, timeoutMs?: number): TxPromise {
+    const tx = createTransaction(target, timeoutMs)
     emit(action, channel, tx.channel, data)
     return tx.promise
   }
@@ -68,6 +68,10 @@ export function createControl(target: Device, channel: string) {
     , keyUp: keySender('input.keyUp')
     , keyPress: keySender('input.keyPress')
     , home: keySender('input.keyPress', 'home')
+    , shake: () => sendTwoWay('device.shake', {}, 65000)
+    , unlock: () => sendTwoWay('device.unlock', {}, 20000)
+    , lock: () => sendTwoWay('device.lock', {}, 65000)
+    , iosPower: (action: 'reboot' | 'shutdown') => sendTwoWay('device.iosPower', {action}, 25000)
     , menu: keySender('input.keyPress', 'menu')
     , back: keySender('input.keyPress', 'back')
     , appSwitch: keySender('input.keyPress', 'app_switch')
@@ -76,7 +80,9 @@ export function createControl(target: Device, channel: string) {
     , copy: () => sendTwoWay('clipboard.copy')
     , shell: (command: string) => sendTwoWay('shell.command', {command, timeout: 10000})
     , identify: () => sendTwoWay('device.identify')
-    , install: (options: InstallOptions) => sendTwoWay('device.install', options)
+    , install: (options: InstallOptions) => sendTwoWay('device.install', options, target.platform === 'iOS' ? 20000 : undefined)
+    , iosInstallStatus: (id?: string) => sendTwoWay('device.install.status', {id}, 10000)
+    , cancelIosInstall: (id: string) => sendTwoWay('device.install.cancel', {id}, 20000)
     , uninstall: (packageName: string) => sendTwoWay('device.uninstall', {packageName})
     , reboot: () => sendTwoWay('device.reboot')
     , rebootAndKeep: () =>

@@ -2,6 +2,7 @@
 *.tgz
 .DS_Store
 .env
+ios.local.json
 .git/
 .idea/
 node_modules/
@@ -12,3 +13,4 @@ rethinkdb_data/
 temp/
 tmp/
 .eslintcache
+doc/ios-media/

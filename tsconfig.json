@@ -22,6 +22,7 @@
     "res/common/**/*.ts",
     "res/common/**/*.mts",
     "test/**/*.mts",
+    "tools/ios-prototype/**/*.mts",
     "lib/**/*.ts"
   ],
   "exclude": ["test/playwright", "node_modules"]

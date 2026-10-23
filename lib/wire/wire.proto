@@ -85,6 +85,12 @@ enum MessageType {
   BluetoothSetEnabledMessage = 94;
   BluetoothGetStatusMessage  = 95;
   BluetoothCleanBondedMessage = 96;
+  IosInstallStatusMessage     = 97;
+  IosInstallCancelMessage     = 98;
+  IosShakeMessage             = 99;
+  IosUnlockMessage            = 100;
+  IosLockMessage              = 101;
+  IosPowerMessage             = 102;
   GroupUserChangeMessage     = 1200;
   DeviceGroupChangeMessage   = 1201;
   DeviceOriginGroupMessage   = 1202;
@@ -619,6 +625,28 @@ message InstallMessage {
   required string href = 1;
   required bool launch = 2;
   optional string manifest = 3;
+  optional string requestId = 4;
+}
+
+message IosInstallStatusMessage {
+  optional string id = 1;
+}
+
+message IosInstallCancelMessage {
+  required string id = 1;
+}
+
+message IosShakeMessage {
+}
+
+message IosUnlockMessage {
+}
+
+message IosLockMessage {
+}
+
+message IosPowerMessage {
+  required string action = 1;
 }
 
 message UninstallMessage {

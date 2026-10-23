@@ -75,6 +75,7 @@ async function eslint() {
     , 'res/common/**/*.{ts,mts}'
     , '*.{ts,mts}'
     , 'test/**/*.mts'
+    , 'tools/ios-prototype/**/*.mts'
     , 'test/playwright/**/*.ts'
     , '.github/scripts/**/*.mts'
   ])

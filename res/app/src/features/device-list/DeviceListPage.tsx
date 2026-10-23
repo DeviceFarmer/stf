@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react'
-import {Center, CloseButton, Group, Image, Loader, Modal, SegmentedControl, TextInput} from '@mantine/core'
+import {Center, CloseButton, Group, Loader, Modal, SegmentedControl, TextInput} from '@mantine/core'
+import {DeviceImage, deviceImageUrl} from '@/ui/DeviceImage'
 import {useDebouncedValue} from '@mantine/hooks'
 import {IconLayoutGrid, IconList, IconSearch, IconSitemap} from '@tabler/icons-react'
 import {useDateFormat} from '@/core/date-format'
@@ -212,8 +213,8 @@ export default function DeviceListPage() {
         size='lg'
       >
         {photo && (
-          <Image
-            src={`/static/app/devices/photo/x800/${photo.image}`}
+          <DeviceImage
+            src={deviceImageUrl(photo.image, 'photo/x800')}
             alt={photo.name}
             fit='contain'
             mah='70vh'

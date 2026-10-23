@@ -1,0 +1,96 @@
+name: iOS prototype
+
+on:
+  pull_request:
+    paths:
+      - tools/ios-prototype/**
+      - bin/stf-ios-compose
+      - docker/ios/**
+      - docker/compose/**
+      - docker-compose.yaml
+      - .github/workflows/ios-prototype.yml
+      - doc/ios-provider.md
+      - package.json
+      - lib/**
+      - res/app/src/**
+      - test/units/ios-*.mts
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  prototype:
+    name: Linux prototype / Node ${{ matrix.node }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        node: ['22.18.0', '24']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Verify the dependency-free entry point
+        run: node tools/ios-prototype/main.mts --help
+      - name: Test HTTP, WDA and process lifecycle without a device
+        run: npm run test:ios-prototype
+
+  compose:
+    name: Local iOS Compose configuration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Render and validate the local stack without a phone
+        run: >-
+          node tools/ios-prototype/compose.mts prepare
+          --config docker/ios/devices.example.json
+          --state-dir "$RUNNER_TEMP/stf-ios-compose"
+      - name: Validate the same-origin screen proxy
+        run: >-
+          docker run --rm
+          --volume "$RUNNER_TEMP/stf-ios-compose/nginx.conf:/etc/nginx/nginx.conf:ro"
+          nginx:stable-alpine nginx -t
+      - name: Initialize an existing non-root-owned device volume
+        run: |
+          docker volume create stf-ios-state-check
+          docker run --rm --volume stf-ios-state-check:/state node:24-bookworm-slim \
+            node -e 'require("fs").chownSync("/state",1000,1000)'
+          docker run --rm --user 0:0 --cap-drop ALL --cap-add CHOWN --cap-add FOWNER \
+            --volume stf-ios-state-check:/state \
+            --volume "$PWD/tools/ios-prototype/container.mts:/container.mts:ro" \
+            node:24-bookworm-slim node /container.mts init
+          docker run --rm --user 1000:1000 --volume stf-ios-state-check:/state \
+            node:24-bookworm-slim node -e 'require("fs").writeFileSync("/state/home/test","ok")'
+          docker volume rm stf-ios-state-check
+
+  image:
+    name: Linux USB runtime image / ${{ matrix.arch }}
+    needs: prototype
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+        if: matrix.arch == 'arm64'
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/ios/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          push: false
+          cache-from: type=gha,scope=ios-runtime-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=ios-runtime-${{ matrix.arch }}

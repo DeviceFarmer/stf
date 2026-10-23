@@ -6,18 +6,21 @@ import type {DeviceActions} from './use-device-actions'
 
 const allowInInputs = ['SELECT']
 
-export function useControlHotkeys(control: Control, actions: DeviceActions) {
+export function useControlHotkeys(control: Control, actions: DeviceActions, ios = false) {
   const navigate = useNavigate()
   const [platform, setPlatform] = usePlatform()
-
-  useHotkeys([
-    ['meta+shift+D', () => navigate('/devices')]
-    , ['shift+space', () => control.keyPress('switch_charset')]
+  const androidOnly: Parameters<typeof useHotkeys>[0] = ios ? [] : [
+    ['shift+space', () => control.keyPress('switch_charset')]
     , ['meta+ArrowLeft', () => actions.rotateBy(-90)]
     , ['meta+ArrowRight', () => actions.rotateBy(90)]
     , ['meta+shift+M', () => control.menu()]
-    , ['meta+shift+H', () => control.home()]
     , ['meta+shift+B', () => control.back()]
+  ]
+
+  useHotkeys([
+    ['meta+shift+D', () => navigate('/devices')]
+    , ['meta+shift+H', () => control.home()]
     , ['shift+W', () => setPlatform(platform === 'web' ? 'native' : 'web'), {preventDefault: false}]
+    , ...androidOnly
   ], allowInInputs)
 }

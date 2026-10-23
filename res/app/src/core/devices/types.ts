@@ -1,3 +1,5 @@
+import type {IosDeviceStatus} from '../../../../../lib/util/ios-device-status'
+
 export type DeviceState =
   | 'absent'
   | 'present'
@@ -72,6 +74,7 @@ export interface DeviceNetwork {
 }
 
 export interface Device {
+  ios?: IosDeviceStatus | null
   serial: string
   present: boolean
   ready: boolean

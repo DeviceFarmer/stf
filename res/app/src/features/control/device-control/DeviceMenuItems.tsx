@@ -21,15 +21,17 @@ export function DeviceMenuItems({device, control, onStopUsing}: {
 }) {
   const {t} = useTranslation()
   const standalone = useStandalone()
+  const ios = device.platform === 'iOS'
 
   return (
     <>
-      <Menu.Item leftSection={<IconArrowBackUp size={16} />} onClick={() => control.back()}>
+      {!ios && <Menu.Item leftSection={<IconArrowBackUp size={16} />} onClick={() => control.back()}>
         {t('Back')}
-      </Menu.Item>
+      </Menu.Item>}
       <Menu.Item leftSection={<IconHome size={16} />} onClick={() => control.home()}>
         {t('Home')}
       </Menu.Item>
+      {!ios && <>
       <Menu.Item leftSection={<IconSquare size={16} />} onClick={() => control.appSwitch()}>
         {t('Recents')}
       </Menu.Item>
@@ -44,6 +46,7 @@ export function DeviceMenuItems({device, control, onStopUsing}: {
         {t('Rotate Right')}
       </Menu.Item>
       <Menu.Divider />
+      </>}
       <Menu.Item leftSection={<IconCamera size={16} />} onClick={() => saveScreenshot(control)}>
         {t('Save ScreenShot')}
       </Menu.Item>

@@ -220,6 +220,7 @@ export default [
     , 'test/**/*.mts'
     , 'test/playwright/**/*.ts'
     , '.github/scripts/**/*.mts'
+    , 'tools/ios-prototype/**/*.mts'
     ]
   , languageOptions: {
       parser: tseslint.parser

@@ -1,5 +1,5 @@
 import {useEffect, useState, type ComponentType, type ReactNode} from 'react'
-import {Button, Group, Image, Progress, Table, Text, type MantineColor} from '@mantine/core'
+import {Button, Group, Progress, Table, Text, type MantineColor} from '@mantine/core'
 import {modals} from '@mantine/modals'
 import {
   IconBolt
@@ -17,9 +17,10 @@ import {
 import {displayDensities, humanizedBool, networkTypes} from '@/core/devices/enhance'
 import type {Device} from '@/core/devices/types'
 import {gettext, translate, useTranslation} from '@/core/i18n'
-import {NothingToShow} from '@/ui/NothingToShow'
+import {DeviceImage, deviceImageUrl} from '@/ui/DeviceImage'
 import {notifyFailure} from '@/ui/notify'
 import {WidgetCard} from '@/ui/WidgetCard'
+import {IosDeviceHealth} from '@/ui/IosDeviceHealth'
 import type {PaneProps} from '../../types'
 import classes from './InfoPane.module.css'
 
@@ -98,14 +99,9 @@ function BatteryLevel({device}: {device: Device}) {
 }
 
 function DevicePhoto({url}: {url: string}) {
-  const {t} = useTranslation()
-  const [failed, setFailed] = useState(false)
-  if (failed) {
-    return <NothingToShow message={t('No photo available')} icon={<IconPhoto size={30} />} />
-  }
   return (
     <div className={classes.photo}>
-      <Image src={url} alt='' fit='contain' mah='75vh' onError={() => setFailed(true)} />
+      <DeviceImage src={url} alt='' mah='75vh' />
     </div>
   )
 }
@@ -121,7 +117,7 @@ function openDevicePhoto(device: Device) {
     , size: 'xl'
     , centered: true
     , classNames: {content: 'stf-lightbox-image'}
-    , children: <DevicePhoto url={`/static/app/devices/photo/x800/${device.image}`} />
+    , children: <DevicePhoto url={deviceImageUrl(device.image, 'photo/x800')} />
   })
 }
 
@@ -183,7 +179,7 @@ export default function InfoPane({device, control}: PaneProps) {
       , title: gettext('Physical Device')
       , icon: IconMapPin
       , color: 'pink'
-      , actions: (
+      , actions: device.platform !== 'iOS' && (
         <Button size='compact-xs' leftSection={<IconInfoCircle size={14} />} onClick={() => control.identify().catch(notifyFailure)}>
           {t('Find Device')}
         </Button>
@@ -304,7 +300,9 @@ export default function InfoPane({device, control}: PaneProps) {
 
   return (
     <div className={`stf-info selectable ${classes.masonry}`}>
-      {sections.map((section) => (
+      {device.platform === 'iOS' && <div className={classes.item}><IosDeviceHealth device={device} /></div>}
+      {sections.filter(section => device.platform !== 'iOS' ||
+        ['physical', 'display', 'hardware', 'platform'].includes(section.id)).map((section) => (
         <WidgetCard
           key={section.id}
           title={t(section.title)}
