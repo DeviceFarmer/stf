@@ -23,7 +23,8 @@ import zmqutil from '../../util/zmqutil.js'
 import cookieSession from './middleware/cookie-session.js'
 import ip from './middleware/remote-ip.js'
 import auth from './middleware/auth.js'
-import {createIosPacketGuard} from './ios-access.js'
+import {createDevicePacketGuard} from './ios-access.js'
+import {DevicePacketAccess, isDeviceCommand} from './device-access.js'
 import {readIosProperties} from '../../util/ios-device-status.js'
 import jwtutil from '../../util/jwtutil.js'
 
@@ -241,8 +242,13 @@ export default function(options: WebsocketOptions) {
     var channels: string[] = []
     var messageListener: MessageListener
 
-    socket.use(createIosPacketGuard(user, dbapi.loadDeviceBySerial, (channel, failure) => {
+    const deviceAccess = new DevicePacketAccess(dbapi.loadDevices, dbapi.loadDeviceBySerial)
+    socket.use(createDevicePacketGuard(user, dbapi.loadDeviceBySerial, (channel, failure) => {
       socket.emit('tx.cancel', channel, failure)
+    }, {
+      matches: isDeviceCommand
+    , allows: (channel, groups, load) => deviceAccess.allows(channel, groups, load)
+    , source: channel => deviceAccess.source(channel)
     }))
     socket.on('error', error => log.warn('Socket request rejected: %s', error.message))
 
@@ -377,6 +383,7 @@ export default function(options: WebsocketOptions) {
         }
       })
       .on(wire.DeviceReadyMessage, function(channel, message) {
+        deviceAccess.released(message.serial)
         socket.emit('device.change', {
           important: true
         , data: {
@@ -398,6 +405,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.DeviceAbsentMessage, function(channel, message) {
+        deviceAccess.released(message.serial)
         socket.emit('device.remove', {
           important: true
         , data: {
@@ -408,6 +416,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.JoinGroupMessage, function(channel, message) {
+        deviceAccess.joined(message.serial, message.usage)
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({
@@ -427,6 +436,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.LeaveGroupMessage, function(channel, message) {
+        deviceAccess.released(message.serial)
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({

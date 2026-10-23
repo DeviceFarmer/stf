@@ -1,6 +1,7 @@
 import {emit} from './socket'
 import {createTransaction, TransactionError} from './transaction'
 import type {Device} from './devices/types'
+import {isAutomated} from './devices/enhance'
 
 function request(action: 'group.invite' | 'group.kick', device: Device): Promise<Device> {
   const tx = createTransaction(device)
@@ -23,14 +24,14 @@ function request(action: 'group.invite' | 'group.kick', device: Device): Promise
 }
 
 export function inviteDevice(device: Device): Promise<Device> {
-  if (!device.usable) {
+  if (isAutomated(device) || !device.usable) {
     return Promise.reject(new Error('Device is not usable'))
   }
   return request('group.invite', device)
 }
 
 export function kickDevice(device: Device, force = false): Promise<Device> {
-  if (!force && !device.usable) {
+  if (isAutomated(device) || (!force && !device.usable)) {
     return Promise.reject(new Error('Device is not usable'))
   }
   return request('group.kick', device)

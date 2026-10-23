@@ -114,9 +114,9 @@ test.describe('STF against a real device', function() {
       const before = await canvas.evaluate(function(el: HTMLCanvasElement) {
         return el.toDataURL()
       })
-      await page.click('a[device-control-key="app_switch"]')
+      await page.click('[device-control-key="app_switch"]')
       await page.waitForTimeout(2500)
-      await page.click('a[device-control-key="home"]')
+      await page.click('[device-control-key="home"]')
 
       await expect.poll(async function() {
         const now = await canvas.evaluate(function(el: HTMLCanvasElement) {

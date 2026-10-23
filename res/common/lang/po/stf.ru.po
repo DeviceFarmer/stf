@@ -2634,3 +2634,15 @@ msgstr "Вы"
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr "Вы (или кто-то еще) отключили устройство."
+
+msgid "Automated"
+msgstr "Automated"
+
+msgid "Automation finished"
+msgstr "Автотест завершён"
+
+msgid "View only. Controls are disabled while the test is running."
+msgstr "Идёт автотест. Управление устройством временно отключено."
+
+msgid "The test has finished. Take control to interact with the device."
+msgstr "Тест завершён. Нажмите «Использовать», чтобы управлять устройством."

@@ -73,6 +73,9 @@ export function useDeviceActions(device: Device, control: Control) {
   }
 
   function stopUsing(target: Device) {
+    if (control.readOnly && target.serial === device.serial) {
+      return
+    }
     if (target.serial !== device.serial) {
       kick(target)
       return

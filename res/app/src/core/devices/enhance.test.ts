@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {computeState, enhanceDevice, userProfileUrl} from './enhance'
+import {canViewDevice, computeState, enhanceDevice, userProfileUrl} from './enhance'
 import type {Device} from './types'
 
 function device(overrides: Partial<Device>): Device {
@@ -40,6 +40,18 @@ describe('enhanceDevice', () => {
     expect(named.enhancedImage120).toBe('/static/app/devices/icon/x120/x.jpg')
     expect(named.enhancedStateAction).toBe('Use')
     expect(named.enhancedGroupOwnerProfileUrl).toBe('mailto:owner@example.com')
+  })
+
+  it('shows automation for other owners without granting control or hiding the screen', () => {
+    const automatic = enhanceDevice(device({owner: {email: 'ci@example.test'}, using: false, usage: 'automation'}))
+    expect(automatic.state).toBe('automation')
+    expect(automatic.usable).toBe(false)
+    expect(automatic.enhancedStatePassive).toBe('Automated')
+    expect(canViewDevice(automatic)).toBe(true)
+    const released = enhanceDevice({...automatic, owner: null})
+    expect(released.state).toBe('available')
+    expect(canViewDevice(released)).toBe(false)
+    expect(canViewDevice({...automatic, ready: false})).toBe(false)
   })
 
   it('builds battery details', () => {

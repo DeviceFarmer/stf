@@ -1,7 +1,8 @@
 import {lazy, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type ComponentType} from 'react'
 import {useNavigate, useParams} from 'react-router'
 import {
-  Box
+  Alert
+  , Box
   , Button
   , Center
   , Group
@@ -26,7 +27,7 @@ import {
 } from '@tabler/icons-react'
 import {createControl, type Control} from '@/core/control'
 import {useDevice} from '@/core/devices/store'
-import {likelyLeaveReason} from '@/core/devices/enhance'
+import {isAutomated, likelyLeaveReason} from '@/core/devices/enhance'
 import type {Device} from '@/core/devices/types'
 import {inviteDevice} from '@/core/group'
 import {gettext, useTranslation} from '@/core/i18n'
@@ -163,7 +164,8 @@ function ControlWorkspace({device, control}: PaneProps) {
   const split = useSplit(Math.round(window.innerWidth * 0.34))
   const visiblePanes = device.platform === 'iOS' ?
     panes.filter(pane => ['dashboard', 'screenshots', 'info'].includes(pane.id)) : panes
-  const current = visiblePanes.some((pane) => pane.id === activePane) ? activePane : 'dashboard'
+  const selectedPane = visiblePanes.some((pane) => pane.id === activePane) ? activePane : 'dashboard'
+  const current = control.readOnly ? 'info' : selectedPane
 
   return (
     <div className={classes.workspace}>
@@ -185,7 +187,7 @@ function ControlWorkspace({device, control}: PaneProps) {
       >
         <Tabs.List className={classes.tabList}>
           {visiblePanes.map(({id, title, icon: Icon}) => (
-            <Tabs.Tab key={id} value={id} leftSection={<Icon size={16} />}>
+            <Tabs.Tab key={id} value={id} disabled={control.readOnly && id !== 'info'} leftSection={<Icon size={16} />}>
               {t(title)}
             </Tabs.Tab>
           ))}
@@ -224,6 +226,7 @@ function ControlSession() {
   const {device, loading, error} = useDevice(serial)
   const [joined, setJoined] = useState<Device | null>(null)
   const [lost, setLost] = useState(false)
+  const [watching, setWatching] = useState(false)
   const previousState = useRef<string | null>(null)
   const loadedSerial = device?.serial
   const deviceState = device?.state
@@ -241,6 +244,12 @@ function ControlSession() {
   useEffect(() => {
     const target = latestDevice()
     if (!target || joined) {
+      return
+    }
+    if (isAutomated(target)) {
+      setWatching(true)
+      setJoined(target)
+      setSetting('lastUsedDevice', target.serial)
       return
     }
     let active = true
@@ -262,20 +271,27 @@ function ControlSession() {
   }, [loadedSerial, joined])
 
   useEffect(() => {
+    if (device && isAutomated(device)) {
+      setWatching(true)
+    }
+  }, [device, deviceState])
+
+  useEffect(() => {
     if (!deviceState || !joined) {
       return
     }
     const previous = previousState.current
     previousState.current = deviceState
-    if (previous && previous !== deviceState &&
-        (previous === 'using' || previous === 'automation')) {
+    if (!watching && deviceState !== 'automation' && previous && previous !== deviceState &&
+        previous === 'using') {
       setLost(true)
     }
-  }, [deviceState, joined])
+  }, [deviceState, joined, watching])
 
+  const readOnly = watching || !device?.using || Boolean(device && isAutomated(device))
   const control: Control | null = useMemo(
-    () => (joined ? createControl(joined, joined.channel) : null)
-    , [joined]
+    () => (joined ? createControl(joined, joined.channel, () => readOnly) : null)
+    , [joined, readOnly]
   )
 
   if (!serial) {
@@ -294,12 +310,28 @@ function ControlSession() {
   }
 
   return (
-    <>
-      {basicMode || standalone ?
-        <Box className='fill-height'>
-          <DeviceControlPanel device={device} control={control} standalone />
-        </Box> :
-        <ControlWorkspace device={device} control={control} />}
+    <Stack h='100%' gap={0}>
+      {watching && (
+        <Alert color='violet' title={isAutomated(device) ? t('Automated') : t('Automation finished')}>
+          {isAutomated(device) ? t('View only. Controls are disabled while the test is running.') : (
+            <Group justify='space-between'>
+              <Text size='sm'>{t('The test has finished. Take control to interact with the device.')}</Text>
+              <Button disabled={!device.usable || Boolean(device.owner)} onClick={() => {
+                setWatching(false)
+                previousState.current = null
+                setJoined(null)
+              }}>{t('Use')}</Button>
+            </Group>
+          )}
+        </Alert>
+      )}
+      <Box style={{flex: '1 1 0%', minHeight: 0}}>
+        {basicMode || standalone ?
+          <Box className='fill-height'>
+            <DeviceControlPanel device={device} control={control} standalone />
+          </Box> :
+          <ControlWorkspace device={device} control={control} />}
+      </Box>
       {lost && (
         <DeviceLostModal
           device={device}
@@ -315,6 +347,6 @@ function ControlSession() {
           onDismiss={() => setLost(false)}
         />
       )}
-    </>
+    </Stack>
   )
 }

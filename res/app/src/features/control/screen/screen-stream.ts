@@ -1,4 +1,5 @@
 import type {Device} from '@/core/devices/types'
+import {canViewDevice} from '@/core/devices/enhance'
 import {rotator} from './rotator'
 
 export interface ScreenBounds {
@@ -137,7 +138,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function shouldUpdateScreen(): boolean {
     return options.isShown() &&
-      Boolean(getDevice().using) &&
+      canViewDevice(getDevice()) &&
       !document.hidden &&
       isOpen()
   }
@@ -299,11 +300,11 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       cachedEnabled = false
       const device = getDevice()
       // A recovered iPhone may register before Kubernetes has restored its screen route.
-      if (device.platform === 'iOS' && device.using && device.present && device.ready) {
+      if (device.platform === 'iOS' && canViewDevice(device)) {
         retry = setTimeout(() => {
           retry = null
           const current = getDevice()
-          if (!stopped && current.using && current.present && current.ready) {
+          if (!stopped && canViewDevice(current)) {
             connect()
           }
         }, Math.min(5000, 500 * 2 ** Math.min(4, retryAttempt++)))

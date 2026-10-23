@@ -36,7 +36,7 @@ function fixture(platform = 'iOS') {
   Object.defineProperties(root, {offsetWidth: {value: 400}, offsetHeight: {value: 700}})
   const canvas = document.createElement('canvas')
   canvas.getContext = vi.fn(() => ({})) as unknown as typeof canvas.getContext
-  const device = {platform, using: true, present: true, ready: true
+  const device = {platform, using: true, present: true, ready: true, status: 3
     , display: {width: 1170, height: 2532}} as Device
   const stream = startScreenStream({url: 'wss://stf.test/screen', root
     , positioner: document.createElement('div'), canvas
@@ -62,6 +62,25 @@ describe('iPhone screen recovery', () => {
     await vi.advanceTimersByTimeAsync(500)
     Socket.instances[2]!.open()
     expect(Socket.instances[2]!.sent).toContain('on')
+    stream.stop()
+  })
+
+  it('streams a non-owner automation view and reconnects without claiming the device', async() => {
+    const {device, stream} = fixture()
+    device.using = false
+    device.owner = {email: 'runner@example.test'}
+    device.usage = 'automation'
+    Socket.instances[0]!.open()
+    expect(Socket.instances[0]!.sent).toContain('on')
+    Socket.instances[0]!.close()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(Socket.instances).toHaveLength(2)
+    Socket.instances[1]!.open()
+    expect(Socket.instances[1]!.sent).toContain('on')
+    device.owner = null
+    Socket.instances[1]!.close()
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(Socket.instances).toHaveLength(2)
     stream.stop()
   })
 

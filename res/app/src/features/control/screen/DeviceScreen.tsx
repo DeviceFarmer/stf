@@ -37,6 +37,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const [displayError, setDisplayError] = useState<DisplayError>(false)
   const [hasFrame, setHasFrame] = useState(false)
 
+  const readOnly = control.readOnly
   const url = device.display?.url
   const displayWidth = device.display?.width || 0
   const displayHeight = device.display?.height || 0
@@ -96,12 +97,12 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
 
   useEffect(() => {
     streamRef.current?.checkEnabled()
-  }, [device.using, showScreen, url])
+  }, [device.using, device.usage, device.owner, showScreen, url])
 
   useEffect(() => {
     const root = rootRef.current
     const input = inputRef.current
-    if (!root || !input) {
+    if (control.readOnly || !root || !input) {
       return undefined
     }
     return bindScreenTouch({
@@ -112,14 +113,14 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , scaler
       , control
     })
-  }, [control, scaler])
+  }, [control, readOnly, scaler])
 
   useEffect(() => {
     const input = inputRef.current
-    return input ? bindScreenKeyboard(input, control) : undefined
-  }, [control])
+    return !control.readOnly && input ? bindScreenKeyboard(input, control) : undefined
+  }, [control, readOnly])
 
-  useGuestOrientation(control)
+  useGuestOrientation(control, control.readOnly)
 
   function retryLoadingScreen() {
     if (displayError === 'secure') {
@@ -163,7 +164,8 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
                 {t('The current view is marked secure and cannot be viewed remotely.')}
               </div>
             )}
-            <Button fullWidth leftSection={<IconRefresh size={16} />} onClick={retryLoadingScreen}>
+            <Button disabled={control.readOnly} fullWidth leftSection={<IconRefresh size={16} />}
+              onClick={retryLoadingScreen}>
               {t('Retry')}
             </Button>
           </div>
@@ -173,7 +175,8 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
         ref={inputRef}
         type='password'
         className='stf-screen-keyboard'
-        tabIndex={40}
+        disabled={control.readOnly}
+        tabIndex={control.readOnly ? -1 : 40}
         accessKey='C'
         autoCorrect='off'
         autoCapitalize='off'

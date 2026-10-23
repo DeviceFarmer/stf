@@ -1,6 +1,7 @@
 import {useMemo, type MouseEvent} from 'react'
 import {useNavigate} from 'react-router'
 import type {Device} from '@/core/devices/types'
+import {isAutomated} from '@/core/devices/enhance'
 import {inviteDevice, kickDevice} from '@/core/group'
 import {useTranslation} from '@/core/i18n'
 import {useAdminMode} from '@/ui/modes'
@@ -19,7 +20,7 @@ export function controlHref(device: Device): string {
 }
 
 export function canStartUsing(device: Device): boolean {
-  return Boolean(device.usable && !device.using)
+  return Boolean(device.usable && !device.using && !isAutomated(device))
 }
 
 export function useDeviceActions(): DeviceActions {
@@ -71,6 +72,13 @@ export function useDeviceActions(): DeviceActions {
     return {
       adminMode
       , open(event, device) {
+        if (isAutomated(device)) {
+          if (!event.metaKey && !event.ctrlKey && event.button === 0) {
+            event.preventDefault()
+            navigate(`/control/${device.serial}`)
+          }
+          return undefined
+        }
         const handled = modified(event, device)
         if (handled || event.metaKey || event.ctrlKey || event.button !== 0) {
           return handled
@@ -82,6 +90,11 @@ export function useDeviceActions(): DeviceActions {
         return undefined
       }
       , status(event, device) {
+        if (isAutomated(device)) {
+          event.preventDefault()
+          navigate(`/control/${device.serial}`)
+          return undefined
+        }
         const handled = modified(event, device)
         if (handled) {
           return handled

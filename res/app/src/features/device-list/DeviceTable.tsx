@@ -13,7 +13,7 @@ const DeviceRow = memo(function DeviceRow({device, columnIds, context}: {
   context: CellContext
 }) {
   return (
-    <Table.Tr className={device.usable ? undefined : `device-not-usable ${classes.notUsable}`}>
+    <Table.Tr className={device.usable || device.state === 'automation' ? undefined : `device-not-usable ${classes.notUsable}`}>
       {columnIds.map((id) => (
         <Table.Td key={id} className={id === 'name' || id === 'operator' ? classes.wrapCell : undefined}>
           {columnDefinition(id)?.render(device, context)}

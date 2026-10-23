@@ -9,11 +9,12 @@ export function DeviceControlKey({control, deviceKey, title, children}: {
   title: string
   children: ReactNode
 }) {
-  const ref = useRef<HTMLAnchorElement>(null)
+  const readOnly = control.readOnly
+  const ref = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const element = ref.current
-    if (!element) {
+    if (control.readOnly || !element) {
       return undefined
     }
 
@@ -66,13 +67,13 @@ export function DeviceControlKey({control, deviceKey, title, children}: {
       element.removeEventListener('mouseup', mouseUp)
       element.removeEventListener('mouseleave', mouseUp)
     }
-  }, [control, deviceKey])
+  }, [control, deviceKey, readOnly])
 
   return (
     <Tooltip label={title} openDelay={400} withinPortal>
       <ActionIcon
         ref={ref}
-        component='a'
+        disabled={control.readOnly}
         variant='subtle'
         color='gray'
         size={40}

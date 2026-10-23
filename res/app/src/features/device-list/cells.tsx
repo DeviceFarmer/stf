@@ -19,7 +19,7 @@ export const StatusButton = memo(function StatusButton({device, actions}: {
   actions: DeviceActions
 }) {
   const [pending, setPending] = useState(false)
-  const actionable = Boolean(device.usable) || (actions.adminMode && device.state === 'busy')
+  const actionable = Boolean(device.usable || device.state === 'automation') || (actions.adminMode && device.state === 'busy')
 
   return (
     <Button
@@ -49,7 +49,7 @@ export function NameLink({device, label, actions, userEmail}: {
   userEmail: string
 }) {
   const mine = Boolean(device.using && device.owner?.email === userEmail)
-  if (!mine && !canStartUsing(device)) {
+  if (!mine && device.state !== 'automation' && !canStartUsing(device)) {
     return <span className='device-product-name-unusable'>{label}</span>
   }
   return (
