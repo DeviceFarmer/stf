@@ -46,6 +46,20 @@ describe('iOS controls', () => {
     expect(html).not.toContain('Rotate Right')
   })
 
+  it('disables device actions while preserving screen visibility during automation', () => {
+    const html = renderToStaticMarkup(
+      <AuthProviders>
+        <DeviceToolbar device={{...device, platform: 'Android'}} actions={actions}
+          readOnly showScreen onToggleScreen={() => {}} />
+      </AuthProviders>
+    )
+    const page = new DOMParser().parseFromString(html, 'text/html')
+    for (const name of ['Portrait', 'Landscape', 'Rotate Left', 'Rotate Right', 'Stop Using']) {
+      expect(page.querySelector(`[aria-label="${name}"]`)?.hasAttribute('disabled')).toBe(true)
+    }
+    expect(page.querySelector('[aria-label="Hide Screen"]')?.hasAttribute('disabled')).toBe(false)
+  })
+
   it('preserves Android rotation buttons', () => {
     const html = renderToStaticMarkup(
       <AuthProviders>

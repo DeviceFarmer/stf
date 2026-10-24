@@ -25,21 +25,26 @@ export function DeviceMenuItems({device, control, onStopUsing}: {
 
   return (
     <>
-      {!ios && <Menu.Item leftSection={<IconArrowBackUp size={16} />} onClick={() => control.back()}>
+      {!ios && <Menu.Item disabled={control.readOnly}
+        leftSection={<IconArrowBackUp size={16} />} onClick={() => control.back()}>
         {t('Back')}
       </Menu.Item>}
-      <Menu.Item leftSection={<IconHome size={16} />} onClick={() => control.home()}>
+      <Menu.Item disabled={control.readOnly}
+        leftSection={<IconHome size={16} />} onClick={() => control.home()}>
         {t('Home')}
       </Menu.Item>
       {!ios && <>
-      <Menu.Item leftSection={<IconSquare size={16} />} onClick={() => control.appSwitch()}>
+      <Menu.Item disabled={control.readOnly}
+        leftSection={<IconSquare size={16} />} onClick={() => control.appSwitch()}>
         {t('Recents')}
       </Menu.Item>
       <Menu.Divider />
-      <Menu.Item leftSection={<IconRotate size={16} />} onClick={() => rotateBy(control, device, 90, standalone)}>
+      <Menu.Item disabled={control.readOnly}
+        leftSection={<IconRotate size={16} />} onClick={() => rotateBy(control, device, 90, standalone)}>
         {t('Rotate Left')}
       </Menu.Item>
       <Menu.Item
+        disabled={control.readOnly}
         leftSection={<IconRotateClockwise size={16} />}
         onClick={() => rotateBy(control, device, -90, standalone)}
       >
@@ -47,11 +52,13 @@ export function DeviceMenuItems({device, control, onStopUsing}: {
       </Menu.Item>
       <Menu.Divider />
       </>}
-      <Menu.Item leftSection={<IconCamera size={16} />} onClick={() => saveScreenshot(control)}>
+      <Menu.Item disabled={control.readOnly}
+        leftSection={<IconCamera size={16} />} onClick={() => saveScreenshot(control)}>
         {t('Save ScreenShot')}
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item
+        disabled={control.readOnly}
         color='red'
         leftSection={<IconLogout size={16} />}
         onClick={() => (standalone ? window.close() : onStopUsing())}

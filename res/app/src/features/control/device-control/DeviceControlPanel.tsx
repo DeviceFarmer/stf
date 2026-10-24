@@ -27,10 +27,10 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
   const actions = useDeviceActions(device, control)
 
   const ios = device.platform === 'iOS'
-  useControlHotkeys(control, actions, ios)
+  useControlHotkeys(control, actions, ios, control.readOnly)
 
   function onDragOver(event: DragEvent) {
-    if (hasFiles(event)) {
+    if (!control.readOnly && hasFiles(event)) {
       event.preventDefault()
       setDragOver(true)
     }
@@ -39,6 +39,9 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
   function onDrop(event: DragEvent) {
     event.preventDefault()
     setDragOver(false)
+    if (control.readOnly) {
+      return
+    }
     const files = Array.from(event.dataTransfer.files)
     if (files.length) {
       installDroppedFiles(control, files)
@@ -71,6 +74,7 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
       <DeviceToolbar
         device={device}
         actions={actions}
+        readOnly={control.readOnly}
         showScreen={showScreen}
         onToggleScreen={() => setShowScreen((value) => !value)}
       />

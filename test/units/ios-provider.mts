@@ -10,7 +10,7 @@ import type {IosDeviceStatus} from '../../lib/util/ios-device-status.js'
 import {MjpegDecoder} from '../../lib/units/ios-provider/mjpeg.js'
 import {authorizeScreen} from '../../lib/units/ios-provider/access.js'
 import {createScreenServer} from '../../lib/units/ios-provider/screen.js'
-import {allowIosPacket, createIosPacketGuard} from '../../lib/units/websocket/ios-access.js'
+import {allowIosPacket, createDevicePacketGuard} from '../../lib/units/websocket/ios-access.js'
 
 const serial = 'TEST-IPHONE'
 const owner = {email: 'owner@example.test', name: 'Owner', group: 'owner-group'}
@@ -115,12 +115,12 @@ describe('Linux iOS integration', function() {
       bridge.handle(channel, transaction ?
         wireutil.transaction('reply', message) : wireutil.envelope(message))
     }
-    const join = async(timeout = 900000) => {
+    const join = async(timeout = 900000, usage?: string) => {
       await bridge.poll()
       send(new wire.DeviceRegisteredMessage(serial), false, bridge.solo)
       send(new wire.GroupMessage(owner, timeout, [
         new wire.DeviceRequirement('serial', serial, wire.RequirementType.EXACT)
-      ]), true)
+      ], usage), true)
       await until(() => bridge.owner !== null)
     }
     return {bridge, client, state, requests, sent, send, join, errors
@@ -130,6 +130,76 @@ describe('Linux iOS integration', function() {
       , pushFrames: () => screens.forEach(res => res.write(Buffer.concat([frame, frame])))
       , disconnects: () => disconnects, cancelled: () => cancelled}
   }
+
+  it('keeps iOS automation usage until release', async function() {
+    const f = await fixture()
+    await f.join(900000, 'automation')
+    const joined = f.sent.find(item => item.envelope.type === wire.JoinGroupMessage.$code)
+    assert.equal(wire.JoinGroupMessage.decode(joined!.envelope.message).usage, 'automation')
+    assert.equal(f.bridge.usage, 'automation')
+    f.bridge.leave('ungroup_request')
+    assert.equal(f.bridge.usage, null)
+  })
+
+  it('streams authorized automation without extending its lease', async function() {
+    const f = await fixture()
+    let usage: string | null = 'automation'
+    let visible = true
+    const api = http.createServer((req, res) => {
+      if (req.url === '/api/v1/user') {
+        res.end(JSON.stringify({success: true, user: {email: 'viewer@example.test'}}))
+      }
+      else {
+        assert.equal(req.url, '/api/v1/devices/' + serial)
+        res.writeHead(visible ? 200 : 403)
+        res.end(JSON.stringify({success: visible, device: {serial, owner, usage}}))
+      }
+    })
+    servers.push(api)
+    const apiUrl = await listen(api)
+    const headers = {origin, cookie: 'session=signed'}
+    assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), true)
+    usage = null
+    assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
+    usage = 'automation'
+    visible = false
+    assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
+    visible = true
+    await f.join(20000, 'automation')
+    const screen = createScreenServer({client: f.client, apiUrl, publicOrigin: origin, serial
+      , owner: () => f.bridge.owner})
+    const url = (await listen(screen.server)).replace('http:', 'ws:')
+    const ws = new WebSocket(url, {headers})
+    let frames = 0
+    ws.on('message', (_data, binary) => {
+ if (binary) {
+ frames++
+}
+})
+    try {
+      await once(ws, 'open')
+      ws.send('on')
+      await until(() => frames >= 2)
+      assert.equal(f.requests.length, 0)
+      const now = Date.now
+      const future = now() + 21000
+      try {
+        Date.now = () => future
+        f.pushFrames()
+        await new Promise(resolve => setTimeout(resolve, 20))
+        await f.bridge.poll()
+        assert.equal(f.bridge.owner, null, 'Observers must not renew automation ownership')
+        assert.equal(f.bridge.usage, null)
+      }
+      finally {
+        Date.now = now
+      }
+    }
+    finally {
+      ws.terminate()
+      screen.close()
+    }
+  })
 
   it('aborts forwarded input on release and permits a new session', async function() {
     const f = await fixture('iPhone 16 Plus', true)
@@ -451,7 +521,7 @@ describe('Linux iOS integration', function() {
     const user = {email: owner.email, groups: {subscribed: ['root']}}
     const cancelled: unknown[][] = []
     let fail = false
-    const guard = createIosPacketGuard(user, async() => {
+    const guard = createDevicePacketGuard(user, async() => {
       if (fail) {
         throw new Error('database unavailable')
       }
@@ -481,7 +551,7 @@ describe('Linux iOS integration', function() {
     let lookups = 0
     const delivered: string[] = []
     const user = {email: owner.email, groups: {subscribed: ['root']}}
-    const guard = createIosPacketGuard(user, async() => {
+    const guard = createDevicePacketGuard(user, async() => {
       if (++lookups === 1) {
         await pending
       }
@@ -532,7 +602,8 @@ describe('Linux iOS integration', function() {
           res.end(JSON.stringify({success: true, user: {email: viewer}}))
           return
         }
-        assert.equal(req.url, '/api/v1/user/devices/' + serial)
+        const path = viewer === owner.email ? '/api/v1/user/devices/' : '/api/v1/devices/'
+        assert.equal(req.url, path + serial)
         res.writeHead(allowed ? 200 : 403)
         res.end(JSON.stringify({success: allowed, device: {serial, owner}}))
       })

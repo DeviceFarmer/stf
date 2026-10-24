@@ -63,13 +63,13 @@ const DeviceTile = memo(function DeviceTile({device, actions}: {
 
   const tileClasses = [
     classes.tile
-    , device.usable ? '' : `device-is-busy ${classes.unusable}`
+    , (device.usable || device.state === 'automation') ? '' : `device-is-busy ${classes.unusable}`
     , device.using ? classes.using : ''
   ].join(' ')
 
   const tile = (
     <li className={tileClasses} title={device.provider?.name}>
-      {device.usable ?
+      {(device.usable || device.state === 'automation') ?
         <a href={controlHref(device)} className={classes.tileLink} onClick={open}>
           {content}
         </a> :

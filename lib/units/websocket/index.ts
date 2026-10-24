@@ -23,7 +23,8 @@ import zmqutil from '../../util/zmqutil.js'
 import cookieSession from './middleware/cookie-session.js'
 import ip from './middleware/remote-ip.js'
 import auth from './middleware/auth.js'
-import {createIosPacketGuard} from './ios-access.js'
+import {createDevicePacketGuard} from './ios-access.js'
+import {DevicePacketAccess, isDeviceCommand} from './device-access.js'
 import {readIosProperties} from '../../util/ios-device-status.js'
 import jwtutil from '../../util/jwtutil.js'
 
@@ -241,9 +242,16 @@ export default function(options: WebsocketOptions) {
     var channels: string[] = []
     var messageListener: MessageListener
 
-    socket.use(createIosPacketGuard(user, dbapi.loadDeviceBySerial, (channel, failure) => {
+    const deviceAccess = new DevicePacketAccess(dbapi.loadDevices, dbapi.loadDeviceBySerial)
+    socket.use(createDevicePacketGuard(user, dbapi.loadDeviceBySerial, (channel, failure) => {
       socket.emit('tx.cancel', channel, failure)
-    }))
+    }, {
+      matches: isDeviceCommand
+    , allows: (channel, groups, load) => deviceAccess.allows(channel, groups, load)
+    , source: channel => deviceAccess.source(channel)
+    , checkpoint: () => deviceAccess.checkpoint()
+    , current: (channel, checkpoint) => deviceAccess.current(channel, checkpoint)
+    }, {disconnect: () => socket.disconnect(true)}))
     socket.on('error', error => log.warn('Socket request rejected: %s', error.message))
 
     user.ip = socket.handshake.query.uip as string | undefined || req.ip
@@ -281,6 +289,7 @@ export default function(options: WebsocketOptions) {
         disconnectSocket(true)
       })
       .on(wire.DeviceChangeMessage, function(channel, message) {
+        deviceAccess.invalidate(message.device.serial)
         if (user.groups.subscribed.indexOf(message.device.group!.id!) > -1) {
           socket.emit('device.change', {
             important: true
@@ -314,6 +323,7 @@ export default function(options: WebsocketOptions) {
         }
       })
       .on(wire.DeviceGroupChangeMessage, function(channel, message) {
+        deviceAccess.invalidate(message.serial)
         if (user.groups.subscribed.indexOf(message.id) > -1) {
           if (user.groups.subscribed.indexOf(message.group.id) > -1) {
             socket.emit('device.updateGroupDevice', {
@@ -334,6 +344,7 @@ export default function(options: WebsocketOptions) {
       })
       .on(wire.GroupUserChangeMessage, function(channel, message) {
         if (message.users.indexOf(user.email) > -1) {
+          deviceAccess.invalidate()
           if (message.isAdded) {
             user.groups.subscribed = _.union(user.groups.subscribed, [message.id])
             if (message.devices.length) {
@@ -346,6 +357,7 @@ export default function(options: WebsocketOptions) {
             }
             if (message.isDeletedLater) {
               setTimeout(function() {
+                deviceAccess.invalidate()
                 user.groups.subscribed = _.without(user.groups.subscribed, message.id)
               }, 5000)
             }
@@ -359,6 +371,7 @@ export default function(options: WebsocketOptions) {
         socket.emit('device.log', message)
       })
       .on(wire.DeviceIntroductionMessage, function(channel, message) {
+        deviceAccess.invalidate(message.serial)
         if (user.groups.subscribed.indexOf(message.group!.id) > -1) {
           socket.emit('device.add', {
             important: true
@@ -377,6 +390,7 @@ export default function(options: WebsocketOptions) {
         }
       })
       .on(wire.DeviceReadyMessage, function(channel, message) {
+        deviceAccess.released(message.serial)
         socket.emit('device.change', {
           important: true
         , data: {
@@ -389,6 +403,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.DevicePresentMessage, function(channel, message) {
+        deviceAccess.invalidate(message.serial)
         socket.emit('device.change', {
           important: true
         , data: {
@@ -398,6 +413,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.DeviceAbsentMessage, function(channel, message) {
+        deviceAccess.released(message.serial)
         socket.emit('device.remove', {
           important: true
         , data: {
@@ -408,6 +424,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.JoinGroupMessage, function(channel, message) {
+        deviceAccess.joined(message.serial, message.usage)
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({
@@ -427,6 +444,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.LeaveGroupMessage, function(channel, message) {
+        deviceAccess.released(message.serial)
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({
@@ -439,6 +457,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.DeviceStatusMessage, function(channel, message: LabelledStatusMessage) {
+        deviceAccess.invalidate(message.serial)
         message.likelyLeaveReason = 'status_change'
         socket.emit('device.change', {
           important: true

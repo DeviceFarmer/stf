@@ -2,9 +2,9 @@ import {useEffect} from 'react'
 import {browserInfo} from '@/core/browser-info'
 import type {Control} from '@/core/control'
 
-export function useGuestOrientation(control: Control) {
+export function useGuestOrientation(control: Control, disabled = false) {
   useEffect(() => {
-    if (!browserInfo.deviceorientation) {
+    if (disabled || !browserInfo.deviceorientation) {
       return undefined
     }
 
@@ -20,5 +20,5 @@ export function useGuestOrientation(control: Control) {
 
     window.addEventListener('orientationchange', guestDisplayRotated, true)
     return () => window.removeEventListener('orientationchange', guestDisplayRotated, true)
-  }, [control])
+  }, [control, disabled])
 }

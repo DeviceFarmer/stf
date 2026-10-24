@@ -1,7 +1,8 @@
 import {lazy, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type ComponentType} from 'react'
-import {useNavigate, useParams} from 'react-router'
+import {useNavigate, useParams, useSearchParams} from 'react-router'
 import {
-  Box
+  Alert
+  , Box
   , Button
   , Center
   , Group
@@ -26,15 +27,16 @@ import {
 } from '@tabler/icons-react'
 import {createControl, type Control} from '@/core/control'
 import {useDevice} from '@/core/devices/store'
-import {likelyLeaveReason} from '@/core/devices/enhance'
+import {isAutomated, likelyLeaveReason} from '@/core/devices/enhance'
 import type {Device} from '@/core/devices/types'
-import {inviteDevice} from '@/core/group'
+import {inviteDevice, kickDevice} from '@/core/group'
 import {gettext, useTranslation} from '@/core/i18n'
 import {setSetting, useSetting} from '@/core/settings'
 import {basicMode, useStandalone} from '@/ui/modes'
 import {usePageTitle} from '@/ui/page-title'
 import {stateColor} from '@/ui/device-state'
 import {DeviceImage} from '@/ui/DeviceImage'
+import {notifyFailure} from '@/ui/notify'
 import {ControlRedirect} from './ControlRedirect'
 import DeviceControlPanel from './device-control/DeviceControlPanel'
 import type {PaneProps} from './types'
@@ -163,7 +165,8 @@ function ControlWorkspace({device, control}: PaneProps) {
   const split = useSplit(Math.round(window.innerWidth * 0.34))
   const visiblePanes = device.platform === 'iOS' ?
     panes.filter(pane => ['dashboard', 'screenshots', 'info'].includes(pane.id)) : panes
-  const current = visiblePanes.some((pane) => pane.id === activePane) ? activePane : 'dashboard'
+  const selectedPane = visiblePanes.some((pane) => pane.id === activePane) ? activePane : 'dashboard'
+  const current = control.readOnly ? 'info' : selectedPane
 
   return (
     <div className={classes.workspace}>
@@ -185,7 +188,7 @@ function ControlWorkspace({device, control}: PaneProps) {
       >
         <Tabs.List className={classes.tabList}>
           {visiblePanes.map(({id, title, icon: Icon}) => (
-            <Tabs.Tab key={id} value={id} leftSection={<Icon size={16} />}>
+            <Tabs.Tab key={id} value={id} disabled={control.readOnly && id !== 'info'} leftSection={<Icon size={16} />}>
               {t(title)}
             </Tabs.Tab>
           ))}
@@ -219,16 +222,41 @@ export default function ControlPage() {
 function ControlSession() {
   const {serial} = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const watchMode = searchParams.get('mode') === 'watch'
+  const startedWatching = useRef(watchMode)
+  const sessionActive = useRef(false)
   const {t} = useTranslation()
   const standalone = useStandalone()
   const {device, loading, error} = useDevice(serial)
   const [joined, setJoined] = useState<Device | null>(null)
   const [lost, setLost] = useState(false)
+  const automated = Boolean(device && isAutomated(device))
+  const watching = watchMode || automated
+  const [observedAutomation, setObservedAutomation] = useState(false)
+  const [takingControl, setTakingControl] = useState(false)
   const previousState = useRef<string | null>(null)
   const loadedSerial = device?.serial
   const deviceState = device?.state
   const latestDevice = useEffectEvent(() => device)
   const leaveToDeviceList = useEffectEvent(() => navigate('/', {replace: true}))
+  const watch = useEffectEvent(() => {
+    startedWatching.current = true
+    if (!watchMode) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        next.set('mode', 'watch')
+        return next
+      }, {replace: true})
+    }
+  })
+
+  useEffect(() => {
+    sessionActive.current = true
+    return () => {
+      sessionActive.current = false
+    }
+  }, [])
 
   usePageTitle(joined ? device?.enhancedName || joined.enhancedName : null)
 
@@ -241,6 +269,11 @@ function ControlSession() {
   useEffect(() => {
     const target = latestDevice()
     if (!target || joined) {
+      return
+    }
+    if (watchMode || isAutomated(target)) {
+      watch()
+      setJoined(target)
       return
     }
     let active = true
@@ -259,7 +292,27 @@ function ControlSession() {
     return () => {
       active = false
     }
-  }, [loadedSerial, joined])
+  }, [loadedSerial, joined, watchMode])
+
+  useEffect(() => {
+    if (automated) {
+      setObservedAutomation(true)
+    }
+    if (device && (watchMode || automated)) {
+      watch()
+    }
+  }, [device, deviceState, watchMode, automated])
+
+  useEffect(() => {
+    if (!standalone || !startedWatching.current || watching || !device?.using || isAutomated(device)) {
+      return
+    }
+    const release = () => {
+      kickDevice(device).catch(() => undefined)
+    }
+    window.addEventListener('beforeunload', release)
+    return () => window.removeEventListener('beforeunload', release)
+  }, [standalone, watching, device])
 
   useEffect(() => {
     if (!deviceState || !joined) {
@@ -267,16 +320,49 @@ function ControlSession() {
     }
     const previous = previousState.current
     previousState.current = deviceState
-    if (previous && previous !== deviceState &&
-        (previous === 'using' || previous === 'automation')) {
+    if (!watching && deviceState !== 'automation' && previous && previous !== deviceState &&
+        previous === 'using') {
       setLost(true)
     }
-  }, [deviceState, joined])
+  }, [deviceState, joined, watching])
 
+  const readOnly = watching || !device?.using
   const control: Control | null = useMemo(
-    () => (joined ? createControl(joined, joined.channel) : null)
-    , [joined]
+    () => (joined ? createControl(joined, joined.channel, () => readOnly) : null)
+    , [joined, readOnly]
   )
+
+  function takeControl() {
+    if (!device || takingControl || !device.usable || device.owner) {
+      return
+    }
+    const target = device
+    setTakingControl(true)
+    inviteDevice(target)
+      .then(() => {
+        if (!sessionActive.current) {
+          return
+        }
+        previousState.current = null
+        setJoined(target)
+        setSetting('lastUsedDevice', target.serial)
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current)
+          next.delete('mode')
+          return next
+        }, {replace: true})
+      })
+      .catch((error) => {
+        if (sessionActive.current) {
+          notifyFailure(error, t('Error'))
+        }
+      })
+      .finally(() => {
+        if (sessionActive.current) {
+          setTakingControl(false)
+        }
+      })
+  }
 
   if (!serial) {
     return <ControlRedirect />
@@ -293,13 +379,32 @@ function ControlSession() {
     )
   }
 
+  const watchTitle = observedAutomation ? t('Automation finished') : t('View only')
+  const watchDescription = observedAutomation ?
+    t('The test has finished. Take control to interact with the device.') :
+    t('Take control to view and interact with the device.')
+
   return (
-    <>
-      {basicMode || standalone ?
-        <Box className='fill-height'>
-          <DeviceControlPanel device={device} control={control} standalone />
-        </Box> :
-        <ControlWorkspace device={device} control={control} />}
+    <Stack h='100%' gap={0}>
+      {watching && (
+        <Alert color='violet' title={automated ? t('Automated') : watchTitle}>
+          {automated ? t('View only. Controls are disabled while the test is running.') : (
+            <Group justify='space-between'>
+              <Text size='sm'>{watchDescription}</Text>
+              <Button disabled={!device.usable || Boolean(device.owner)} loading={takingControl} onClick={takeControl}>
+                {t('Use')}
+              </Button>
+            </Group>
+          )}
+        </Alert>
+      )}
+      <Box style={{flex: '1 1 0%', minHeight: 0}}>
+        {basicMode || standalone ?
+          <Box className='fill-height'>
+            <DeviceControlPanel device={device} control={control} standalone />
+          </Box> :
+          <ControlWorkspace device={device} control={control} />}
+      </Box>
       {lost && (
         <DeviceLostModal
           device={device}
@@ -315,6 +420,6 @@ function ControlSession() {
           onDismiss={() => setLost(false)}
         />
       )}
-    </>
+    </Stack>
   )
 }

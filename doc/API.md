@@ -216,7 +216,9 @@ clientWithPromise.then(function(api) {
 
 #### POST /user/devices
 
-Attempts to add a device under the authenticated user's control. This is analogous to pressing "Use" in the UI.
+Reserves a device for automation under the authenticated user's ownership.
+The reservation is marked `usage: automation`; group members can
+[watch the automated session](automation-viewer.md) through STF.
 
 ```bash
 POST /api/v1/user/devices
@@ -247,7 +249,8 @@ clientWithPromise.then(function(api) {
 
 #### DELETE /user/devices/{serial}
 
-Removes a device from the authenticated user's device list. This is analogous to pressing "Stop using" in the UI.
+Releases a device owned by the authenticated user. Close the test session before
+releasing its reservation, including in cleanup after a failed test.
 
 ```bash
 DELETE /api/v1/user/devices/{serial}

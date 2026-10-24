@@ -2,7 +2,7 @@ import type {DeviceState} from '@/core/devices/types'
 
 export const stateColors: Record<DeviceState, string> = {
   using: 'blue'
-  , automation: 'cyan'
+  , automation: 'violet'
   , busy: 'orange'
   , available: 'green'
   , ready: 'teal'

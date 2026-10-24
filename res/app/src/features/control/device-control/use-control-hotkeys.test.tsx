@@ -9,11 +9,12 @@ vi.mock('@/ui/modes', () => ({usePlatform: () => ['web', vi.fn()]}))
 afterEach(cleanup)
 
 describe('device control keyboard shortcuts', () => {
-  it.each([true, false])('registers platform-appropriate shortcuts (iOS: %s)', ios => {
+  it.each([[true, false], [false, false], [true, true], [false, true]])(
+    'registers platform-appropriate shortcuts (iOS: %s, read-only: %s)', (ios, readOnly) => {
     const control = {keyPress: vi.fn(), home: vi.fn(), menu: vi.fn(), back: vi.fn()} as unknown as Control
     const actions = {rotateBy: vi.fn()} as unknown as DeviceActions
     function Fixture() {
-      useControlHotkeys(control, actions, ios)
+      useControlHotkeys(control, actions, ios, readOnly)
       return null
     }
     render(<Fixture />)
@@ -27,16 +28,16 @@ describe('device control keyboard shortcuts', () => {
     for (const key of keys) {
       const event = new KeyboardEvent('keydown', {...key, bubbles: true, cancelable: true})
       document.body.dispatchEvent(event)
-      expect(event.defaultPrevented).toBe(!ios)
+      expect(event.defaultPrevented).toBe(!ios && !readOnly)
     }
-    expect(control.keyPress).toHaveBeenCalledTimes(ios ? 0 : 1)
-    expect(actions.rotateBy).toHaveBeenCalledTimes(ios ? 0 : 2)
-    expect(control.menu).toHaveBeenCalledTimes(ios ? 0 : 1)
-    expect(control.back).toHaveBeenCalledTimes(ios ? 0 : 1)
+    expect(control.keyPress).toHaveBeenCalledTimes(ios || readOnly ? 0 : 1)
+    expect(actions.rotateBy).toHaveBeenCalledTimes(ios || readOnly ? 0 : 2)
+    expect(control.menu).toHaveBeenCalledTimes(ios || readOnly ? 0 : 1)
+    expect(control.back).toHaveBeenCalledTimes(ios || readOnly ? 0 : 1)
     const home = new KeyboardEvent('keydown', {key: 'H', metaKey: true, shiftKey: true
       , bubbles: true, cancelable: true})
     document.body.dispatchEvent(home)
-    expect(home.defaultPrevented).toBe(true)
-    expect(control.home).toHaveBeenCalledOnce()
+    expect(home.defaultPrevented).toBe(!readOnly)
+    expect(control.home).toHaveBeenCalledTimes(readOnly ? 0 : 1)
   })
 })

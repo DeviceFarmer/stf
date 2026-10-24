@@ -160,3 +160,7 @@
   color: #ccc;
   font-size: var(--mantine-font-size-sm);
 }
+
+.device-screen .screen-stream-status {
+  pointer-events: none;
+}
