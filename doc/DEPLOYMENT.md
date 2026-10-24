@@ -1,6 +1,9 @@
 # Deployment
 
-So you've got STF running via `stf local` and now you'd like to deploy it to real servers. While there are of course various ways to set everything up, this document will focus on a [systemd](http://www.freedesktop.org/wiki/Software/systemd/) + [Docker](https://www.docker.com/) deployment. Even if you've got a different setup, you should be able to use the configuration files as a rough guide. You can also check some [Setup Examples](https://github.com/devicefarmer/setup-examples) which uses [Vagrant](https://www.vagrantup.com/) and [Virtual Box](https://www.virtualbox.org/) to create a virtual setup. But before going there, it is highly recommended that you read this document thoroughly.
+> [!NOTE]
+> For new deployments, use the Docker Compose setup: [docker-compose.yaml](../docker-compose.yaml) and the [Compose setup guide](../docker/compose/README.md). This document describes the older systemd + Docker route, which is still supported for existing installations.
+
+So you've got STF running via `stf local` and now you'd like to deploy it to real servers. While there are of course various ways to set everything up, this document will focus on a [systemd](http://www.freedesktop.org/wiki/Software/systemd/) + [Docker](https://www.docker.com/) deployment. Even if you've got a different setup, you should be able to use the configuration files as a rough guide. The archived [Setup Examples](https://github.com/DeviceFarmer/setup-examples) repository shows an older virtual setup with [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/). But before going there, it is highly recommended that you read this document thoroughly.
 
 STF consists of multiple independent processes communicating via [ZeroMQ](http://zeromq.org/) and [Protocol Buffers](https://github.com/google/protobuf). We call each process a "unit" to match systemd terminology.
 
@@ -157,6 +160,8 @@ ExecStop=-/usr/bin/docker stop -t 10 %p
 You need a single instance of the `rethinkdb-proxy-28015.service` unit on each host where you have another unit that needs to access the database. Having a local proxy simplifies configuration for other units and allows the `AUTHKEY` to be specified only once.
 
 Note that the `After` condition also specifies the [rethinkdb.service](#rethinkdbservice) unit just in case you're on a low budget and want to run the RethinkDB unit on the same server as the rest of the units, which by the way is NOT recommended at all.
+
+The unit runs [devicefarmer/ambassador](https://github.com/DeviceFarmer/docker-ambassador), which is kept for existing systemd deployments. The Compose setup connects to RethinkDB directly and doesn't need it.
 
 ```ini
 [Unit]
