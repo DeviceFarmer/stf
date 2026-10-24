@@ -93,9 +93,8 @@ Notes that matter when changing the matrix:
   root before STF is watching matters too: `adb root` restarts adbd, and a
   transport flap while the provider is tracking leaves a stale device record.
 - `@devicefarmer/minicap-prebuilt` only ships a native `minicap.so` up to
-  `android-30`. Above that, `.github/scripts/android-leg.sh` sets
-  `SCREEN_GRABBER=minicap-apk` so STF goes straight to the `app_process`
-  grabber instead of failing the native attempt first.
+  `android-30`. Above that, STF's default `auto` screen grabber goes straight
+  to the `app_process` apk grabber.
 - A leg whose system image is not published self-skips instead of failing, and
   the report says so. The probe fails open: if `sdkmanager` cannot be read at
   all the leg still runs, because a probe that fails closed would let the whole

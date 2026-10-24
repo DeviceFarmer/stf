@@ -49,8 +49,8 @@ export function renderIosCompose(
     delete services.provider
   }
   else if (options.androidScreenGrabber) {
-    if (!['minicap-bin', 'minicap-apk'].includes(options.androidScreenGrabber)) {
-      throw new Error('SCREEN_GRABBER must be minicap-bin or minicap-apk')
+    if (!['auto', 'minicap-bin', 'minicap-apk'].includes(options.androidScreenGrabber)) {
+      throw new Error('SCREEN_GRABBER must be auto, minicap-bin or minicap-apk')
     }
     services.provider!.environment ??= {}
     services.provider!.environment.SCREEN_GRABBER = options.androidScreenGrabber

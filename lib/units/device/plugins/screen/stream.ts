@@ -21,6 +21,7 @@ import StateQueue from '../../../../util/statequeue.js'
 import RiskyStream from '../../../../util/riskystream.js'
 import FailCounter from '../../../../util/failcounter.js'
 import type {Duplex} from 'stream'
+import type {ScreenGrabber} from '../../../../types/device.js'
 import adbSyrup from '../../support/adb.js'
 import minicapSyrup from '../../resources/minicap.js'
 import displaySyrup from '../util/display.js'
@@ -39,6 +40,7 @@ interface ScreenStreamOptions {
 }
 
 interface Minicap {
+  grabber: ScreenGrabber
   run(mode: string, cmd: string): Promise<Duplex>
 }
 
@@ -72,7 +74,7 @@ export default syrup.serial()
   , screenOptions: ScreenOptions
   ) {
     var log = logger.createLogger('device:plugins:screen:stream')
-    log.info('ScreenGrabber option set to %s', options.screenGrabber)
+    log.info('ScreenGrabber set to %s', minicap.grabber)
     log.info('ScreenFrameRate option set to %d', options.screenFrameRate)
 
     interface ScreenClient {
@@ -95,7 +97,7 @@ export default syrup.serial()
       declare banner: Awaited<ReturnType<FrameProducer['_readBanner']>> | null
       declare parser: FrameParser | null
       declare frameConfig: FrameConfig
-      declare grabber: string
+      declare grabber: ScreenGrabber
       declare readable: boolean
       declare needsReadable: boolean
       declare failCounter: FailCounter
@@ -114,7 +116,7 @@ export default syrup.serial()
         this.banner = null
         this.parser = null
         this.frameConfig = config
-        this.grabber = options.screenGrabber
+        this.grabber = minicap.grabber
         this.readable = false
         this.needsReadable = false
         this.failCounter = new FailCounter(3, 10000)
@@ -170,7 +172,12 @@ export default syrup.serial()
               .catch(function(this: FrameProducer) {
                 return this._stop().finally(function(this: FrameProducer) {
                   this.failCounter.inc()
-                  this.grabber = 'minicap-apk'
+                  // Only auto may switch grabbers; an explicit choice is kept
+                  if (options.screenGrabber === 'auto' &&
+                      this.grabber === 'minicap-bin') {
+                    log.warn('minicap-bin failed to start, falling back to minicap-apk')
+                    this.grabber = 'minicap-apk'
+                  }
                 })
               })
               .finally(function(this: FrameProducer) {
@@ -529,7 +536,7 @@ export default syrup.serial()
 
     return createServer()
       .then(function(wss) {
-        log.info('creating FrameProducer: %s', options.screenGrabber)
+        log.info('creating FrameProducer: %s', minicap.grabber)
         var frameProducer = new FrameProducer(
           new FrameConfig(display.properties, display.properties))
         var broadcastSet = frameProducer.broadcastSet = new BroadcastSet()

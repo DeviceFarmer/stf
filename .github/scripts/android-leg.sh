@@ -107,14 +107,6 @@ ABI="$(adb -s "$SERIAL" shell getprop ro.product.cpu.abi | tr -d '\r\n')"
 echo "sdk level: $SDK"
 echo "abi:       $ABI"
 
-# @devicefarmer/minicap-prebuilt only ships a native minicap.so up to
-# android-30, so above that go straight to the app_process grabber instead of
-# letting STF fail the native attempt first.
-if [ -n "$SDK" ] && [ "$SDK" -gt 30 ] 2>/dev/null; then
-  export SCREEN_GRABBER=minicap-apk
-  echo "using the minicap apk grabber (no native lib for android-$SDK)"
-fi
-
 set_check emulator_boot pass
 
 # minitouch has to open /dev/input/event* for writing, which the shell user
