@@ -1999,6 +1999,10 @@ msgstr ""
 msgid "Take Screenshot"
 msgstr ""
 
+#: res/app/src/features/control/ControlPage.tsx:385
+msgid "Take control to view and interact with the device."
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
 msgstr ""
@@ -2431,6 +2435,10 @@ msgstr ""
 
 #: res/app/src/features/control/panes/automation/DeviceSettingsCard.tsx:33
 msgid "Vibrate Mode"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx:382
+msgid "View only"
 msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:316

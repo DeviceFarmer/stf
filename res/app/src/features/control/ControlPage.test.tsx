@@ -1,6 +1,6 @@
 import {act} from 'react'
 import {createRoot} from 'react-dom/client'
-import {MemoryRouter, Route, Routes, useLocation, useNavigate} from 'react-router'
+import {createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLocation, useNavigate} from 'react-router'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import type {Device} from '@/core/devices/types'
 import {AuthProviders} from '@/ui/AuthProviders'
@@ -9,8 +9,20 @@ import type {Control} from '@/core/control'
 
 const state = vi.hoisted(() => ({
   device: undefined as Device | undefined, invite: vi.fn(), kick: vi.fn(), notify: vi.fn(), standalone: false
+  , listeners: new Set<() => void>()
 }))
-vi.mock('@/core/devices/store', () => ({useDevice: () => ({device: state.device, loading: false})}))
+vi.mock('@/core/devices/store', async() => {
+  const {useSyncExternalStore} = await import('react')
+  return {useDevice: () => ({device: useSyncExternalStore(
+    listener => {
+      state.listeners.add(listener)
+      return () => {
+        state.listeners.delete(listener)
+      }
+    }
+    , () => state.device
+  ), loading: false})}
+})
 vi.mock('@/core/group', () => ({inviteDevice: state.invite, kickDevice: state.kick}))
 vi.mock('@/core/settings', () => ({setSetting: vi.fn(), useSetting: () => ['dashboard', vi.fn()]}))
 vi.mock('@/ui/modes', () => ({basicMode: true, useStandalone: () => state.standalone}))
@@ -112,21 +124,80 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     expect(home().disabled).toBe(false)
     expect(state.invite).toHaveBeenCalledTimes(1)
   })
-  it('does not acquire a device when its reservation ended before the watch link loads', async() => {
+  it.each(['before', 'after'])(
+    'enables controls when ownership arrives %s the Use reply while navigation is delayed'
+    , async(order) => {
+      state.device = phone({platform, owner: null, usage: null})
+      let accept!: () => void
+      state.invite.mockImplementationOnce(() => new Promise<void>(resolve => {
+        accept = resolve
+      }))
+      const router = createMemoryRouter([{path: '*', element: <>
+        <Location />
+        <Routes><Route path='/control/:serial' element={<ControlPage />} /></Routes>
+      </>}], {initialEntries: ['/control/phone?mode=watch&standalone']})
+      const blockUseNavigation = ({nextLocation}: {nextLocation: {search: string}}) =>
+        !new URLSearchParams(nextLocation.search).has('mode')
+      router.getBlocker('handover', blockUseNavigation)
+      await act(async() => root.render(<AuthProviders><RouterProvider router={router} /></AuthProviders>))
+      await act(async() => useButton().click())
+      const publishOwnership = async() => act(async() => {
+        state.device = phone({platform, owner: {email: 'viewer@example.test'}, usage: null, using: true})
+        state.listeners.forEach(listener => listener())
+      })
+      if (order === 'before') {
+        await publishOwnership()
+      }
+      await act(async() => accept())
+      expect(location()).toBe('/control/phone?mode=watch&standalone')
+      if (order === 'after') {
+        await publishOwnership()
+      }
+      expect(home().disabled).toBe(true)
+      const blocker = router.getBlocker('handover', blockUseNavigation)
+      expect(blocker.state).toBe('blocked')
+      await act(async() => blocker.proceed!())
+      expect(location()).toBe('/control/phone?standalone=')
+      expect(home().disabled).toBe(false)
+      expect(host.textContent).not.toContain('Automation finished')
+      expect(state.invite).toHaveBeenCalledTimes(1)
+      router.deleteBlocker('handover')
+      router.dispose()
+    }
+  )
+  it('shows a neutral watch state without acquiring a device when no test was observed', async() => {
     state.device = phone({platform, owner: null, usage: null})
     await render('/control/phone?mode=watch')
-    expect(host.textContent).toContain('Automation finished')
+    expect(host.textContent).toContain('View only')
+    expect(host.textContent).toContain('Take control to view and interact with the device.')
+    expect(host.textContent).not.toContain('Automation finished')
     expect(home().disabled).toBe(true)
     expect(useButton().disabled).toBe(false)
+    expect(state.invite).not.toHaveBeenCalled()
+  })
+  it('reports completion only after this watch session observed an actual automation', async() => {
+    state.device = phone({platform, owner: null, usage: null})
+    await render('/control/phone?mode=watch')
+    expect(host.textContent).toContain('View only')
+    state.device = phone({platform})
+    await render()
+    expect(host.textContent).toContain('Automated')
+    state.device = phone({platform, owner: null, usage: null})
+    await render()
+    expect(host.textContent).toContain('Automation finished')
+    expect(host.textContent).toContain('The test has finished. Take control to interact with the device.')
+    expect(home().disabled).toBe(true)
     expect(state.invite).not.toHaveBeenCalled()
   })
   it('preserves watch intent when reloaded after automation ends', async() => {
     await render('/control/phone?mode=watch')
     state.device = phone({platform, owner: null, usage: null})
     await render()
+    expect(host.textContent).toContain('Automation finished')
     await reload()
     expect(location()).toBe('/control/phone?mode=watch')
-    expect(host.textContent).toContain('Automation finished')
+    expect(host.textContent).toContain('View only')
+    expect(host.textContent).not.toContain('Automation finished')
     expect(home().disabled).toBe(true)
     expect(state.invite).not.toHaveBeenCalled()
   })
@@ -137,7 +208,8 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     await act(async() => useButton().click())
     expect(location()).toBe('/control/phone?mode=watch&standalone')
     expect(state.notify).toHaveBeenCalledOnce()
-    expect(host.textContent).toContain('Automation finished')
+    expect(host.textContent).toContain('View only')
+    expect(host.textContent).not.toContain('Automation finished')
     expect(home().disabled).toBe(true)
     state.device = phone({platform, owner: {email: 'next-runner@example.test'}})
     await render()
@@ -164,7 +236,10 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     expect(state.invite).toHaveBeenCalledTimes(1)
   })
   it('ignores a previous session Use acknowledgement after switching to another watch device', async() => {
+    await render('/control/phone?mode=watch')
     state.device = phone({platform, owner: null, usage: null})
+    await render()
+    expect(host.textContent).toContain('Automation finished')
     let accept!: () => void
     state.invite.mockImplementationOnce(() => new Promise<void>(resolve => {
       accept = resolve
@@ -176,7 +251,8 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     expect(location()).toBe('/control/other?mode=watch&standalone')
     await act(async() => accept())
     expect(location()).toBe('/control/other?mode=watch&standalone')
-    expect(host.textContent).toContain('Automation finished')
+    expect(host.textContent).toContain('View only')
+    expect(host.textContent).not.toContain('Automation finished')
     expect(home().disabled).toBe(true)
     expect(state.invite).toHaveBeenCalledTimes(1)
   })

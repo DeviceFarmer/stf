@@ -30,10 +30,12 @@ These restrictions also apply when the viewer is the automation owner or an
 administrator. The runner continues through its test connection and can release
 the reservation through the STF API.
 
-After release, the viewer shows **Automation finished**. Press **Use** to request
-manual control when the device is free. The page leaves watch mode only after
-that request succeeds. STF does not acquire the device automatically, including
-when another test starts immediately afterwards.
+After a test ends in the open viewer, it shows **Automation finished**. Opening
+or refreshing a watch link when no test is running shows **View only** instead.
+A free device does not stream its screen until you press **Use** to request
+manual control. After that request succeeds, the page leaves watch mode and
+enables control without a refresh. STF does not acquire the device automatically,
+including when another test starts immediately afterwards.
 
 A lost iPhone screen connection shows **Reconnecting…** until a new frame arrives.
 Android shows **Screen disconnected**, and an unavailable device shows

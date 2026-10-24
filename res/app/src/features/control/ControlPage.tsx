@@ -231,7 +231,9 @@ function ControlSession() {
   const {device, loading, error} = useDevice(serial)
   const [joined, setJoined] = useState<Device | null>(null)
   const [lost, setLost] = useState(false)
-  const [watching, setWatching] = useState(watchMode)
+  const automated = Boolean(device && isAutomated(device))
+  const watching = watchMode || automated
+  const [observedAutomation, setObservedAutomation] = useState(false)
   const [takingControl, setTakingControl] = useState(false)
   const previousState = useRef<string | null>(null)
   const loadedSerial = device?.serial
@@ -240,7 +242,6 @@ function ControlSession() {
   const leaveToDeviceList = useEffectEvent(() => navigate('/', {replace: true}))
   const watch = useEffectEvent(() => {
     startedWatching.current = true
-    setWatching(true)
     if (!watchMode) {
       setSearchParams((current) => {
         const next = new URLSearchParams(current)
@@ -294,10 +295,13 @@ function ControlSession() {
   }, [loadedSerial, joined, watchMode])
 
   useEffect(() => {
-    if (device && (watchMode || isAutomated(device))) {
+    if (automated) {
+      setObservedAutomation(true)
+    }
+    if (device && (watchMode || automated)) {
       watch()
     }
-  }, [device, deviceState, watchMode])
+  }, [device, deviceState, watchMode, automated])
 
   useEffect(() => {
     if (!standalone || !startedWatching.current || watching || !device?.using || isAutomated(device)) {
@@ -322,7 +326,7 @@ function ControlSession() {
     }
   }, [deviceState, joined, watching])
 
-  const readOnly = watchMode || watching || !device?.using || Boolean(device && isAutomated(device))
+  const readOnly = watching || !device?.using
   const control: Control | null = useMemo(
     () => (joined ? createControl(joined, joined.channel, () => readOnly) : null)
     , [joined, readOnly]
@@ -341,7 +345,6 @@ function ControlSession() {
         }
         previousState.current = null
         setJoined(target)
-        setWatching(false)
         setSetting('lastUsedDevice', target.serial)
         setSearchParams((current) => {
           const next = new URLSearchParams(current)
@@ -376,13 +379,18 @@ function ControlSession() {
     )
   }
 
+  const watchTitle = observedAutomation ? t('Automation finished') : t('View only')
+  const watchDescription = observedAutomation ?
+    t('The test has finished. Take control to interact with the device.') :
+    t('Take control to view and interact with the device.')
+
   return (
     <Stack h='100%' gap={0}>
       {watching && (
-        <Alert color='violet' title={isAutomated(device) ? t('Automated') : t('Automation finished')}>
-          {isAutomated(device) ? t('View only. Controls are disabled while the test is running.') : (
+        <Alert color='violet' title={automated ? t('Automated') : watchTitle}>
+          {automated ? t('View only. Controls are disabled while the test is running.') : (
             <Group justify='space-between'>
-              <Text size='sm'>{t('The test has finished. Take control to interact with the device.')}</Text>
+              <Text size='sm'>{watchDescription}</Text>
               <Button disabled={!device.usable || Boolean(device.owner)} loading={takingControl} onClick={takeControl}>
                 {t('Use')}
               </Button>

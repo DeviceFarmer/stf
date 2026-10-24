@@ -2658,3 +2658,9 @@ msgstr "Идёт автотест. Управление устройством �
 
 msgid "The test has finished. Take control to interact with the device."
 msgstr "Тест завершён. Нажмите «Использовать», чтобы управлять устройством."
+
+msgid "View only"
+msgstr "Только просмотр"
+
+msgid "Take control to view and interact with the device."
+msgstr "Нажмите «Использовать», чтобы видеть экран и управлять устройством."
