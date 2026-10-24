@@ -90,6 +90,8 @@ export interface Minicap {
   bin: string
   lib: string
   apk: string
+  // The grabber to use: --screen-grabber, with auto resolved for this device
+  grabber: 'minicap-bin' | 'minicap-apk'
   run(mode: string, cmd: string): Bluebird<Duplex>
 }
 

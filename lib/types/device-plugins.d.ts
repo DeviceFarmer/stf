@@ -69,6 +69,7 @@ export interface SdkInfo {
 }
 
 export interface MinicapResource {
+  grabber: string
   run(mode: string, cmd: string): ReturnType<Adb['shell']>
 }
 

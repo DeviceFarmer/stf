@@ -39,6 +39,7 @@ interface ScreenStreamOptions {
 }
 
 interface Minicap {
+  grabber: string
   run(mode: string, cmd: string): Promise<Duplex>
 }
 
@@ -72,7 +73,7 @@ export default syrup.serial()
   , screenOptions: ScreenOptions
   ) {
     var log = logger.createLogger('device:plugins:screen:stream')
-    log.info('ScreenGrabber option set to %s', options.screenGrabber)
+    log.info('ScreenGrabber set to %s', minicap.grabber)
     log.info('ScreenFrameRate option set to %d', options.screenFrameRate)
 
     interface ScreenClient {
@@ -114,7 +115,7 @@ export default syrup.serial()
         this.banner = null
         this.parser = null
         this.frameConfig = config
-        this.grabber = options.screenGrabber
+        this.grabber = minicap.grabber
         this.readable = false
         this.needsReadable = false
         this.failCounter = new FailCounter(3, 10000)
@@ -529,7 +530,7 @@ export default syrup.serial()
 
     return createServer()
       .then(function(wss) {
-        log.info('creating FrameProducer: %s', options.screenGrabber)
+        log.info('creating FrameProducer: %s', minicap.grabber)
         var frameProducer = new FrameProducer(
           new FrameConfig(display.properties, display.properties))
         var broadcastSet = frameProducer.broadcastSet = new BroadcastSet()

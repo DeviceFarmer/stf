@@ -151,13 +151,24 @@ export default syrup.serial()
         .timeout(15000)
     }
 
+    // @devicefarmer/minicap-prebuilt ships a native minicap.so only up to
+    // android-30, so auto picks the apk wherever there is none.
+    function grabber(): Minicap['grabber'] {
+      if (options.screenGrabber === 'minicap-bin' || options.screenGrabber === 'minicap-apk') {
+        return options.screenGrabber
+      }
+      return resources.lib.src ? 'minicap-bin' : 'minicap-apk'
+    }
+
     return stop()
       .then(installAll)
       .then(function() {
+        log.info('Using the %s screen grabber', grabber())
         return {
           bin: resources.bin.dest
         , lib: resources.lib.dest
         , apk: resources.apk.dest
+        , grabber: grabber()
         , run: function(mode: string, cmd: string) {
             var runCmd
             if(mode === 'minicap-bin' && resources.lib.src) {

@@ -16,4 +16,3 @@ services:
     environment:
       STF_PROVIDER_ALLOW_REMOTE: "true"
       STF_PROVIDER_CLEANUP: "false"
-      SCREEN_GRABBER: minicap-apk

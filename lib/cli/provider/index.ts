@@ -155,10 +155,13 @@ var builder = function(yargs: Argv) {
     , default: process.env.SCREEN_JPEG_QUALITY || 80
     })
     .option('screen-grabber', {
-      describe: 'The tool to be used for screen capture. ' +
-        'Value must be either: minicap-bin (default) or minicap-apk'
+      describe: 'The tool to be used for screen capture: auto (default), ' +
+        'minicap-bin or minicap-apk. auto uses minicap-bin where a native ' +
+        'library exists for the device (Android 11 and earlier) and ' +
+        'minicap-apk elsewhere.'
     , type: 'string'
-    , default: process.env.SCREEN_GRABBER || 'minicap-bin'
+    , choices: ['auto', 'minicap-bin', 'minicap-apk']
+    , default: process.env.SCREEN_GRABBER || 'auto'
     })
     .option('screen-ping-interval', {
       describe: 'The interval at which to send ping messages to keep the ' +

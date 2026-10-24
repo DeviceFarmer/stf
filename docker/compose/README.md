@@ -71,18 +71,6 @@ storage backend and are discarded when its container is replaced. Stop the stack
 with `docker compose down`; add `--volumes` only when you intend to erase the
 database.
 
-To use Android 16, add the minicap apk screen grabber to the provider's
-environment in `docker-compose.override.yaml`, as
-[the CI override](../../test/compose/docker-compose.yaml) does:
-
-```yaml
-services:
-  provider:
-    environment:
-      STF_PROVIDER_ALLOW_REMOTE: "true"
-      SCREEN_GRABBER: minicap-apk
-```
-
 ### Production settings
 
 A production setup usually needs real authentication, TLS, persistent adb keys
