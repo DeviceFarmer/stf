@@ -73,7 +73,7 @@ jobs:
   image:
     name: Linux USB runtime image / ${{ matrix.arch }}
     needs: prototype
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -81,10 +81,6 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-qemu-action@v4
-        if: matrix.arch == 'arm64'
-        with:
-          platforms: arm64
       - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v7
         with:

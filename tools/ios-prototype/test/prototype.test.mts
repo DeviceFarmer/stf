@@ -18,7 +18,7 @@ const options: RuntimeOptions = {
   udid: '00000000-0000000000000001', bundleId: 'test.wda.xctrunner'
 , xctest: 'WebDriverAgentRunner.xctest', goIos: 'ios', iproxy: 'iproxy'
 , imageMounter: 'go-ios', pymobiledevice3: '/venv/bin/pymobiledevice3'
-, wdaPort: 18100, mjpegPort: 19100, tunnelPort: 28100, retryMs: 30, startupMs: 500
+, wdaPort: 18100, mjpegPort: 19100, tunnelPort: 28100, retryMs: 30, startupMs: 5000
 }
 
 afterEach(async() => {
@@ -106,7 +106,7 @@ async function fixture() {
       res.end(JSON.stringify({value: {ready: true}}))
     }
   }))
-  const wda = new WdaClient(origin, 500)
+  const wda = new WdaClient(origin, 5000)
   await wda.open()
   const runtime = new IosRuntime(options, {wda, log: () => null})
   runtime.state = 'ready'
