@@ -3,7 +3,7 @@
 **/
 
 import deviceData from '@devicefarmer/stf-device-db'
-import browserData from '@devicefarmer/stf-browser-db'
+import browserData from './browsers.js'
 
 import deviceutil from './deviceutil.js'
 import {findCatalogDevice} from './device-catalog.js'

@@ -1,6 +1,6 @@
 import syrup from '@devicefarmer/stf-syrup'
 
-import browsers from '@devicefarmer/stf-browser-db'
+import browsers from '../../../util/browsers.js'
 
 import logger from '../../../util/logger.js'
 import wire from '../../../wire/index.js'

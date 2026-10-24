@@ -1,10 +1,9 @@
 import {createRequire} from 'module'
 import path from 'path'
 
+import {verify} from '../util/depcheck.js'
+
 var require = createRequire(import.meta.url)
 
-require('@devicefarmer/please-update-dependencies')({
-  filename: path.resolve(import.meta.dirname, '../../package.json')
-, require: require
-})
+verify(path.resolve(import.meta.dirname, '../..'))
 require('./index.js')
