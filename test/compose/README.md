@@ -17,7 +17,7 @@ are running without restarts, their health checks pass, and the one-off migratio
 completed successfully. It also checks that each STF container runs its own unit
 command from the checked-out image.
 
-All 14 Playwright tests run: the 11 existing UI/device tests plus authenticated
+All 21 Playwright tests run: the 18 UI/device tests plus authenticated
 API routing, APK upload/manifest/download, and image upload/resizing. Device
 coverage includes claiming, changing screen frames, tap/swipe coordinates
 captured on the AVD, shell execution and release. Missing or skipped coverage

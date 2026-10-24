@@ -180,7 +180,7 @@ You should now have a working installation for local development.
 
 ## Running
 
-STF comprises of several independent processes that must normally be launched separately. In our own setup each one these processes is its own [systemd](http://www.freedesktop.org/wiki/Software/systemd/) unit. See the [Compose setup guide](docker/compose/README.md), or [DEPLOYMENT.md](doc/DEPLOYMENT.md) for the older systemd route, if you're interested.
+STF comprises several independent processes that must normally be launched separately. Deploy them with the [Compose setup guide](docker/compose/README.md); [DEPLOYMENT.md](doc/DEPLOYMENT.md) covers the older route with one [systemd](http://www.freedesktop.org/wiki/Software/systemd/) unit per process.
 
 For development purposes, however, there's a helper command to quickly launch all required processes along with a mock login implementation. Note that you **must** have RethinkDB running first.
 
