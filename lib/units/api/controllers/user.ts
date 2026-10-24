@@ -409,7 +409,7 @@ function getUserAccessTokens(req: ApiRequest, res: Response) {
 
 function addAdbPublicKey(req: ApiRequest, res: Response) {
   var data = req.swagger.params.adb.value
-  adb.util.parsePublicKey(data.publickey)
+  Promise.resolve(adb.util.parsePublicKey(data.publickey))
     .then(function(key) {
       return dbapi.lookupUsersByAdbKey(key.fingerprint)
         .then(function(cursor) {

@@ -504,7 +504,7 @@ export default syrup.serial()
             })
         }
 
-        return readVersion()
+        return Promise.resolve(readVersion())
           .then(readLimits)
           .then(readPid)
           .return(banner)

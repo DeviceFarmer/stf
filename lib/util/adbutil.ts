@@ -2,12 +2,10 @@
 * Copyright © 2024 code initially contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 **/
 
-import {createRequire} from 'module'
+import Bluebird from 'bluebird'
 import adbkit from '@devicefarmer/adbkit'
 import type {Client, DeviceClient, SocketOptions, StartActivityOptions} from '@devicefarmer/adbkit'
 import type {Readable} from 'stream'
-
-var require = createRequire(import.meta.url)
 
 interface AdbOptions {
   adbHost: string
@@ -17,54 +15,50 @@ interface AdbOptions {
 type LogcatOptions = Parameters<DeviceClient['openLogcat']>[0]
 type ShellCommand = Parameters<DeviceClient['shell']>[0]
 
+// adbkit returns native promises, but stf chains Bluebird methods
+// (.timeout(), .return(), .delay()) on them, so the wrapper converts.
+type Wrapped<F extends (...args: never[]) => unknown> = Bluebird<Awaited<ReturnType<F>>>
+
 interface AdbWrapper {
   client: Client
   Keycode: typeof adbkit.KeyCodes
   Parser: typeof adbkit.Parser
   util: typeof adbkit.Adb.util
-  readdir(serial: string, path: string): ReturnType<DeviceClient['readdir']>
-  stat(serial: string, path: string): ReturnType<DeviceClient['stat']>
-  openLocal(serial: string, path: string): ReturnType<DeviceClient['openLocal']>
-  openLogcat(serial: string, options?: LogcatOptions): ReturnType<DeviceClient['openLogcat']>
-  shell(serial: string, command: ShellCommand): ReturnType<DeviceClient['shell']>
+  readdir(serial: string, path: string): Wrapped<DeviceClient['readdir']>
+  stat(serial: string, path: string): Wrapped<DeviceClient['stat']>
+  openLocal(serial: string, path: string): Wrapped<DeviceClient['openLocal']>
+  openLogcat(serial: string, options?: LogcatOptions): Wrapped<DeviceClient['openLogcat']>
+  shell(serial: string, command: ShellCommand): Wrapped<DeviceClient['shell']>
   push(
     serial: string
   , contents: string | Readable
   , path: string
   , mode?: number
-  ): ReturnType<DeviceClient['push']>
-  pull(serial: string, path: string): ReturnType<DeviceClient['pull']>
-  install(serial: string, apk: string | Readable): ReturnType<DeviceClient['install']>
-  installRemote(serial: string, apk: string): ReturnType<DeviceClient['installRemote']>
-  uninstall(serial: string, pkg: string): ReturnType<DeviceClient['uninstall']>
-  clear(serial: string, pkg: string): ReturnType<DeviceClient['clear']>
-  reboot(serial: string): ReturnType<DeviceClient['reboot']>
-  waitBootComplete(serial: string): ReturnType<DeviceClient['waitBootComplete']>
-  getPackages(serial: string): ReturnType<DeviceClient['getPackages']>
-  getProperties(serial: string): ReturnType<DeviceClient['getProperties']>
+  ): Wrapped<DeviceClient['push']>
+  pull(serial: string, path: string): Wrapped<DeviceClient['pull']>
+  install(serial: string, apk: string | Readable): Wrapped<DeviceClient['install']>
+  installRemote(serial: string, apk: string): Wrapped<DeviceClient['installRemote']>
+  uninstall(serial: string, pkg: string): Wrapped<DeviceClient['uninstall']>
+  clear(serial: string, pkg: string): Wrapped<DeviceClient['clear']>
+  reboot(serial: string): Wrapped<DeviceClient['reboot']>
+  waitBootComplete(serial: string): Wrapped<DeviceClient['waitBootComplete']>
+  getPackages(serial: string): Wrapped<DeviceClient['getPackages']>
+  getProperties(serial: string): Wrapped<DeviceClient['getProperties']>
   startActivity(
     serial: string
   , options: StartActivityOptions
-  ): ReturnType<DeviceClient['startActivity']>
+  ): Wrapped<DeviceClient['startActivity']>
   createTcpUsbBridge(
     serial: string
   , options: SocketOptions
   ): ReturnType<Client['createTcpUsbBridge']>
+  // Not converted: the tracker emits the devices adb already lists right after
+  // it resolves, before a Bluebird callback would get to attach the listeners
   trackDevices(): ReturnType<Client['trackDevices']>
 }
 
-interface LegacyAdbkit {
-  createClient(options?: {host?: string, port?: number}): AdbWrapper
-  Keycode: AdbWrapper['Keycode']
-  util: AdbWrapper['util']
-}
-
 export default function(options?: AdbOptions): AdbWrapper {
-var adb: AdbWrapper | null = null
-
-if (adbkit.hasOwnProperty('Adb')) {
-  // adbkit 3.x version
-  adb = {
+  return {
     client: typeof options === 'undefined' ?
       adbkit.Adb.createClient() :
       adbkit.Adb.createClient({
@@ -74,79 +68,59 @@ if (adbkit.hasOwnProperty('Adb')) {
   , Keycode: adbkit.KeyCodes
   , Parser: adbkit.Parser
   , util: adbkit.Adb.util
-  , readdir: function(this: AdbWrapper, serial: string, path: string) {
-      return this.client.getDevice(serial).readdir(path)
+  , readdir: function(serial, path) {
+      return Bluebird.resolve(this.client.getDevice(serial).readdir(path))
     }
-  , stat: function(this: AdbWrapper, serial: string, path: string) {
-      return this.client.getDevice(serial).stat(path)
+  , stat: function(serial, path) {
+      return Bluebird.resolve(this.client.getDevice(serial).stat(path))
     }
-  , openLocal: function(this: AdbWrapper, serial: string, path: string) {
-      return this.client.getDevice(serial).openLocal(path)
+  , openLocal: function(serial, path) {
+      return Bluebird.resolve(this.client.getDevice(serial).openLocal(path))
     }
-  , openLogcat: function(this: AdbWrapper, serial: string, options?: LogcatOptions) {
-      return this.client.getDevice(serial).openLogcat(options)
+  , openLogcat: function(serial, options) {
+      return Bluebird.resolve(this.client.getDevice(serial).openLogcat(options))
     }
-  , shell: function(this: AdbWrapper, serial: string, command: ShellCommand) {
-      return this.client.getDevice(serial).shell(command)
+  , shell: function(serial, command) {
+      return Bluebird.resolve(this.client.getDevice(serial).shell(command))
     }
-  , push: function(
-      this: AdbWrapper
-    , serial: string
-    , contents: string | Readable
-    , path: string
-    , mode?: number
-    ) {
-      return this.client.getDevice(serial).push(contents, path, mode)
+  , push: function(serial, contents, path, mode) {
+      return Bluebird.resolve(this.client.getDevice(serial).push(contents, path, mode))
     }
-  , pull: function(this: AdbWrapper, serial: string, path: string) {
-      return this.client.getDevice(serial).pull(path)
+  , pull: function(serial, path) {
+      return Bluebird.resolve(this.client.getDevice(serial).pull(path))
     }
-  , install: function(this: AdbWrapper, serial: string, apk: string | Readable) {
-      return this.client.getDevice(serial).install(apk)
+  , install: function(serial, apk) {
+      return Bluebird.resolve(this.client.getDevice(serial).install(apk))
     }
-  , installRemote: function(this: AdbWrapper, serial: string, apk: string) {
-      return this.client.getDevice(serial).installRemote(apk)
+  , installRemote: function(serial, apk) {
+      return Bluebird.resolve(this.client.getDevice(serial).installRemote(apk))
     }
-  , uninstall: function(this: AdbWrapper, serial: string, pkg: string) {
-      return this.client.getDevice(serial).uninstall(pkg)
+  , uninstall: function(serial, pkg) {
+      return Bluebird.resolve(this.client.getDevice(serial).uninstall(pkg))
     }
-  , clear: function(this: AdbWrapper, serial: string, pkg: string) {
-      return this.client.getDevice(serial).clear(pkg)
+  , clear: function(serial, pkg) {
+      return Bluebird.resolve(this.client.getDevice(serial).clear(pkg))
     }
-  , reboot: function(this: AdbWrapper, serial: string) {
-      return this.client.getDevice(serial).reboot()
+  , reboot: function(serial) {
+      return Bluebird.resolve(this.client.getDevice(serial).reboot())
     }
-  , waitBootComplete: function(this: AdbWrapper, serial: string) {
-      return this.client.getDevice(serial).waitBootComplete()
+  , waitBootComplete: function(serial) {
+      return Bluebird.resolve(this.client.getDevice(serial).waitBootComplete())
     }
-  , getPackages: function(this: AdbWrapper, serial: string) {
-      return this.client.getDevice(serial).getPackages()
+  , getPackages: function(serial) {
+      return Bluebird.resolve(this.client.getDevice(serial).getPackages())
     }
-  , getProperties: function(this: AdbWrapper, serial: string) {
-      return this.client.getDevice(serial).getProperties()
+  , getProperties: function(serial) {
+      return Bluebird.resolve(this.client.getDevice(serial).getProperties())
     }
-  , startActivity: function(this: AdbWrapper, serial: string, options: StartActivityOptions) {
-      return this.client.getDevice(serial).startActivity(options)
+  , startActivity: function(serial, options) {
+      return Bluebird.resolve(this.client.getDevice(serial).startActivity(options))
     }
-  , createTcpUsbBridge: function(this: AdbWrapper, serial: string, options: SocketOptions) {
+  , createTcpUsbBridge: function(serial, options) {
       return this.client.createTcpUsbBridge(serial, options)
     }
-  , trackDevices: function(this: AdbWrapper) {
+  , trackDevices: function() {
       return this.client.trackDevices()
     }
   }
-}
-else {
-  // adbkit 2.x version
-  adb = typeof options === 'undefined' ?
-    (adbkit as unknown as LegacyAdbkit).createClient() :
-    (adbkit as unknown as LegacyAdbkit).createClient({
-      host: options.adbHost
-    , port: options.adbPort
-    })
-  adb.Keycode = (adbkit as unknown as LegacyAdbkit).Keycode
-  adb.Parser = require('@devicefarmer/adbkit/lib/adb/parser')
-  adb.util = (adbkit as unknown as LegacyAdbkit).util
- }
-return adb
 }

@@ -619,7 +619,7 @@ export default function(options: WebsocketOptions) {
             })
         })
         .on('user.keys.adb.add', function(data) {
-          return adb.util.parsePublicKey(data.key)
+          return Promise.resolve(adb.util.parsePublicKey(data.key))
             .then(function(key) {
               return dbapi.lookupUsersByAdbKey(key.fingerprint)
                 .then(function(cursor) {
