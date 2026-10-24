@@ -9,11 +9,32 @@ import pathutil from '../../../util/pathutil.js'
 import devutil from '../../../util/devutil.js'
 import streamutil from '../../../util/streamutil.js'
 import Resource from './util/resource.js'
-import type {Abi, Adb, DeviceOptions, Minicap, Properties, Sdk} from '../../../types/device.js'
+import type {
+  Abi, Adb, DeviceOptions, Minicap, Properties, ScreenGrabber, Sdk
+} from '../../../types/device.js'
 import adbSyrup from '../support/adb.js'
 import propertiesSyrup from '../support/properties.js'
 import abiSyrup from '../support/abi.js'
 import sdkSyrup from '../support/sdk.js'
+
+// Resolves --screen-grabber for a device. exactLib is whether
+// @devicefarmer/minicap-prebuilt ships a native minicap.so for the device's
+// exact (preview) SDK level, anyLib whether one matches at all, including the
+// base SDK level of a preview build.
+export function resolveGrabber(
+  requested: string
+, exactLib: boolean
+, anyLib: boolean
+): ScreenGrabber {
+  switch (requested) {
+  case 'minicap-apk':
+    return 'minicap-apk'
+  case 'minicap-bin':
+    return anyLib ? 'minicap-bin' : 'minicap-apk'
+  default:
+    return exactLib ? 'minicap-bin' : 'minicap-apk'
+  }
+}
 
 export default syrup.serial()
   .dependency(adbSyrup)
@@ -129,9 +150,30 @@ export default syrup.serial()
         .return(res)
     }
 
+    // minicap-prebuilt ships a native minicap.so only up to android-30, so
+    // auto picks the apk wherever there is none for the exact SDK level.
+    var exactLib = pathutil.match(abi.all.map(function(supportedAbi: string) {
+      return pathutil.module(util.format(
+        '@devicefarmer/minicap-prebuilt/prebuilt/%s/lib/android-%s/minicap.so'
+      , supportedAbi
+      , sdk.previewLevel
+      ))
+    }))
+    var grabber = resolveGrabber(
+      options.screenGrabber
+    , !!exactLib
+    , !!resources.lib.src
+    )
+    if (options.screenGrabber === 'minicap-bin' && grabber !== 'minicap-bin') {
+      log.warn(
+        'No native minicap library for SDK %s, using minicap-apk instead'
+      , sdk.previewLevel
+      )
+    }
+
     function installAll() {
       var resourcesToBeinstalled: Promise<unknown>[] = []
-      if(resources.lib.src) {
+      if(grabber === 'minicap-bin') {
         resourcesToBeinstalled.push(installResource(resources.bin))
         resourcesToBeinstalled.push(installResource(resources.lib))
       }
@@ -151,27 +193,18 @@ export default syrup.serial()
         .timeout(15000)
     }
 
-    // @devicefarmer/minicap-prebuilt ships a native minicap.so only up to
-    // android-30, so auto picks the apk wherever there is none.
-    function grabber(): Minicap['grabber'] {
-      if (options.screenGrabber === 'minicap-bin' || options.screenGrabber === 'minicap-apk') {
-        return options.screenGrabber
-      }
-      return resources.lib.src ? 'minicap-bin' : 'minicap-apk'
-    }
-
     return stop()
       .then(installAll)
       .then(function() {
-        log.info('Using the %s screen grabber', grabber())
+        log.info('Using the %s screen grabber', grabber)
         return {
           bin: resources.bin.dest
         , lib: resources.lib.dest
         , apk: resources.apk.dest
-        , grabber: grabber()
+        , grabber: grabber
         , run: function(mode: string, cmd: string) {
             var runCmd
-            if(mode === 'minicap-bin' && resources.lib.src) {
+            if(mode === 'minicap-bin' && grabber === 'minicap-bin') {
               runCmd = util.format(
                 'LD_LIBRARY_PATH=%s exec %s %s'
               , path.dirname(resources.lib.dest)

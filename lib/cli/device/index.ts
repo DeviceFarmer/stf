@@ -136,6 +136,9 @@ var builder = function(yargs: Argv) {
         'minicap-apk elsewhere.'
     , type: 'string'
     , choices: ['auto', 'minicap-bin', 'minicap-apk']
+    , coerce: function(val: string) {
+        return String(val).trim().toLowerCase()
+      }
     , default: process.env.SCREEN_GRABBER || 'auto'
     })
     .option('screen-ping-interval', {

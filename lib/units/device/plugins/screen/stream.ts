@@ -21,6 +21,7 @@ import StateQueue from '../../../../util/statequeue.js'
 import RiskyStream from '../../../../util/riskystream.js'
 import FailCounter from '../../../../util/failcounter.js'
 import type {Duplex} from 'stream'
+import type {ScreenGrabber} from '../../../../types/device.js'
 import adbSyrup from '../../support/adb.js'
 import minicapSyrup from '../../resources/minicap.js'
 import displaySyrup from '../util/display.js'
@@ -39,7 +40,7 @@ interface ScreenStreamOptions {
 }
 
 interface Minicap {
-  grabber: string
+  grabber: ScreenGrabber
   run(mode: string, cmd: string): Promise<Duplex>
 }
 
@@ -96,7 +97,7 @@ export default syrup.serial()
       declare banner: Awaited<ReturnType<FrameProducer['_readBanner']>> | null
       declare parser: FrameParser | null
       declare frameConfig: FrameConfig
-      declare grabber: string
+      declare grabber: ScreenGrabber
       declare readable: boolean
       declare needsReadable: boolean
       declare failCounter: FailCounter
@@ -171,7 +172,12 @@ export default syrup.serial()
               .catch(function(this: FrameProducer) {
                 return this._stop().finally(function(this: FrameProducer) {
                   this.failCounter.inc()
-                  this.grabber = 'minicap-apk'
+                  // Only auto may switch grabbers; an explicit choice is kept
+                  if (options.screenGrabber === 'auto' &&
+                      this.grabber === 'minicap-bin') {
+                    log.warn('minicap-bin failed to start, falling back to minicap-apk')
+                    this.grabber = 'minicap-apk'
+                  }
                 })
               })
               .finally(function(this: FrameProducer) {

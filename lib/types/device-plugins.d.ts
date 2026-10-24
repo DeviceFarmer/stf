@@ -10,6 +10,7 @@ import type zmqutil from '../util/zmqutil.js'
 import type wirerouter from '../wire/router.js'
 import type ChannelManager from '../wire/channelmanager.js'
 import type {ConnectStartMessageFields, LogcatFilter, OwnerMessage} from './wire.js'
+import type {ScreenGrabber} from './device.js'
 import type {
   AirplaneModeEvent
 , BatteryEvent
@@ -69,7 +70,7 @@ export interface SdkInfo {
 }
 
 export interface MinicapResource {
-  grabber: string
+  grabber: ScreenGrabber
   run(mode: string, cmd: string): ReturnType<Adb['shell']>
 }
 

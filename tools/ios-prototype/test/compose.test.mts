@@ -73,6 +73,16 @@ describe('local Compose iPhone fleet', () => {
     assert.ok(document.services.auth!.command.includes(config.publicOrigin + '/'))
   })
 
+  it('accepts every Android screen grabber and rejects unknown ones', () => {
+    for (const grabber of ['auto', 'minicap-bin', 'minicap-apk']) {
+      const {document} = renderIosCompose(base, {...config, android: true}
+        , {...options, androidScreenGrabber: grabber})
+      assert.equal(document.services.provider!.environment.SCREEN_GRABBER, grabber)
+    }
+    assert.throws(() => renderIosCompose(base, {...config, android: true}
+      , {...options, androidScreenGrabber: 'minicap'}), /SCREEN_GRABBER/)
+  })
+
   it('routes only the selected screen and passes authentication to the provider', () => {
     const {screenRoutes} = renderIosCompose(base, config, options)
     const nginx = renderIosNginx('server {\n    location / {\n    }\n}', screenRoutes)
