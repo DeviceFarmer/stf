@@ -4,7 +4,7 @@ Report issues [here](https://github.com/DeviceFarmer/stf/issues).
 
 - Usage
 	- Getting Started
-	- [Remote Debugging](/#!/docs/remote-debug)
+	- [Remote Debugging](/#!/docs/Remote-Debug)
 
 	- Remote Shell
 	- Browser Navigation

@@ -87,8 +87,8 @@ export default function(options: AppOptions) {
 
   app.use('/static/app/data', serveStatic(pathutil.resource('data')))
   app.use('/static/app/status', serveStatic(pathutil.resource('common/status')))
-  app.use('/static/app/browsers', browserIconMiddleware())
-  app.use('/static/app/appstores', appstoreIconMiddleware())
+  app.use('/static/app/browsers/icon', browserIconMiddleware())
+  app.use('/static/app/appstores/icon', appstoreIconMiddleware())
   app.use('/static/app/devices', deviceIconMiddleware())
   app.use('/static/app', serveStatic(pathutil.resource('app')))
 

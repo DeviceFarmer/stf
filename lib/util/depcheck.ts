@@ -24,32 +24,39 @@ function isRegistryRange(wanted: string) {
   return semver.validRange(wanted) !== null
 }
 
+// Looks in every node_modules folder from root upwards, like Node does, so
+// dependencies npm hoisted above stf (a workspace or a submodule) are found.
+// Reading the package.json directly also works for packages whose exports
+// don't list it.
+function findInstalled(root: string, name: string): PackageJson | null {
+  for (var dir = root; ; dir = path.dirname(dir)) {
+    try {
+      return readJson(path.join(dir, 'node_modules', name, 'package.json'))
+    }
+    catch {
+      if (dir === path.dirname(dir)) {
+        return null
+      }
+    }
+  }
+}
+
 // Returns one message per problem, empty when everything is fine.
 export function findProblems(root: string, nodeVersion = process.version): string[] {
   var pkg = readJson(path.join(root, 'package.json'))
   var problems: string[] = []
 
   var wantedNode = pkg.engines?.node
-  if (wantedNode && !semver.satisfies(nodeVersion, wantedNode)) {
+  if (wantedNode && !semver.satisfies(nodeVersion, wantedNode, {includePrerelease: true})) {
     problems.push(`node is ${nodeVersion} but needs to be ${wantedNode}`)
-  }
-
-  // An npm or Docker install has its dependencies resolved by npm. Only a
-  // source checkout can be left behind after a `git pull`.
-  // eslint-disable-next-line no-sync
-  if (!fs.existsSync(path.join(root, '.git'))) {
-    return problems
   }
 
   Object.entries(pkg.dependencies || {}).forEach(function([name, wanted]) {
     if (!isRegistryRange(wanted)) {
       return
     }
-    var installed: PackageJson
-    try {
-      installed = readJson(path.join(root, 'node_modules', name, 'package.json'))
-    }
-    catch {
+    var installed = findInstalled(root, name)
+    if (!installed) {
       problems.push(`${name} is not installed`)
       return
     }
@@ -73,8 +80,9 @@ export function verify(root: string) {
     return
   }
 
-  var error = styleText('red', 'ERROR:')
-  var hint = styleText('yellow', 'HINT:')
+  var stream = {stream: process.stderr}
+  var error = styleText('red', 'ERROR:', stream)
+  var hint = styleText('yellow', 'HINT:', stream)
   problems.forEach(function(problem) {
     // eslint-disable-next-line no-console
     console.error(error, problem)

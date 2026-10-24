@@ -8,20 +8,20 @@ var expect = chai.expect
 import {findProblems} from '../../lib/util/depcheck.js'
 
 describe('depcheck', function() {
-  var root: string
+  var parent: string, root: string
 
   function writeJson(file: string, value: object) {
     fs.mkdirSync(path.dirname(file), {recursive: true})
     fs.writeFileSync(file, JSON.stringify(value))
   }
 
-  function install(name: string, version: string) {
-    writeJson(path.join(root, 'node_modules', name, 'package.json'), {name, version})
+  function install(name: string, version: string, dir = root) {
+    writeJson(path.join(dir, 'node_modules', name, 'package.json'), {name, version})
   }
 
   beforeEach(function() {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'stf-depcheck-'))
-    fs.mkdirSync(path.join(root, '.git'))
+    parent = fs.mkdtempSync(path.join(os.tmpdir(), 'stf-depcheck-'))
+    root = path.join(parent, 'stf')
     writeJson(path.join(root, 'package.json'), {
       engines: {node: '>= 22.18.0'}
     , dependencies: {
@@ -34,7 +34,7 @@ describe('depcheck', function() {
   })
 
   afterEach(function() {
-    fs.rmSync(root, {recursive: true, force: true})
+    fs.rmSync(parent, {recursive: true, force: true})
   })
 
   it('should pass when every dependency satisfies its range', function() {
@@ -59,9 +59,24 @@ describe('depcheck', function() {
     ])
   })
 
-  it('should only check the Node version outside a source checkout', function() {
-    fs.rmdirSync(path.join(root, '.git'))
+  it('should accept a newer prerelease Node version', function() {
+    install('a', '1.4.0')
+    install('@scope/b', '2.0.3')
+    expect(findProblems(root, 'v24.0.0-rc.1')).to.deep.equal([])
+  })
+
+  it('should find dependencies hoisted above the root', function() {
+    install('a', '1.4.0', parent)
+    install('@scope/b', '2.0.3', parent)
     expect(findProblems(root, 'v22.18.0')).to.deep.equal([])
-    expect(findProblems(root, 'v20.19.0')).to.have.length(1)
+  })
+
+  it('should prefer the closest installed copy', function() {
+    install('a', '1.1.9')
+    install('a', '1.4.0', parent)
+    install('@scope/b', '2.0.3')
+    expect(findProblems(root, 'v22.18.0')).to.deep.equal([
+      'a is 1.1.9 but needs to be ^1.2.0'
+    ])
   })
 })

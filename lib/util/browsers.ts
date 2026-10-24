@@ -1,6 +1,4 @@
-import fs from 'fs'
-
-import pathutil from './pathutil.js'
+import inventory from '../../res/common/browsers/inventory.json' with {type: 'json'}
 
 export interface BrowserPlatform {
   package: string
@@ -17,11 +15,6 @@ export interface BrowserData {
 }
 
 // Keyed by browser id, which is also the icon name in res/common/browsers/icon.
-// Loaded once when the module is first imported.
-// eslint-disable-next-line no-sync
-const browsers: Record<string, BrowserData> = JSON.parse(fs.readFileSync(
-  pathutil.resource('common/browsers/inventory.json')
-, 'utf8'
-))
+const browsers: Record<string, BrowserData> = inventory
 
 export default browsers
