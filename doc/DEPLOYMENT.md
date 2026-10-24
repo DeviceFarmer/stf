@@ -19,6 +19,8 @@ For this example deployment, the following assumptions will be made. You will ne
 
 * You have [systemd](http://www.freedesktop.org/wiki/Software/systemd/) running on each host
 * You have [Docker](https://www.docker.com/) running on each host
+  - Docker 29 and later no longer set the legacy `--link` environment variables. STF finds RethinkDB through `RETHINKDB_PORT_28015_TCP`, so the units below pass it explicitly. Units written for older Docker versions without that line fail to connect to the database after a Docker upgrade.
+  - Variables in `/etc/environment` only fill in the `${...}` placeholders in the unit files. They don't reach the containers unless a unit passes them with `-e`.
 * Each host has an `/etc/environment` (a la [CoreOS](https://coreos.com/)) file with `COREOS_PRIVATE_IPV4=MACHINE_IP_HERE`. This is used to load the machine IP address in configuration files.
   - You can create the file yourself or alternatively replace `${COREOS_PRIVATE_IPV4}` manually as required.
 * You're deploying [devicefarmer/stf:latest](https://registry.hub.docker.com/u/devicefarmer/stf/). There's also a fixed tag for each release if you're feeling less adventurous.
@@ -213,6 +215,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -p %i:3000 \
   devicefarmer/stf:latest \
@@ -368,6 +371,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "STF_ROOT_GROUP_NAME=YOUR_ROOT_GROUP_NAME_HERE" \
   -e "STF_ADMIN_NAME=YOUR_ADMIN_NAME_HERE" \
   -e "STF_ADMIN_EMAIL=YOUR_ADMIN_EMAIL_HERE" \
@@ -399,6 +403,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   devicefarmer/stf:latest \
   stf processor %p-%i \
     --connect-app-dealer tcp://appside.stf.example.org:7160 \
@@ -479,6 +484,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   devicefarmer/stf:latest \
   stf reaper dev \
     --connect-push tcp://devside.stf.example.org:7270 \
@@ -666,6 +672,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -p %i:3000 \
   devicefarmer/stf:latest \
@@ -700,6 +707,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -p %i:3000 \
   devicefarmer/stf:latest \
@@ -743,6 +751,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   devicefarmer/stf:latest \
   stf groups-engine \
@@ -781,6 +790,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   devicefarmer/stf:latest \
   stf log-rethinkdb \
     --connect-sub tcp://appside.stf.example.org:7150
