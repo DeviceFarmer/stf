@@ -55,7 +55,7 @@ export default function(options: AppOptions) {
   var server = http.createServer(app)
 
   app.use('/static/wiki', markdownServe.middleware({
-    rootDirectory: pathutil.root('node_modules/@devicefarmer/stf-wiki')
+    rootDirectory: pathutil.resource('wiki')
   , view: 'docs'
   }))
 

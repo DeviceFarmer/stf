@@ -4,7 +4,7 @@ import pathutil from '../../../util/pathutil.js'
 
 export default function() {
   return serveStatic(
-    pathutil.root('node_modules/@devicefarmer/stf-appstore-db/dist')
+    pathutil.resource('common/appstores')
     , {
       maxAge: '30d'
     }

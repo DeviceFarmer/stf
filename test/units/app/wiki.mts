@@ -46,11 +46,13 @@ describe('wiki rendering', function() {
   })
 
   it('should render the wiki through the application Pug view', async function() {
-    var response = await fetch(origin + '/static/wiki/Home', {redirect: 'manual'})
+    var response = await fetch(origin + '/static/wiki/' + encodeURIComponent('[en]-Help'), {
+      redirect: 'manual'
+    })
     var body = await response.text()
     expect(response.status).to.equal(200)
     expect(response.headers.get('content-type')).to.match(/^text\/html/)
     expect(body).to.contain('stf-docs')
-    expect(body).to.contain('<p>Welcome to the stf wiki!</p>')
+    expect(body).to.contain('STF Help</h1>')
   })
 })
