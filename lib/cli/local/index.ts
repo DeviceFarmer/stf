@@ -283,6 +283,42 @@ var builder = function(yargs: Argv) {
 
 type CliArg = string | number
 
+// The serials go right after the command name. Placed last they would be
+// swallowed by an array option such as --cleanup-folder, and the provider
+// would then handle every device.
+var providerArgs = function(argv: CommandArgv<typeof builder>) {
+  var util = require('util')
+
+  return ([
+      'provider'
+    ] as CliArg[])
+    .concat(argv.serial as CliArg[])
+    .concat([
+      '--name', argv.provider
+    , '--min-port', argv.providerMinPort
+    , '--max-port', argv.providerMaxPort
+    , '--connect-sub', argv.bindDevPub
+    , '--connect-push', argv.bindDevPull
+    , '--group-timeout', argv.groupTimeout
+    , '--public-ip', argv.publicIp
+    , '--storage-url'
+    , util.format('http://localhost:%d/', argv.port)
+    , '--adb-host', argv.adbHost
+    , '--adb-port', argv.adbPort
+    , '--vnc-initial-size', argv.vncInitialSize.join('x')
+    , '--mute-master', argv.muteMaster
+    , '--screen-ws-url-pattern', argv.screenWsUrlPattern
+    ])
+    .concat(argv.allowRemote ? ['--allow-remote'] : [])
+    .concat(argv.lockRotation ? ['--lock-rotation'] : [])
+    .concat(!argv.cleanup ? ['--no-cleanup'] : [])
+    .concat(argv.cleanupDisableBluetooth ? ['--cleanup-disable-bluetooth'] : [])
+    .concat(argv.cleanupBluetoothBonds ? ['--cleanup-bluetooth-bonds'] : [])
+    .concat(argv.cleanupFolder.length ?
+      ['--cleanup-folder' as CliArg].concat(argv.cleanupFolder) : [])
+    .concat(!argv.screenReset ? ['--no-screen-reset'] : [])
+}
+
 var handler = async function(argv: CommandArgv<typeof builder>) {
   var util = require('util')
   var path = require('path')
@@ -473,31 +509,8 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
     ]
 
     if ((argv.provider as string | false) !== false) {
-      procs.push(procutil.fork(path.resolve(import.meta.dirname, '..'), [
-          'provider'
-        , '--name', argv.provider
-        , '--min-port', argv.providerMinPort
-        , '--max-port', argv.providerMaxPort
-        , '--connect-sub', argv.bindDevPub
-        , '--connect-push', argv.bindDevPull
-        , '--group-timeout', argv.groupTimeout
-        , '--public-ip', argv.publicIp
-        , '--storage-url'
-        , util.format('http://localhost:%d/', argv.port)
-        , '--adb-host', argv.adbHost
-        , '--adb-port', argv.adbPort
-        , '--vnc-initial-size', argv.vncInitialSize.join('x')
-        , '--mute-master', argv.muteMaster
-        , '--screen-ws-url-pattern', argv.screenWsUrlPattern
-        ]
-        .concat(argv.allowRemote ? ['--allow-remote'] : [])
-        .concat(argv.lockRotation ? ['--lock-rotation'] : [])
-        .concat(!argv.cleanup ? ['--no-cleanup'] : [])
-        .concat(argv.cleanupDisableBluetooth ? ['--cleanup-disable-bluetooth'] : [])
-        .concat(argv.cleanupBluetoothBonds ? ['--cleanup-bluetooth-bonds'] : [])
-        .concat(argv.cleanupFolder ? ['--cleanup-folder' as CliArg].concat(argv.cleanupFolder) : [])
-        .concat(!argv.screenReset ? ['--no-screen-reset'] : [])
-        .concat(argv.serial)))
+      procs.push(procutil.fork(path.resolve(import.meta.dirname, '..')
+        , providerArgs(argv)))
     }
 
     ios?.start().catch(error => {
@@ -544,4 +557,4 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
   }
 }
 
-export {command, describe, builder, handler}
+export {command, describe, builder, handler, providerArgs}
