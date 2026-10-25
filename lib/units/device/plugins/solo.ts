@@ -10,7 +10,8 @@ import logger from '../../../util/logger.js'
 import wire from '../../../wire/index.js'
 import wireutil from '../../../wire/util.js'
 import type {
-  DeviceIdentity
+  DeviceData
+, DeviceIdentity
 , DevicePluginOptions
 , Router
 , SoloPlugin
@@ -20,18 +21,21 @@ import subSyrup from '../support/sub.js'
 import pushSyrup from '../support/push.js'
 import routerSyrup from '../support/router.js'
 import identitySyrup from './util/identity.js'
+import dataSyrup from './util/data.js'
 
 export default syrup.serial()
   .dependency(subSyrup)
   .dependency(pushSyrup)
   .dependency(routerSyrup)
   .dependency(identitySyrup)
+  .dependency(dataSyrup)
   .define(function(
     options: DevicePluginOptions
   , sub: ZmqSocket
   , push: ZmqSocket
   , router: Router
   , identity: DeviceIdentity
+  , data?: DeviceData | null
   ): SoloPlugin {
     var log = logger.createLogger('device:plugins:solo')
 
@@ -49,6 +53,16 @@ export default syrup.serial()
     sub.subscribe(channel)
 
     router.on(wire.ProbeMessage, function() {
+      var cpu = data && data.cpu &&
+        (data.cpu.name !== null || data.cpu.cores !== null || data.cpu.freq !== null) ?
+        new wire.DeviceCpuMessage(data.cpu) :
+        null
+      var memory = data && data.memory &&
+        (data.memory.ram !== null || data.memory.rom !== null) ?
+        new wire.DeviceMemoryMessage(data.memory) :
+        null
+      var releasedAt = (data && data.date) || null
+
       push.send([
         wireutil.global
       , wireutil.envelope(new wire.DeviceIdentityMessage(
@@ -66,6 +80,9 @@ export default syrup.serial()
         , identity.cpuPlatform
         , identity.openGLESVersion
         , identity.marketName
+        , cpu
+        , memory
+        , releasedAt
         ))
       ])
     })

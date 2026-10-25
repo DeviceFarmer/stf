@@ -145,6 +145,11 @@ export function userProfileUrl(email?: string): string | undefined {
   return `/#/user/${email}`
 }
 
+export function setDeviceImage(device: Device): void {
+  device.enhancedImage120 = deviceImageUrl(device.image, 'icon/x120', device)
+  device.enhancedImage24 = deviceImageUrl(device.image, 'icon/x24', device)
+}
+
 export function enhanceDevice(device: Device): Device {
   device.usable = Boolean(device.present && device.status === 3 && device.ready &&
     (!device.owner || device.using))
@@ -157,8 +162,7 @@ export function enhanceDevice(device: Device): Device {
   device.enhancedName = device.marketName || device.name || device.model || device.serial ||
     'Unknown'
   device.enhancedModel = device.model || 'Unknown'
-  device.enhancedImage120 = deviceImageUrl(device.image, 'icon/x120')
-  device.enhancedImage24 = deviceImageUrl(device.image, 'icon/x24')
+  setDeviceImage(device)
   device.enhancedStateAction = statusNameAction(device.state)
   device.enhancedStatePassive = statusNamePassive(device.state)
 

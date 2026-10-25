@@ -9,6 +9,7 @@ import type devutil from '../util/devutil.js'
 import type zmqutil from '../util/zmqutil.js'
 import type wirerouter from '../wire/router.js'
 import type ChannelManager from '../wire/channelmanager.js'
+import type {HwProbeResult} from '../units/device/plugins/util/hwprobe.js'
 import type {ConnectStartMessageFields, LogcatFilter, OwnerMessage} from './wire.js'
 import type {ScreenGrabber} from './device.js'
 import type {
@@ -28,8 +29,17 @@ export type ZmqSocket = ReturnType<typeof zmqutil.socket>
 export type Channels = ChannelManager
 export type LocalSocket = Awaited<ReturnType<typeof devutil.waitForLocalSocket>>
 export type Identity = ReturnType<typeof devutil.makeIdentity>
-export type DeviceData = NonNullable<ReturnType<typeof deviceData.find>>
-export type DeviceFlags = NonNullable<DeviceData['flags']>
+export interface DeviceFlags {
+  forceMaxPressure?: number
+  forceTouchMode?: string
+  forceMinScreenScale?: number
+  forceTouchOrigin?: string
+}
+
+export interface DeviceData extends deviceData.DeviceRecord {
+  flags?: DeviceFlags
+}
+export type {HwProbeResult}
 
 export type NonNullableFields<T> = {[K in keyof T]: NonNullable<T[K]>}
 

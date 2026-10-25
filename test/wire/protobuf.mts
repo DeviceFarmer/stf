@@ -587,6 +587,9 @@ var pbjs5Decodings: Sample[] = [
     , cpuPlatform: null
     , openGLESVersion: null
     , marketName: null
+    , cpu: null
+    , memory: null
+    , releasedAt: null
     }
   }
 ]
@@ -800,6 +803,47 @@ describe('wire protobuf', function() {
         ))
       }
     )
+
+    it('should round-trip DeviceIdentityMessage with cpu, memory, and releasedAt fields',
+      function() {
+        var display = new wire.DeviceDisplayMessage(
+          0, 1080, 2400, 0, 420, 420, 60, 2.625, true, 'url', 6.6
+        )
+      var phone = new wire.DevicePhoneMessage('123', '456', '789', '012', 'LTE')
+      var cpu = new wire.DeviceCpuMessage('Snapdragon 8 Gen 3', 8, 3.3)
+      var memory = new wire.DeviceMemoryMessage(12288, 256.5)
+      var original = new wire.DeviceIdentityMessage(
+        'serial123'
+      , 'Android'
+      , 'Samsung'
+      , 'Carrier'
+      , 'SM-S928B'
+      , '14'
+      , 'arm64-v8a'
+      , '34'
+      , display
+      , phone
+      , 'e3qxxx'
+      , 'qcom'
+      , '3.2'
+      , 'Galaxy S24 Ultra'
+      , cpu
+      , memory
+      , '2024-01-24'
+      )
+
+      var encoded = original.encodeNB()
+      var decoded = wire.DeviceIdentityMessage.decode(encoded)
+
+      expect(decoded.serial).to.equal('serial123')
+      expect(decoded.platform).to.equal('Android')
+      expect(decoded.manufacturer).to.equal('Samsung')
+      expect(decoded.model).to.equal('SM-S928B')
+      expect(decoded.marketName).to.equal('Galaxy S24 Ultra')
+      expect(decoded.releasedAt).to.equal('2024-01-24')
+      expect(fields(decoded.cpu!)).to.eql({name: 'Snapdragon 8 Gen 3', cores: 8, freq: 3.3})
+      expect(fields(decoded.memory!)).to.eql({ram: 12288, rom: 256.5})
+    })
   })
 
   describe('routing', function() {
