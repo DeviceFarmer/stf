@@ -4,7 +4,13 @@
 
 import Bluebird from 'bluebird'
 import adbkit from '@devicefarmer/adbkit'
-import type {Client, DeviceClient, SocketOptions, StartActivityOptions} from '@devicefarmer/adbkit'
+import type {
+  Client
+, DeviceClient
+, SocketOptions
+, StartActivityOptions
+, WaitOptions
+} from '@devicefarmer/adbkit'
 import type {Readable} from 'stream'
 
 interface AdbOptions {
@@ -41,7 +47,7 @@ interface AdbWrapper {
   uninstall(serial: string, pkg: string): Wrapped<DeviceClient['uninstall']>
   clear(serial: string, pkg: string): Wrapped<DeviceClient['clear']>
   reboot(serial: string): Wrapped<DeviceClient['reboot']>
-  waitBootComplete(serial: string): Wrapped<DeviceClient['waitBootComplete']>
+  waitBootComplete(serial: string, options?: WaitOptions): Wrapped<DeviceClient['waitBootComplete']>
   getPackages(serial: string): Wrapped<DeviceClient['getPackages']>
   getProperties(serial: string): Wrapped<DeviceClient['getProperties']>
   startActivity(
@@ -104,8 +110,8 @@ export default function(options?: AdbOptions): AdbWrapper {
   , reboot: function(serial) {
       return Bluebird.resolve(this.client.getDevice(serial).reboot())
     }
-  , waitBootComplete: function(serial) {
-      return Bluebird.resolve(this.client.getDevice(serial).waitBootComplete())
+  , waitBootComplete: function(serial, options) {
+      return Bluebird.resolve(this.client.getDevice(serial).waitBootComplete(options))
     }
   , getPackages: function(serial) {
       return Bluebird.resolve(this.client.getDevice(serial).getPackages())
