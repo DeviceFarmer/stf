@@ -57,6 +57,8 @@ describe('screen availability notice', () => {
     Socket.instances = []
     device = {platform: 'iOS', using: false, usage: 'automation', owner: {email: 'runner@example.test'}
       , present: true, ready: true, status: 3
+      , battery: {health: 'good', level: 80, scale: 100, source: 'usb', status: 'charging'
+        , temp: 25, voltage: 4000}
       , display: {url: 'wss://stf.test/screen', width: 100, height: 200}} as Device
     host = document.createElement('div')
     document.body.append(host)
@@ -116,5 +118,24 @@ describe('screen availability notice', () => {
     device = {...device, owner: null, usage: null}
     await render()
     expect(host.querySelector('[role="status"]')).toBeNull()
+  })
+
+  it('skips screen checks for battery updates with the same owner and rechecks owner changes', async() => {
+    await render()
+    await act(async() => Socket.instances[0]!.open())
+    const measure = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+    measure.mockClear()
+    device = {...device, owner: {...device.owner!}, battery: {...device.battery!, level: 75}}
+    await render()
+    expect(measure).not.toHaveBeenCalled()
+    expect(Socket.instances).toHaveLength(1)
+
+    device = {...device, owner: {...device.owner!, email: 'next-runner@example.test'}}
+    await render()
+    expect(measure).toHaveBeenCalled()
+
+    device = {...device, ready: false}
+    await render()
+    expect(host.querySelector('[role="status"]')?.textContent).toBe('Device offline')
   })
 })

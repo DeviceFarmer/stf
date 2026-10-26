@@ -79,6 +79,7 @@ export interface DeviceOwner {
   email: string
   name: string
   group: string
+  reservationId?: string | null
 }
 
 export interface DeviceGroup {

@@ -2664,3 +2664,12 @@ msgstr "Только просмотр"
 
 msgid "Take control to view and interact with the device."
 msgstr "Нажмите «Использовать», чтобы видеть экран и управлять устройством."
+
+msgid "Release reservation"
+msgstr "Освободить устройство"
+
+msgid "Release this STF reservation? The external automation session must be stopped separately."
+msgstr "Освободить устройство в STF? Внешний сеанс автоматизации нужно остановить отдельно."
+
+msgid "Stop Automation"
+msgstr "Остановить автоматизацию"

@@ -9,6 +9,8 @@ import type {Control} from '@/core/control'
 
 const state = vi.hoisted(() => ({
   device: undefined as Device | undefined, invite: vi.fn(), kick: vi.fn(), notify: vi.fn(), standalone: false
+  , release: vi.fn(), confirm: vi.fn(), report: vi.fn()
+  , user: {email: 'viewer@example.test', privilege: 'user'}
   , listeners: new Set<() => void>()
 }))
 vi.mock('@/core/devices/store', async() => {
@@ -23,7 +25,10 @@ vi.mock('@/core/devices/store', async() => {
     , () => state.device
   ), loading: false})}
 })
-vi.mock('@/core/group', () => ({inviteDevice: state.invite, kickDevice: state.kick}))
+vi.mock('@/core/group', () => ({inviteDevice: state.invite, releaseDevice: state.release}))
+vi.mock('@/core/user', () => ({currentUser: state.user}))
+vi.mock('@/ui/modals', () => ({openConfirm: state.confirm}))
+vi.mock('../device-list/standalone-session', () => ({reportStandaloneSession: state.report}))
 vi.mock('@/core/settings', () => ({setSetting: vi.fn(), useSetting: () => ['dashboard', vi.fn()]}))
 vi.mock('@/ui/modes', () => ({basicMode: true, useStandalone: () => state.standalone}))
 vi.mock('@/ui/page-title', () => ({usePageTitle: vi.fn()}))
@@ -48,6 +53,7 @@ function Location() {
   const navigate = useNavigate()
   return <>
     <output data-testid='location'>{location.pathname}{location.search}</output>
+    <button data-testid='watch-same-device' onClick={() => navigate('/control/phone?mode=watch')}>Watch again</button>
     <button data-testid='other-device' onClick={() => navigate('/control/other?mode=watch&standalone')}>
       Open another device
     </button>
@@ -66,6 +72,10 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     state.kick.mockReset().mockResolvedValue(undefined)
     state.notify.mockReset()
     state.standalone = false
+    state.user.privilege = 'user'
+    state.release.mockReset().mockResolvedValue(undefined)
+    state.confirm.mockReset().mockResolvedValue(true)
+    state.report.mockReset()
     state.device = phone({platform})
     host = document.createElement('div')
     document.body.append(host)
@@ -289,17 +299,95 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     expect(state.invite).not.toHaveBeenCalled()
     expect(home().disabled).toBe(true)
   })
-  it('does not release a standalone watch session on close, but releases after explicit manual takeover', async() => {
+  it('reports only the popup acknowledged reservation to its opener', async() => {
     state.standalone = true
     await render('/control/phone?standalone&mode=watch')
-    window.dispatchEvent(new Event('beforeunload'))
-    expect(state.kick).not.toHaveBeenCalled()
+    expect(state.report).toHaveBeenLastCalledWith(state.device, false)
     state.device = phone({platform, owner: null, usage: null})
     await render()
+    const acquired = phone({platform, owner: {email: state.user.email, reservationId: 'this-popup'}
+      , usage: null, using: true})
+    state.invite.mockResolvedValueOnce(acquired)
     await act(async() => useButton().click())
-    state.device = phone({platform, owner: {email: 'viewer@example.test'}, usage: null, using: true})
+    expect(state.report).toHaveBeenLastCalledWith(expect.objectContaining({
+      owner: {email: state.user.email, reservationId: 'this-popup'}
+    }), true)
+    state.device = acquired
     await render()
+    expect(state.report).toHaveBeenLastCalledWith(state.device, true)
+    state.device = phone({platform, owner: null, usage: null})
+    await render()
+    expect(state.report).toHaveBeenLastCalledWith(state.device, false)
     window.dispatchEvent(new Event('beforeunload'))
-    expect(state.kick).toHaveBeenCalledWith(state.device)
+    expect(state.kick).not.toHaveBeenCalled()
+    // The same user acquiring another reservation in another tab must not
+    // become this popup's cleanup responsibility, even without a free update.
+    state.device = phone({platform, owner: {email: state.user.email, reservationId: 'another-tab'}
+      , usage: null, using: true})
+    await render()
+    expect(state.report).toHaveBeenLastCalledWith(state.device, false)
+    state.device = phone({platform})
+    await render()
+    expect(state.report).toHaveBeenLastCalledWith(state.device, false)
+  })
+  it.each(['user', 'admin'])('leaves explicit watch mode for existing manual access without another invite (%s)', async(privilege) => {
+    state.user.privilege = privilege
+    state.device = phone({platform, owner: {email: privilege === 'admin' ? 'another@example.test' : state.user.email}
+      , usage: null, using: true})
+    await render('/control/phone?mode=watch')
+    expect(host.textContent).toContain('View only')
+    expect(home().disabled).toBe(true)
+    expect(useButton().disabled).toBe(false)
+    expect(state.invite).not.toHaveBeenCalled()
+    await act(async() => useButton().click())
+    expect(location()).toBe('/control/phone')
+    expect(home().disabled).toBe(false)
+    expect(state.invite).not.toHaveBeenCalled()
+  })
+  it('does not leave explicit watch when the automation owner also has manual-style using access', async() => {
+    state.device = phone({platform, using: true})
+    await render('/control/phone?mode=watch')
+    expect(home().disabled).toBe(true)
+    expect(useButton()).toBeUndefined()
+    expect(state.invite).not.toHaveBeenCalled()
+  })
+  it('starts a new neutral watch session after taking manual control of a completed run', async() => {
+    await render('/control/phone?mode=watch')
+    state.device = phone({platform, owner: null, usage: null})
+    await render()
+    expect(host.textContent).toContain('Automation finished')
+    await act(async() => useButton().click())
+    state.device = phone({platform, owner: {email: state.user.email}, usage: null, using: true})
+    await render()
+    expect(home().disabled).toBe(false)
+    // A new watch URL for the same mounted device must not remember the old run.
+    await act(async() => host.querySelector<HTMLButtonElement>('[data-testid="watch-same-device"]')!.click())
+    expect(host.textContent).toContain('View only')
+    expect(host.textContent).not.toContain('Automation finished')
+    expect(home().disabled).toBe(true)
+  })
+  it('offers administrators a separate, confirmed reservation release without leaving watch mode', async() => {
+    state.user.privilege = 'admin'
+    await render('/control/phone?mode=watch')
+    const release = Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Release reservation')!
+    state.confirm.mockResolvedValueOnce(false)
+    await act(async() => release.click())
+    expect(state.release).not.toHaveBeenCalled()
+    await act(async() => release.click())
+    expect(state.release).toHaveBeenCalledWith(state.device)
+    expect(location()).toBe('/control/phone?mode=watch')
+    expect(home().disabled).toBe(true)
+    expect(state.invite).not.toHaveBeenCalled()
+  })
+  it('does not offer reservation release to ordinary viewers and reports API rejection', async() => {
+    await render('/control/phone?mode=watch')
+    expect(host.textContent).not.toContain('Release reservation')
+    state.user.privilege = 'admin'
+    await render()
+    state.release.mockRejectedValueOnce(new Error('Reservation changed'))
+    const release = Array.from(host.querySelectorAll('button')).find(button => button.textContent === 'Release reservation')!
+    await act(async() => release.click())
+    expect(state.notify).toHaveBeenCalledOnce()
+    expect(home().disabled).toBe(true)
   })
 })

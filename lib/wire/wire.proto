@@ -464,6 +464,7 @@ message OwnerMessage {
   required string email = 1;
   required string name = 2;
   required string group = 3;
+  optional string reservationId = 4;
 }
 
 message GroupMessage {
@@ -480,6 +481,7 @@ message AutoGroupMessage {
 
 message UngroupMessage {
   repeated DeviceRequirement requirements = 2;
+  optional string reservationId = 3;
 }
 
 message JoinGroupMessage {
@@ -546,10 +548,12 @@ message TouchCommitMessage {
 
 message TouchResetMessage {
   required uint32 seq = 1;
+  optional string gestureId = 2;
 }
 
 message GestureStartMessage {
   required uint32 seq = 1;
+  optional string gestureId = 2;
 }
 
 message GestureStopMessage {

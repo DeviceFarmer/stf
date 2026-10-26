@@ -197,6 +197,7 @@ interface DbApi {
   loadStandardDevices(groups: string[]): Promise<DeviceDocument[]>
   loadPresentDevices(): Promise<r.Cursor>
   loadDeviceBySerial(serial: string): Promise<DeviceDocument | null>
+  loadDeviceByChannel(channel: string, groups: string[]): Promise<DeviceDocument | null>
   loadDevice(groups: string[], serial: string): Promise<r.Cursor>
   loadBookableDevice(groups: string[], serial: string): Promise<DeviceDocument[]>
   loadDeviceByCurrent(groups: string[], serial: string): Promise<DeviceDocument[]>
@@ -1855,6 +1856,19 @@ dbapi.loadPresentDevices = function() {
   return db.run(r.table('devices').getAll(true, {
     index: 'present'
   }))
+}
+
+dbapi.loadDeviceByChannel = function(channel, groups) {
+  return db.run(r.table('devices').getAll(channel, {index: 'channel'})
+    .filter(function(device) {
+      return r.expr(groups).contains(device('group')('id'))
+    }).limit(1))
+    .then(function(cursor) {
+      return cursor.toArray()
+    })
+    .then(function(devices) {
+      return devices[0] || null
+    })
 }
 
 dbapi.loadDeviceBySerial = function(serial) {

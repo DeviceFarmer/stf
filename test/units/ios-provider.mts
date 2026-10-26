@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import {once} from 'node:events'
+import sinon from 'sinon'
 import {WebSocket} from 'ws'
 import wire from '../../lib/wire/index.js'
 import wireutil from '../../lib/wire/util.js'
@@ -131,14 +132,23 @@ describe('Linux iOS integration', function() {
       , disconnects: () => disconnects, cancelled: () => cancelled}
   }
 
-  it('keeps iOS automation usage until release', async function() {
+  it('publishes iOS automation usage and releases its owner', async function() {
     const f = await fixture()
     await f.join(900000, 'automation')
     const joined = f.sent.find(item => item.envelope.type === wire.JoinGroupMessage.$code)
-    assert.equal(wire.JoinGroupMessage.decode(joined!.envelope.message).usage, 'automation')
-    assert.equal(f.bridge.usage, 'automation')
+    const reservation = wire.JoinGroupMessage.decode(joined!.envelope.message)
+    assert.equal(reservation.usage, 'automation')
+    assert.ok(reservation.owner.reservationId)
+    assert.equal(reservation.owner.reservationId, f.bridge.owner?.reservationId)
+    const acknowledgement = f.sent.find(item =>
+      item.channel === 'reply' && item.envelope.type === wire.TransactionDoneMessage.$code)!
+    const response = wire.TransactionDoneMessage.decode(acknowledgement.envelope.message)
+    assert.equal(response.success, true)
+    assert.equal(JSON.parse(response.body!).owner.reservationId, reservation.owner.reservationId)
     f.bridge.leave('ungroup_request')
-    assert.equal(f.bridge.usage, null)
+    const left = f.sent.find(item => item.envelope.type === wire.LeaveGroupMessage.$code)
+    assert.equal(wire.LeaveGroupMessage.decode(left!.envelope.message).owner.email, owner.email)
+    assert.equal(f.bridge.owner, null)
   })
 
   it('streams authorized automation without extending its lease', async function() {
@@ -189,7 +199,6 @@ describe('Linux iOS integration', function() {
         await new Promise(resolve => setTimeout(resolve, 20))
         await f.bridge.poll()
         assert.equal(f.bridge.owner, null, 'Observers must not renew automation ownership')
-        assert.equal(f.bridge.usage, null)
       }
       finally {
         Date.now = now
@@ -200,6 +209,66 @@ describe('Linux iOS integration', function() {
       screen.close()
     }
   })
+
+  for (const revoked of ['group visibility', 'viewer token']) {
+    it(`rechecks ${revoked} while the automation owner is unchanged`, async function() {
+      const f = await fixture()
+      await f.join(20000, 'automation')
+      const reservationOwner = f.bridge.owner
+      let allowed = true
+      let identityChecks = 0
+      let deviceChecks = 0
+      const api = http.createServer((req, res) => {
+        if (req.url === '/api/v1/user') {
+          identityChecks++
+          const visible = allowed || revoked !== 'viewer token'
+          res.writeHead(visible ? 200 : 401)
+          res.end(JSON.stringify({success: visible, user: {email: 'viewer@example.test'}}))
+        }
+        else {
+          assert.equal(req.url, '/api/v1/devices/' + serial)
+          deviceChecks++
+          res.writeHead(allowed ? 200 : 403)
+          res.end(JSON.stringify({success: allowed, device: {serial, owner, usage: 'automation'}}))
+        }
+      })
+      servers.push(api)
+      const apiUrl = await listen(api)
+      const clock = sinon.useFakeTimers({toFake: ['setInterval', 'clearInterval']})
+      const screen = createScreenServer({client: f.client, apiUrl, publicOrigin: origin, serial
+        , owner: () => f.bridge.owner})
+      const ws = new WebSocket((await listen(screen.server)).replace('http:', 'ws:'), {
+        headers: {origin, cookie: 'session=signed'}
+      })
+      let frames = 0
+      ws.on('message', (_data, binary) => {
+        if (binary) {
+          frames++
+        }
+      })
+      try {
+        await once(ws, 'open')
+        ws.send('on')
+        await until(() => frames >= 2)
+        const closed = once(ws, 'close')
+        allowed = false
+        clock.tick(5000)
+        const [code] = await closed
+        assert.equal(code, 1008)
+        assert.ok(identityChecks >= 2, 'The same-owner stream must recheck viewer credentials')
+        assert.equal(f.bridge.owner, reservationOwner,
+          'Revocation must not release the reservation')
+        if (revoked === 'group visibility') {
+          assert.ok(deviceChecks >= 2, 'The same-owner stream must recheck group visibility')
+        }
+      }
+      finally {
+        ws.terminate()
+        screen.close()
+        clock.restore()
+      }
+    })
+  }
 
   it('aborts forwarded input on release and permits a new session', async function() {
     const f = await fixture('iPhone 16 Plus', true)
@@ -277,6 +346,87 @@ describe('Linux iOS integration', function() {
     f.send(new wire.KeyPressMessage('home'))
     await new Promise(resolve => setTimeout(resolve, 30))
     assert.equal(f.requests.length, 0)
+  })
+
+  it('does not release a new reservation for an old reservation ID', async function() {
+    const f = await fixture()
+    await f.join()
+    const previousId = f.bridge.owner!.reservationId!
+    f.bridge.leave('test')
+    await f.join()
+    const replacement = f.bridge.owner!
+    assert.ok(previousId)
+    assert.ok(replacement.reservationId)
+    assert.notEqual(previousId, replacement.reservationId)
+    assert.ok(!('reservationId' in owner), 'The provider must not mutate the caller owner')
+    f.send(new wire.UngroupMessage([], previousId), true)
+    await until(() => f.sent.some(item =>
+      item.envelope.type === wire.TransactionDoneMessage.$code &&
+      !wire.TransactionDoneMessage.decode(item.envelope.message).success))
+    assert.equal(f.bridge.owner, replacement)
+    f.send(new wire.UngroupMessage([], replacement.reservationId), true)
+    await until(() => f.bridge.owner === null)
+  })
+
+  it('ignores a scoped reset from a previous gesture', async function() {
+    const f = await fixture()
+    await f.join()
+    f.send(new wire.GestureStartMessage(0, 'old-gesture'))
+    f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
+    f.send(new wire.GestureStartMessage(2, 'current-gesture'))
+    f.send(new wire.TouchDownMessage(3, 0, 0.7, 0.8))
+    f.send(new wire.TouchResetMessage(0, 'old-gesture'))
+    f.send(new wire.TouchUpMessage(4, 0))
+    await until(() => f.requests.length === 1)
+    assert.equal(f.requests[0]!.path, '/tap')
+    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
+    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+  })
+
+  it('clears scoped gesture state when a reservation ends', async function() {
+    const f = await fixture()
+    await f.join()
+    f.send(new wire.GestureStartMessage(0, 'previous-session'))
+    f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
+    f.bridge.leave('test')
+    await f.join()
+    // Legacy clients can start a gesture without a token after the old session.
+    f.send(new wire.TouchDownMessage(0, 0, 0.7, 0.8))
+    f.send(new wire.TouchResetMessage(0, 'previous-session'))
+    f.send(new wire.TouchUpMessage(1, 0))
+    await until(() => f.requests.length === 1)
+    assert.equal(f.requests[0]!.path, '/tap')
+    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
+    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+  })
+
+  for (const resetId of ['current-gesture', null]) {
+    it(`cancels touch with a ${resetId ? 'matching scoped' : 'legacy'} reset`, async function() {
+      const f = await fixture()
+      await f.join()
+      f.send(new wire.GestureStartMessage(0, 'current-gesture'))
+      f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
+      f.send(new wire.TouchResetMessage(2, resetId))
+      f.send(new wire.TouchUpMessage(3, 0))
+      // Use the ordered command queue as a barrier after the rejected tap.
+      f.send(new wire.KeyPressMessage('home'))
+      await until(() => f.requests.length === 1)
+      assert.deepEqual(f.requests.map(item => item.path), ['/home'])
+    })
+  }
+
+  it('retains scoped cleanup across a legacy reset within a gesture', async function() {
+    const f = await fixture()
+    await f.join()
+    f.send(new wire.GestureStartMessage(0, 'current-gesture'))
+    f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
+    f.send(new wire.TouchResetMessage(2))
+    f.send(new wire.TouchDownMessage(3, 0, 0.7, 0.8))
+    f.send(new wire.TouchResetMessage(0, 'current-gesture'))
+    f.send(new wire.TouchUpMessage(4, 0))
+    f.send(new wire.KeyPressMessage('home'))
+    await until(() => f.requests.length === 1)
+    assert.deepEqual(f.requests.map(item => item.path), ['/home'])
   })
 
   it('invalidates commands on release and WDA recovery', async function() {
@@ -558,6 +708,10 @@ describe('Linux iOS integration', function() {
       return {serial, platform: 'iOS', channel: 'ios:' + serial, present: true
         , ready: true, owner, group: {id: 'root'}}
     }, () => assert.fail('Owned input must not be rejected'))
+    guard(['input.gestureStart', 'ios:' + serial], error => {
+      assert.ifError(error)
+      delivered.push('start')
+    })
     guard(['input.touchDown', 'ios:' + serial], error => {
       assert.ifError(error)
       delivered.push('down')
@@ -569,8 +723,8 @@ describe('Linux iOS integration', function() {
     await until(() => lookups === 1)
     assert.deepEqual(delivered, [])
     release()
-    await until(() => delivered.length === 2)
-    assert.deepEqual(delivered, ['down', 'up'])
+    await until(() => delivered.length === 3)
+    assert.deepEqual(delivered, ['start', 'down', 'up'])
   })
 
   it('reassembles split MJPEG frames and rejects missing or oversized lengths', function() {

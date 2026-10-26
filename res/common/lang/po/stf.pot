@@ -2564,3 +2564,14 @@ msgstr ""
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid "Release reservation"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid "Release this STF reservation? The external automation session must be stopped separately."
+msgstr ""
+
+msgid "Stop Automation"
+msgstr ""

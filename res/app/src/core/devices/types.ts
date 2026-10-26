@@ -13,6 +13,7 @@ export type DeviceState =
   | 'automation'
 
 export interface DeviceOwner {
+  reservationId?: string
   email: string
   name?: string
   group?: string

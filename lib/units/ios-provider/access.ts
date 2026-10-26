@@ -4,6 +4,7 @@ export interface IosOwner {
   email: string
   name: string
   group: string
+  reservationId?: string | null
 }
 
 export async function authorizeScreen(

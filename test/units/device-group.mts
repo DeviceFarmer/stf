@@ -28,6 +28,7 @@ function setup() {
   var service = {
     wake: sinon.spy()
   , acquireWakeLock: sinon.spy()
+  , releaseWakeLock: sinon.spy()
   }
   var plugin = group.invoke(
     {serial: 'test-device', groupTimeout: 1000}
@@ -79,5 +80,63 @@ describe('Device group plugin', function() {
       var message = wire.JoinGroupMessage.decode(envelope.message)
       expect(message.usage).to.not.equal('fingerprint')
     })
+  })
+
+  it('assigns a fresh reservation id without changing the caller owner', async function() {
+    const {plugin} = setup()
+    const owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')
+    const first = await plugin.join(owner)
+    expect(first.reservationId).to.be.a('string').with.length(36)
+    expect(owner.reservationId).to.equal(null)
+    expect((await plugin.join(owner)).reservationId).to.equal(first.reservationId)
+    await plugin.leave('test')
+    const second = await plugin.join(owner)
+    expect(second.reservationId).to.not.equal(first.reservationId)
+  })
+
+  it('refuses a delayed release after the same user acquired a new reservation', async function() {
+    const {plugin, handlers, push} = setup()
+    const owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')
+    const first = await plugin.join(owner)
+    await plugin.leave('test')
+    const second = await plugin.join(owner)
+    await handlers[wire.UngroupMessage.$code]!(
+      'transaction', new wire.UngroupMessage([], first.reservationId)
+    )
+    expect((await plugin.get()).reservationId).to.equal(second.reservationId)
+    let envelope = wire.Envelope.decode(push.send.lastCall.args[0][1])
+    expect(wire.TransactionDoneMessage.decode(envelope.message).success).to.equal(false)
+    await handlers[wire.UngroupMessage.$code]!(
+      'transaction', new wire.UngroupMessage([], second.reservationId)
+    )
+    for (let i = 0; i < 100; i++) {
+      envelope = wire.Envelope.decode(push.send.lastCall.args[0][1])
+      if (wire.TransactionDoneMessage.decode(envelope.message).success) {
+        break
+      }
+      await new Promise(resolve => setTimeout(resolve, 1))
+    }
+    expect(wire.TransactionDoneMessage.decode(envelope.message).success).to.equal(true)
+    await plugin.get().then(() => {
+      throw new Error('Expected no owner')
+    }, () => undefined)
+  })
+
+  it('acknowledges the exact acquired reservation, including idempotent joins', async function() {
+    const {plugin, handlers, push} = setup()
+    const owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')
+    const current = await plugin.join(owner)
+    await handlers[wire.GroupMessage.$code]!('transaction', new wire.GroupMessage(owner))
+    for (let i = 0; i < 100; i++) {
+      const envelope = wire.Envelope.decode(push.send.lastCall.args[0][1])
+      if (envelope.type === wire.TransactionDoneMessage.$code) {
+        break
+      }
+      await new Promise(resolve => setTimeout(resolve, 1))
+    }
+    const envelope = wire.Envelope.decode(push.send.lastCall.args[0][1])
+    const response = wire.TransactionDoneMessage.decode(envelope.message)
+    expect(response.success).to.equal(true)
+    expect(JSON.parse(response.body!).owner.reservationId).to.equal(current.reservationId)
   })
 })

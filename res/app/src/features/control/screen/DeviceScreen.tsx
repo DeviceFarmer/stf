@@ -106,7 +106,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
 
   useEffect(() => {
     streamRef.current?.checkEnabled()
-  }, [device.using, device.usage, device.owner, device.present, device.ready, device.status, showScreen, url])
+  }, [device.using, device.usage, device.owner?.email, device.present, device.ready, device.status, showScreen, url])
 
   useEffect(() => {
     const root = rootRef.current

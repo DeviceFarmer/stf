@@ -208,7 +208,7 @@ export interface GroupPlugin extends EventEmitter<GroupEvents> {
   , identifier?: string
   ): Bluebird<OwnerMessage>
   keepalive(): void
-  leave(reason: string): Bluebird<OwnerMessage>
+  leave(reason: string, reservationId?: string | null): Bluebird<OwnerMessage>
 }
 
 export interface ConnectPlugin {

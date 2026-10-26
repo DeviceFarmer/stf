@@ -6,7 +6,7 @@ import {updateDeviceNote} from '@/core/devices/store'
 import type {Device, DeviceBrowserApp} from '@/core/devices/types'
 import {useTranslation} from '@/core/i18n'
 import {stateClass, stateColor} from '@/ui/device-state'
-import {canStartUsing, controlHref, type DeviceActions} from './device-actions'
+import {canStartUsing, canStopAutomation, controlHref, type DeviceActions} from './device-actions'
 import classes from './DeviceList.module.css'
 import {DeviceImage} from '@/ui/DeviceImage'
 
@@ -19,13 +19,15 @@ export const StatusButton = memo(function StatusButton({device, actions}: {
   actions: DeviceActions
 }) {
   const [pending, setPending] = useState(false)
+  const {t} = useTranslation()
+  const stopAutomation = canStopAutomation(device)
   const actionable = Boolean(device.usable || device.state === 'automation') || (actions.adminMode && device.state === 'busy')
 
   return (
     <Button
       size='compact-xs'
       radius='xl'
-      color={stateColor(device.state)}
+      color={stopAutomation ? 'red' : stateColor(device.state)}
       variant={device.using ? 'filled' : 'light'}
       className={`device-status ${stateClass(device.state)} ${actionable ? '' : classes.inert}`}
       loading={pending}
@@ -37,7 +39,7 @@ export const StatusButton = memo(function StatusButton({device, actions}: {
         }
       }}
     >
-      {statusNameAction(device.state)}
+      {stopAutomation ? t('Stop Automation') : statusNameAction(device.state)}
     </Button>
   )
 })

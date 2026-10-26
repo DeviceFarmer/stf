@@ -50,6 +50,7 @@ export default {
       }
     , logs_enabled: false
     , present: null
+    , channel: null
     , providerChannel: {
         indexFunction: function(device) {
           return device('provider')('channel')
