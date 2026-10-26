@@ -13,9 +13,6 @@ export interface HwProbeResult {
   cpuFreq: number | null
   socModel: string | null
   socManufacturer: string | null
-  marketName: string | null
-  buildDateUtc: number | null
-  buildDate: string | null
 }
 
 const STORAGE_TIERS_GB = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
@@ -34,10 +31,6 @@ export const PROBE_COMMAND = [
 , 'getprop ro.soc.model 2>/dev/null || true'
 , 'echo "===SOC_MANUFACTURER==="'
 , 'getprop ro.soc.manufacturer 2>/dev/null || true'
-, 'echo "===MARKETNAME==="'
-, 'getprop ro.product.marketname 2>/dev/null || true'
-, 'echo "===BUILD_DATE_UTC==="'
-, 'getprop ro.build.date.utc 2>/dev/null || true'
 ].join('; ')
 
 export function emptyHwProbeResult(): HwProbeResult {
@@ -48,9 +41,6 @@ export function emptyHwProbeResult(): HwProbeResult {
   , cpuFreq: null
   , socModel: null
   , socManufacturer: null
-  , marketName: null
-  , buildDateUtc: null
-  , buildDate: null
   }
 }
 
@@ -185,27 +175,6 @@ function cleanProp(text: string, rejectUnknown: boolean): string | null {
   return null
 }
 
-export function parseBuildDateUtc(
-  text: string
-): {buildDateUtc: number | null, buildDate: string | null} {
-  const raw = cleanProp(text, true)
-  if (!raw || !/^\d+$/.test(raw)) {
-    return {buildDateUtc: null, buildDate: null}
-  }
-  const utc = parseInt(raw, 10)
-  if (!Number.isFinite(utc) || utc <= 0) {
-    return {buildDateUtc: null, buildDate: null}
-  }
-  const date = new Date(utc * 1000)
-  if (Number.isNaN(date.getTime())) {
-    return {buildDateUtc: null, buildDate: null}
-  }
-  return {
-    buildDateUtc: utc
-  , buildDate: date.toISOString().slice(0, 10)
-  }
-}
-
 function splitSections(raw: string): Record<string, string> {
   const normalized = raw.replace(/\r\n/g, '\n')
   const sections: Record<string, string> = Object.create(null)
@@ -231,12 +200,8 @@ export function parseHwProbeOutput(raw: string): HwProbeResult {
     , cpuFreq: null
     , socModel: null
     , socManufacturer: null
-    , marketName: null
-    , buildDateUtc: null
-    , buildDate: null
     }
   }
-  const parsedDate = parseBuildDateUtc(sections.BUILD_DATE_UTC || '')
   return {
     ram: parseMemTotalMb(sections.MEMINFO || '')
   , rom: parseDataRomGb(sections.DF_DATA || '')
@@ -244,9 +209,6 @@ export function parseHwProbeOutput(raw: string): HwProbeResult {
   , cpuFreq: parseCpuMaxFreqGhz(sections.CPU_FREQ || '')
   , socModel: cleanProp(sections.SOC_MODEL || '', true)
   , socManufacturer: cleanProp(sections.SOC_MANUFACTURER || '', true)
-  , marketName: cleanProp(sections.MARKETNAME || '', true)
-  , buildDateUtc: parsedDate.buildDateUtc
-  , buildDate: parsedDate.buildDate
   }
 }
 

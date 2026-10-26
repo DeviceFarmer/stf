@@ -74,10 +74,6 @@ const ANDROID_8_SAMPLE = [
 , ''
 , '===SOC_MANUFACTURER==='
 , ''
-, '===MARKETNAME==='
-, ''
-, '===BUILD_DATE_UTC==='
-, '1538694120'
 , ''
 ].join('\r\n')
 
@@ -104,10 +100,6 @@ const ANDROID_12_SAMPLE = [
 , 'GS101'
 , '===SOC_MANUFACTURER==='
 , 'Google'
-, '===MARKETNAME==='
-, 'Pixel 6'
-, '===BUILD_DATE_UTC==='
-, '1643841200'
 , ''
 ].join('\n')
 
@@ -134,10 +126,6 @@ const ANDROID_15_SAMPLE = [
 , 'Tensor G4'
 , '===SOC_MANUFACTURER==='
 , 'Google'
-, '===MARKETNAME==='
-, 'Pixel 9 Pro'
-, '===BUILD_DATE_UTC==='
-, '1723680000'
 , ''
 ].join('\n')
 
@@ -188,13 +176,10 @@ describe('device hardware probe (hwprobe)', function() {
       , cpuFreq: 2.46
       , socModel: null
       , socManufacturer: null
-      , marketName: null
-      , buildDateUtc: 1538694120
-      , buildDate: '2018-10-04'
       })
     })
 
-  it('parses Android 12 shell output with Tensor SoC, marketname, and 128 GB storage',
+  it('parses Android 12 shell output with Tensor SoC and 128 GB storage',
     function() {
       const parsed = parseHwProbeOutput(ANDROID_12_SAMPLE)
       expect(parsed).to.deep.equal({
@@ -204,9 +189,6 @@ describe('device hardware probe (hwprobe)', function() {
       , cpuFreq: 2.8
       , socModel: 'GS101'
       , socManufacturer: 'Google'
-      , marketName: 'Pixel 6'
-      , buildDateUtc: 1643841200
-      , buildDate: '2022-02-02'
       })
     })
 
@@ -220,9 +202,6 @@ describe('device hardware probe (hwprobe)', function() {
       , cpuFreq: 3.11
       , socModel: 'Tensor G4'
       , socManufacturer: 'Google'
-      , marketName: 'Pixel 9 Pro'
-      , buildDateUtc: 1723680000
-      , buildDate: '2024-08-15'
       })
     })
 
@@ -251,10 +230,6 @@ describe('device hardware probe (hwprobe)', function() {
     , 'unknown'
     , '===SOC_MANUFACTURER==='
     , 'Qualcomm'
-    , '===MARKETNAME==='
-    , ''
-    , '===BUILD_DATE_UTC==='
-    , '1700000000'
     ].join('\n')
 
     const adb = {
@@ -272,9 +247,6 @@ describe('device hardware probe (hwprobe)', function() {
     , cpuFreq: null
     , socModel: null
     , socManufacturer: 'Qualcomm'
-    , marketName: null
-    , buildDateUtc: 1700000000
-    , buildDate: '2023-11-14'
     })
   })
 
@@ -301,8 +273,6 @@ describe('device hardware probe (hwprobe)', function() {
         'case "$1" in\n' +
         '  ro.soc.model) echo "SM8650" ;;\n' +
         '  ro.soc.manufacturer) echo "Qualcomm" ;;\n' +
-        '  ro.product.marketname) echo "OnePlus 12" ;;\n' +
-        '  ro.build.date.utc) echo "1710000000" ;;\n' +
         'esac\n'
       , {mode: 0o755}
       )
@@ -316,8 +286,6 @@ describe('device hardware probe (hwprobe)', function() {
       const parsed = parseHwProbeOutput(proc.stdout)
       expect(parsed.socModel).to.equal('SM8650')
       expect(parsed.socManufacturer).to.equal('Qualcomm')
-      expect(parsed.marketName).to.equal('OnePlus 12')
-      expect(parsed.buildDate).to.equal('2024-03-09')
     }
     finally {
       fs.rmSync(dir, {recursive: true, force: true})
@@ -346,7 +314,7 @@ describe('device data and identity metadata resolution', function() {
         manufacturer: 'SAMSUNG'
       , model: 'SM-A556E'
       , product: 'a55xnsxx'
-      , marketName: 'SM-A556E'
+      , marketName: null
       , sdk: '34'
       , display: {
           id: 0
@@ -369,9 +337,6 @@ describe('device data and identity metadata resolution', function() {
       , cpuFreq: 2.75
       , socModel: 's5e8845'
       , socManufacturer: 'Samsung'
-      , marketName: null
-      , buildDateUtc: 1720000000
-      , buildDate: '2024-07-03'
       }
 
       const result = dataSyrup.invoke(dummyOptions, identity, probe)
@@ -393,7 +358,7 @@ describe('device data and identity metadata resolution', function() {
       })
     })
 
-  it('builds a complete payload for an unreleased prototype without logging a warning',
+  it('builds a complete payload for an unreleased prototype without a warning or release date',
     function() {
       const warnSpy = sinon.spy()
       sinon.stub(logger, 'createLogger').returns({
@@ -408,7 +373,7 @@ describe('device data and identity metadata resolution', function() {
         manufacturer: 'QUALCOMM'
       , model: 'QRD-SM8750'
       , product: 'sun_qrd'
-      , marketName: 'QRD-SM8750'
+      , marketName: 'Snapdragon 8 Elite QRD'
       , sdk: '35'
       })
 
@@ -419,9 +384,6 @@ describe('device data and identity metadata resolution', function() {
       , cpuFreq: 4.32
       , socModel: 'SM8750'
       , socManufacturer: 'Qualcomm'
-      , marketName: 'Snapdragon 8 Elite QRD'
-      , buildDateUtc: 1729555200
-      , buildDate: '2024-10-22'
       }
 
       const result = dataSyrup.invoke(dummyOptions, identity, probe)
@@ -433,7 +395,7 @@ describe('device data and identity metadata resolution', function() {
         }
       , brand: 'QUALCOMM'
       , marketName: 'Snapdragon 8 Elite QRD'
-      , date: '2024-10-22'
+      , date: null
       , cpu: {
           name: 'Qualcomm SM8750'
         , cores: 8
@@ -473,7 +435,7 @@ describe('device data and identity metadata resolution', function() {
     })).to.equal('generic-phone-v1.svg?w=1080&h=2400&dpi=480&sdk=35')
   })
 
-  it('resolves identity.marketName from debug override, live hwprobe, or static DB', function() {
+  it('resolves identity.marketName from debug override, live property, or static DB', function() {
     sinon.stub(deviceData, 'find').returns({
       name: {id: 'Galaxy A55 5G', long: 'Samsung Galaxy A55 5G'}
     , brand: 'Samsung'
@@ -493,30 +455,18 @@ describe('device data and identity metadata resolution', function() {
     , 'ro.opengles.version': '196610'
     }
 
-    const fromDb = identitySyrup.invoke(
-      dummyOptions
-    , baseProps
-    , display
-    , {}
-    , emptyHwProbeResult()
-    )
+    const fromDb = identitySyrup.invoke(dummyOptions, baseProps, display, {})
     expect(fromDb.marketName).to.equal('Galaxy A55 5G')
 
-    const fromProbe = identitySyrup.invoke(
-      dummyOptions
-    , baseProps
-    , display
-    , {}
-    , Object.assign(emptyHwProbeResult(), {marketName: 'Live Market Name'})
-    )
-    expect(fromProbe.marketName).to.equal('Live Market Name')
+    const liveProps = Object.assign({}, baseProps, {'ro.product.marketname': 'Live Market Name'})
+    const fromDevice = identitySyrup.invoke(dummyOptions, liveProps, display, {})
+    expect(fromDevice.marketName).to.equal('Live Market Name')
 
     const fromDebug = identitySyrup.invoke(
       dummyOptions
-    , Object.assign({}, baseProps, {'debug.stf.product.device': 'Custom Bench Label'})
+    , Object.assign({}, liveProps, {'debug.stf.product.device': 'Custom Bench Label'})
     , display
     , {}
-    , Object.assign(emptyHwProbeResult(), {marketName: 'Live Market Name'})
     )
     expect(fromDebug.marketName).to.equal('Custom Bench Label')
   })

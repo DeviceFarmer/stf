@@ -4,7 +4,6 @@
 .idea/
 *.iml
 .python-version
-__pycache__/
 /*.tgz
 /.env
 /docker-compose.override.yaml

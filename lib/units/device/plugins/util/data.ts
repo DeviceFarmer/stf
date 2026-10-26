@@ -97,9 +97,9 @@ export function mergeDeviceData(
   const dbBrand = dbMatch && dbMatch.brand
   const brand = dbBrand || identity.manufacturer || ''
   const dbMarketName = dbMatch && (dbMatch.marketName || (dbMatch.name && dbMatch.name.id))
-  const marketName = probe.marketName ||
+  // identity.marketName already holds the debug override, ro.product.marketname or the database name
+  const marketName = identity.marketName ||
     dbMarketName ||
-    identity.marketName ||
     (catalog && catalog.name) ||
     identity.model ||
     identity.product ||
@@ -107,14 +107,15 @@ export function mergeDeviceData(
     'Unknown'
 
   let longName: string
-  if (!probe.marketName && dbMatch && dbMatch.name && dbMatch.name.long) {
+  if (marketName === dbMarketName && dbMatch && dbMatch.name && dbMatch.name.long) {
     longName = dbMatch.name.long
   }
   else {
     longName = formatLongName(brand, marketName)
   }
 
-  const releaseDate = (dbMatch && dbMatch.date) || probe.buildDate || null
+  // Only the database knows the release date; ro.build.date.utc dates the installed firmware
+  const releaseDate = (dbMatch && dbMatch.date) || null
 
   const dbCpu = dbMatch ? dbMatch.cpu : null
   const cpuName = (dbCpu && dbCpu.name) || formatSocName(probe) || identity.cpuPlatform || null
