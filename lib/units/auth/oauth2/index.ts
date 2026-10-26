@@ -11,6 +11,7 @@ import logger from '../../../util/logger.js'
 import urlutil from '../../../util/urlutil.js'
 import jwtutil from '../../../util/jwtutil.js'
 import Strategy from './strategy.js'
+import {isEmailAllowed} from './email.js'
 
 import dbapi from '../../../db/api.js'
 import type {VerifyCallback} from 'passport-oauth2'
@@ -69,25 +70,16 @@ export default function(options: OAuth2AuthOptions) {
 
   app.disable('x-powered-by')
 
-  function isEmailAllowed(email: string | undefined): email is string {
-    if (email) {
-      if (options.domain) {
-        return email.endsWith(options.domain)
-      }
-      return true
-    }
-    return false
-  }
-
   app.get(
     '/auth/oauth/callback'
   , function(req, res) {
-      if (isEmailAllowed(req.user!.email)) {
+      const user = req.user!
+      if (isEmailAllowed(user, options.domain)) {
         res.redirect(urlutil.addParams(options.appUrl, {
           jwt: jwtutil.encode({
             payload: {
-              email: req.user!.email
-            , name: req.user!.email.split('@', 1).join('')
+              email: user.email
+            , name: user.email.split('@', 1).join('')
             }
           , secret: options.secret
           , header: {
@@ -97,7 +89,7 @@ export default function(options: OAuth2AuthOptions) {
         }))
       }
       else {
-        log.warn('Missing or disallowed email in profile', req.user)
+        log.warn('Missing, unverified or disallowed email in profile', user)
         res.render('rejected-email')
       }
     }
