@@ -152,6 +152,7 @@
     "@types/chai": "^5.2.3",
     "@types/compression": "^1.8.1",
     "@types/cookie-session": "^2.0.49",
+    "@types/debug": "^4.1.13",
     "@types/file-saver": "^2.0.7",
     "@types/formidable": "^3.5.1",
     "@types/gettext-parser": "^9.0.0",
