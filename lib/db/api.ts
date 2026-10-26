@@ -1800,6 +1800,9 @@ dbapi.saveDeviceIdentity = function(serial, identity) {
   , cpuPlatform: identity.cpuPlatform
   , openGLESVersion: identity.openGLESVersion
   , marketName: identity.marketName
+  , cpu: identity.cpu || null
+  , memory: identity.memory || null
+  , releasedAt: identity.releasedAt || null
   }))
 }
 

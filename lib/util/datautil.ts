@@ -26,8 +26,9 @@ interface DeviceView extends deviceutil.Claimable {
   product?: string | null
   platform?: string | null
   manufacturer?: string | null
+  marketName?: string | null
   name?: string
-  releasedAt?: string
+  releasedAt?: string | null
   image?: string
   cpu?: deviceData.DeviceData['cpu']
   memory?: deviceData.DeviceData['memory']
@@ -47,28 +48,89 @@ interface DataUtil {
 
 var datautil: DataUtil = Object.create(null)
 
+function applyDisplayInches(display?: DisplayView) {
+  if (!display) {
+    return
+  }
+  if (typeof display.inches === 'number' && Number.isFinite(display.inches) && display.inches > 0) {
+    return
+  }
+  if (typeof display.size === 'number' && Number.isFinite(display.size) && display.size > 0) {
+    display.inches = Math.round(display.size * 100) / 100
+    return
+  }
+  if (typeof display.width === 'number' && display.width > 0 &&
+      typeof display.height === 'number' && display.height > 0 &&
+      typeof display.xdpi === 'number' && display.xdpi > 0 &&
+      typeof display.ydpi === 'number' && display.ydpi > 0) {
+    var diag = Math.hypot(display.width / display.xdpi, display.height / display.ydpi)
+    if (diag >= 0.8 && diag <= 30) {
+      display.inches = Math.round(diag * 100) / 100
+    }
+  }
+}
+
 datautil.applyData = function<D extends DeviceView>(device: D) {
+  applyDisplayInches(device.display)
+
   var local = findCatalogDevice(device)
   if (local) {
     device.name = local.name
     device.image = local.image
-    return device
   }
+
   var match = deviceData.find({
     model: device.model
   , name: device.product
+  , manufacturer: device.manufacturer
+  , platform: device.platform
   })
 
   if (match) {
-    device.name = match.name.id
-    device.releasedAt = match.date
-    device.image = match.image
-    device.cpu = match.cpu
-    device.memory = match.memory
-    if (match.display && match.display.s) {
-      device.display = device.display || {}
-      device.display.inches = match.display.s
+    if (!local) {
+      device.name = match.name.id
     }
+    if (match.marketName && !device.marketName) {
+      device.marketName = match.marketName
+    }
+    if (match.date && !device.releasedAt) {
+      device.releasedAt = match.date
+    }
+    if (!device.image && match.image) {
+      device.image = match.image
+    }
+    if (match.cpu) {
+      if (!device.cpu) {
+        device.cpu = match.cpu
+      }
+      else {
+        if (device.cpu.name === null && match.cpu.name !== null) {
+          device.cpu.name = match.cpu.name
+        }
+        if (device.cpu.cores === null && match.cpu.cores !== null) {
+          device.cpu.cores = match.cpu.cores
+        }
+        if (device.cpu.freq === null && match.cpu.freq !== null) {
+          device.cpu.freq = match.cpu.freq
+        }
+      }
+    }
+    if (match.memory) {
+      if (!device.memory) {
+        device.memory = match.memory
+      }
+      else {
+        if (device.memory.ram === null && match.memory.ram !== null) {
+          device.memory.ram = match.memory.ram
+        }
+        if (device.memory.rom === null && match.memory.rom !== null) {
+          device.memory.rom = match.memory.rom
+        }
+      }
+    }
+  }
+  else if (local && !device.marketName) {
+    device.marketName = local.name
   }
 
   if (!device.image) {

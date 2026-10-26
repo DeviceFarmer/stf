@@ -117,7 +117,7 @@ function openDevicePhoto(device: Device) {
     , size: 'xl'
     , centered: true
     , classNames: {content: 'stf-lightbox-image'}
-    , children: <DevicePhoto url={deviceImageUrl(device.image, 'photo/x800')} />
+    , children: <DevicePhoto url={deviceImageUrl(device.image, 'photo/x800', device)} />
   })
 }
 
@@ -159,6 +159,7 @@ export default function InfoPane({device, control}: PaneProps) {
   const {t, language} = useTranslation()
   const sdCardMounted = useSdCardMounted(control)
   const {battery, display, network, phone, cpu, memory} = device
+  const displayInches = display?.inches || display?.size
   const photoRows: InfoRow[] = device.name && device.image ? [{
     label: ''
     , value: (
@@ -209,7 +210,7 @@ export default function InfoPane({device, control}: PaneProps) {
       , icon: IconDeviceTablet
       , color: 'blue'
       , rows: [
-        {label: gettext('Size'), value: display?.inches ? `${display.inches}″` : '-'}
+        {label: gettext('Size'), value: displayInches ? `${Math.round(displayInches * 10) / 10}″` : '-'}
         , {label: gettext('Density'), value: density(display?.density)}
         , {label: gettext('FPS'), value: rounded(display?.fps)}
         , {label: gettext('Width'), value: withUnit(display?.width, ' px')}
@@ -292,7 +293,7 @@ export default function InfoPane({device, control}: PaneProps) {
       , color: 'orange'
       , rows: [
         {label: gettext('RAM'), value: memory?.ram ? `${memory.ram} MB` : '-'}
-        , {label: gettext('ROM'), value: memory?.rom ? `${memory.rom} MB` : '-'}
+        , {label: gettext('ROM'), value: memory?.rom ? `${memory.rom} GB` : '-'}
         , {label: gettext('SD Card Mounted'), value: humanizedBool(sdCardMounted)}
       ]
     }
