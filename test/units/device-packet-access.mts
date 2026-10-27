@@ -451,11 +451,39 @@ describe('manual device packet authorization', function() {
     assert.equal(await f.dispatch('device.lock'), undefined)
   })
 
+  for (const serial of ['host.docker.internal:15555', '192.168.1.12:5555', '[::1]:5555'
+    , 'adb-PHONE-key._adb-tls-connect._tcp']) {
+    it(`authorizes Android TCP serial ${serial} without bypassing access checks`, async function() {
+      const f = fixture()
+      f.update({serial, owner: null})
+      assert.ifError(await f.dispatch('group.invite', 'tx.acquire'))
+      f.update({owner: {email: f.user.email, reservationId: 'tcp-session'}})
+      f.access.joined(serial, null, f.device().owner)
+      assert.ifError(await f.dispatch('input.keyPress'))
+      assert.ifError(await f.dispatch('shell.command', 'tx.shell'))
+      assert.deepEqual(f.cancelled, [])
+
+      f.update({usage: 'automation'})
+      f.access.joined(serial, 'automation', f.device().owner)
+      for (const event of ['group.invite', 'input.keyPress', 'shell.command']) {
+        assert.equal((await f.dispatch(event, 'tx.automation'))?.message, 'Device access denied')
+      }
+
+      f.update({usage: null, group: {id: 'private'}})
+      f.access.update(serial, {usage: null, group: {id: 'private'}})
+      for (const event of ['group.invite', 'input.keyPress', 'shell.command']) {
+        assert.equal((await f.dispatch(event, 'tx.private'))?.message, 'Device access denied')
+      }
+    })
+  }
+
   it('validates serials and distinguishes controls from metadata', function() {
-    for (const value of ['A', 'a'.repeat(128), '00008110-000625A02146201E']) {
+    for (const value of ['A', 'a'.repeat(128), '00008110-000625A02146201E', 'usb_serial.1'
+      , 'host.docker.internal:15555', '[2001:db8::1]:5555']) {
       assert.equal(isValidSerial(value), true)
     }
-    for (const value of ['', 'a'.repeat(129), 'a/b', 'a.b', null, 123]) {
+    for (const value of ['', 'a'.repeat(129), 'a/b', 'a\\b', 'a b', 'a\n', 'a\0b'
+      , 'a?b', 'a#b', null, 123]) {
       assert.equal(isValidSerial(value), false)
     }
     for (const event of ['input.touchDown', 'clipboard.paste', 'device.reboot', 'group.invite'

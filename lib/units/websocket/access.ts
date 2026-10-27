@@ -12,5 +12,6 @@ export interface DeviceAccess {
 export type LoadDevice = (serial: string) => PromiseLike<DeviceAccess | null | undefined>
 
 export function isValidSerial(value: unknown): value is string {
-  return typeof value === 'string' && /^[A-Za-z0-9-]{1,128}$/.test(value)
+  // ADB also identifies devices by host:port, IPv6 and wireless discovery names.
+  return typeof value === 'string' && /^[A-Za-z0-9_.:[\]-]{1,128}$/.test(value)
 }
