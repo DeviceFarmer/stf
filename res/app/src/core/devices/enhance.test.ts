@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {canViewDevice, computeState, enhanceDevice, userProfileUrl} from './enhance'
+import {canViewDevice, computeState, enhanceDevice, setDeviceImage, userProfileUrl} from './enhance'
 import type {Device} from './types'
 
 function device(overrides: Partial<Device>): Device {
@@ -37,7 +37,8 @@ describe('enhanceDevice', () => {
 
     const named = enhanceDevice(device({marketName: 'Galaxy', model: 'SM-1', image: 'x.jpg'}))
     expect(named.enhancedName).toBe('Galaxy')
-    expect(named.enhancedImage120).toBe('/static/app/devices/icon/x120/x.jpg')
+    expect(named.enhancedImage120).toBe('/static/app/devices/icon/x120/x.jpg?m=Galaxy')
+    expect(named.enhancedImage24).toBe('/static/app/devices/icon/x24/x.jpg?m=Galaxy')
     expect(named.enhancedStateAction).toBe('Use')
     expect(named.enhancedGroupOwnerProfileUrl).toBe('mailto:owner@example.com')
   })
@@ -52,6 +53,46 @@ describe('enhanceDevice', () => {
     expect(released.state).toBe('available')
     expect(canViewDevice(released)).toBe(false)
     expect(canViewDevice({...automatic, ready: false})).toBe(false)
+  })
+
+  it('passes live display, sdk, manufacturer, and marketName query parameters in setDeviceImage', () => {
+    const live = device({
+      image: 'Pixel_9.svg?dpi=3'
+      , display: {width: 1080, height: 2424, rotation: 0, xdpi: 422, ydpi: 422}
+      , sdk: '35'
+      , manufacturer: 'Google'
+      , marketName: 'Pixel 9'
+    })
+    setDeviceImage(live)
+    expect(live.enhancedImage120).toBe(
+      '/static/app/devices/icon/x120/Pixel_9.svg?dpi=3&w=1080&h=2424&xd=422&yd=422&sdk=35&b=Google&m=Pixel+9'
+    )
+    expect(live.enhancedImage24).toBe(
+      '/static/app/devices/icon/x24/Pixel_9.svg?dpi=3&w=1080&h=2424&xd=422&yd=422&sdk=35&b=Google&m=Pixel+9'
+    )
+
+    const bare = device({})
+    setDeviceImage(bare)
+    expect(bare.enhancedImage120).toBe('/static/app/devices/icon/x120/generic-phone-v1.svg')
+    expect(bare.enhancedImage24).toBe('/static/app/devices/icon/x24/generic-phone-v1.svg')
+
+    const ios = device({
+      platform: 'iOS'
+      , image: 'iOS.jpg'
+      , sdk: '17.4'
+      , manufacturer: 'Apple'
+      , marketName: 'iPhone 15'
+    })
+    setDeviceImage(ios)
+    expect(ios.enhancedImage120).toBe('/static/app/devices/icon/x120/iOS.jpg?b=Apple&m=iPhone+15')
+
+    const unknownSdk = device({
+      image: 'Pixel_8.svg'
+      , sdk: 'unknown'
+      , manufacturer: 'Google'
+    })
+    setDeviceImage(unknownSdk)
+    expect(unknownSdk.enhancedImage120).toBe('/static/app/devices/icon/x120/Pixel_8.svg?b=Google')
   })
 
   it('builds battery details', () => {

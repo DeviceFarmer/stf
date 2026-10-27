@@ -1,6 +1,9 @@
 # Deployment
 
-So you've got STF running via `stf local` and now you'd like to deploy it to real servers. While there are of course various ways to set everything up, this document will focus on a [systemd](http://www.freedesktop.org/wiki/Software/systemd/) + [Docker](https://www.docker.com/) deployment. Even if you've got a different setup, you should be able to use the configuration files as a rough guide. You can also check some [Setup Examples](https://github.com/devicefarmer/setup-examples) which uses [Vagrant](https://www.vagrantup.com/) and [Virtual Box](https://www.virtualbox.org/) to create a virtual setup. But before going there, it is highly recommended that you read this document thoroughly.
+> [!NOTE]
+> For new deployments, use the Docker Compose setup: [docker-compose.yaml](../docker-compose.yaml) and the [Compose setup guide](../docker/compose/README.md). This document describes the older systemd + Docker route, which is still supported for existing installations.
+
+So you've got STF running via `stf local` and now you'd like to deploy it to real servers. While there are of course various ways to set everything up, this document will focus on a [systemd](http://www.freedesktop.org/wiki/Software/systemd/) + [Docker](https://www.docker.com/) deployment. Even if you've got a different setup, you should be able to use the configuration files as a rough guide. The archived [Setup Examples](https://github.com/DeviceFarmer/setup-examples) repository shows an older virtual setup with [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/). But before going there, it is highly recommended that you read this document thoroughly.
 
 STF consists of multiple independent processes communicating via [ZeroMQ](http://zeromq.org/) and [Protocol Buffers](https://github.com/google/protobuf). We call each process a "unit" to match systemd terminology.
 
@@ -16,6 +19,8 @@ For this example deployment, the following assumptions will be made. You will ne
 
 * You have [systemd](http://www.freedesktop.org/wiki/Software/systemd/) running on each host
 * You have [Docker](https://www.docker.com/) running on each host
+  - Docker 29 and later no longer set the legacy `--link` environment variables. STF finds RethinkDB through `RETHINKDB_PORT_28015_TCP`, so the units below pass it explicitly. Units written for older Docker versions without that line fail to connect to the database after a Docker upgrade.
+  - Variables in `/etc/environment` only fill in the `${...}` placeholders in the unit files. They don't reach the containers unless a unit passes them with `-e`.
 * Each host has an `/etc/environment` (a la [CoreOS](https://coreos.com/)) file with `COREOS_PRIVATE_IPV4=MACHINE_IP_HERE`. This is used to load the machine IP address in configuration files.
   - You can create the file yourself or alternatively replace `${COREOS_PRIVATE_IPV4}` manually as required.
 * You're deploying [devicefarmer/stf:latest](https://registry.hub.docker.com/u/devicefarmer/stf/). There's also a fixed tag for each release if you're feeling less adventurous.
@@ -158,6 +163,8 @@ You need a single instance of the `rethinkdb-proxy-28015.service` unit on each h
 
 Note that the `After` condition also specifies the [rethinkdb.service](#rethinkdbservice) unit just in case you're on a low budget and want to run the RethinkDB unit on the same server as the rest of the units, which by the way is NOT recommended at all.
 
+The unit runs [devicefarmer/ambassador](https://github.com/DeviceFarmer/docker-ambassador), which is kept for existing systemd deployments. The Compose setup connects to RethinkDB directly and doesn't need it.
+
 ```ini
 [Unit]
 Description=RethinkDB proxy/28015
@@ -208,6 +215,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -p %i:3000 \
   devicefarmer/stf:latest \
@@ -363,6 +371,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "STF_ROOT_GROUP_NAME=YOUR_ROOT_GROUP_NAME_HERE" \
   -e "STF_ADMIN_NAME=YOUR_ADMIN_NAME_HERE" \
   -e "STF_ADMIN_EMAIL=YOUR_ADMIN_EMAIL_HERE" \
@@ -394,6 +403,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   devicefarmer/stf:latest \
   stf processor %p-%i \
     --connect-app-dealer tcp://appside.stf.example.org:7160 \
@@ -474,6 +484,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   devicefarmer/stf:latest \
   stf reaper dev \
     --connect-push tcp://devside.stf.example.org:7270 \
@@ -661,6 +672,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -p %i:3000 \
   devicefarmer/stf:latest \
@@ -695,6 +707,7 @@ ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -p %i:3000 \
   devicefarmer/stf:latest \
@@ -738,6 +751,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   devicefarmer/stf:latest \
   stf groups-engine \
@@ -776,6 +790,7 @@ ExecStartPre=-/usr/bin/docker rm %p
 ExecStart=/usr/bin/docker run --rm \
   --name %p \
   --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   devicefarmer/stf:latest \
   stf log-rethinkdb \
     --connect-sub tcp://appside.stf.example.org:7150

@@ -17,14 +17,16 @@ export default syrup.serial()
     var adb: Adb = require('../../../util/adbutil.js').default(options)
 
     function ensureBootComplete() {
+      // The signal stops adbkit polling the device once the time is up
       return promiseutil.periodicNotify(
-          adb.waitBootComplete(options.serial)
+          adb.waitBootComplete(options.serial, {
+            signal: AbortSignal.timeout(options.bootCompleteTimeout)
+          })
         , 1000
         , function() {
             log.info('Waiting for boot to complete')
           }
         )
-        .timeout(options.bootCompleteTimeout)
     }
 
     return ensureBootComplete()

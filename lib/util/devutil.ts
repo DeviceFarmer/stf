@@ -2,9 +2,10 @@ import util from 'util'
 
 import split from 'split'
 import Promise from 'bluebird'
-import androidDeviceList from 'android-device-list'
+import deviceData from '@devicefarmer/stf-device-db'
 import type {Properties} from '@devicefarmer/adbkit'
 import type {Duplex, Readable} from 'stream'
+import {findCatalogDevice} from './device-catalog.js'
 import type adbutil from './adbutil.js'
 
 type Adb = ReturnType<typeof adbutil>
@@ -28,7 +29,7 @@ interface Identity {
   product: string | undefined
   cpuPlatform: string | undefined
   openGLESVersion: string
-  marketName: string | undefined
+  marketName: string | null
 }
 
 interface DevUtil {
@@ -194,8 +195,10 @@ devutil.makeIdentity = function(serial: string, properties: Properties) {
   var product = properties['ro.product.name']
   var cpuPlatform = properties['ro.board.platform']
   var openGLESVersion: string | number = properties['ro.opengles.version']!
-  var marketName = properties['ro.product.device']
+  var deviceName = properties['ro.product.device']
+  var liveMarketName = properties['ro.product.marketname']
   var customMarketName = properties['debug.stf.product.device']
+  var marketName: string | null = null
 
   openGLESVersion = parseInt(openGLESVersion, 10)
   if (isNaN(openGLESVersion)) {
@@ -218,19 +221,33 @@ devutil.makeIdentity = function(serial: string, properties: Properties) {
     model = model.substr(manufacturer.length)
   }
 
-  if (customMarketName) {
-    marketName = customMarketName
+  if (customMarketName && customMarketName.trim()) {
+    marketName = customMarketName.trim()
   }
-  else if (marketName) {
-    var devices = androidDeviceList.getDevicesByDeviceId(marketName)
-    if (devices.length > 0) {
-      const deviceFilter = devices.filter(device => device.model === model)
-      
-      if (deviceFilter.length > 0) {
-        marketName = deviceFilter[0]!.name
-      }
-      else {
-        marketName = devices[0]!.name
+  else if (liveMarketName &&
+           liveMarketName.trim() &&
+           liveMarketName.trim().toLowerCase() !== 'unknown') {
+    marketName = liveMarketName.trim()
+  }
+  else {
+    var dbMatch = deviceData.find({
+      model: model
+    , name: product || deviceName
+    , brand: brand
+    , manufacturer: manufacturer
+    })
+    if (dbMatch && (dbMatch.marketName || (dbMatch.name && dbMatch.name.id))) {
+      marketName = dbMatch.marketName || dbMatch.name.id
+    }
+    else {
+      var catalog = findCatalogDevice({
+        platform: 'Android'
+      , manufacturer: manufacturer || brand || null
+      , model: model
+      , product: product || deviceName || null
+      })
+      if (catalog && catalog.name) {
+        marketName = catalog.name
       }
     }
   }

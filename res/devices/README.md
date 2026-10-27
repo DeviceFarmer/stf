@@ -7,7 +7,6 @@ the artwork is intended for identifying devices, not measuring their hardware.
 The prompts and final background-extraction instructions are in `prompts.json`.
 It retains the original front-reference prompts used to create the active pairs.
 These project assets are supplied under the repository's Apache-2.0 license.
-The separate legacy device-db assets retain their existing license and notices.
 
 | Model | Hardware identifiers | Asset |
 | --- | --- | --- |
@@ -31,13 +30,14 @@ all three sizes. Cards use a 104 px photo area; table/toolbar icons reserve
 
 ## Serving and maintenance
 
-`lib/util/device-catalog.ts` resolves these entries before the legacy device-db.
+`lib/util/device-catalog.ts` resolves these entries before `@devicefarmer/stf-device-db`.
 It sets the presentation name and image without replacing hardware identifiers,
 measured CPU/RAM or display dimensions. Unknown devices use the transparent
-`generic-phone-v1.svg`; existing legacy/custom images are retained.
+`generic-phone-v1.svg`; existing custom images are retained.
 
-The app serves this directory first at `/static/app/devices`, then falls through
-to the legacy package. The API and WebSocket services must run the catalogue
+The app serves this directory first at `/static/app/devices`. Any other image is
+an SVG that `@devicefarmer/stf-device-db` draws from the device's brand, name and
+display metrics. The API and WebSocket services must run the catalogue
 revision as well as the app so initial lists and live updates agree. No remote
 image host is contacted at runtime.
 

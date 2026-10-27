@@ -35,7 +35,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     apt-get -y install wget python3 build-essential && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz && \
+      https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
@@ -81,7 +81,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     apt-get -y install pkg-config curl zip unzip wget python3 build-essential cmake ninja-build && \
     cd /tmp && \
     wget --progress=dot:mega \
-      https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-arm64.tar.xz && \
+      https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-arm64.tar.xz && \
     tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
     rm node-v*.tar.xz && \
     useradd --system \

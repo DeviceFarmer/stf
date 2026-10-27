@@ -9,15 +9,15 @@ to ADB and the device-side ZeroMQ proxy over the Compose network.
 The job boots an Android 16 (API 36, x86_64) AVD on the Linux runner with KVM.
 A relay exposes the AVD's loopback ADB transport to the ADB container, and
 Playwright's `adb` helpers use that same server through port 15037. The override
-replaces USB access with the runner's ADB keys and enables the APK screen grabber
-for Android 16. CI uses the locally built STF image and disables service restarts.
+replaces USB access with the runner's ADB keys. CI uses the locally built STF
+image and disables service restarts.
 
 Before and after Playwright, the job verifies that all 16 long-running services
 are running without restarts, their health checks pass, and the one-off migration
 completed successfully. It also checks that each STF container runs its own unit
 command from the checked-out image.
 
-All 14 Playwright tests run: the 11 existing UI/device tests plus authenticated
+All 21 Playwright tests run: the 18 UI/device tests plus authenticated
 API routing, APK upload/manifest/download, and image upload/resizing. Device
 coverage includes claiming, changing screen frames, tap/swipe coordinates
 captured on the AVD, shell execution and release. Missing or skipped coverage

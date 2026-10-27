@@ -419,6 +419,17 @@ message DevicePhoneMessage {
   optional string network = 4;
 }
 
+message DeviceCpuMessage {
+  optional string name = 1;
+  optional int32 cores = 2;
+  optional double freq = 3;
+}
+
+message DeviceMemoryMessage {
+  optional int32 ram = 1;
+  optional double rom = 2;
+}
+
 message DeviceIdentityMessage {
   required string serial = 1;
   required string platform = 2;
@@ -434,6 +445,9 @@ message DeviceIdentityMessage {
   optional string cpuPlatform = 13;
   optional string openGLESVersion = 14;
   optional string marketName = 15;
+  optional DeviceCpuMessage cpu = 16;
+  optional DeviceMemoryMessage memory = 17;
+  optional string releasedAt = 18;
 }
 
 message DeviceProperty {

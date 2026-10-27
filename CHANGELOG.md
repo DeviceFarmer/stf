@@ -1,5 +1,43 @@
 # Changelog
 
+## 3.9.0 (2026-10-26)
+
+* Replace the AngularJS web UI with React by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1027
+* fix: name downloaded screenshots after the resource instead of undefined by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1029
+* Bump typescript to 7.0.2 by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1030
+* fix(ci): skip stale CI reports instead of failing by @koral-- in https://github.com/DeviceFarmer/stf/pull/1039
+* Migrate the repo to TypeScript by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1031
+* Bump @types/yauzl from 2.10.3 to 3.4.0 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1042
+* Bump @types/node to 26.6.3 by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1044
+* Sync translations with Transifex and complete all languages by @koral-- in https://github.com/DeviceFarmer/stf/pull/1038
+* Check translations in CI and sync them through the Transifex GitHub integration by @koral-- in https://github.com/DeviceFarmer/stf/pull/1040
+* Point the Transifex CLI at the integration's resource by @koral-- in https://github.com/DeviceFarmer/stf/pull/1046
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1047
+* fix(install): wait for the pushed APK to reach full size before installing by @jozenstar in https://github.com/DeviceFarmer/stf/pull/1045
+* Ship the web UI in arm64 Docker images by @koral-- in https://github.com/DeviceFarmer/stf/pull/1049
+* Bump url-join from 5.0.0 to 5.1.1 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1050
+* feat(ios): add experimental Linux iPhone support by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1048
+* ci(android): retry the SDK installs before the emulator action by @koral-- in https://github.com/DeviceFarmer/stf/pull/1051
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1052
+* docs: present Compose as the main deployment route by @koral-- in https://github.com/DeviceFarmer/stf/pull/1054
+* refactor: bring the browser, app store and wiki data into stf by @koral-- in https://github.com/DeviceFarmer/stf/pull/1055
+* feat(device): pick the screen grabber automatically by @koral-- in https://github.com/DeviceFarmer/stf/pull/1056
+* fix(local): pass serial filter through to the provider by @koral-- in https://github.com/DeviceFarmer/stf/pull/1057
+* feat(deps): move to adbkit 4, adbkit-apkreader 4 and stf-syrup 2 by @koral-- in https://github.com/DeviceFarmer/stf/pull/1058
+* Bump Node to 22.23.4 for CVE-2026-111497 by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1059
+* Bump gettext-parser from 9.1.1 to 10.0.0 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1060
+* fix(deps): depend on @types/debug directly by @koral-- in https://github.com/DeviceFarmer/stf/pull/1062
+* ci(docker): give the workflow a read-only token by default by @koral-- in https://github.com/DeviceFarmer/stf/pull/1063
+* feat(device): move to stf-device-db 2.0.0 and show hardware specs by @koral-- in https://github.com/DeviceFarmer/stf/pull/1061
+
+### New Contributors
+
+* @transifex-integration[bot] made their first contribution in https://github.com/DeviceFarmer/stf/pull/1047
+* @jozenstar made their first contribution in https://github.com/DeviceFarmer/stf/pull/1045
+* @mdub1na made their first contribution in https://github.com/DeviceFarmer/stf/pull/1048
+
+**Full Changelog**: https://github.com/DeviceFarmer/stf/compare/v3.8.0...v3.9.0
+
 ## 3.8.0 (2026-09-23)
 
 * feat(api): add an admin only Prometheus metrics endpoint by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/893

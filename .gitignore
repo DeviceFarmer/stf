@@ -6,6 +6,7 @@
 .python-version
 /*.tgz
 /.env
+/docker-compose.override.yaml
 /ios.local.json
 /node_modules/
 /res/build/

@@ -150,9 +150,6 @@ An optional device `name` overrides its STF display model label; normally the
 provider reads the model from the phone. Add `"android": true` at the top level
 to also launch the existing ADB/Android provider. Android is disabled by default
 for this iOS launcher; the original `docker compose up` remains unchanged.
-For Android 16, set `SCREEN_GRABBER=minicap-apk` when preparing/starting this
-launcher, as in the existing Compose CI configuration. This only changes the
-Android provider's screen backend.
 
 ## Start with Docker Compose
 

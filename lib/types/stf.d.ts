@@ -2,7 +2,9 @@ import type {Expression, WriteResultWithChanges} from 'rethinkdb'
 import type {IosDeviceStatus} from '../util/ios-device-status.js'
 import type {
   DeviceBrowserAppMessageFields
+, DeviceCpuMessageFields
 , DeviceDisplayMessageFields
+, DeviceMemoryMessageFields
 , DevicePhoneMessageFields
 , ReverseForwardFields
 } from './wire.js'
@@ -136,6 +138,9 @@ export interface DeviceDocument {
   cpuPlatform?: string | null
   openGLESVersion?: string | null
   marketName?: string | null
+  cpu?: DeviceCpuMessageFields | null
+  memory?: DeviceMemoryMessageFields | null
+  releasedAt?: string | null
 }
 
 export interface AccessTokenDocument {
@@ -227,6 +232,9 @@ export interface DeviceIdentity {
   cpuPlatform: string | null
   openGLESVersion: string | null
   marketName: string | null
+  cpu?: DeviceCpuMessageFields | null
+  memory?: DeviceMemoryMessageFields | null
+  releasedAt?: string | null
 }
 
 export interface DeviceLogEntry {

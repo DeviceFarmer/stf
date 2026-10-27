@@ -52,7 +52,7 @@ export default syrup.serial()
     }
 
     function infoFromMinicap(id: number): Bluebird<DisplayProperties> {
-      return minicap.run(options.screenGrabber, util.format('-d %d -i', id))
+      return minicap.run(minicap.grabber, util.format('-d %d -i', id))
         .then(streamutil.readAll)
         .then(function(out) {
           var match

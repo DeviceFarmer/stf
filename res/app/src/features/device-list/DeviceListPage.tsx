@@ -214,7 +214,7 @@ export default function DeviceListPage() {
       >
         {photo && (
           <DeviceImage
-            src={deviceImageUrl(photo.image, 'photo/x800')}
+            src={deviceImageUrl(photo.image, 'photo/x800', photo)}
             alt={photo.name}
             fit='contain'
             mah='70vh'

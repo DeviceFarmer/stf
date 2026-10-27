@@ -86,10 +86,14 @@ export interface Storage {
   ): Bluebird<StoredFile>
 }
 
+export type ScreenGrabber = 'minicap-bin' | 'minicap-apk'
+
 export interface Minicap {
   bin: string
   lib: string
   apk: string
+  // The grabber to use: --screen-grabber, with auto resolved for this device
+  grabber: ScreenGrabber
   run(mode: string, cmd: string): Bluebird<Duplex>
 }
 
