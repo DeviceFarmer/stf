@@ -195,13 +195,19 @@ msgstr "Czy na pewno chcesz zrestartować to urządzenie?"
 msgid "Auto Scroll"
 msgstr "Autoprzewijanie"
 
-#: res/app/src/core/devices/enhance.ts:28
-msgid "Automating"
-msgstr "Automatyzowane"
+#: res/app/src/core/devices/enhance.ts:16
+#: res/app/src/core/devices/enhance.ts:29
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automated"
+msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
 msgstr "Automatyzacja"
+
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automation finished"
+msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
@@ -574,6 +580,10 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Device notes state"
 msgstr "Stan notatek urządzenia"
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:31
+msgid "Device offline"
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
@@ -1610,6 +1620,10 @@ msgstr "Czy na pewno usunąć tego użytkownika?"
 msgid "Recents"
 msgstr "Ostatnie aplikacje"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:30
+msgid "Reconnecting…"
+msgstr ""
+
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
@@ -1797,6 +1811,10 @@ msgstr "Harmonogram"
 msgid "Screen"
 msgstr "Ekran"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:32
+msgid "Screen disconnected"
+msgstr ""
+
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
 msgid "Screenshot"
@@ -1973,10 +1991,6 @@ msgstr "Stan"
 msgid "Stop"
 msgstr "Zatrzymaj"
 
-#: res/app/src/core/devices/enhance.ts:15
-msgid "Stop Automation"
-msgstr "Zatrzymaj automatyzację"
-
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:140
@@ -2007,6 +2021,10 @@ msgstr "Tag"
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
 msgstr "Wykonaj zrzut ekranu"
+
+#: res/app/src/features/control/ControlPage.tsx:385
+msgid "Take control to view and interact with the device."
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
@@ -2314,6 +2332,10 @@ msgstr ""
 "System nie mógł zainstalować pakietu, ponieważ użytkownik ma zakaz "
 "instalowania aplikacji."
 
+#: res/app/src/features/control/ControlPage.tsx:318
+msgid "The test has finished. Take control to interact with the device."
+msgstr ""
+
 #: res/app/src/core/install.ts:268
 msgid "The uploaded file is no longer available. Upload it again."
 msgstr ""
@@ -2521,6 +2543,14 @@ msgstr "Aktualizacja wersji"
 msgid "Vibrate Mode"
 msgstr "Tryb wibracji"
 
+#: res/app/src/features/control/ControlPage.tsx:382
+msgid "View only"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx:316
+msgid "View only. Controls are disabled while the test is running."
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
 msgstr "Napięcie"
@@ -2640,3 +2670,16 @@ msgstr "Ty"
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr "Urządzenie zostało wyrzucone przez Ciebie (lub kogoś innego)."
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid "Release reservation"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid ""
+"Release this STF reservation? The external automation session must be "
+"stopped separately."
+msgstr ""
+
+msgid "Stop Automation"
+msgstr "Zatrzymaj automatyzację"

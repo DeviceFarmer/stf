@@ -191,13 +191,19 @@ msgstr "你確定要重開這台裝置 ?"
 msgid "Auto Scroll"
 msgstr "自動捲動"
 
-#: res/app/src/core/devices/enhance.ts:28
-msgid "Automating"
-msgstr "自動化中"
+#: res/app/src/core/devices/enhance.ts:16
+#: res/app/src/core/devices/enhance.ts:29
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automated"
+msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
 msgstr "自動化"
+
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automation finished"
+msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
@@ -570,6 +576,10 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Device notes state"
 msgstr "裝置備註狀態"
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:31
+msgid "Device offline"
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
@@ -1606,6 +1616,10 @@ msgstr "確定要刪除此使用者嗎？"
 msgid "Recents"
 msgstr "最近使用"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:30
+msgid "Reconnecting…"
+msgstr ""
+
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
@@ -1789,6 +1803,10 @@ msgstr "排程"
 msgid "Screen"
 msgstr "螢幕尺寸"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:32
+msgid "Screen disconnected"
+msgstr ""
+
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
 msgid "Screenshot"
@@ -1965,10 +1983,6 @@ msgstr "狀態"
 msgid "Stop"
 msgstr "停止"
 
-#: res/app/src/core/devices/enhance.ts:15
-msgid "Stop Automation"
-msgstr "停止自動化"
-
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:140
@@ -1999,6 +2013,10 @@ msgstr "標籤"
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
 msgstr "截圖"
+
+#: res/app/src/features/control/ControlPage.tsx:385
+msgid "Take control to view and interact with the device."
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
@@ -2268,6 +2286,10 @@ msgid ""
 " installing apps."
 msgstr "套件安裝失敗，使用者被限制安裝 App"
 
+#: res/app/src/features/control/ControlPage.tsx:318
+msgid "The test has finished. Take control to interact with the device."
+msgstr ""
+
 #: res/app/src/core/install.ts:268
 msgid "The uploaded file is no longer available. Upload it again."
 msgstr ""
@@ -2475,6 +2497,14 @@ msgstr "版本更新"
 msgid "Vibrate Mode"
 msgstr "震動模式"
 
+#: res/app/src/features/control/ControlPage.tsx:382
+msgid "View only"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx:316
+msgid "View only. Controls are disabled while the test is running."
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
 msgstr "電壓"
@@ -2594,3 +2624,16 @@ msgstr "你"
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr "你 (或別人) 把裝置踢掉了."
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid "Release reservation"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid ""
+"Release this STF reservation? The external automation session must be "
+"stopped separately."
+msgstr ""
+
+msgid "Stop Automation"
+msgstr "停止自動化"

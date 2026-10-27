@@ -191,13 +191,19 @@ msgstr "단말기를 재부팅 하시겠습니까?"
 msgid "Auto Scroll"
 msgstr "자동 스크롤"
 
-#: res/app/src/core/devices/enhance.ts:28
-msgid "Automating"
-msgstr "자동화"
+#: res/app/src/core/devices/enhance.ts:16
+#: res/app/src/core/devices/enhance.ts:29
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automated"
+msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
 msgstr "자동화"
+
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automation finished"
+msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
@@ -570,6 +576,10 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Device notes state"
 msgstr "단말기 메모 상태"
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:31
+msgid "Device offline"
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
@@ -1606,6 +1616,10 @@ msgstr "이 사용자를 삭제하시겠습니까?"
 msgid "Recents"
 msgstr "최근 앱"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:30
+msgid "Reconnecting…"
+msgstr ""
+
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
@@ -1789,6 +1803,10 @@ msgstr "일정"
 msgid "Screen"
 msgstr "화면"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:32
+msgid "Screen disconnected"
+msgstr ""
+
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
 msgid "Screenshot"
@@ -1965,10 +1983,6 @@ msgstr "상태"
 msgid "Stop"
 msgstr "정지"
 
-#: res/app/src/core/devices/enhance.ts:15
-msgid "Stop Automation"
-msgstr "자동화 중지"
-
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:140
@@ -1999,6 +2013,10 @@ msgstr "태그"
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
 msgstr "스크린샷 캡처"
+
+#: res/app/src/features/control/ControlPage.tsx:385
+msgid "Take control to view and interact with the device."
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
@@ -2271,6 +2289,10 @@ msgid ""
 " installing apps."
 msgstr "사용자의 앱 설치가 제한되어 있어 패키지를 설치하지 못했습니다."
 
+#: res/app/src/features/control/ControlPage.tsx:318
+msgid "The test has finished. Take control to interact with the device."
+msgstr ""
+
 #: res/app/src/core/install.ts:268
 msgid "The uploaded file is no longer available. Upload it again."
 msgstr ""
@@ -2478,6 +2500,14 @@ msgstr "버전 업데이트"
 msgid "Vibrate Mode"
 msgstr "진동"
 
+#: res/app/src/features/control/ControlPage.tsx:382
+msgid "View only"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx:316
+msgid "View only. Controls are disabled while the test is running."
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
 msgstr "전압"
@@ -2597,3 +2627,16 @@ msgstr "본인"
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr "당신(혹은 다른 누군가)이 단말기를 사용 종료 하였습니다."
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid "Release reservation"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid ""
+"Release this STF reservation? The external automation session must be "
+"stopped separately."
+msgstr ""
+
+msgid "Stop Automation"
+msgstr "자동화 중지"

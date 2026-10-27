@@ -198,13 +198,19 @@ msgstr "Êtes-vous sûr de vouloir redémarrer ce terminal?"
 msgid "Auto Scroll"
 msgstr "Défilement Automatique"
 
-#: res/app/src/core/devices/enhance.ts:28
-msgid "Automating"
-msgstr "En cours d'automatisation"
+#: res/app/src/core/devices/enhance.ts:16
+#: res/app/src/core/devices/enhance.ts:29
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automated"
+msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
 msgstr "Automatisation"
+
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automation finished"
+msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
@@ -577,6 +583,10 @@ msgstr ""
 #: res/app/src/features/settings/devices/DevicesSettings.tsx:52
 msgid "Device notes state"
 msgstr "État des notes du terminal"
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:31
+msgid "Device offline"
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
@@ -1615,6 +1625,10 @@ msgstr "Voulez-vous vraiment supprimer cet utilisateur?"
 msgid "Recents"
 msgstr "Récents"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:30
+msgid "Reconnecting…"
+msgstr ""
+
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
@@ -1802,6 +1816,10 @@ msgstr "Planification"
 msgid "Screen"
 msgstr "Écran"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:32
+msgid "Screen disconnected"
+msgstr ""
+
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
 msgid "Screenshot"
@@ -1978,10 +1996,6 @@ msgstr "Statut"
 msgid "Stop"
 msgstr "Arrêter"
 
-#: res/app/src/core/devices/enhance.ts:15
-msgid "Stop Automation"
-msgstr "Arrêter l'automatisation"
-
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:140
@@ -2012,6 +2026,10 @@ msgstr "Étiquette"
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
 msgstr "Prendre une Capture d'écran"
+
+#: res/app/src/features/control/ControlPage.tsx:385
+msgid "Take control to view and interact with the device."
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
@@ -2331,6 +2349,10 @@ msgstr ""
 "Le système n'a pas réussi à installer le paquet parce que l'utilisateur "
 "n'est pas autorisé à installer des applications."
 
+#: res/app/src/features/control/ControlPage.tsx:318
+msgid "The test has finished. Take control to interact with the device."
+msgstr ""
+
 #: res/app/src/core/install.ts:268
 msgid "The uploaded file is no longer available. Upload it again."
 msgstr ""
@@ -2538,6 +2560,14 @@ msgstr "Mise à jour de version"
 msgid "Vibrate Mode"
 msgstr "Mode Vibration"
 
+#: res/app/src/features/control/ControlPage.tsx:382
+msgid "View only"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx:316
+msgid "View only. Controls are disabled while the test is running."
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
 msgstr "Tension"
@@ -2657,3 +2687,16 @@ msgstr "Vous"
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr "Vous (ou quelqu'un d'autre) avez exclu le Terminal."
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid "Release reservation"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid ""
+"Release this STF reservation? The external automation session must be "
+"stopped separately."
+msgstr ""
+
+msgid "Stop Automation"
+msgstr "Arrêter l'automatisation"

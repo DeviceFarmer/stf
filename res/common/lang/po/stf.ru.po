@@ -196,13 +196,19 @@ msgstr "Вы уверены, что хотите перезагрузить ус
 msgid "Auto Scroll"
 msgstr "Автопрокрутка"
 
-#: res/app/src/core/devices/enhance.ts:28
-msgid "Automating"
-msgstr "Автоматизация"
+#: res/app/src/core/devices/enhance.ts:16
+#: res/app/src/core/devices/enhance.ts:29
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automated"
+msgstr ""
 
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
 msgstr "Автоматизация"
+
+#: res/app/src/features/control/ControlPage.tsx:315
+msgid "Automation finished"
+msgstr ""
 
 #: res/app/src/core/devices/enhance.ts:27
 msgid "Available"
@@ -576,9 +582,9 @@ msgstr ""
 msgid "Device notes state"
 msgstr "Наличие записей у устройства"
 
-#: res/app/src/features/control/screen/DeviceScreen.tsx
+#: res/app/src/features/control/screen/DeviceScreen.tsx:31
 msgid "Device offline"
-msgstr "Устройство недоступно"
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
@@ -1615,9 +1621,9 @@ msgstr "Действительно удалить этого пользоват�
 msgid "Recents"
 msgstr "Недавние"
 
-#: res/app/src/features/control/screen/DeviceScreen.tsx
+#: res/app/src/features/control/screen/DeviceScreen.tsx:30
 msgid "Reconnecting…"
-msgstr "Переподключение…"
+msgstr ""
 
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
@@ -1802,9 +1808,9 @@ msgstr "Расписание"
 msgid "Screen"
 msgstr "Экран"
 
-#: res/app/src/features/control/screen/DeviceScreen.tsx
+#: res/app/src/features/control/screen/DeviceScreen.tsx:32
 msgid "Screen disconnected"
-msgstr "Видеопоток прерван"
+msgstr ""
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
@@ -1982,10 +1988,6 @@ msgstr "Статус"
 msgid "Stop"
 msgstr "Стоп"
 
-#: res/app/src/core/devices/enhance.ts:15
-msgid "Stop Automation"
-msgstr "Остановить автоматизацию"
-
 #: res/app/src/core/devices/enhance.ts:12
 #: res/app/src/features/control/device-control/DeviceMenuItems.tsx:56
 #: res/app/src/features/control/device-control/DeviceToolbar.tsx:140
@@ -2016,6 +2018,10 @@ msgstr "Тег"
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:68
 msgid "Take Screenshot"
 msgstr "Сделать снимок экрана"
+
+#: res/app/src/features/control/ControlPage.tsx:385
+msgid "Take control to view and interact with the device."
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:206
 msgid "Temperature"
@@ -2320,6 +2326,10 @@ msgstr ""
 "Не удалось установить пакет, так как данному пользователю запрещена "
 "установка приложений."
 
+#: res/app/src/features/control/ControlPage.tsx:318
+msgid "The test has finished. Take control to interact with the device."
+msgstr ""
+
 #: res/app/src/core/install.ts:268
 msgid "The uploaded file is no longer available. Upload it again."
 msgstr ""
@@ -2527,6 +2537,14 @@ msgstr "Обновление версии"
 msgid "Vibrate Mode"
 msgstr "Режим вибрации"
 
+#: res/app/src/features/control/ControlPage.tsx:382
+msgid "View only"
+msgstr ""
+
+#: res/app/src/features/control/ControlPage.tsx:316
+msgid "View only. Controls are disabled while the test is running."
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:207
 msgid "Voltage"
 msgstr "Напряжение"
@@ -2647,29 +2665,15 @@ msgstr "Вы"
 msgid "You (or someone else) kicked the device."
 msgstr "Вы (или кто-то еще) отключили устройство."
 
-msgid "Automated"
-msgstr "Automated"
-
-msgid "Automation finished"
-msgstr "Автотест завершён"
-
-msgid "View only. Controls are disabled while the test is running."
-msgstr "Идёт автотест. Управление устройством временно отключено."
-
-msgid "The test has finished. Take control to interact with the device."
-msgstr "Тест завершён. Нажмите «Использовать», чтобы управлять устройством."
-
-msgid "View only"
-msgstr "Только просмотр"
-
-msgid "Take control to view and interact with the device."
-msgstr "Нажмите «Использовать», чтобы видеть экран и управлять устройством."
-
+#: res/app/src/features/control/ControlPage.tsx
 msgid "Release reservation"
-msgstr "Освободить устройство"
+msgstr ""
 
-msgid "Release this STF reservation? The external automation session must be stopped separately."
-msgstr "Освободить устройство в STF? Внешний сеанс автоматизации нужно остановить отдельно."
+#: res/app/src/features/control/ControlPage.tsx
+msgid ""
+"Release this STF reservation? The external automation session must be "
+"stopped separately."
+msgstr ""
 
 msgid "Stop Automation"
 msgstr "Остановить автоматизацию"
