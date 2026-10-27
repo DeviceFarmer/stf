@@ -10,6 +10,7 @@ import {
   , IconX
 } from '@tabler/icons-react'
 import type {Device} from '@/core/devices/types'
+import {isAutomated} from '@/core/devices/enhance'
 import {useTranslation} from '@/core/i18n'
 import type {DeviceActions} from './use-device-actions'
 import classes from './DeviceControlPanel.module.css'
@@ -41,6 +42,7 @@ function DeviceNameMenu({device, actions}: {device: Device, actions: DeviceActio
                 size='sm'
                 variant='subtle'
                 color='gray'
+                disabled={isAutomated(groupDevice)}
                 className={`${classes.kickDevice} kick-device`}
                 onClick={(event) => {
                   event.stopPropagation()
@@ -67,9 +69,10 @@ function DeviceNameMenu({device, actions}: {device: Device, actions: DeviceActio
   )
 }
 
-export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
+export function DeviceToolbar({device, actions, showScreen, onToggleScreen, readOnly = false}: {
   device: Device
   actions: DeviceActions
+  readOnly?: boolean
   showScreen: boolean
   onToggleScreen: () => void
 }) {
@@ -86,6 +89,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
             <ActionIcon
               size='md'
               variant={actions.currentRotation === 'portrait' ? 'filled' : 'default'}
+              disabled={readOnly}
               aria-label={t('Portrait')}
               aria-pressed={actions.currentRotation === 'portrait'}
               onClick={() => actions.tryToRotate('portrait')}
@@ -97,6 +101,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
             <ActionIcon
               size='md'
               variant={actions.currentRotation === 'landscape' ? 'filled' : 'default'}
+              disabled={readOnly}
               aria-label={t('Landscape')}
               aria-pressed={actions.currentRotation === 'landscape'}
               onClick={() => actions.tryToRotate('landscape')}
@@ -110,6 +115,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
             <ActionIcon
               size='md'
               variant='default'
+              disabled={readOnly}
               aria-label={t('Rotate Left')}
               onClick={() => actions.rotateBy(90)}
             >
@@ -120,6 +126,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
             <ActionIcon
               size='md'
               variant='default'
+              disabled={readOnly}
               aria-label={t('Rotate Right')}
               onClick={() => actions.rotateBy(-90)}
             >
@@ -147,6 +154,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen}: {
             variant='light'
             color='red'
             className='stop-using btn-danger-outline'
+            disabled={readOnly}
             aria-label={t('Stop Using')}
             onClick={(event) => {
               event.stopPropagation()

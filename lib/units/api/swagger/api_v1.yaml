@@ -1506,6 +1506,18 @@ paths:
           description: Device Serial
           required: true
           type: string
+        - name: reservationId
+          in: query
+          description: Release only this reservation. Must be used with deviceChannel.
+          type: string
+          minLength: 1
+          maxLength: 128
+        - name: deviceChannel
+          in: query
+          description: Expected device runtime channel. Must be used with reservationId.
+          type: string
+          minLength: 1
+          maxLength: 512
       responses:
         "200":
           description: Delete User Device Status
@@ -1516,6 +1528,7 @@ paths:
             Unexpected Error:
               * 401: Unauthorized => bad credentials
               * 403: Forbidden => device is not controlled by the user
+              * 409: Conflict => device reservation changed
               * 404: Not Found => unknown device 
               * 500: Internal Server Error
               * 504: Gateway Time-out => device is not responding

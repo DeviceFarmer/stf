@@ -11,14 +11,16 @@ type InitialState = Parameters<typeof DbApi.saveDeviceInitialState>[1]
 // connects to RethinkDB as it loads, and these tests only care about the document a write sends.
 // A built update term is [UPDATE, [[target], {document}]], so the document is the last argument.
 var lastUpdate: any = null
+var lastQuery: any = null
 
 mockModule(new URL('../../lib/db/index.js', import.meta.url), {default: {
   run: function(query: {build(): any}) {
+    lastQuery = query.build()
     // Only the first write of a call, so a function that reads the row back does not overwrite it
     if (lastUpdate === null) {
       lastUpdate = query.build()[1][1]
     }
-    return Promise.resolve({skipped: 0})
+    return Promise.resolve({skipped: 0, toArray: () => Promise.resolve([])})
   }
 }})
 
@@ -116,5 +118,25 @@ describe('dbapi adb keys', function() {
       dbapi.insertUserAdbKey('email', {title: 'title', fingerprint: 'fp'})
       expect(appendedEntry()).to.deep.equal({title: 'title', fingerprint: 'fp'})
     })
+  })
+})
+
+
+describe('dbapi device channel resolution', function() {
+  it('uses the channel index and applies group visibility', async function() {
+    const tables = (await import('../../lib/db/tables.js')).default
+    expect(tables.devices!.indexes).to.have.property('channel')
+    const result = await dbapi.loadDeviceByChannel('private-channel', ['shared-group'])
+    expect(result).to.equal(null)
+    // Inspect the driver's actual query tree: LIMIT(FILTER(GET_ALL(..., index: channel))).
+    expect(lastQuery[0]).to.equal(71)
+    const filter = lastQuery[1][0]
+    expect(filter[0]).to.equal(39)
+    const getAll = filter[1][0]
+    expect(getAll[0]).to.equal(78)
+    expect(getAll[1][1]).to.equal('private-channel')
+    expect(getAll[2]).to.deep.equal({index: 'channel'})
+    expect(JSON.stringify(filter[1][1])).to.include('shared-group')
+    expect(lastQuery[1][1]).to.equal(1)
   })
 })

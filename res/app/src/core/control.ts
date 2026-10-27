@@ -3,6 +3,7 @@ import {emit} from './socket'
 import {createTransaction, type ProgressPromise, type TransactionResult} from './transaction'
 import keycodesMapped from './keycodes-mapped.json'
 import type {Device} from './devices/types'
+import {isAutomated} from './devices/enhance'
 
 const mappedKeys = keycodesMapped as Record<string, string>
 
@@ -27,12 +28,19 @@ export interface InstallOptions {
   [key: string]: unknown
 }
 
-export function createControl(target: Device, channel: string) {
+export function createControl(target: Device, channel: string, isReadOnly = () => isAutomated(target)) {
   function sendOneWay(action: string, data?: unknown) {
-    emit(action, channel, data)
+    if (!isReadOnly()) {
+      emit(action, channel, data)
+    }
   }
 
   function sendTwoWay(action: string, data?: unknown, timeoutMs?: number): TxPromise {
+    if (isReadOnly()) {
+      const denied = Promise.reject(new Error('Device is read-only during automation')) as TxPromise
+      denied.progressed = () => denied
+      return denied
+    }
     const tx = createTransaction(target, timeoutMs)
     emit(action, channel, tx.channel, data)
     return tx.promise
@@ -54,6 +62,9 @@ export function createControl(target: Device, channel: string) {
 
   return {
     target
+    , get readOnly() {
+      return isReadOnly()
+    }
     , channel
     , gestureStart: (seq: number) => sendOneWay('input.gestureStart', {seq})
     , gestureStop: (seq: number) => sendOneWay('input.gestureStop', {seq})
@@ -86,7 +97,8 @@ export function createControl(target: Device, channel: string) {
     , uninstall: (packageName: string) => sendTwoWay('device.uninstall', {packageName})
     , reboot: () => sendTwoWay('device.reboot')
     , rebootAndKeep: () =>
-      api.post(`/api/v1/user/devices/${target.serial}/reboot?keepOwnership=true`)
+      isReadOnly() ? Promise.reject(new Error('Device is read-only during automation')) :
+        api.post(`/api/v1/user/devices/${target.serial}/reboot?keepOwnership=true`)
     , rotate: (rotation: number, lock?: boolean) =>
       sendOneWay('display.rotate', {rotation, lock})
     , testForward: (forward: ForwardSpec) => sendTwoWay('forward.test', {

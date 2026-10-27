@@ -12,7 +12,10 @@ import EventEmitter from 'eventemitter3'
 import wire from '../../../../wire/index.js'
 import logger from '../../../../util/logger.js'
 import lifecycle from '../../../../util/lifecycle.js'
-import SeqQueue from '../../../../wire/seqqueue.js'
+import {TouchGesture} from './gesture.js'
+import {TouchProtocol} from './protocol.js'
+import groupSyrup from '../group.js'
+import type {GroupPlugin} from '../../../../types/device-plugins.js'
 import StateQueue from '../../../../util/statequeue.js'
 import RiskyStream from '../../../../util/riskystream.js'
 import FailCounter from '../../../../util/failcounter.js'
@@ -42,12 +45,14 @@ export default syrup.serial()
   .dependency(routerSyrup)
   .dependency(minitouchSyrup)
   .dependency(flagsSyrup)
+  .dependency(groupSyrup)
   .define(function(
     options: TouchOptions
   , adb: Adb
   , router: Router
   , minitouch: Minitouch
   , flags: Flags
+  , group: GroupPlugin
   ) {
     var log = logger.createLogger('device:plugins:touch')
 
@@ -93,6 +98,7 @@ export default syrup.serial()
       declare failed: boolean
       declare readableListener: () => void
       declare writeQueue: Array<(this: TouchConsumer) => unknown>
+      private readonly protocol: TouchProtocol
 
       constructor(config: {origin: TouchOrigin}) {
         super()
@@ -109,6 +115,8 @@ export default syrup.serial()
         this.failed = false
         this.readableListener = this._readableListener.bind(this)
         this.writeQueue = []
+        this.protocol = new TouchProtocol(command => this._write(command),
+          () => Number(this.banner?.maxContacts || 0))
       }
 
       _queueWrite(writer: (this: TouchConsumer) => unknown) {
@@ -124,46 +132,39 @@ export default syrup.serial()
 
       touchDown(point: TouchContactPoint) {
         this._queueWrite(function(this: TouchConsumer) {
-          return this._write(util.format(
-            'd %s %s %s %s\n'
-          , point.contact
-          , Math.floor(this.touchConfig.origin.x(point) * this.banner!.maxX)
-          , Math.floor(this.touchConfig.origin.y(point) * this.banner!.maxY)
-          , Math.floor((point.pressure || 0.5) * this.banner!.maxPressure)
-          ))
+          this.protocol.down(point.contact, {
+            x: Math.floor(this.touchConfig.origin.x(point) * this.banner!.maxX)
+          , y: Math.floor(this.touchConfig.origin.y(point) * this.banner!.maxY)
+          , pressure: Math.floor((point.pressure || 0.5) * this.banner!.maxPressure)
+          })
         })
       }
 
       touchMove(point: TouchContactPoint) {
         this._queueWrite(function(this: TouchConsumer) {
-          return this._write(util.format(
-            'm %s %s %s %s\n'
-          , point.contact
-          , Math.floor(this.touchConfig.origin.x(point) * this.banner!.maxX)
-          , Math.floor(this.touchConfig.origin.y(point) * this.banner!.maxY)
-          , Math.floor((point.pressure || 0.5) * this.banner!.maxPressure)
-          ))
+          this.protocol.move(point.contact, {
+            x: Math.floor(this.touchConfig.origin.x(point) * this.banner!.maxX)
+          , y: Math.floor(this.touchConfig.origin.y(point) * this.banner!.maxY)
+          , pressure: Math.floor((point.pressure || 0.5) * this.banner!.maxPressure)
+          })
         })
       }
 
       touchUp(point: TouchContact) {
         this._queueWrite(function(this: TouchConsumer) {
-          return this._write(util.format(
-            'u %s\n'
-          , point.contact
-          ))
+          this.protocol.up(point.contact)
         })
       }
 
       touchCommit() {
         this._queueWrite(function(this: TouchConsumer) {
-          return this._write('c\n')
+          this.protocol.commit()
         })
       }
 
       touchReset() {
         this._queueWrite(function(this: TouchConsumer) {
-          return this._write('r\n')
+          this.protocol.reset()
         })
       }
 
@@ -591,7 +592,9 @@ export default syrup.serial()
 
     return startConsumer()
       .then(function(touchConsumer) {
-        var queue = new SeqQueue(100, 4)
+        const queue = new TouchGesture(() => touchConsumer.touchReset())
+        group.on('join', () => queue.clear())
+        group.on('leave', () => queue.clear())
 
         touchConsumer.on('error', function(err) {
           log.fatal('Touch consumer had an error', err.stack)
@@ -600,12 +603,10 @@ export default syrup.serial()
 
         router
           .on(wire.GestureStartMessage, function(channel, message) {
-            queue.start(message.seq)
+            queue.start(message.seq, message.gestureId)
           })
           .on(wire.GestureStopMessage, function(channel, message) {
-            queue.push(message.seq, function() {
-              queue.stop()
-            })
+            queue.stop(message.seq)
           })
           .on(wire.TouchDownMessage, function(channel, message) {
             queue.push(message.seq, function() {
@@ -628,9 +629,12 @@ export default syrup.serial()
             })
           })
           .on(wire.TouchResetMessage, function(channel, message) {
-            queue.push(message.seq, function() {
-              touchConsumer.touchReset()
-            })
+            if (message.gestureId) {
+              queue.clear(message.gestureId)
+            }
+            else {
+              queue.push(message.seq, () => touchConsumer.touchReset())
+            }
           })
 
         return touchConsumer

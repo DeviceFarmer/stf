@@ -206,12 +206,23 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
 
 function deleteUserDeviceBySerial(req: ApiRequest, res: Response) {
   var serial = req.swagger.params.serial.value
+  const reservationId = req.swagger.params.reservationId?.value
+  const deviceChannel = req.swagger.params.deviceChannel?.value
+  if (Boolean(reservationId) !== Boolean(deviceChannel)) {
+    apiutil.respond(res, 400, 'Both reservationId and deviceChannel are required')
+    return
+  }
 
   withOwnedDevice(req, res, serial, 'You cannot release this device. Not owned by you'
   , function(device) {
+    if (reservationId && (device.owner?.reservationId !== reservationId ||
+        device.channel !== deviceChannel)) {
+      apiutil.respond(res, 409, 'Device reservation changed')
+      return
+    }
     var messageListener: MessageListener
 
-    // Timer will be called if no JoinGroupMessage is received till 5 seconds
+    // Timer will be called if no LeaveGroupMessage is received till 5 seconds
     var responseTimer = setTimeout(function() {
       req.options.channelRouter.removeListener(wireutil.global, messageListener)
       return res.status(504).json({
@@ -223,6 +234,7 @@ function deleteUserDeviceBySerial(req: ApiRequest, res: Response) {
     messageListener = wirerouter()
       .on(wire.LeaveGroupMessage, function(channel, message) {
         if (message.serial === serial &&
+            (!reservationId || message.owner.reservationId === reservationId) &&
             (message.owner.email === req.user.email || req.user.privilege === 'admin')) {
           clearTimeout(responseTimer)
           req.options.channelRouter.removeListener(wireutil.global, messageListener)
@@ -247,6 +259,7 @@ function deleteUserDeviceBySerial(req: ApiRequest, res: Response) {
             , match: 'exact'
             }
           })
+        , reservationId
         )
       )
     ])

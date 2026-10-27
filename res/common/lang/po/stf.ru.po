@@ -576,6 +576,10 @@ msgstr ""
 msgid "Device notes state"
 msgstr "Наличие записей у устройства"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx
+msgid "Device offline"
+msgstr "Устройство недоступно"
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:175
 msgid "Device Photo"
 msgstr "Фото устройства"
@@ -1611,6 +1615,10 @@ msgstr "Действительно удалить этого пользоват�
 msgid "Recents"
 msgstr "Недавние"
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx
+msgid "Reconnecting…"
+msgstr "Переподключение…"
+
 #: res/app/src/features/settings/groups/GroupDetail.tsx:86
 #: res/app/src/features/settings/users/CreateUserForm.tsx:61
 msgid "Regex syntax"
@@ -1793,6 +1801,10 @@ msgstr "Расписание"
 #: res/app/src/features/settings/groups/GroupDevices.tsx:20
 msgid "Screen"
 msgstr "Экран"
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx
+msgid "Screen disconnected"
+msgstr "Видеопоток прерван"
 
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:58
 #: res/app/src/features/control/panes/screenshots/ScreenshotsPane.tsx:75
@@ -2634,3 +2646,30 @@ msgstr "Вы"
 #: res/app/src/core/devices/enhance.ts:32
 msgid "You (or someone else) kicked the device."
 msgstr "Вы (или кто-то еще) отключили устройство."
+
+msgid "Automated"
+msgstr "Automated"
+
+msgid "Automation finished"
+msgstr "Автотест завершён"
+
+msgid "View only. Controls are disabled while the test is running."
+msgstr "Идёт автотест. Управление устройством временно отключено."
+
+msgid "The test has finished. Take control to interact with the device."
+msgstr "Тест завершён. Нажмите «Использовать», чтобы управлять устройством."
+
+msgid "View only"
+msgstr "Только просмотр"
+
+msgid "Take control to view and interact with the device."
+msgstr "Нажмите «Использовать», чтобы видеть экран и управлять устройством."
+
+msgid "Release reservation"
+msgstr "Освободить устройство"
+
+msgid "Release this STF reservation? The external automation session must be stopped separately."
+msgstr "Освободить устройство в STF? Внешний сеанс автоматизации нужно остановить отдельно."
+
+msgid "Stop Automation"
+msgstr "Остановить автоматизацию"

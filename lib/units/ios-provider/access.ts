@@ -4,6 +4,7 @@ export interface IosOwner {
   email: string
   name: string
   group: string
+  reservationId?: string | null
 }
 
 export async function authorizeScreen(
@@ -36,10 +37,12 @@ export async function authorizeScreen(
       return false
     }
     const viewer = await identity.json() as {success?: boolean, user?: {email?: string}}
-    if (viewer.success !== true || viewer.user?.email !== owner.email) {
+    if (viewer.success !== true || !viewer.user?.email) {
       return false
     }
-    const url = new URL('/api/v1/user/devices/' + encodeURIComponent(serial), apiUrl)
+    const isOwner = viewer.user.email === owner.email
+    const url = new URL((isOwner ? '/api/v1/user/devices/' : '/api/v1/devices/') +
+      encodeURIComponent(serial), apiUrl)
     const signal = AbortSignal.timeout(5000)
     let response: Response | null = null
     for (let attempt = 0; attempt < 4; attempt++) {
@@ -55,10 +58,11 @@ export async function authorizeScreen(
       await new Promise(resolve => setTimeout(resolve, 50))
     }
     const body = await response!.json() as {
-      success?: boolean, device?: {serial?: string, owner?: {email?: string}}
+      success?: boolean, device?: {serial?: string, owner?: {email?: string}, usage?: string}
     }
     return body.success === true && body.device?.serial === serial &&
-      body.device.owner?.email === owner.email
+      body.device.owner?.email === owner.email &&
+      (isOwner || body.device.usage === 'automation')
   }
   catch {
     return false

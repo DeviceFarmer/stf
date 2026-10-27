@@ -31,6 +31,7 @@ export class IosBridge {
   private queue = Promise.resolve()
   private touch: {from: Point, to: Point, started: number} | null = null
   private multitouch = false
+  private touchGestureId: string | null = null
   private lease = randomUUID()
   private installId: string | null = null
   private lastObservation: IosDeviceState | null = null
@@ -65,7 +66,8 @@ export class IosBridge {
             throw new Error('Device not ready')
           }
           await grouputil.match({serial: options.serial}, message.requirements)
-          this.join(message.owner, message.timeout)
+          this.join(message.owner, message.timeout, message.usage)
+          return {owner: this.owner}
         })
       })
       .on(wire.AutoGroupMessage, (_channel, message) => {
@@ -76,6 +78,9 @@ export class IosBridge {
       .on(wire.UngroupMessage, (channel, message) => {
         this.transaction(String(channel), async() => {
           await grouputil.match({serial: options.serial}, message.requirements)
+          if (message.reservationId && message.reservationId !== this.owner?.reservationId) {
+            throw new Error('Device session changed')
+          }
           this.leave('ungroup_request')
         })
       })
@@ -109,8 +114,15 @@ export class IosBridge {
           }
         }
       })
-      .on(wire.GestureStartMessage, () => this.resetTouch())
-      .on(wire.TouchResetMessage, () => this.resetTouch())
+      .on(wire.GestureStartMessage, (_channel, message) => {
+        this.resetTouch()
+        this.touchGestureId = message.gestureId || null
+      })
+      .on(wire.TouchResetMessage, (_channel, message) => {
+        if (!message.gestureId || message.gestureId === this.touchGestureId) {
+          this.resetTouch(!message.gestureId)
+        }
+      })
       .on(wire.TouchCommitMessage, () => null)
       .on(wire.GestureStopMessage, () => this.resetTouch())
       .on(wire.TypeMessage, (_channel, message) => this.command('/text', {text: message.text}))
@@ -212,9 +224,12 @@ export class IosBridge {
     }, true))
   }
 
-  private resetTouch() {
+  private resetTouch(keepGestureId = false) {
     this.touch = null
     this.multitouch = false
+    if (!keepGestureId) {
+      this.touchGestureId = null
+    }
   }
 
   private key(key: string) {
@@ -277,19 +292,19 @@ export class IosBridge {
     )
   }
 
-  private join(owner: IosOwner, timeout?: number | null) {
+  private join(owner: IosOwner, timeout?: number | null, usage?: string | null) {
     if (this.owner && this.owner.email !== owner.email) {
       throw new Error('Device already owned')
     }
     if (!this.owner) {
       this.ownerAbort = new AbortController()
-      this.owner = owner
+      this.owner = {...owner, reservationId: randomUUID()}
       this.lease = randomUUID()
       this.epoch++
       // GroupMessage/API timeouts are milliseconds; the CLI fallback is seconds.
       this.timeout = Math.min(3600, Math.max(10,
         timeout ? timeout / 1000 : this.options.groupTimeout))
-      this.broadcast(new wire.JoinGroupMessage(this.options.serial, owner))
+      this.broadcast(new wire.JoinGroupMessage(this.options.serial, this.owner, usage))
     }
     this.keepalive()
   }
