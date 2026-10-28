@@ -88,7 +88,7 @@ android:
 
 Android providers fetch install URLs through the complete proxy so APK metadata routes are available. Set an entry's `storageUrl` to an existing full gateway when adopting a farm; the raw temporary-storage endpoint cannot serve APK metadata.
 
-Use one USB ADB server per node. To share an existing server, configure `externalAdb` and disjoint serial lists rather than starting competing ADB services. USB passthrough and host permissions remain node preparation tasks. Set `adbKeysClaim` to an existing claim when ADB trust keys must survive replacement of its pod.
+Use one USB ADB server per node, selected by an explicit `kubernetes.io/hostname`. Additional labels do not partition a host's USB bus. To share an existing server, configure `externalAdb` and disjoint serial lists rather than starting competing ADB services. USB passthrough and host permissions remain node preparation tasks. Set `adbKeysClaim` to an existing claim when ADB trust keys must survive replacement of its pod.
 
 For iOS, build the Linux runtime from the same STF checkout and make it available to the cluster. The chart deliberately supplies no published iOS runtime image name:
 

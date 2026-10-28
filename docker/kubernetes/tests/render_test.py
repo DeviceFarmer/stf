@@ -131,6 +131,10 @@ class ChartTest(unittest.TestCase):
         self.assertNotIn('resolver 10.', proxy)
         providers[1]['nodeSelector'] = providers[0]['nodeSelector']
         render({'android': {'providers': providers}}, failure='one USB ADB server')
+        providers[1]['nodeSelector'] = {**providers[0]['nodeSelector'], 'stf.role': 'android'}
+        render({'android': {'providers': providers}}, failure='one USB ADB server')
+        providers[1]['nodeSelector'] = {'stf.role': 'android'}
+        render({'android': {'providers': providers}}, failure='explicit kubernetes.io/hostname')
         render({'android': {'providers': [{'name': 'a', 'capacity': 2, 'minPort': 65532, 'nodeSelector': {'n': 'a'}}]}}, failure='port pool')
 
     def test_android_install_fetches_via_complete_gateway_not_raw_storage(self):

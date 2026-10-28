@@ -22,7 +22,8 @@
 {{- else -}}{{- $_ := set $externalPools $pool $serials -}}{{- end -}}
 {{- else -}}
 {{- if not .nodeSelector }}{{ fail "a USB Android provider requires nodeSelector" }}{{ end -}}
-{{- $node := toJson .nodeSelector -}}
+{{- $node := index .nodeSelector "kubernetes.io/hostname" -}}
+{{- if not $node }}{{ fail "a USB Android provider requires an explicit kubernetes.io/hostname selector" }}{{ end -}}
 {{- if hasKey $nodes $node }}{{ fail "configure one USB ADB server per node; use externalAdb and disjoint serials to share it" }}{{ end -}}
 {{- $_ := set $nodes $node true -}}
 {{- end -}}
