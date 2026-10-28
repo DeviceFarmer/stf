@@ -27,8 +27,6 @@ jobs:
     name: Helm render, install and upgrade
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      KUBECONFIG: ${{ runner.temp }}/stf-chart-ci.kubeconfig
     steps:
       - uses: actions/checkout@v7
 
@@ -51,6 +49,7 @@ jobs:
           mv linux-amd64/helm helm
           chmod +x helm kind
           echo "$RUNNER_TEMP/stf-chart-tools" >> "$GITHUB_PATH"
+          echo "STF_CHART_KUBECONFIG=$RUNNER_TEMP/stf-chart-ci.kubeconfig" >> "$GITHUB_ENV"
           python3 -m venv "$RUNNER_TEMP/stf-chart-venv"
           "$RUNNER_TEMP/stf-chart-venv/bin/pip" install --disable-pip-version-check PyYAML==6.0.3
 
@@ -63,16 +62,17 @@ jobs:
         run: |
           "$RUNNER_TEMP/stf-chart-venv/bin/python" docker/kubernetes/tests/smoke.py \
             --cluster-name stf-chart-ci-smoke \
-            --kubeconfig "$KUBECONFIG" \
+            --kubeconfig "$STF_CHART_KUBECONFIG" \
             --artifacts test-results/kubernetes
 
       - name: Remove the isolated cluster
         if: always()
         run: |
+          chart_kubeconfig="${STF_CHART_KUBECONFIG:-$RUNNER_TEMP/stf-chart-ci.kubeconfig}"
           if command -v kind >/dev/null 2>&1; then
-            kind delete cluster --name stf-chart-ci-smoke --kubeconfig "$KUBECONFIG"
+            kind delete cluster --name stf-chart-ci-smoke --kubeconfig "$chart_kubeconfig"
           fi
-          rm -f "$KUBECONFIG"
+          rm -f "$chart_kubeconfig"
 
       - uses: actions/upload-artifact@v7
         if: always()
