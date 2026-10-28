@@ -200,7 +200,9 @@ class Smoke:
         return email
 
     def verify_owner(self):
-        contact = self.request_json('/auth/contact', client=self.anonymous).get('contact', {})
+        # Auth and API restart independently after a database outage.
+        contact = json.loads(self.wait_http('/auth/contact', client=self.anonymous,
+                                            seconds=120)).get('contact', {})
         self.require(contact.get('email') == self.admin_email and contact.get('name') == self.admin_name,
                      'Migration changed the existing bootstrap owner')
 
