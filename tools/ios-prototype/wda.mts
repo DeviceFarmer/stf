@@ -16,18 +16,27 @@ export class WdaClient {
   sessionId: string | null = null
   readonly origin: string
   private timeout: number
+  private healthTimeout: number
 
-  constructor(origin: string, timeout = 10000) {
+  constructor(origin: string, timeout = 10000, healthTimeout = 60000) {
     this.origin = origin
     this.timeout = timeout
+    this.healthTimeout = healthTimeout
   }
 
   async request(
     method: string, path: string, body?: unknown, signal?: AbortSignal
   ): Promise<WdaResponse> {
+    return this.requestWithSignal(method, path, body,
+      AbortSignal.any([AbortSignal.timeout(this.timeout), ...(signal ? [signal] : [])]))
+  }
+
+  private async requestWithSignal(
+    method: string, path: string, body: unknown, signal: AbortSignal
+  ): Promise<WdaResponse> {
     const response = await fetch(this.origin + path, {
       method
-    , signal: AbortSignal.any([AbortSignal.timeout(this.timeout), ...(signal ? [signal] : [])])
+    , signal
     , ...(typeof body === 'undefined' ? {} : {
         headers: {'Content-Type': 'application/json'}
       , body: JSON.stringify(body)
@@ -39,6 +48,19 @@ export class WdaClient {
         result.value?.error || 'wda_error')
     }
     return result
+  }
+
+  async probeSession(signal?: AbortSignal): Promise<WdaResponse> {
+    if (!this.sessionId) {
+      throw new Error('WDA session is not ready')
+    }
+    const path = '/session/' + encodeURIComponent(this.sessionId)
+    // An external WDA command can keep XCTest busy longer than an input request.
+    const active = AbortSignal.any([
+      AbortSignal.timeout(this.healthTimeout), ...(signal ? [signal] : [])
+    ])
+    await this.requestWithSignal('GET', path, undefined, active)
+    return this.requestWithSignal('GET', path + '/wda/locked', undefined, active)
   }
 
   async open(): Promise<void> {
