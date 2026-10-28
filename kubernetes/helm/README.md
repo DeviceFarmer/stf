@@ -1,13 +1,15 @@
 # STF on Kubernetes
 
-The Helm chart in [`kubernetes/helm`](../kubernetes/helm) deploys the STF server, a browser-facing proxy and an optional single-node RethinkDB. Android and Linux iOS USB providers are opt-in and can be assigned to separate nodes. The chart uses the existing STF commands and images; it does not install Argo CD, Appium Grid or a test scheduler.
+The Helm chart in [`kubernetes/helm`](.) deploys the STF server, a browser-facing proxy and an optional single-node RethinkDB. Android and Linux iOS USB providers are opt-in and can be assigned to separate nodes. The chart uses the existing STF commands and images; it does not install Argo CD, Appium Grid or a test scheduler.
+
+Run the commands below from the root of the STF repository. Examples and verification scripts are provided in the repository checkout.
 
 ## Prerequisites
 
 - Kubernetes 1.27 or later, Helm 3 or later, and `kubectl` configured for the intended cluster.
 - A default StorageClass for the bundled database, or a reviewed existing claim/external database configuration.
 - An existing session Secret in the release namespace. All STF units must keep the same session key across upgrades.
-- For USB devices, Linux worker nodes with the devices visible to the host. iOS additionally needs host `usbmuxd`, a trusted pairing and signed WebDriverAgent, as described in the [iOS provider guide](ios-provider.md).
+- For USB devices, Linux worker nodes with the devices visible to the host. iOS additionally needs host `usbmuxd`, a trusted pairing and signed WebDriverAgent, as described in the [iOS provider guide](../../doc/ios-provider.md).
 
 The default authentication mode is `mock`, intended for private development. Configure LDAP or OAuth2 before making a shared installation reachable. The chart does not provision certificates, Apple signing accounts or device trust.
 
@@ -65,7 +67,7 @@ Keep installation values in an environment-specific file outside the STF checkou
 | `bootstrap.adminName`, `bootstrap.adminEmail` | Optional explicit root-owner overrides; empty values preserve an existing owner |
 | `resourceNames`, `selectorOverrides` | Explicit names/selectors for a separately reviewed adoption plan |
 
-The bundled database is a single StatefulSet, not a highly available database service. If `database.bundled: false`, set `database.external.host`, port and database name, and verify the database is reachable from the release namespace. Refer to [`values.yaml`](../kubernetes/helm/values.yaml) for the exact keys. A claim alone does not preserve in-progress upload metadata across a storage-process restart.
+The bundled database is a single StatefulSet, not a highly available database service. If `database.bundled: false`, set `database.external.host`, port and database name, and verify the database is reachable from the release namespace. Refer to [`values.yaml`](values.yaml) for the exact keys. A claim alone does not preserve in-progress upload metadata across a storage-process restart.
 
 For remote access, set `publicOrigin` to the URL users open and configure `proxy.ingress` or an equivalent private gateway. Keep HTTP and WebSocket traffic on that same origin. TLS certificates and DNS records are operator inputs.
 
@@ -115,7 +117,7 @@ ios:
         size: 5Gi
 ```
 
-The [USB values example](../kubernetes/helm/examples/usb.yaml) combines Android and iOS configuration. Replace its synthetic identifiers and image before applying it. Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](ios-provider.md).
+The [USB values example](examples/usb.yaml) combines Android and iOS configuration. Replace its synthetic identifiers and image before applying it. Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](../../doc/ios-provider.md).
 
 ## Database migration and upgrades
 

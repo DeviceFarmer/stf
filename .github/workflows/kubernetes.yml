@@ -4,14 +4,12 @@ on:
   pull_request:
     paths:
       - kubernetes/helm/**
-      - doc/kubernetes.md
       - README.md
       - .github/workflows/kubernetes.yml
   push:
     branches: [master]
     paths:
       - kubernetes/helm/**
-      - doc/kubernetes.md
       - README.md
       - .github/workflows/kubernetes.yml
 
