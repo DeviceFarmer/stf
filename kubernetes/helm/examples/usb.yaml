@@ -1,0 +1,25 @@
+# Create these Secrets before installing; these are reference names, not values.
+session:
+  existingSecret: stf-session
+publicOrigin: https://stf.example.com
+proxy:
+  ingress:
+    enabled: true
+    className: nginx
+    tls: [{hosts: [stf.example.com], secretName: stf-tls}]
+android:
+  providers:
+    - name: android-a
+      nodeSelector: {kubernetes.io/hostname: usb-worker-a}
+      capacity: 4
+      serials: []
+ios:
+  # Build docker/ios/Dockerfile and replace these user-owned image coordinates.
+  image: {repository: registry.example.com/stf-ios-runtime, tag: YOUR_VERSION}
+  devices:
+    - name: iphone-a
+      udid: REPLACE-WITH-YOUR-UDID
+      wdaBundleId: com.example.WebDriverAgentRunner.xctrunner
+      tokenSecret: iphone-a-token
+      nodeSelector: {kubernetes.io/hostname: usb-worker-a}
+      persistence: {size: 5Gi}

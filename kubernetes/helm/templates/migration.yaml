@@ -1,0 +1,86 @@
+{{- if .Values.migration.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "stf.name" (dict "root" . "component" "scripts") }}
+data:
+  wait-migration.cjs: |
+    {{- .Files.Get "files/wait-migration.cjs" | nindent 4 }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "stf.name" (dict "root" . "component" "wait-migration") }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "stf.name" (dict "root" . "component" "wait-migration") }}
+rules:
+  - apiGroups: [batch]
+    resources: [jobs]
+    resourceNames: [{{ include "stf.migration" . | quote }}]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "stf.name" (dict "root" . "component" "wait-migration") }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "stf.name" (dict "root" . "component" "wait-migration") }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "stf.name" (dict "root" . "component" "wait-migration") }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "stf.migration" . }}
+  labels:
+    {{- include "stf.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: {{ .Values.migration.timeoutSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "stf.selector" (dict "root" . "component" "migrate") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-database
+          image: {{ include "stf.image" .Values.image | quote }}
+          command: [node, -e]
+          args:
+            - >-
+              const net=require('net');const end=Date.now()+{{ .Values.migration.timeoutSeconds }}*1000;
+              function check(){const s=net.connect({host:process.env.DB_HOST,port:Number(process.env.DB_PORT)});
+              s.setTimeout(2000,()=>s.destroy());s.once('connect',()=>{s.destroy();process.exit(0)});
+              s.once('error',()=>{});s.once('close',()=>{if(Date.now()>end)process.exit(1);setTimeout(check,1000)})}check();
+          env:
+            - {name: DB_HOST, value: {{ include "stf.dbhost" . | quote }}}
+            - {name: DB_PORT, value: {{ ternary 28015 .Values.database.external.port .Values.database.bundled | quote }}}
+      containers:
+        - name: migrate
+          image: {{ include "stf.image" .Values.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [stf, migrate]
+          env:
+            {{- include "stf.env" . | nindent 12 }}
+            {{- with .Values.bootstrap.adminName }}
+            - {name: STF_ADMIN_NAME, value: {{ . | quote }}}
+            {{- end }}
+            {{- with .Values.bootstrap.adminEmail }}
+            - {name: STF_ADMIN_EMAIL, value: {{ . | quote }}}
+            {{- end }}
+          resources: {{ toYaml .Values.core.resources | nindent 12 }}
+
+{{- end }}

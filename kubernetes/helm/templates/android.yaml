@@ -1,0 +1,138 @@
+{{- $r := . -}}
+{{- range .Values.android.providers -}}
+{{- $component := printf "android-%s" .name -}}
+{{- $name := include "stf.name" (dict "root" $r "component" $component) -}}
+{{- $adb := include "stf.name" (dict "root" $r "component" (printf "adb-%s" .name)) -}}
+{{- $external := default dict .externalAdb -}}
+{{- $adbHost := default $adb $external.host -}}
+{{- $min := int (default 7400 .minPort) -}}
+{{- $capacity := int (default 8 .capacity) -}}
+{{- $max := int (default (sub (add $min (mul 4 $capacity)) 1) .maxPort) -}}
+{{- $capacity = div (add (sub $max $min) 1) 4 | int -}}
+{{ printf "\n---\n" }}apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate, rollingUpdate: null}
+  selector:
+    matchLabels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 8 }}
+      annotations:
+        checksum/config: {{ toJson (dict "provider" . "origin" $r.Values.publicOrigin "migration" (include "stf.migration" $r)) | sha256sum }}
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- if $r.Values.migration.enabled }}
+      serviceAccountName: {{ include "stf.name" (dict "root" $r "component" "wait-migration") }}
+      {{- end }}
+      {{- with .nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $r.Values.migration.enabled }}
+      initContainers: {{ include "stf.waitMigration" $r | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ default "provider" .containerName }}
+          image: {{ include "stf.image" $r.Values.image | quote }}
+          imagePullPolicy: {{ $r.Values.image.pullPolicy }}
+          command: [stf, provider]
+          args:
+            {{- range .serials }}
+            - {{ . | quote }}
+            {{- end }}
+            - --name={{ $name }}
+            - --adb-host={{ $adbHost }}
+            - --adb-port={{ default 5037 $external.port }}
+            - --public-ip={{ regexReplaceAll ":[0-9]+$" (urlParse $r.Values.publicOrigin).host "" }}
+            - --min-port={{ $min }}
+            - --max-port={{ $max }}
+            - --screen-ws-url-pattern={{ regexReplaceAll "^http" $r.Values.publicOrigin "ws" }}/d/{{ $name }}/<%= publicPort %>/
+            - {{ printf "--storage-url=%s" (default (printf "http://%s:%v/" (include "stf.name" (dict "root" $r "component" "proxy")) $r.Values.proxy.service.port) .storageUrl) | quote }}
+            - --connect-push=tcp://{{ include "stf.name" (dict "root" $r "component" "triproxy-dev") }}:{{ $r.Values.messaging.dev.pull }}
+            - --connect-sub=tcp://{{ include "stf.name" (dict "root" $r "component" "triproxy-dev") }}:{{ $r.Values.messaging.dev.pub }}
+            {{- range .extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          env: {{ include "stf.env" $r | nindent 12 }}
+          resources: {{ toYaml (default $r.Values.core.resources .resources) | nindent 12 }}
+      {{- if $r.Values.migration.enabled }}
+      volumes: {{ include "stf.migrationVolumes" $r | nindent 8 }}
+      {{- end }}
+{{- if dig "create" true (default dict .service) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  type: ClusterIP
+  selector: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 4 }}
+  ports:
+    {{- range $i := until (add (sub $max $min) 1 | int) }}
+    - {name: p{{ add $min $i }}, port: {{ add $min $i }}, targetPort: {{ add $min $i }}}
+    {{- end }}
+{{- end }}
+{{- if not $external.host }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $adb }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate, rollingUpdate: null}
+  selector:
+    matchLabels: {{ include "stf.selector" (dict "root" $r "component" (printf "adb-%s" .name)) | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "stf.selector" (dict "root" $r "component" (printf "adb-%s" .name)) | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector: {{ toYaml .nodeSelector | nindent 8 }}
+      {{- with .tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: adb
+          image: {{ $r.Values.android.adbImage | quote }}
+          securityContext: {privileged: true}
+          ports: [{name: adb, containerPort: 5037}]
+          startupProbe: {tcpSocket: {port: adb}, periodSeconds: 2, failureThreshold: 90}
+          readinessProbe: {tcpSocket: {port: adb}, periodSeconds: 5}
+          livenessProbe: {tcpSocket: {port: adb}, periodSeconds: 20, failureThreshold: 6}
+          resources: {{ toYaml (default $r.Values.core.resources .resources) | nindent 12 }}
+          volumeMounts:
+            - {name: usb, mountPath: /dev/bus/usb}
+            {{- with .adbKeysClaim }}
+            - {name: keys, mountPath: /root/.android}
+            {{- end }}
+      volumes:
+        - name: usb
+          hostPath: {path: /dev/bus/usb, type: Directory}
+        {{- with .adbKeysClaim }}
+        - name: keys
+          persistentVolumeClaim: {claimName: {{ . | quote }}}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $adb }}
+spec:
+  selector: {{ include "stf.selector" (dict "root" $r "component" (printf "adb-%s" .name)) | nindent 4 }}
+  ports: [{name: adb, port: 5037, targetPort: adb}]
+{{- end }}
+{{- end }}

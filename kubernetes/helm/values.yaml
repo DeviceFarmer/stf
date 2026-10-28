@@ -1,0 +1,117 @@
+# Use a complete HTTP(S) origin, without a trailing slash or path.
+publicOrigin: http://localhost:7100
+nameOverride: ""
+fullnameOverride: ""
+# Optional component -> existing resource name overrides for reviewed adoption.
+resourceNames: {}
+selectorOverrides: {}
+image:
+  repository: devicefarmer/stf
+  tag: "3.9.0"
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+ports:
+  http: 7100
+messaging:
+  app: {pub: 7111, dealer: 7112, pull: 7113}
+  dev: {pub: 7111, dealer: 7112, pull: 7113}
+session:
+  existingSecret: ""
+  key: SECRET
+auth:
+  # mock is for a private development installation only.
+  type: mock
+  existingSecret: ""
+  env: {}
+  extraArgs: []
+bootstrap:
+  # Leave empty to preserve an existing root owner; fresh databases use STF defaults.
+  adminName: ""
+  adminEmail: ""
+database:
+  bundled: true
+  image: rethinkdb:2.4.2
+  name: stf
+  external:
+    host: ""
+    port: 28015
+    existingSecret: ""
+    authKeyKey: RETHINKDB_ENV_AUTHKEY
+  persistence:
+    enabled: true
+    existingClaim: ""
+    size: 5Gi
+    storageClass: ""
+    annotations: {}
+  nodeSelector: {}
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: '1', memory: 1Gi}
+migration:
+  enabled: true
+  timeoutSeconds: 600
+  # Increment to run migration again without changing the image/configuration.
+  revision: ""
+storage:
+  maxFileSize: 1073741824
+  # Temporary storage metadata is process-local; PVC does not make jobs durable.
+  persistence:
+    enabled: false
+    existingClaim: ""
+    size: 5Gi
+    storageClass: ""
+    annotations: {}
+proxy:
+  # Trusted exact routes to externally managed iOS screen Services.
+  extraScreenRoutes: []
+  containerPort: 7100
+  containerName: proxy
+  image: nginx:stable-alpine
+  service:
+    type: ClusterIP
+    port: 7100
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    tls: []
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: '1', memory: 256Mi}
+core:
+  nodeSelector: {}
+  tolerations: []
+  podAnnotations: {}
+  resources:
+    requests: {cpu: 25m, memory: 128Mi}
+    limits: {cpu: '1', memory: 1Gi}
+  # Per-component pod/container overrides, e.g. units.api.resources.
+  units: {}
+android:
+  adbImage: devicefarmer/adb:latest
+  # One entry per USB host/ADB pool. No USB access is enabled by default.
+  providers: []
+  # - name: android-a
+  #   nodeSelector: {kubernetes.io/hostname: usb-worker}
+  #   serials: []
+  #   capacity: 8
+  #   minPort: 7400
+  #   maxPort: 7431 # Optional exact endpoint; overrides capacity-derived bound.
+  #   service: {create: true}
+  #   externalAdb: {host: '', port: 5037}
+  #   adbKeysClaim: ''
+  #   extraArgs: []
+ios:
+  # Build docker/ios/Dockerfile and provide a real image when enabling devices.
+  image: {repository: '', tag: '', digest: '', pullPolicy: IfNotPresent}
+  socketPath: /run/usbmuxd
+  devices: []
+  # - name: iphone-a
+  #   udid: YOUR_DEVICE_UDID
+  #   wdaBundleId: com.example.WebDriverAgentRunner.xctrunner
+  #   tokenSecret: iphone-a-token
+  #   service: {create: true}
+  #   tokenKey: token
+  #   nodeSelector: {kubernetes.io/hostname: usb-worker}
+  #   persistence: {existingClaim: '', storageClass: '', size: 5Gi}

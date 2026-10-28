@@ -1,0 +1,53 @@
+{{- if not (regexMatch "^https?://[^/?#@]+$" .Values.publicOrigin) }}{{ fail "publicOrigin must be an HTTP(S) origin without a path, credentials or trailing slash" }}{{ end -}}
+{{- $names := dict -}}
+{{- $udids := dict -}}
+{{- $nodes := dict -}}
+{{- $externalPools := dict -}}
+{{- range .Values.android.providers -}}
+{{- if hasKey $names .name }}{{ fail "provider/device names must be unique" }}{{ end -}}
+{{- $_ := set $names .name true -}}
+{{- $capacity := int (default 8 .capacity) -}}
+{{- $port := int (default 7400 .minPort) -}}
+{{- $end := int (default (sub (add $port (mul 4 $capacity)) 1) .maxPort) -}}
+{{- if or (lt $capacity 1) (gt $capacity 128) (lt $port 1024) (gt $end 65535) (lt (sub $end $port) 3) (gt (sub $end $port) 511) }}{{ fail "Android port pool is invalid" }}{{ end -}}
+{{- $external := default dict .externalAdb -}}
+{{- if $external.host -}}
+{{- $pool := printf "%s:%v" $external.host (default 5037 $external.port) -}}
+{{- $serials := default list .serials -}}
+{{- if hasKey $externalPools $pool -}}
+{{- $other := get $externalPools $pool -}}
+{{- if or (not $other) (not $serials) }}{{ fail "providers sharing externalAdb require explicit disjoint serials" }}{{ end -}}
+{{- range $serials -}}{{- if has . $other }}{{ fail "providers sharing externalAdb cannot select the same serial" }}{{ end -}}{{- end -}}
+{{- $_ := set $externalPools $pool (concat $other $serials) -}}
+{{- else -}}{{- $_ := set $externalPools $pool $serials -}}{{- end -}}
+{{- else -}}
+{{- if not .nodeSelector }}{{ fail "a USB Android provider requires nodeSelector" }}{{ end -}}
+{{- $node := index .nodeSelector "kubernetes.io/hostname" -}}
+{{- if not $node }}{{ fail "a USB Android provider requires an explicit kubernetes.io/hostname selector" }}{{ end -}}
+{{- if hasKey $nodes $node }}{{ fail "configure one USB ADB server per node; use externalAdb and disjoint serials to share it" }}{{ end -}}
+{{- $_ := set $nodes $node true -}}
+{{- end -}}
+{{- end -}}
+{{- range .Values.ios.devices -}}
+{{- if hasKey $names .name }}{{ fail "provider/device names must be unique" }}{{ end -}}
+{{- $_ := set $names .name true -}}
+{{- $id := lower .udid -}}
+{{- if hasKey $udids $id }}{{ fail "iOS UDIDs must be unique" }}{{ end -}}
+{{- $_ := set $udids $id true -}}
+{{- if not .nodeSelector }}{{ fail "an iPhone requires nodeSelector for its USB host" }}{{ end -}}
+{{- end -}}
+{{- if .Values.ios.devices -}}
+{{- if or (not .Values.ios.image.repository) (and (not .Values.ios.image.tag) (not .Values.ios.image.digest)) }}{{ fail "ios.image requires a real repository and tag or digest; build docker/ios/Dockerfile" }}{{ end -}}
+{{- end -}}
+{{- if and (not .Values.database.bundled) (not .Values.database.external.host) }}{{ fail "database.external.host is required" }}{{ end -}}
+
+{{- if and .Values.database.bundled .Values.database.external.existingSecret }}{{ fail "database.external.existingSecret requires database.bundled=false" }}{{ end -}}
+
+{{- range $bus := list .Values.messaging.app .Values.messaging.dev -}}
+{{- if or (eq (int $bus.pub) (int $bus.dealer)) (eq (int $bus.pub) (int $bus.pull)) (eq (int $bus.dealer) (int $bus.pull)) }}{{ fail "messaging ports must be distinct within each triproxy" }}{{ end -}}
+{{- end -}}
+{{- $routes := dict -}}
+{{- range .Values.proxy.extraScreenRoutes -}}
+{{- if hasKey $routes .path }}{{ fail "extra screen paths must be unique" }}{{ end -}}
+{{- $_ := set $routes .path true -}}
+{{- end -}}

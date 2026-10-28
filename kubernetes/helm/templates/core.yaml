@@ -1,0 +1,135 @@
+{{- $r := . -}}
+{{- $n := dict -}}
+{{- range $c := list "triproxy-app" "triproxy-dev" "storage" -}}
+{{- $_ := set $n $c (include "stf.name" (dict "root" $r "component" $c)) -}}
+{{- end -}}
+{{- $pushApp := printf "tcp://%s:%v" (get $n "triproxy-app") .Values.messaging.app.pull -}}
+{{- $subApp := printf "tcp://%s:%v" (get $n "triproxy-app") .Values.messaging.app.pub -}}
+{{- $pushDev := printf "tcp://%s:%v" (get $n "triproxy-dev") .Values.messaging.dev.pull -}}
+{{- $subDev := printf "tcp://%s:%v" (get $n "triproxy-dev") .Values.messaging.dev.pub -}}
+{{- $storage := printf "http://%s:%v/" (get $n "storage") .Values.ports.http -}}
+{{- $authPath := ternary "oauth" .Values.auth.type (eq .Values.auth.type "oauth2") -}}
+{{- $commands := dict
+  "triproxy-app" (list "triproxy" "app" "--bind-pub" (printf "tcp://*:%v" .Values.messaging.app.pub) "--bind-dealer" (printf "tcp://*:%v" .Values.messaging.app.dealer) "--bind-pull" (printf "tcp://*:%v" .Values.messaging.app.pull))
+  "triproxy-dev" (list "triproxy" "dev" "--bind-pub" (printf "tcp://*:%v" .Values.messaging.dev.pub) "--bind-dealer" (printf "tcp://*:%v" .Values.messaging.dev.dealer) "--bind-pull" (printf "tcp://*:%v" .Values.messaging.dev.pull))
+  "processor" (list "processor" "kubernetes" "--connect-app-dealer" (printf "tcp://%s:%v" (get $n "triproxy-app") .Values.messaging.app.dealer) "--connect-dev-dealer" (printf "tcp://%s:%v" (get $n "triproxy-dev") .Values.messaging.dev.dealer))
+  "reaper" (list "reaper" "kubernetes" "--connect-push" $pushDev "--connect-sub" $subApp)
+  "groups-engine" (list "groups-engine" "--connect-push" $pushApp "--connect-sub" $subApp "--connect-push-dev" $pushDev "--connect-sub-dev" $subDev)
+  "auth" (concat (list (printf "auth-%s" .Values.auth.type) "--app-url" (printf "%s/" .Values.publicOrigin)) .Values.auth.extraArgs)
+  "app" (list "app" "--auth-url" (printf "%s/auth/%s/" .Values.publicOrigin $authPath) "--websocket-url" (printf "%s/" .Values.publicOrigin))
+  "api" (list "api" "--connect-push" $pushApp "--connect-sub" $subApp "--connect-push-dev" $pushDev "--connect-sub-dev" $subDev)
+  "websocket" (list "websocket" "--storage-url" $storage "--connect-push" $pushApp "--connect-sub" $subApp)
+  "storage" (list "storage-temp" "--save-dir" "/data" "--max-file-size" (printf "%.0f" (float64 .Values.storage.maxFileSize)))
+  "storage-image" (list "storage-plugin-image" "--storage-url" $storage)
+  "storage-apk" (list "storage-plugin-apk" "--storage-url" $storage)
+ -}}
+{{- range $component, $args := $commands -}}
+{{- $name := include "stf.name" (dict "root" $r "component" $component) -}}
+{{- $unit := default dict (get $r.Values.core.units $component) -}}
+{{- $triproxy := hasPrefix "triproxy-" $component -}}
+{{- $transport := ternary $r.Values.messaging.app $r.Values.messaging.dev (eq $component "triproxy-app") -}}
+{{ printf "\n---\n" }}apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels: {{ include "stf.labels" $r | nindent 4 }}
+spec:
+  replicas: 1
+  {{- if eq $component "storage" }}
+  strategy: {type: Recreate, rollingUpdate: null}
+  {{- end }}
+  selector:
+    matchLabels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 8 }}
+      annotations:
+        checksum/config: {{ toJson (dict "publicOrigin" $r.Values.publicOrigin "auth" $r.Values.auth "session" $r.Values.session "database" $r.Values.database "migration" (include "stf.migration" $r)) | sha256sum }}
+        {{- with $r.Values.core.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}
+    spec:
+      {{- if eq $component "storage" }}
+      securityContext: {fsGroup: 1000, fsGroupChangePolicy: OnRootMismatch}
+      {{- end }}
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- if $r.Values.migration.enabled }}
+      serviceAccountName: {{ include "stf.name" (dict "root" $r "component" "wait-migration") }}
+      {{- end }}
+      {{- with $r.Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with default $r.Values.core.nodeSelector $unit.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.Values.core.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $r.Values.migration.enabled }}
+      initContainers: {{ include "stf.waitMigration" $r | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ default $component $unit.containerName }}
+          image: {{ include "stf.image" $r.Values.image | quote }}
+          imagePullPolicy: {{ $r.Values.image.pullPolicy }}
+          command: {{ toJson (prepend $args "stf") }}
+          env:
+            {{- include "stf.env" $r | nindent 12 }}
+            {{- if eq $component "auth" }}
+            {{- range $key, $val := $r.Values.auth.env }}
+            - {name: {{ $key | quote }}, value: {{ $val | quote }}}
+            {{- end }}
+            {{- end }}
+          {{- if and (eq $component "auth") $r.Values.auth.existingSecret }}
+          envFrom:
+            - secretRef: {name: {{ $r.Values.auth.existingSecret | quote }}}
+          {{- end }}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources: {{ toYaml (default $r.Values.core.resources $unit.resources) | nindent 12 }}
+          {{- if or $triproxy (has $component (list "app" "auth" "api" "websocket" "storage" "storage-image" "storage-apk")) }}
+          ports:
+            {{- if $triproxy }}
+            - {name: pub, containerPort: {{ $transport.pub }}}
+            - {name: dealer, containerPort: {{ $transport.dealer }}}
+            - {name: pull, containerPort: {{ $transport.pull }}}
+            {{- else }}
+            - {name: http, containerPort: {{ $r.Values.ports.http }}}
+            {{- end }}
+          startupProbe: {tcpSocket: {port: {{ ternary "dealer" "http" $triproxy }}}, periodSeconds: 2, failureThreshold: 90}
+          readinessProbe: {tcpSocket: {port: {{ ternary "dealer" "http" $triproxy }}}, periodSeconds: 5}
+          livenessProbe: {tcpSocket: {port: {{ ternary "dealer" "http" $triproxy }}}, periodSeconds: 20, failureThreshold: 6}
+          {{- end }}
+          {{- if eq $component "storage" }}
+          volumeMounts: [{name: storage, mountPath: /data}]
+          {{- end }}
+      {{- if or $r.Values.migration.enabled (eq $component "storage") }}
+      volumes:
+        {{- include "stf.migrationVolumes" $r | nindent 8 }}
+        {{- if eq $component "storage" }}
+        - name: storage
+          {{- if $r.Values.storage.persistence.enabled }}
+          persistentVolumeClaim: {claimName: {{ default $name $r.Values.storage.persistence.existingClaim | quote }}}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+{{- end }}
+{{- if or $triproxy (has $component (list "app" "auth" "api" "websocket" "storage" "storage-image" "storage-apk")) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  type: ClusterIP
+  selector: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 4 }}
+  ports:
+    {{- if $triproxy }}
+    - {name: pub, port: {{ $transport.pub }}, targetPort: pub}
+    - {name: dealer, port: {{ $transport.dealer }}, targetPort: dealer}
+    - {name: pull, port: {{ $transport.pull }}, targetPort: pull}
+    {{- else }}
+    - {name: http, port: {{ $r.Values.ports.http }}, targetPort: http}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{ include "stf.pvc" (dict "root" . "name" (include "stf.name" (dict "root" . "component" "storage")) "persistence" .Values.storage.persistence) }}

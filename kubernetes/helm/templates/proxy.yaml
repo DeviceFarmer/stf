@@ -1,0 +1,135 @@
+{{- $r := . -}}
+{{- $proxy := include "stf.name" (dict "root" . "component" "proxy") -}}
+{{- $config := default $proxy (get .Values.resourceNames "proxy-config") -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $config }}
+data:
+  nginx.conf: |
+    worker_processes auto;
+    events { worker_connections 1024; }
+    http {
+      map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+      {{- range $component := list "app" "auth" "api" "websocket" "storage" "storage-apk" "storage-image" }}
+      upstream {{ $component }} { server {{ include "stf.name" (dict "root" $r "component" $component) }}:{{ $r.Values.ports.http }}; }
+      {{- end }}
+      map $uri $stf_backend {
+        ~^/(auth|static/auth)/ auth;
+        ~^/api/ api;
+        ~^/socket\.io/ websocket;
+        ~^/s/image/ storage-image;
+        ~^/s/apk/ storage-apk;
+        ~^/s/ storage;
+        default app;
+      }
+      server {
+        listen {{ .Values.proxy.containerPort }};
+        client_max_body_size {{ printf "%.0f" (float64 .Values.storage.maxFileSize) }};
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Cookie $http_cookie;
+        proxy_set_header Origin $http_origin;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 3600s;
+        location = /healthz { access_log off; return 200 'ok'; }
+        {{- range .Values.android.providers }}
+        {{- $name := include "stf.name" (dict "root" $r "component" (printf "android-%s" .name)) }}
+        {{- $min := int (default 7400 .minPort) }}
+        {{- $max := int (default (sub (add $min (mul 4 (int (default 8 .capacity)))) 1) .maxPort) }}
+        {{- range $i := until (div (add (sub $max $min) 1) 4 | int) }}
+        {{- $port := add $min (mul $i 4) }}
+        location = /d/{{ $name }}/{{ $port }}/ { proxy_pass http://{{ $name }}:{{ $port }}/; }
+        {{- end }}
+        {{- end }}
+        {{- range .Values.ios.devices }}
+        {{- $name := include "stf.name" (dict "root" $r "component" (printf "ios-%s" .name)) }}
+        location = /ios/{{ .name }}/screen { proxy_pass http://{{ $name }}:17440/; }
+        {{- end }}
+        {{- range .Values.proxy.extraScreenRoutes }}
+        location = {{ .path }} { proxy_pass http://{{ .service }}:{{ .port }}/; }
+        {{- end }}
+        # Unconfigured provider names and raw control ports are never proxied.
+        location /d/ { return 404; }
+        location /ios/ { return 404; }
+        location / { proxy_pass http://$stf_backend; }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $proxy }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{ include "stf.selector" (dict "root" . "component" "proxy") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "stf.selector" (dict "root" . "component" "proxy") | nindent 8 }}
+      annotations:
+        checksum/config: {{ toJson (dict "names" .Values.resourceNames "httpPort" .Values.ports.http "proxyPort" .Values.proxy.containerPort "extraRoutes" .Values.proxy.extraScreenRoutes "android" .Values.android.providers "ios" .Values.ios.devices "maxFileSize" .Values.storage.maxFileSize "migration" (include "stf.migration" .)) | sha256sum }}
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- if .Values.migration.enabled }}
+      serviceAccountName: {{ include "stf.name" (dict "root" . "component" "wait-migration") }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.migration.enabled }}
+      initContainers: {{ include "stf.waitMigration" . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.proxy.containerName }}
+          image: {{ .Values.proxy.image | quote }}
+          ports: [{name: http, containerPort: {{ .Values.proxy.containerPort }}}]
+          startupProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 2, failureThreshold: 90}
+          readinessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 20}
+          resources: {{ toYaml .Values.proxy.resources | nindent 12 }}
+          volumeMounts: [{name: proxy-config, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf, readOnly: true}]
+      volumes:
+        {{- include "stf.migrationVolumes" . | nindent 8 }}
+        - name: proxy-config
+          configMap: {name: {{ $config }}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $proxy }}
+spec:
+  type: {{ .Values.proxy.service.type }}
+  selector: {{ include "stf.selector" (dict "root" . "component" "proxy") | nindent 4 }}
+  ports: [{name: http, port: {{ .Values.proxy.service.port }}, targetPort: http}]
+{{- if .Values.proxy.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $proxy }}
+  {{- with .Values.proxy.ingress.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.proxy.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.proxy.ingress.tls }}
+  tls: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ regexReplaceAll ":[0-9]+$" (urlParse .Values.publicOrigin).host "" | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $proxy }}
+                port: {name: http}
+{{- end }}
