@@ -1,6 +1,6 @@
 # STF on Kubernetes
 
-The Helm chart in [`docker/kubernetes`](../docker/kubernetes) deploys the STF server, a browser-facing proxy and an optional single-node RethinkDB. Android and Linux iOS USB providers are opt-in and can be assigned to separate nodes. The chart uses the existing STF commands and images; it does not install Argo CD, Appium Grid or a test scheduler.
+The Helm chart in [`kubernetes/helm`](../kubernetes/helm) deploys the STF server, a browser-facing proxy and an optional single-node RethinkDB. Android and Linux iOS USB providers are opt-in and can be assigned to separate nodes. The chart uses the existing STF commands and images; it does not install Argo CD, Appium Grid or a test scheduler.
 
 ## Prerequisites
 
@@ -16,8 +16,8 @@ The default authentication mode is `mock`, intended for private development. Con
 These commands create a separate installation with no USB providers. They do not adopt an existing STF namespace or migrate a running farm. Review the rendered resources first; use your actual Kubernetes context in place of `YOUR_CONTEXT`.
 
 ```sh
-helm lint docker/kubernetes --set session.existingSecret=stf-session
-helm template stf docker/kubernetes --namespace stf \
+helm lint kubernetes/helm --set session.existingSecret=stf-session
+helm template stf kubernetes/helm --namespace stf \
   --set session.existingSecret=stf-session > /tmp/stf-kubernetes.yaml
 
 KUBE_CONTEXT=YOUR_CONTEXT
@@ -30,7 +30,7 @@ kubectl --context "$KUBE_CONTEXT" --namespace stf create secret generic stf-sess
 rm "$STF_SESSION_DIR/SECRET"
 rmdir "$STF_SESSION_DIR"
 
-helm upgrade --install stf docker/kubernetes \
+helm upgrade --install stf kubernetes/helm \
   --kube-context "$KUBE_CONTEXT" --namespace stf \
   --set session.existingSecret=stf-session --wait --timeout 10m
 
@@ -65,7 +65,7 @@ Keep installation values in an environment-specific file outside the STF checkou
 | `bootstrap.adminName`, `bootstrap.adminEmail` | Optional explicit root-owner overrides; empty values preserve an existing owner |
 | `resourceNames`, `selectorOverrides` | Explicit names/selectors for a separately reviewed adoption plan |
 
-The bundled database is a single StatefulSet, not a highly available database service. If `database.bundled: false`, set `database.external.host`, port and database name, and verify the database is reachable from the release namespace. Refer to [`values.yaml`](../docker/kubernetes/values.yaml) for the exact keys. A claim alone does not preserve in-progress upload metadata across a storage-process restart.
+The bundled database is a single StatefulSet, not a highly available database service. If `database.bundled: false`, set `database.external.host`, port and database name, and verify the database is reachable from the release namespace. Refer to [`values.yaml`](../kubernetes/helm/values.yaml) for the exact keys. A claim alone does not preserve in-progress upload metadata across a storage-process restart.
 
 For remote access, set `publicOrigin` to the URL users open and configure `proxy.ingress` or an equivalent private gateway. Keep HTTP and WebSocket traffic on that same origin. TLS certificates and DNS records are operator inputs.
 
@@ -115,7 +115,7 @@ ios:
         size: 5Gi
 ```
 
-The [USB values example](../docker/kubernetes/examples/usb.yaml) combines Android and iOS configuration. Replace its synthetic identifiers and image before applying it. Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](ios-provider.md).
+The [USB values example](../kubernetes/helm/examples/usb.yaml) combines Android and iOS configuration. Replace its synthetic identifiers and image before applying it. Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](ios-provider.md).
 
 ## Database migration and upgrades
 
@@ -132,7 +132,7 @@ Existing farms need a separate adoption plan: compare names, namespaces, immutab
 Run `helm lint` and `helm template` with the actual values file before an installation. Review optional database, auth, ingress and provider branches separately. Chart fixture tests require Python 3, PyYAML 6 and Helm on `PATH`:
 
 ```sh
-python3 docker/kubernetes/tests/render_test.py
+python3 kubernetes/helm/tests/render_test.py
 ```
 
 Set `HELM=/path/to/helm` if Helm is installed elsewhere. These tests validate rendered manifests and migration behavior without proving real USB operation.
@@ -140,7 +140,7 @@ Set `HELM=/path/to/helm` if Helm is installed elsewhere. These tests validate re
 The API-only smoke creates and removes its own Kind cluster, installs and upgrades the chart, checks login/session and database persistence, and never reuses the current Kubernetes context. With Docker, Kind, Helm and kubectl available:
 
 ```sh
-python3 docker/kubernetes/tests/smoke.py \
+python3 kubernetes/helm/tests/smoke.py \
   --cluster-name stf-chart-local \
   --kubeconfig /tmp/stf-chart-new.kubeconfig \
   --artifacts /tmp/stf-chart-smoke

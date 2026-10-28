@@ -3,14 +3,14 @@ name: Kubernetes
 on:
   pull_request:
     paths:
-      - docker/kubernetes/**
+      - kubernetes/helm/**
       - doc/kubernetes.md
       - README.md
       - .github/workflows/kubernetes.yml
   push:
     branches: [master]
     paths:
-      - docker/kubernetes/**
+      - kubernetes/helm/**
       - doc/kubernetes.md
       - README.md
       - .github/workflows/kubernetes.yml
@@ -55,12 +55,12 @@ jobs:
 
       - name: Validate chart contracts without a cluster
         run: |
-          helm lint docker/kubernetes --set session.existingSecret=stf-session
-          "$RUNNER_TEMP/stf-chart-venv/bin/python" docker/kubernetes/tests/render_test.py
+          helm lint kubernetes/helm --set session.existingSecret=stf-session
+          "$RUNNER_TEMP/stf-chart-venv/bin/python" kubernetes/helm/tests/render_test.py
 
       - name: Install and upgrade the core using HTTP APIs
         run: |
-          "$RUNNER_TEMP/stf-chart-venv/bin/python" docker/kubernetes/tests/smoke.py \
+          "$RUNNER_TEMP/stf-chart-venv/bin/python" kubernetes/helm/tests/smoke.py \
             --cluster-name stf-chart-ci-smoke \
             --kubeconfig "$STF_CHART_KUBECONFIG" \
             --artifacts test-results/kubernetes
