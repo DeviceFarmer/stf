@@ -36,7 +36,7 @@ metadata:
 spec:
   replicas: 1
   {{- if eq $component "storage" }}
-  strategy: {type: Recreate}
+  strategy: {type: Recreate, rollingUpdate: null}
   {{- end }}
   selector:
     matchLabels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 6 }}

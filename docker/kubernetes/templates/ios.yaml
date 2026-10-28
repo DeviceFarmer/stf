@@ -10,7 +10,7 @@ metadata:
   name: {{ $name }}
 spec:
   replicas: 1
-  strategy: {type: Recreate}
+  strategy: {type: Recreate, rollingUpdate: null}
   selector:
     matchLabels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 6 }}
   template:

@@ -147,6 +147,13 @@ class ChartTest(unittest.TestCase):
         provider['storageUrl'] = 'https://farm.example.com/'
         self.assertEqual(storage({'android': {'providers': [provider]}}), '--storage-url=https://farm.example.com/')
 
+    def test_recreate_adoption_explicitly_clears_rolling_update(self):
+        items = render({'android': {'providers': [{'name': 'a', 'nodeSelector': {'kubernetes.io/hostname': 'usb-a'}}]},
+                        'ios': {'image': IOS_IMAGE, 'devices': [iphone()]}})
+        for name in ['stf-storage', 'stf-android-a', 'stf-adb-a', 'stf-ios-iphone-a']:
+            strategy = obj(items, 'Deployment', name)['spec']['strategy']
+            self.assertEqual(strategy, {'type': 'Recreate', 'rollingUpdate': None})
+
     def test_shared_external_adb_requires_disjoint_serials(self):
         providers = [{'name': 'a', 'externalAdb': {'host': 'adb'}, 'serials': ['one']},
                      {'name': 'b', 'externalAdb': {'host': 'adb'}, 'serials': ['two']}]
