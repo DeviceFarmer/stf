@@ -1,0 +1,138 @@
+{{- $r := . -}}
+{{- range .Values.ios.devices -}}
+{{- $component := printf "ios-%s" .name -}}
+{{- $name := include "stf.name" (dict "root" $r "component" $component) -}}
+{{- $p := merge (default dict .persistence) (dict "enabled" true "existingClaim" "" "storageClass" "" "size" "5Gi" "annotations" dict) -}}
+{{- if not $p.enabled }}{{ fail "iOS device state persistence cannot be disabled" }}{{ end -}}
+{{ printf "\n---\n" }}apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 8 }}
+      annotations:
+        checksum/config: {{ toJson (dict "device" . "origin" $r.Values.publicOrigin "migration" (include "stf.migration" $r)) | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- if $r.Values.migration.enabled }}
+      serviceAccountName: {{ include "stf.name" (dict "root" $r "component" "wait-migration") }}
+      {{- end }}
+      nodeSelector: {{ toYaml .nodeSelector | nindent 8 }}
+      {{- with .tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $r.Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      initContainers:
+        {{- include "stf.waitMigration" $r | nindent 8 }}
+        - name: state
+          image: {{ include "stf.image" $r.Values.ios.image | quote }}
+          command: [node, tools/ios-prototype/container.mts, init]
+          securityContext: {runAsUser: 0, capabilities: {drop: [ALL], add: [CHOWN, FOWNER]}}
+          volumeMounts: [{name: state, mountPath: /state}]
+      containers:
+        - name: tunnel
+          image: {{ include "stf.image" $r.Values.ios.image | quote }}
+          imagePullPolicy: {{ $r.Values.ios.image.pullPolicy }}
+          command: [node, tools/ios-prototype/container.mts, supervise, ios]
+          args:
+            - --udid={{ .udid }}
+            - --tunnel-info-port=28100
+            - tunnel
+            - start
+            - --pair-record-path=/state/remotepairing
+          securityContext: {privileged: true, runAsUser: 0}
+          resources: {requests: {cpu: 25m, memory: 64Mi}, limits: {cpu: '1', memory: 512Mi}}
+          volumeMounts:
+            - {name: usbmuxd, mountPath: /run/usbmuxd, readOnly: true}
+            - {name: tun, mountPath: /dev/net/tun}
+            - {name: state, mountPath: /state}
+        - name: prototype
+          image: {{ include "stf.image" $r.Values.ios.image | quote }}
+          imagePullPolicy: {{ $r.Values.ios.image.pullPolicy }}
+          command: [node, tools/ios-prototype/container.mts, supervise, node, tools/ios-prototype/main.mts]
+          args:
+            - --udid={{ .udid }}
+            - --wda-bundle-id={{ .wdaBundleId }}
+            - --image-mounter=pymobiledevice3
+            - --token-file=/token/token
+            - --storage-url=http://{{ include "stf.name" (dict "root" $r "component" "storage") }}:{{ $r.Values.ports.http }}/
+          env: [{name: HOME, value: /home/node/home}]
+          securityContext: {runAsUser: 1000, runAsGroup: 1000, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources: {{ toYaml (default $r.Values.core.resources .resources) | nindent 12 }}
+          startupProbe:
+            exec: {command: [node, -e, "fetch('http://127.0.0.1:7400/health',{headers:{Authorization:'Bearer '+require('fs').readFileSync('/token/token','utf8').trim()}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]}
+            periodSeconds: 2
+            timeoutSeconds: 5
+            failureThreshold: 90
+          readinessProbe:
+            exec: {command: [node, -e, "fetch('http://127.0.0.1:7400/health',{headers:{Authorization:'Bearer '+require('fs').readFileSync('/token/token','utf8').trim()}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec: {command: [node, -e, "fetch('http://127.0.0.1:7400/health',{headers:{Authorization:'Bearer '+require('fs').readFileSync('/token/token','utf8').trim()}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]}
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - {name: usbmuxd, mountPath: /run/usbmuxd, readOnly: true}
+            - {name: token, mountPath: /token, readOnly: true}
+            - {name: state, mountPath: /home/node}
+            {{- with .extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
+        - name: stf-provider
+          image: {{ include "stf.image" $r.Values.image | quote }}
+          imagePullPolicy: {{ $r.Values.image.pullPolicy }}
+          command: [stf, ios-provider]
+          args:
+            - --serial={{ .udid }}
+            - --token-file=/token/token
+            - --api-url=http://{{ include "stf.name" (dict "root" $r "component" "api") }}:{{ $r.Values.ports.http }}
+            - --public-origin={{ $r.Values.publicOrigin }}
+            - --storage-url=http://{{ include "stf.name" (dict "root" $r "component" "storage") }}:{{ $r.Values.ports.http }}/
+            - --screen-url={{ regexReplaceAll "^http" $r.Values.publicOrigin "ws" }}/ios/{{ .name }}/screen
+            - --connect-push=tcp://{{ include "stf.name" (dict "root" $r "component" "triproxy-dev") }}:{{ $r.Values.messaging.dev.pull }}
+            - --connect-sub=tcp://{{ include "stf.name" (dict "root" $r "component" "triproxy-dev") }}:{{ $r.Values.messaging.dev.pub }}
+            {{- with .marketName }}
+            - {{ printf "--market-name=%s" . | quote }}
+            {{- end }}
+          ports: [{name: screen, containerPort: 17440}]
+          securityContext: {runAsUser: 1000, runAsGroup: 1000, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources: {{ toYaml (default $r.Values.core.resources .resources) | nindent 12 }}
+          readinessProbe: {tcpSocket: {port: screen}, periodSeconds: 5}
+          volumeMounts: [{name: token, mountPath: /token, readOnly: true}]
+        {{- with .extraContainers }}{{ toYaml . | nindent 8 }}{{ end }}
+      volumes:
+        {{- include "stf.migrationVolumes" $r | nindent 8 }}
+        - name: state
+          persistentVolumeClaim: {claimName: {{ default $name $p.existingClaim | quote }}}
+        - name: usbmuxd
+          hostPath: {path: {{ $r.Values.ios.socketPath | quote }}, type: Socket}
+        - name: tun
+          hostPath: {path: /dev/net/tun, type: CharDevice}
+        - name: token
+          secret:
+            secretName: {{ .tokenSecret | quote }}
+            items: [{key: {{ default "token" .tokenKey | quote }}, path: token}]
+        {{- with .extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
+{{- if dig "create" true (default dict .service) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  type: ClusterIP
+  selector: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 4 }}
+  ports: [{name: screen, port: 17440, targetPort: screen}]
+{{- end }}
+{{ include "stf.pvc" (dict "root" $r "name" $name "persistence" $p) }}
+{{- end }}

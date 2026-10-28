@@ -139,6 +139,7 @@ On Windows you're on your own. In theory you might be able to get STF installed 
 
 We also provide a [Docker](http://docker.com/) container in the [Docker Hub](https://hub.docker.com/) as [devicefarmer/stf](https://hub.docker.com/r/devicefarmer/stf). You can use our [Dockerfile](Dockerfile) as guidance if you'd prefer to do the installation yourself.
 The [docker-compose.yaml](docker-compose.yaml) runs STF units as separate services. See the [Compose setup guide](docker/compose/README.md) for configuration and startup instructions.
+For Kubernetes, see the [Helm deployment guide](doc/kubernetes.md).
 
 You should now be ready to [build](#building) or [run](#running) STF.
 

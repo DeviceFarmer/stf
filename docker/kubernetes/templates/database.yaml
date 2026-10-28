@@ -1,0 +1,50 @@
+{{- if .Values.database.bundled -}}
+{{- $name := include "stf.name" (dict "root" . "component" "rethinkdb") -}}
+{{- $p := .Values.database.persistence -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  selector: {{ include "stf.selector" (dict "root" . "component" "rethinkdb") | nindent 4 }}
+  ports: [{name: driver, port: 28015, targetPort: driver}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+spec:
+  serviceName: {{ $name }}
+  replicas: 1
+  selector:
+    matchLabels: {{ include "stf.selector" (dict "root" . "component" "rethinkdb") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "stf.selector" (dict "root" . "component" "rethinkdb") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.database.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: rethinkdb
+          image: {{ .Values.database.image | quote }}
+          args: [rethinkdb, --bind, all, --cache-size, '256']
+          ports: [{name: driver, containerPort: 28015}]
+          startupProbe: {tcpSocket: {port: driver}, periodSeconds: 2, failureThreshold: 90}
+          readinessProbe: {tcpSocket: {port: driver}, periodSeconds: 5}
+          livenessProbe: {tcpSocket: {port: driver}, periodSeconds: 20, failureThreshold: 6}
+          resources: {{ toYaml .Values.database.resources | nindent 12 }}
+          volumeMounts: [{name: data, mountPath: /data}]
+      volumes:
+        - name: data
+          {{- if $p.enabled }}
+          persistentVolumeClaim: {claimName: {{ default $name $p.existingClaim | quote }}}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{ include "stf.pvc" (dict "root" . "name" $name "persistence" $p) }}
+{{- end }}

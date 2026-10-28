@@ -1,0 +1,5 @@
+# Private, hardware-free installation. Create stf-session first.
+session: {existingSecret: stf-session}
+publicOrigin: http://localhost:7100
+database:
+  persistence: {enabled: false}
