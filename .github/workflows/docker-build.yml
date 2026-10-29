@@ -1,8 +1,6 @@
 name: Docker build
 
 on:
-  push:
-    branches: [codex/docker-multistage-ubuntu]
   workflow_dispatch:
   workflow_call:
     inputs:
