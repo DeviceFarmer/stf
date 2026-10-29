@@ -76,8 +76,13 @@ subscribed groups remains available outside automation. If the connection reache
 its limit for tracking permission changes, it denies further commands; refresh
 the page to reconnect after the database catches up.
 
-Run `stf migrate` when upgrading to create the device channel index, and restart
-the provider processes to enable reservation and gesture identifiers. Conditional
+Run `stf migrate` when upgrading to create the device channel index. Deploy
+websocket units and providers from the same build: during a rolling upgrade,
+update websocket units first, then release devices and restart their providers.
+Protected providers reject touch packets without the acknowledged reservation
+and server-generated gesture identity; the browser API remains unchanged.
+Gesture queues tolerate reordered transport packets, bound pending prefixes,
+and expire sequence gaps without imposing a long-press timeout. Conditional
 release requests supply both `reservationId` and `deviceChannel`; they fail if
 the reservation changed. The existing unconditional DELETE API remains available
 for automation cleanup.

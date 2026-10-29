@@ -1,3 +1,4 @@
+import {randomUUID} from 'node:crypto'
 import {isValidSerial} from './access.js'
 import type {DeviceAccess, LoadDevice} from './access.js'
 
@@ -17,13 +18,19 @@ interface DevicePacketPolicy {
   current?: (channel: string, checkpoint: number) => boolean
 }
 
+export interface AuthorizedInput {
+  gestureId: string | null
+  reservationId: string | null
+}
+
 interface PacketGuardOptions {
   lookupTimeoutMs?: number
   maxPendingPackets?: number
   maxTotalPendingPackets?: number
   maxChannels?: number
   inputCacheMs?: number
-  resetGesture?: (channel: string) => void
+  resetGesture?: (channel: string, identity?: AuthorizedInput) => void
+  onAuthorizedInput?: (packet: readonly unknown[], identity: AuthorizedInput) => void
 }
 
 interface PendingPacket {
@@ -78,8 +85,10 @@ export function createDevicePacketGuard(
 ) {
   const queues = new Map<string, PacketQueue>()
   const inputPermissions = new Map<string, {checkpoint: number, until: number
-    , groups: string, identity: string}>()
-  const gestures = new Map<string, string>()
+    , groups: string, identity: string, reservationId: string | null}>()
+  const gestures = new Map<string, {identity: string, id: string, reservationId: string | null}>()
+  const gestureSource = randomUUID()
+  let gestureCounter = 0
   const timeoutMs = options.lookupTimeoutMs ?? 2000
   const maxPending = options.maxPendingPackets ?? 256
   const maxTotalPending = options.maxTotalPendingPackets ?? 4096
@@ -107,8 +116,11 @@ export function createDevicePacketGuard(
     queue.failed = true
     inputPermissions.delete(channel)
     // A scoped provider reset cannot affect a newer gesture or another owner.
+    const gesture = gestures.get(channel)
+    options.resetGesture?.(channel, gesture ? {
+      gestureId: gesture.id, reservationId: gesture.reservationId
+    } : undefined)
     gestures.delete(channel)
-    options.resetGesture?.(channel)
     for (const entry of queue.pending.splice(0)) {
       finish(entry, reason)
     }
@@ -122,6 +134,7 @@ export function createDevicePacketGuard(
     let snapshots = new Map<string, Promise<DeviceAccess | null | undefined>>()
     let snapshotExpires = 0
     let identity = ''
+    let reservationId: string | null = null
     const current = (value: number | undefined) => typeof value === 'undefined' ||
       !devicePolicy?.current || devicePolicy.current(channel, value)
     const loadOnce: LoadDevice = serial => {
@@ -130,6 +143,7 @@ export function createDevicePacketGuard(
           const device = loaded && devicePolicy?.snapshot ?
               devicePolicy.snapshot(loaded) : loaded
           if (device) {
+            reservationId = device.owner?.reservationId || null
             identity = JSON.stringify([device.serial, device.channel, device.group?.id
               , device.owner?.email, device.owner?.reservationId || device.owner?.group
               , devicePolicy?.session?.(channel)])
@@ -158,6 +172,7 @@ export function createDevicePacketGuard(
           current(cached.checkpoint)) {
         validatedAt = cached.checkpoint
         identity = cached.identity
+        reservationId = cached.reservationId
       }
       else {
         if (commandClass !== nextClass || !current(checkpoint) || snapshotExpires <= Date.now()) {
@@ -173,6 +188,15 @@ export function createDevicePacketGuard(
               channel, user.groups.subscribed, loadOnce)) ||
                 !await allowIosPacket(event, channel, user, loadOnce)) {
               return 'Device access denied'
+            }
+            if (input) {
+              const serial = devicePolicy?.source(channel) ||
+                (channel.startsWith('ios:') ? channel.slice(4) : channel)
+              const device = await loadOnce(serial)
+              if (!device?.owner || (device.owner.email !== user.email &&
+                  user.privilege !== 'admin')) {
+                return 'Device access denied'
+              }
             }
           }
           catch {
@@ -210,7 +234,7 @@ export function createDevicePacketGuard(
         if (!reason && input && typeof validatedAt === 'number' && devicePolicy?.current) {
           inputPermissions.delete(channel)
           inputPermissions.set(channel, {checkpoint: validatedAt
-            , until: snapshotExpires, groups: subscribed, identity})
+            , until: snapshotExpires, groups: subscribed, identity, reservationId})
           if (inputPermissions.size > 128) {
             inputPermissions.delete(inputPermissions.keys().next().value!)
           }
@@ -221,7 +245,7 @@ export function createDevicePacketGuard(
         continue
       }
       if (input && event !== 'input.gestureStart' && gestures.has(channel) &&
-          gestures.get(channel) !== identity) {
+          gestures.get(channel)!.identity !== identity) {
         reason = 'Device access denied'
       }
       if (reason) {
@@ -229,12 +253,24 @@ export function createDevicePacketGuard(
         return
       }
       if (event === 'input.gestureStart') {
-        gestures.set(channel, identity)
+        if (gestureCounter === Number.MAX_SAFE_INTEGER) {
+          failChannel(channel, queue, 'Device gesture counter exhausted; reconnect to continue')
+          return
+        }
+        gestures.set(channel, {identity, id: gestureSource + ':' + ++gestureCounter, reservationId})
         if (gestures.size > 128) {
           const oldest = gestures.keys().next().value!
+          const previous = gestures.get(oldest)!
+          options.resetGesture?.(oldest, {
+            gestureId: previous.id, reservationId: previous.reservationId
+          })
           gestures.delete(oldest)
-          options.resetGesture?.(oldest)
         }
+      }
+      if (input) {
+        options.onAuthorizedInput?.(entry.packet, {
+          gestureId: gestures.get(channel)?.id || null, reservationId
+        })
       }
       if (event === 'input.gestureStop') {
         gestures.delete(channel)

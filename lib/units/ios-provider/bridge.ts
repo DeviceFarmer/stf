@@ -3,6 +3,7 @@ import wireutil from '../../wire/util.js'
 import wirerouter from '../../wire/router.js'
 import grouputil from '../../util/grouputil.js'
 import {randomUUID} from 'node:crypto'
+import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
 import type {IosOwner} from './access.js'
 import {findCatalogDevice} from '../../util/device-catalog.js'
@@ -31,7 +32,7 @@ export class IosBridge {
   private queue = Promise.resolve()
   private touch: {from: Point, to: Point, started: number} | null = null
   private multitouch = false
-  private touchGestureId: string | null = null
+  private readonly gestures: TouchGesture
   private lease = randomUUID()
   private installId: string | null = null
   private lastObservation: IosDeviceState | null = null
@@ -46,6 +47,8 @@ export class IosBridge {
   , private readonly disconnect: () => void
   , private readonly report: (error: unknown) => void
   ) {
+    this.gestures = new TouchGesture(() => this.resetTouch(), {report: error => this.report(error)})
+    this.gestures.setOwner(null)
     this.channel = 'ios:' + options.serial
     this.timeout = options.groupTimeout
     const router = wirerouter()
@@ -85,46 +88,59 @@ export class IosBridge {
         })
       })
       .on(wire.TouchDownMessage, (_channel, message) => {
-        if (message.contact !== 0 || this.touch) {
-          this.multitouch = true
-          this.touch = null
-        }
-        else if (!this.multitouch && this.point(message)) {
-          this.touch = {from: message, to: message, started: Date.now()}
-        }
+        this.gestures.push(message.seq, () => {
+          if (message.contact !== 0 || this.touch) {
+            this.multitouch = true
+            this.touch = null
+          }
+          else if (!this.multitouch && this.point(message)) {
+            this.touch = {from: message, to: message, started: Date.now()}
+          }
+        }, message.gestureId, message.reservationId)
       })
       .on(wire.TouchMoveMessage, (_channel, message) => {
-        if (this.touch && message.contact === 0 && this.point(message)) {
-          this.touch.to = message
-        }
+        this.gestures.push(message.seq, () => {
+          if (this.touch && message.contact === 0 && this.point(message)) {
+            this.touch.to = message
+          }
+        }, message.gestureId, message.reservationId)
       })
       .on(wire.TouchUpMessage, (_channel, message) => {
-        const touch = this.touch
-        this.touch = null
-        if (touch && message.contact === 0 && !this.multitouch) {
-          const distance = Math.hypot(touch.to.x - touch.from.x, touch.to.y - touch.from.y)
-          if (distance < 0.005) {
-            this.command('/tap', touch.to)
+        this.gestures.push(message.seq, () => {
+          const touch = this.touch
+          this.touch = null
+          if (touch && message.contact === 0 && !this.multitouch) {
+            const distance = Math.hypot(touch.to.x - touch.from.x, touch.to.y - touch.from.y)
+            if (distance < 0.005) {
+              this.command('/tap', touch.to)
+            }
+            else {
+              this.command('/swipe', {
+                from: touch.from, to: touch.to
+              , durationMs: Math.max(50, Math.min(5000, Date.now() - touch.started))
+              })
+            }
           }
-          else {
-            this.command('/swipe', {
-              from: touch.from, to: touch.to
-            , durationMs: Math.max(50, Math.min(5000, Date.now() - touch.started))
-            })
-          }
-        }
+        }, message.gestureId, message.reservationId)
       })
       .on(wire.GestureStartMessage, (_channel, message) => {
-        this.resetTouch()
-        this.touchGestureId = message.gestureId || null
+        this.gestures.start(message.seq, message.gestureId, message.reservationId)
       })
       .on(wire.TouchResetMessage, (_channel, message) => {
-        if (!message.gestureId || message.gestureId === this.touchGestureId) {
-          this.resetTouch(!message.gestureId)
+        if (message.gestureId && message.cancel !== false) {
+          this.gestures.clear(message.gestureId, message.reservationId)
+        }
+        else {
+          this.gestures.push(message.seq, () => this.resetTouch(),
+            message.gestureId, message.reservationId)
         }
       })
-      .on(wire.TouchCommitMessage, () => null)
-      .on(wire.GestureStopMessage, () => this.resetTouch())
+      .on(wire.TouchCommitMessage, (_channel, message) => {
+        this.gestures.push(message.seq, () => {}, message.gestureId, message.reservationId)
+      })
+      .on(wire.GestureStopMessage, (_channel, message) => {
+        this.gestures.stop(message.seq, message.gestureId, message.reservationId)
+      })
       .on(wire.TypeMessage, (_channel, message) => this.command('/text', {text: message.text}))
       .on(wire.PasteMessage, (channel, message) => {
         this.command('/text', {text: message.text}, String(channel))
@@ -224,12 +240,9 @@ export class IosBridge {
     }, true))
   }
 
-  private resetTouch(keepGestureId = false) {
+  private resetTouch() {
     this.touch = null
     this.multitouch = false
-    if (!keepGestureId) {
-      this.touchGestureId = null
-    }
   }
 
   private key(key: string) {
@@ -299,6 +312,7 @@ export class IosBridge {
     if (!this.owner) {
       this.ownerAbort = new AbortController()
       this.owner = {...owner, reservationId: randomUUID()}
+      this.gestures.setOwner(this.owner.reservationId!)
       this.lease = randomUUID()
       this.epoch++
       // GroupMessage/API timeouts are milliseconds; the CLI fallback is seconds.
@@ -320,7 +334,7 @@ export class IosBridge {
     }
     this.owner = null
     this.epoch++
-    this.resetTouch()
+    this.gestures.setOwner(null)
     this.disconnect()
     if (owner) {
       this.broadcast(new wire.LeaveGroupMessage(this.options.serial, owner, reason))
