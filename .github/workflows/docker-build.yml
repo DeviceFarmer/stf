@@ -49,7 +49,7 @@ jobs:
           cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=stf-runtime-${{ matrix.arch }}
 
-      - name: Fetch the signed-app conversion fixture
+      - name: Fetch the Android app bundle fixture
         if: matrix.arch == 'amd64'
         env:
           FIXTURE: ${{ runner.temp }}/runtime-fixtures/install-time-permanent-modules.aab
@@ -77,12 +77,22 @@ jobs:
             "stf-runtime-check:$ARCH" node /tmp/runtime-smoke.mjs "${arguments[@]}" \
             | tee "$RUNNER_TEMP/docker-runtime-$ARCH.json"
 
+      - name: Check the amd64 Compose core
+        if: matrix.arch == 'amd64'
+        timeout-minutes: 10
+        run: |
+          python3 .github/scripts/docker-compose-smoke.py \
+            --image stf-runtime-check:amd64 \
+            --directory "$RUNNER_TEMP/docker-compose-runtime" --port 17100
+
       - name: Save runtime results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: docker-runtime-${{ matrix.arch }}
-          path: ${{ runner.temp }}/docker-runtime-${{ matrix.arch }}.json
+          path: |
+            ${{ runner.temp }}/docker-runtime-${{ matrix.arch }}.json
+            ${{ runner.temp }}/docker-compose-runtime/
           if-no-files-found: ignore
           retention-days: 7
 
