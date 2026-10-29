@@ -1,6 +1,7 @@
 name: Docker build
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       ref:
@@ -37,6 +38,54 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
+      - name: Build the runtime image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          tags: stf-runtime-check:${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=stf-runtime-${{ matrix.arch }}
+
+      - name: Fetch the signed-app conversion fixture
+        if: matrix.arch == 'amd64'
+        env:
+          FIXTURE: ${{ runner.temp }}/runtime-fixtures/install-time-permanent-modules.aab
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$FIXTURE")"
+          curl --fail --location --retry 3 --output "$FIXTURE" \
+            https://raw.githubusercontent.com/google/bundletool/24df0e8b56580cef68ba904b3a80e881f4fc641a/src/test/resources/com/android/tools/build/bundletool/testdata/bundle/install-time-permanent-modules.aab
+          printf '%s  %s\n' 83d7d10b6036da2f94ad34483a5c3d5a32891b08e4fd1a658165c55258bdaff2 "$FIXTURE" | sha256sum --check
+
+      - name: Check the final runtime without a device
+        timeout-minutes: 5
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/runtime-fixtures"
+          arguments=()
+          if [ "$ARCH" = amd64 ]; then
+            arguments+=(--aab /tmp/fixtures/install-time-permanent-modules.aab)
+          fi
+          docker run --rm --network none --platform "linux/$ARCH" \
+            --mount "type=bind,src=$PWD/.github/scripts/docker-runtime-smoke.mjs,dst=/tmp/runtime-smoke.mjs,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/runtime-fixtures,dst=/tmp/fixtures,readonly" \
+            "stf-runtime-check:$ARCH" node /tmp/runtime-smoke.mjs "${arguments[@]}" \
+            | tee "$RUNNER_TEMP/docker-runtime-$ARCH.json"
+
+      - name: Save runtime results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-runtime-${{ matrix.arch }}
+          path: ${{ runner.temp }}/docker-runtime-${{ matrix.arch }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Log in to Docker Hub
         if: inputs.push
         uses: docker/login-action@v4
@@ -45,15 +94,15 @@ jobs:
         env:
           DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
 
-      - name: Build
-        id: build
+      - name: Publish the checked image
+        id: publish
+        if: inputs.push
         uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/${{ matrix.arch }}
-          outputs: ${{ inputs.push
-            && format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE)
-            || 'type=cacheonly' }}
+          outputs: ${{ format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
+          cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
 
       - name: Export the digest
         if: inputs.push
@@ -62,7 +111,7 @@ jobs:
           mkdir -p /tmp/digests
           touch "/tmp/digests/${DIGEST#sha256:}"
         env:
-          DIGEST: ${{ steps.build.outputs.digest }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
 
       - name: Upload the digest
         if: inputs.push
