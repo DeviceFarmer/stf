@@ -160,7 +160,7 @@ To build a container from this checkout, use Docker with BuildKit:
 
 ```bash
 docker build -t stf:local .
-docker run --rm stf:local --help
+docker run --rm stf:local
 ```
 
 The Dockerfile supports `linux/amd64` and `linux/arm64`. Build tools stay in separate stages; the runtime contains production dependencies, GraphicsMagick and a headless Java runtime. Dependency installation is cached independently of application sources. A root `package-lock.json` is included when present. The bundled AAB-to-APK tool requires amd64; native ARM64 AAB conversion remains unsupported.
