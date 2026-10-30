@@ -7,6 +7,7 @@ ios.local.json
 .idea/
 node_modules/
 **/package-lock.json
+!package-lock.json
 npm-debug.log
 res/build/
 rethinkdb_data/

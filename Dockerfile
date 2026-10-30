@@ -1,133 +1,88 @@
+# syntax=docker/dockerfile:1
 #
 # Copyright © 2022-2024 contains code contributed by Orange SA, authors: Denis Barbaron - Licensed under the Apache license 2.0
 #
 
-FROM ubuntu:22.04
+ARG UBUNTU_IMAGE=ubuntu:22.04@sha256:076e7bf82319619f28dd0aa9c02ab34b055ad37100395b4f49a2ffba04fb5e11
 
-# Sneak the stf executable into $PATH.
-ENV PATH=/app/bin:$PATH
-
-# Work in app dir by default.
-WORKDIR /app
-COPY . /tmp/build/
-
-# Export default app port, not enough for all processes but it should do
-# for now.
-EXPOSE 3000
-
+FROM ${UBUNTU_IMAGE} AS node-base
 ARG TARGETARCH
+ARG NODE_VERSION=22.23.4
+RUN set -eu; \
+    export DEBIAN_FRONTEND=noninteractive; \
+    apt-get update; \
+    apt-get -y dist-upgrade; \
+    apt-get install -y --no-install-recommends ca-certificates curl xz-utils libstdc++6 libatomic1; \
+    case "$TARGETARCH" in \
+      amd64) node_arch=x64; stf_uid=998;; \
+      arm64) node_arch=arm64; stf_uid=999;; \
+      *) echo "Unsupported target architecture: $TARGETARCH" >&2; exit 1;; \
+    esac; \
+    cd /tmp; \
+    curl -fsSLO --retry 3 "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz"; \
+    curl -fsSLO --retry 3 "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt"; \
+    grep " node-v${NODE_VERSION}-linux-${node_arch}.tar.xz$" SHASUMS256.txt | sha256sum -c -; \
+    tar -xJf "node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" --strip-components=1 -C /usr/local; \
+    rm "node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" SHASUMS256.txt; \
+    groupadd --system --gid "$stf_uid" stf; \
+    useradd --system --uid "$stf_uid" --gid stf --create-home --shell /usr/sbin/nologin stf; \
+    node --version; \
+    npm --version; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
 
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-    export DEBIAN_FRONTEND=noninteractive && \
-    useradd --system \
-      --create-home \
-      --shell /usr/sbin/nologin \
-      stf-build && \
-    useradd --system \
-      --create-home \
-      --shell /usr/sbin/nologin \
-      stf && \
-    sed -i'' 's@http://archive.ubuntu.com/ubuntu/@mirror://mirrors.ubuntu.com/mirrors.txt@' /etc/apt/sources.list && \
-    echo '--- Updating repositories' && \
-    apt-get update && \
-    echo '--- Upgrading repositories' && \
-    apt-get -y dist-upgrade && \
-    apt-get -y install wget python3 build-essential && \
-    cd /tmp && \
-    wget --progress=dot:mega \
-      https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.xz && \
-    tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
-    rm node-v*.tar.xz && \
-    su stf-build -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
-    apt-get -y install --no-install-recommends libzmq3-dev libprotobuf-dev git graphicsmagick openjdk-8-jdk yasm cmake && \
-    apt-get clean && \
-    rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
-    mkdir /tmp/bundletool && \
-    cd /tmp/bundletool && \
-    wget --progress=dot:mega \
-      https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
-    mv bundletool-all-1.2.0.jar bundletool.jar && \
-    mkdir -p /app && \
-    chown -R stf:stf /tmp/build /tmp/bundletool /app && \
-    set -x && \
-    echo '--- Building app' && \
-    cd /tmp/build && \
-    export PATH=$PWD/node_modules/.bin:$PATH && \
-    echo 'npm install --python="/usr/bin/python3" --omit=optional --loglevel http' | su stf -s /bin/bash && \
-    echo '--- Assembling app' && \
-    echo 'npm pack' | su stf -s /bin/bash && \
-    tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    npm prune --omit=dev && \
-    mv node_modules /app && \
-    rm -rf ~/.node-gyp && \
-    mkdir /app/bundletool && \
-    mv /tmp/bundletool/* /app/bundletool && \
-    cd /app && \
-    find /tmp -mindepth 1 ! -regex '^/tmp/hsperfdata_root\(/.*\)?' -delete && \
-    rm -rf doc .github .tx .semaphore *.md *.yaml LICENSE Dockerfile* \
-      .eslintrc .nvmrc .tool-versions res/.eslintrc && \
-    cd && \
-    rm -rf .npm .cache .config .local && \
-    cd /app; \
-  fi
-  
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-    export DEBIAN_FRONTEND=noninteractive && \
-    echo '--- Updating repositories' && \
-    apt-get update && \
-    echo '--- Upgrading repositories' && \
-    apt-get -y dist-upgrade && \
-    echo '--- Building node' && \
-    apt-get -y install pkg-config curl zip unzip wget python3 build-essential cmake ninja-build && \
-    cd /tmp && \
-    wget --progress=dot:mega \
-      https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-arm64.tar.xz && \
-    tar -xJf node-v*.tar.xz --strip-components 1 -C /usr/local && \
-    rm node-v*.tar.xz && \
-    useradd --system \
-      --create-home \
-      --shell /usr/sbin/nologin \
-      stf && \
-    su stf -s /bin/bash -c '/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js install' && \
-    apt-get -y install --no-install-recommends musl-dev libzmq3-dev libprotobuf-dev git graphicsmagick yasm && \
-    ln -s /usr/lib/aarch64-linux-musl/libc.so /lib/libc.musl-aarch64.so.1 && \
-    echo '--- Building app' && \
-    mkdir -p /app && \
-    chown -R stf:stf /tmp/build && \
-    set -x && \
-    cd /tmp/build && \
-    export PATH=$PWD/node_modules/.bin:$PATH && \
-    sed -i'' -e '/phantomjs/d' package.json && \
-    export VCPKG_FORCE_SYSTEM_BINARIES="arm" && \
-    echo 'npm install --save-dev pnpm' | su stf -s /bin/bash && \
-    echo 'npm install --python="/usr/bin/python3" --loglevel http' | su stf -s /bin/bash && \
-    echo '--- Assembling app' && \
-    echo 'npm pack' | su stf -s /bin/bash && \
-    tar xzf devicefarmer-stf-*.tgz --strip-components 1 -C /app && \
-    echo 'npm prune --omit=dev' | su stf -s /bin/bash && \
-    wget --progress=dot:mega \
-      https://github.com/google/bundletool/releases/download/1.2.0/bundletool-all-1.2.0.jar && \
-    mkdir -p /app/bundletool && \
-    mv bundletool-all-1.2.0.jar /app/bundletool/bundletool.jar && \
-    mv node_modules /app && \
-    chown -R root:root /app && \
-    echo '--- Cleaning up' && \
-    echo 'npm cache clean --force' | su stf -s /bin/bash && \
-    rm -rf ~/.node-gyp && \
-    apt-get -y purge pkg-config curl zip unzip wget python3 build-essential cmake ninja-build && \
-    apt-get -y clean && \
-    apt-get -y autoremove && \
-    cd /home/stf && \
-    rm -rf vcpkg .npm .cache .cmake-ts .config .local && \
-    rm -rf /var/cache/apt/* /var/lib/apt/lists/* && \
-    cd /app && \
-    rm -rf doc .github .tx .semaphore *.md *.yaml LICENSE Dockerfile* \
-      .eslintrc .nvmrc .tool-versions res/.eslintrc && \
-    rm -rf /tmp/*; \
-  fi
-
-# Switch to the app user.
+FROM node-base AS dependencies
+RUN export DEBIAN_FRONTEND=noninteractive \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+      python3 build-essential pkg-config cmake ninja-build git \
+      libzmq3-dev libprotobuf-dev graphicsmagick yasm nasm \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+RUN chown stf:stf /build
 USER stf
+# A root lockfile is optional. Keep npm install's existing prepare behavior;
+# npm pack builds the application after its sources have been copied.
+COPY --chown=stf:stf package*.json ./
+RUN npm install --omit=optional --no-audit --no-fund
 
-# Show help by default.
+FROM dependencies AS production-dependencies
+RUN npm prune --omit=dev --no-audit --no-fund
+
+FROM dependencies AS build
+COPY --chown=stf:stf . .
+RUN npm pack --quiet > /tmp/package-name \
+    && mkdir /tmp/app \
+    && tar -xzf "$(tail -n 1 /tmp/package-name)" --no-same-owner --strip-components=1 -C /tmp/app \
+    && cd /tmp/app \
+    && rm -rf doc .github .tx .semaphore *.md *.yaml Dockerfile* \
+      .eslintrc .nvmrc .tool-versions res/.eslintrc \
+    && test -s LICENSE
+
+FROM node-base AS bundletool
+ARG BUNDLETOOL_VERSION=1.2.0
+ARG BUNDLETOOL_SHA256=25ef168c6f9a14acd3113d4cffb3efde7ed8c94eeac50e4203be7a71cf1ca837
+RUN mkdir -p /opt/bundletool \
+    && curl -fsSL --retry 3 \
+      "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" \
+      -o /opt/bundletool/bundletool.jar \
+    && echo "${BUNDLETOOL_SHA256}  /opt/bundletool/bundletool.jar" | sha256sum -c -
+
+FROM node-base AS runtime-base
+RUN export DEBIAN_FRONTEND=noninteractive \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+      graphicsmagick openjdk-8-jre-headless libzmq5 libprotobuf23 \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /app \
+    && chown stf:stf /app
+ENV PATH=/app/bin:$PATH
+WORKDIR /app
+EXPOSE 3000
+USER stf
 CMD ["stf", "--help"]
+
+FROM runtime-base AS runtime
+COPY --from=production-dependencies --chown=stf:stf /build/node_modules/ /app/node_modules/
+COPY --from=bundletool --chown=stf:stf /opt/bundletool/ /app/bundletool/
+COPY --from=build --chown=stf:stf /tmp/app/ /app/
