@@ -12,7 +12,7 @@ import EventEmitter from 'eventemitter3'
 import wire from '../../../../wire/index.js'
 import logger from '../../../../util/logger.js'
 import lifecycle from '../../../../util/lifecycle.js'
-import {TouchGesture} from './gesture.js'
+import {TouchGesture} from '../../../../wire/touch-gesture.js'
 import {TouchProtocol} from './protocol.js'
 import groupSyrup from '../group.js'
 import type {GroupPlugin} from '../../../../types/device-plugins.js'
@@ -592,9 +592,12 @@ export default syrup.serial()
 
     return startConsumer()
       .then(function(touchConsumer) {
-        const queue = new TouchGesture(() => touchConsumer.touchReset())
-        group.on('join', () => queue.clear())
-        group.on('leave', () => queue.clear())
+        const queue = new TouchGesture(() => touchConsumer.touchReset(), {
+          report: error => log.warn(error.message)
+        })
+        queue.setOwner(null)
+        group.on('join', owner => queue.setOwner(owner.reservationId || null))
+        group.on('leave', () => queue.setOwner(null))
 
         touchConsumer.on('error', function(err) {
           log.fatal('Touch consumer had an error', err.stack)
@@ -603,37 +606,38 @@ export default syrup.serial()
 
         router
           .on(wire.GestureStartMessage, function(channel, message) {
-            queue.start(message.seq, message.gestureId)
+            queue.start(message.seq, message.gestureId, message.reservationId)
           })
           .on(wire.GestureStopMessage, function(channel, message) {
-            queue.stop(message.seq)
+            queue.stop(message.seq, message.gestureId, message.reservationId)
           })
           .on(wire.TouchDownMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchDown(message)
-            })
+            }, message.gestureId, message.reservationId)
           })
           .on(wire.TouchMoveMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchMove(message)
-            })
+            }, message.gestureId, message.reservationId)
           })
           .on(wire.TouchUpMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchUp(message)
-            })
+            }, message.gestureId, message.reservationId)
           })
           .on(wire.TouchCommitMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchCommit()
-            })
+            }, message.gestureId, message.reservationId)
           })
           .on(wire.TouchResetMessage, function(channel, message) {
-            if (message.gestureId) {
-              queue.clear(message.gestureId)
+            if (message.gestureId && message.cancel !== false) {
+              queue.clear(message.gestureId, message.reservationId)
             }
             else {
-              queue.push(message.seq, () => touchConsumer.touchReset())
+              queue.push(message.seq, () => touchConsumer.touchReset(),
+                message.gestureId, message.reservationId)
             }
           })
 

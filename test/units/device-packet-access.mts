@@ -395,7 +395,8 @@ describe('manual device packet authorization', function() {
     try {
       let resets = 0
       const devices: DeviceAccess[] = ['SLOW', 'FAST'].map(serial => ({serial, channel: serial
-        , platform: 'Android', present: true, ready: true, group: {id: 'shared'}}))
+        , platform: 'Android', present: true, ready: true, group: {id: 'shared'}
+        , owner: {email: 'owner@example.test', reservationId: serial}}))
       const load = async(serial: string) => {
         if (serial === 'SLOW') {
           await new Promise(resolve => setTimeout(resolve, 100))
@@ -476,6 +477,42 @@ describe('manual device packet authorization', function() {
       }
     })
   }
+
+  it('denies input to foreign or unowned Android devices', async function() {
+    const authorized: unknown[] = []
+    const f = fixture('Android', 0, {onAuthorizedInput: (...args: unknown[]) => {
+      authorized.push(args)
+    }})
+    f.update({owner: {email: 'someone@example.test', reservationId: 'victim'}})
+    for (const event of ['input.gestureStart', 'input.keyPress', 'input.type']) {
+      assert.equal((await f.dispatch(event))?.message, 'Device access denied')
+    }
+    f.update({owner: null})
+    f.access.released('PHONE')
+    assert.equal((await f.dispatch('input.gestureStart'))?.message, 'Device access denied')
+    assert.deepEqual(authorized, [])
+    assert.equal(await f.dispatch('group.invite', 'tx.free'), undefined)
+  })
+
+  it('retains visibility and automation checks for stamped admin input', async function() {
+    const authorized: {gestureId: string, reservationId: string}[] = []
+    const f = fixture('Android', 0, {onAuthorizedInput: (_packet: unknown, metadata: any) => {
+      authorized.push(metadata)
+    }})
+    Object.assign(f.user, {privilege: 'admin'})
+    f.update({owner: {email: 'someone@example.test', reservationId: 'manual-reservation'}})
+    assert.equal(await f.dispatch('input.gestureStart'), undefined)
+    assert.match(authorized[0]!.gestureId, /^[a-f0-9-]{36}:1$/)
+    assert.equal(authorized[0]!.reservationId, 'manual-reservation')
+    assert.equal(f.lookups(), 1, 'Stamping reuses the authorization snapshot')
+    f.update({usage: 'automation'})
+    f.access.joined('PHONE', 'automation', f.device().owner)
+    assert.equal((await f.dispatch('input.gestureStart'))?.message, 'Device access denied')
+    f.update({usage: null, group: {id: 'hidden'}})
+    f.access.update('PHONE', {usage: null, group: {id: 'hidden'}})
+    assert.equal((await f.dispatch('input.keyPress'))?.message, 'Device access denied')
+    assert.equal(authorized.length, 1)
+  })
 
   it('validates serials and distinguishes controls from metadata', function() {
     for (const value of ['A', 'a'.repeat(128), '00008110-000625A02146201E', 'usb_serial.1'
