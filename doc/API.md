@@ -214,6 +214,41 @@ clientWithPromise.then(function(api) {
 })
 ```
 
+#### GET /user/devices/{serial}
+
+Returns information about a specific device currently being used by the authenticated user.
+
+```bash
+GET /api/v1/user/devices/{serial}
+```
+
+Using cURL:
+
+```bash
+curl -H "Authorization: Bearer YOUR-TOKEN-HERE" https://stf.example.org/api/v1/user/devices/xxxxxxxxx
+```
+
+Using Node.js:
+
+```js
+clientWithPromise.then(function(api) {
+  api.user.getUserDeviceBySerial({serial: 'xxxx'})
+    .then(function(res) {
+      console.log(res.obj.device.serial)
+      // xxxx
+    })
+})
+
+// OR
+clientWithPromise.then(function(api) {
+  api.user.getUserDeviceBySerial({serial: 'xxxx', fields: 'serial,using,ready'})
+    .then(function(res) {
+      console.log(res.obj.device)
+      // { serial: 'xxxx', using: true, ready: true }
+    })
+})
+```
+
 #### POST /user/devices
 
 Reserves a device for automation under the authenticated user's ownership.
@@ -338,6 +373,32 @@ clientWithPromise.then(function(api) {
 .catch(function(err) {
   console.log(err)
   // {"success":false,"description":"Device is not owned by you or is not available"}
+})
+```
+
+#### GET /user/accessTokens
+
+Returns the titles of all the valid access tokens of the authenticated user.
+
+```bash
+GET /api/v1/user/accessTokens
+```
+
+Using cURL:
+
+```bash
+curl -H "Authorization: Bearer YOUR-TOKEN-HERE" https://stf.example.org/api/v1/user/accessTokens
+```
+
+Using Node.js:
+
+```js
+clientWithPromise.then(function(api) {
+  api.user.getUserAccessTokens()
+    .then(function(res) {
+      console.log(res.obj.titles)
+      // [ 'my-token' ]
+    })
 })
 ```
 
