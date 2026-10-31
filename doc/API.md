@@ -216,7 +216,7 @@ clientWithPromise.then(function(api) {
 
 #### GET /user/devices/{serial}
 
-Returns information about a specific device owned by the authenticated user.
+Returns information about a specific device currently being used by the authenticated user.
 
 ```bash
 GET /api/v1/user/devices/{serial}
