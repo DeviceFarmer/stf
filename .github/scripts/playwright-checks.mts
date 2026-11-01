@@ -48,13 +48,17 @@ function reportOutputs(summary: Summary) {
   if (!process.env.GITHUB_OUTPUT) {
     return
   }
+  var extra: Record<string, unknown> = {
+    checks: summary.checks
+  , playwright_total: summary.total
+  , playwright_failed: summary.failed.length
+  }
+  if (process.env.LEG_ATTEMPT) {
+    extra.attempt = Number(process.env.LEG_ATTEMPT)
+  }
   fs.appendFileSync(
     process.env.GITHUB_OUTPUT
-  , 'extra=' + JSON.stringify({
-      checks: summary.checks
-    , playwright_total: summary.total
-    , playwright_failed: summary.failed.length
-    }) + '\n')
+  , 'extra=' + JSON.stringify(extra) + '\n')
 }
 
 function walk(node: Suite | undefined, specs: Spec[]) {

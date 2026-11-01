@@ -100,10 +100,24 @@ test.describe('STF against a real device', function() {
       // The canvas keeps its default 300x150 intrinsic size until the first
       // frame is decoded, so any other size is the frames-arrived signal. Do
       // not compare against a width, some AVDs are only 320px wide.
+      //
+      // minicap runs with -S (skip frames when nothing changes), and the
+      // emulator boots with animations disabled. On API 31+ (VirtualDisplay +
+      // ImageReader), if the launcher is already static when minicap attaches,
+      // no buffer is emitted until SurfaceFlinger composites a change. Nudge
+      // the screen periodically if no initial frame has arrived after 5s.
+      let nextNudge = Date.now() + 5000
       await expect.poll(async function() {
-        return canvas.evaluate(function(el: HTMLCanvasElement) {
+        const size = await canvas.evaluate(function(el: HTMLCanvasElement) {
           return el.width + 'x' + el.height
         })
+        if (size === '300x150' && Date.now() >= nextNudge) {
+          nextNudge = Date.now() + 10000
+          await page.click('[device-control-key="app_switch"]')
+          await page.waitForTimeout(500)
+          await page.click('[device-control-key="home"]')
+        }
+        return size
       }, {timeout: 120000, message: 'canvas never received a frame'})
         .not.toBe('300x150')
 
