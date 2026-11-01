@@ -59,6 +59,8 @@ export interface DevicePluginOptions {
   muteMaster: 'always' | 'inuse' | 'never'
   heartbeatInterval: number
   screenGrabber: string
+  phoneRetries?: number
+  phoneRetryDelay?: number
 }
 
 export interface StfServiceResource {

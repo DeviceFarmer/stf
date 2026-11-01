@@ -50,6 +50,7 @@ jobs:
     timeout-minutes: 45
     outputs:
       cache-key: ${{ steps.cachekey.outputs.key }}
+      playwright-cache-key: ${{ steps.cachekey.outputs.playwright-key }}
     steps:
       - uses: actions/checkout@v7
 
@@ -74,6 +75,7 @@ jobs:
         run: |
           flags="$(printf '%s' "$NPM_INSTALL_FLAGS" | sha256sum | cut -c1-12)"
           echo "key=stf-deps-${CACHE_EPOCH}-${{ runner.os }}-${flags}-${{ hashFiles('package.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
+          echo "playwright-key=playwright-${CACHE_EPOCH}-${{ runner.os }}-${flags}-${{ hashFiles('test/playwright/package.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
         id: deps
@@ -86,6 +88,20 @@ jobs:
       - name: Install npm dependencies
         if: steps.deps.outputs.cache-hit != 'true'
         run: npm install $NPM_INSTALL_FLAGS
+
+      - name: Restore Playwright cache
+        id: playwright
+        uses: actions/cache@v6
+        with:
+          path: |
+            test/playwright/node_modules
+            ~/.cache/ms-playwright
+          key: ${{ steps.cachekey.outputs.playwright-key }}
+
+      - name: Install Playwright
+        if: steps.playwright.outputs.cache-hit != 'true'
+        timeout-minutes: 15
+        run: bash .github/scripts/install-playwright.sh
 
       - name: Compile lib
         run: node build.mts compile
@@ -350,16 +366,17 @@ jobs:
           node .github/scripts/stf-devices.mts wait-count 2 120
           node .github/scripts/stf-devices.mts list
 
-      # `playwright install --with-deps` shells out to apt for the browser
-      # libraries, so it inherits every apt flake the runtime steps have and
-      # reports it as a bare "Installation process exited with code: 100".
-      # Both halves are pure network, so retry rather than red the run.
+      - name: Restore Playwright cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            test/playwright/node_modules
+            ~/.cache/ms-playwright
+          key: ${{ needs.build.outputs.playwright-cache-key }}
+
       - name: Install Playwright
         timeout-minutes: 15
-        run: |
-          cd test/playwright
-          bash ../../.github/scripts/retry.sh 3 npm install --no-audit --no-fund
-          bash ../../.github/scripts/retry.sh 3 npx playwright install --with-deps chromium
+        run: bash .github/scripts/install-playwright.sh
 
       - name: Type-check the Playwright suite
         run: npx tsc -p test/playwright/tsconfig.json
@@ -516,16 +533,17 @@ jobs:
       - name: Compile lib
         run: node build.mts compile
 
-      # `playwright install --with-deps` shells out to apt for the browser
-      # libraries, so it inherits every apt flake the runtime steps have and
-      # reports it as a bare "Installation process exited with code: 100".
-      # Both halves are pure network, so retry rather than red the run.
+      - name: Restore Playwright cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            test/playwright/node_modules
+            ~/.cache/ms-playwright
+          key: ${{ needs.build.outputs.playwright-cache-key }}
+
       - name: Install Playwright
         timeout-minutes: 15
-        run: |
-          cd test/playwright
-          bash ../../.github/scripts/retry.sh 3 npm install --no-audit --no-fund
-          bash ../../.github/scripts/retry.sh 3 npx playwright install --with-deps chromium
+        run: bash .github/scripts/install-playwright.sh
 
       - name: Type-check the Playwright suite
         run: npx tsc -p test/playwright/tsconfig.json
@@ -625,14 +643,14 @@ jobs:
           # scale up and the picture ends up letterboxed in the STF UI. pixel_2
           # is 1080x1920 420dpi and ships with the SDK for every api level here.
           profile: pixel_2
-          cores: 2
+          cores: 4
           ram-size: 4096M
           disk-size: 6G
           emulator-boot-timeout: ${{ matrix.boot }}
           disable-animations: true
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
-            -no-boot-anim -camera-back none -camera-front none
+            -no-boot-anim -no-metrics -camera-back none -camera-front none
           script: bash .github/scripts/with-emulator-cleanup.sh .github/scripts/android-leg.sh
 
       - name: Derive the verdict
@@ -700,14 +718,14 @@ jobs:
           channel: ${{ matrix.channel || 'stable' }}
           arch: ${{ matrix.arch }}
           profile: pixel_2
-          cores: 2
+          cores: 4
           ram-size: 4096M
           disk-size: 6G
           emulator-boot-timeout: ${{ matrix.boot }}
           disable-animations: true
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
-            -no-boot-anim -camera-back none -camera-front none
+            -no-boot-anim -no-metrics -camera-back none -camera-front none
           script: bash .github/scripts/with-emulator-cleanup.sh .github/scripts/android-leg.sh
 
       - name: Derive the verdict again
@@ -762,7 +780,7 @@ jobs:
   compose:
     name: Compose
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 75
     env:
       COMPOSE_FILE: docker-compose.yaml:test/compose/docker-compose.yaml
       COMPOSE_PROJECT_NAME: stf-compose-ci
@@ -797,13 +815,31 @@ jobs:
           cache-from: type=gha,scope=compose-amd64
           cache-to: type=gha,mode=max,scope=compose-amd64
 
+      - name: Configure a fast apt mirror
+        uses: vegardit/fast-apt-mirror.sh@806c59276adfff2df420124ad5e4587f018c358a
+        continue-on-error: true
+
+      - name: Compute Playwright cache key
+        id: cachekey
+        run: |
+          flags="$(printf '%s' "$NPM_INSTALL_FLAGS" | sha256sum | cut -c1-12)"
+          echo "playwright-key=playwright-${CACHE_EPOCH}-${{ runner.os }}-${flags}-${{ hashFiles('test/playwright/package.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Playwright cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            test/playwright/node_modules
+            ~/.cache/ms-playwright
+          key: ${{ steps.cachekey.outputs.playwright-key }}
+          restore-keys: |
+            playwright-${{ env.CACHE_EPOCH }}-${{ runner.os }}-
+
       - name: Install the ADB relay and Playwright
         timeout-minutes: 15
         run: |
           bash .github/scripts/apt-install.sh socat
-          cd test/playwright
-          bash ../../.github/scripts/retry.sh 3 npm install --no-audit --no-fund
-          bash ../../.github/scripts/retry.sh 3 npx playwright install --with-deps chromium
+          bash .github/scripts/install-playwright.sh
 
       - name: Validate and pull the Compose services
         run: |
@@ -814,11 +850,28 @@ jobs:
 
       - name: Enable KVM
         run: |
-          sudo chmod 666 /dev/kvm
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo udevadm settle --timeout=30 || true
+          test -w /dev/kvm || {
+            echo "::warning::udev kvm rule did not apply, falling back to chmod"
+            sudo chmod 666 /dev/kvm
+          }
+          ls -l /dev/kvm
           test -w /dev/kvm
+
+      - name: Install the Android SDK packages
+        timeout-minutes: 20
+        run: >-
+          bash .github/scripts/retry.sh 3
+          bash .github/scripts/install-android-sdk.sh
+          '36' 'default' 'x86_64' '0'
 
       - name: Boot an AVD and test the Compose stack
         id: emulator
+        continue-on-error: true
         timeout-minutes: 25
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
@@ -826,14 +879,53 @@ jobs:
           target: default
           arch: x86_64
           profile: pixel_2
-          cores: 2
+          cores: 4
           ram-size: 4096M
           disk-size: 6G
           emulator-boot-timeout: 720
           disable-animations: true
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
-            -no-boot-anim -camera-back none -camera-front none
+            -no-boot-anim -no-metrics -camera-back none -camera-front none
+          script: bash .github/scripts/with-emulator-cleanup.sh .github/scripts/compose-leg.sh
+
+      - name: Keep the first Compose attempt before retrying
+        id: keep
+        if: steps.emulator.outcome == 'failure'
+        run: |
+          export STF_ADB_KEYS="$HOME/.android"
+          mkdir -p test-results/compose
+          docker compose ps -a > test-results/compose/containers.txt 2>&1 || true
+          docker compose logs --no-color > test-results/compose/services.log 2>&1 || true
+          docker compose down --volumes --remove-orphans || true
+          rm -rf test-results/compose-attempt-1 test-results/playwright-attempt-1
+          mv test-results/compose test-results/compose-attempt-1 2>/dev/null || true
+          mv test-results/playwright test-results/playwright-attempt-1 2>/dev/null || true
+          mkdir -p test-results/compose
+          docker compose config > test-results/compose/config.yaml
+          adb kill-server 2>/dev/null || true
+          pkill -f qemu-system 2>/dev/null || true
+          df -h /
+          echo "::warning::Compose AVD attempt 1 failed, retrying once."
+
+      - name: Retry the Compose AVD leg once
+        id: emulator_retry
+        if: steps.keep.outcome == 'success'
+        timeout-minutes: 25
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          ram-size: 4096M
+          disk-size: 6G
+          emulator-boot-timeout: 720
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio
+            -no-boot-anim -no-metrics -camera-back none -camera-front none
           script: bash .github/scripts/with-emulator-cleanup.sh .github/scripts/compose-leg.sh
 
       - name: Collect Compose diagnostics
@@ -854,6 +946,8 @@ jobs:
       - name: Derive checks from the Playwright report
         if: always()
         id: checks
+        env:
+          LEG_ATTEMPT: ${{ steps.emulator_retry.outcome != 'skipped' && '2' || '1' }}
         run: |
           node .github/scripts/playwright-checks.mts \
             test-results/playwright/report.json test-results/compose/playwright-checks.json
@@ -865,7 +959,9 @@ jobs:
           name: compose-playwright-results
           path: |
             test-results/compose
+            test-results/compose-attempt-1
             test-results/playwright
+            test-results/playwright-attempt-1
           retention-days: 5
           if-no-files-found: warn
 
@@ -873,15 +969,19 @@ jobs:
         if: always()
         env:
           IMAGE: ${{ steps.image.outcome }}
-          E2E: ${{ steps.emulator.outcome }}
+          E2E: ${{ steps.emulator_retry.outcome != 'skipped' && steps.emulator_retry.outcome || steps.emulator.outcome }}
+          ATTEMPT: ${{ steps.emulator_retry.outcome != 'skipped' && '2' || '1' }}
           TEARDOWN: ${{ steps.teardown.outcome }}
           TEST_COUNT: ${{ fromJSON(steps.checks.outputs.extra || '{}').playwright_total || 0 }}
           VERDICT_EXTRA: ${{ steps.checks.outputs.extra }}
         run: |
+          STATUS='${{ job.status }}'
+          [ "$STATUS" = 'success' ] && [ "$E2E" != 'success' ] && STATUS='failure' || true
           DETAILS="${TEST_COUNT} Playwright tests, image $IMAGE, Compose/AVD $E2E, teardown $TEARDOWN"
+          [ "$ATTEMPT" -gt 1 ] && DETAILS="$DETAILS (attempt $ATTEMPT)" || true
           bash .github/scripts/verdict.sh compose \
             'Docker Compose + AVD + Playwright (Android 16, API 36)' \
-            '${{ job.status }}' "$DETAILS"
+            "$STATUS" "$DETAILS"
 
       - name: Upload verdict
         if: always()
