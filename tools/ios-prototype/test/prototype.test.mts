@@ -106,8 +106,11 @@ async function fixture() {
       res.end(JSON.stringify({value: {ready: true}}))
     }
   }))
+  // Give cold fetch initialization under QEMU a separate setup budget.
+  const setup = new WdaClient(origin, 10000)
+  await setup.open()
   const wda = new WdaClient(origin, 500)
-  await wda.open()
+  wda.sessionId = setup.sessionId
   const runtime = new IosRuntime(options, {wda, log: () => null})
   runtime.state = 'ready'
   const server = createServer(runtime, token)

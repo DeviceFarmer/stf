@@ -186,8 +186,7 @@ export class IosRuntime {
           await this.sleep(this.options.retryMs)
           this.checkChildren()
           // Probe our session, not just /status: WDA can outlive a lost XCTest session.
-          await this.wda.call('GET', '')
-          const locked = await this.wda.call('GET', '/wda/locked')
+          const locked = await this.wda.probeSession(this.abort.signal)
           this.telemetry.status.locked = typeof locked.value === 'boolean' ? locked.value : null
           const profile = this.telemetry.status.wda.profile
           let reason = 'wda_profile_unknown'
