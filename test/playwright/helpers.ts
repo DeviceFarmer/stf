@@ -261,17 +261,19 @@ function recordDeviceScreen(serial?: string, seconds?: number): Recorder {
       return out
     }
   , stop: async function(localPath: string) {
-      // screenrecord only writes the mp4 header when it gets SIGINT, and
-      // killing the local adb client does not signal the process on the
-      // device, so it has to be signalled there.
-      await adb(args, [
-        'shell', 'pkill -INT screenrecord || killall -INT screenrecord'
-      ])
-      await closed(child, 15000)
-      // The adb client can return before screenrecord has written the moov
-      // atom, and a file pulled at that point has no duration. Wait for the
-      // process to actually be gone.
-      await gone(args, 5000)
+      if (child.exitCode === null && !child.signalCode) {
+        // screenrecord only writes the mp4 header when it gets SIGINT, and
+        // killing the local adb client does not signal the process on the
+        // device, so it has to be signalled there.
+        await adb(args, [
+          'shell', 'pkill -INT screenrecord || killall -INT screenrecord'
+        ])
+        await closed(child, 15000)
+        // The adb client can return before screenrecord has written the moov
+        // atom, and a file pulled at that point has no duration. Wait for the
+        // process to actually be gone.
+        await gone(args, 5000)
+      }
       await adb(args, ['pull', remote, localPath])
       await adb(args, ['shell', 'rm', '-f', remote])
 
