@@ -803,7 +803,7 @@ describe('wire protobuf', function() {
       const legacy = Buffer.from('080212036f6c64', 'hex')
       expect(new wire.TouchResetMessage(2, 'old').encodeNB()).to.eql(legacy)
       expect(fields(wire.TouchResetMessage.decode(legacy))).to.eql({
-        seq: 2, gestureId: 'old', cancel: null, reservationId: null
+        seq: 2, gestureId: 'old', cancel: null, reservationId: null, cancelThrough: null
       })
 
       const sequenced = Buffer.from('08021201671800220172', 'hex')
@@ -811,7 +811,15 @@ describe('wire protobuf', function() {
         seq: 2, gestureId: 'g', cancel: false, reservationId: 'r'
       }).encodeNB()).to.eql(sequenced)
       expect(fields(wire.TouchResetMessage.decode(sequenced))).to.eql({
-        seq: 2, gestureId: 'g', cancel: false, reservationId: 'r'
+        seq: 2, gestureId: 'g', cancel: false, reservationId: 'r', cancelThrough: null
+      })
+
+      const range = Buffer.from('080212016718012201722801', 'hex')
+      expect(new wire.TouchResetMessage({
+        seq: 2, gestureId: 'g', cancel: true, reservationId: 'r', cancelThrough: true
+      }).encodeNB()).to.eql(range)
+      expect(fields(wire.TouchResetMessage.decode(range))).to.eql({
+        seq: 2, gestureId: 'g', cancel: true, reservationId: 'r', cancelThrough: true
       })
     })
 

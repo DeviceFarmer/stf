@@ -502,9 +502,27 @@ describe('manual device packet authorization', function() {
     Object.assign(f.user, {privilege: 'admin'})
     f.update({owner: {email: 'someone@example.test', reservationId: 'manual-reservation'}})
     assert.equal(await f.dispatch('input.gestureStart'), undefined)
-    assert.match(authorized[0]!.gestureId, /^[a-f0-9-]{36}:1$/)
+    assert.match(authorized[0]!.gestureId, /^[a-f0-9-]{36}:1:[0-9]+$/)
     assert.equal(authorized[0]!.reservationId, 'manual-reservation')
     assert.equal(f.lookups(), 1, 'Stamping reuses the authorization snapshot')
+    f.update({usage: 'automation'})
+    f.access.joined('PHONE', 'automation', f.device().owner)
+    assert.equal((await f.dispatch('input.gestureStart'))?.message, 'Device access denied')
+    f.update({usage: null, group: {id: 'hidden'}})
+    f.access.update('PHONE', {usage: null, group: {id: 'hidden'}})
+    assert.equal((await f.dispatch('input.keyPress'))?.message, 'Device access denied')
+    assert.equal(authorized.length, 1)
+  })
+
+  it('stamps iOS administrator input with the current manual owner reservation', async function() {
+    const authorized: {gestureId: string, reservationId: string}[] = []
+    const f = fixture('iOS', 0, {onAuthorizedInput: (_packet: unknown, metadata: any) => {
+      authorized.push(metadata)
+    }})
+    Object.assign(f.user, {privilege: 'admin'})
+    f.update({owner: {email: 'someone@example.test', reservationId: 'manual-reservation'}})
+    assert.equal(await f.dispatch('input.gestureStart'), undefined)
+    assert.equal(authorized[0]!.reservationId, 'manual-reservation')
     f.update({usage: 'automation'})
     f.access.joined('PHONE', 'automation', f.device().owner)
     assert.equal((await f.dispatch('input.gestureStart'))?.message, 'Device access denied')

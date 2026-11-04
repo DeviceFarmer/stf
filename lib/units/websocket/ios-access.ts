@@ -257,7 +257,8 @@ export function createDevicePacketGuard(
           failChannel(channel, queue, 'Device gesture counter exhausted; reconnect to continue')
           return
         }
-        gestures.set(channel, {identity, id: gestureSource + ':' + ++gestureCounter, reservationId})
+        gestures.set(channel, {identity
+          , id: gestureSource + ':' + ++gestureCounter + ':' + Date.now(), reservationId})
         if (gestures.size > 128) {
           const oldest = gestures.keys().next().value!
           const previous = gestures.get(oldest)!

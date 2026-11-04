@@ -63,6 +63,13 @@ export class TouchProtocol {
     this.pending.clear()
   }
 
+  finish(heldContacts: ReadonlySet<number>) {
+    for (const contact of heldContacts) {
+      this.up(contact)
+    }
+    this.commit()
+  }
+
   reset() {
     // Drop commands which were never committed. Flushing a pending down before
     // its up can otherwise create an unintended tap in STFService's fallback.

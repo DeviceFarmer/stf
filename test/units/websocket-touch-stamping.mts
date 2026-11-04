@@ -127,6 +127,7 @@ describe('server generated touch identity', function() {
     async function() {
     const f = fixture()
     try {
+      const before = Date.now()
       await f.dispatch('input.gestureStart', {seq: 0, gestureId: 'spoof', reservationId: 'victim'})
       const types = [wire.GestureStartMessage, wire.TouchDownMessage, wire.TouchMoveMessage
         , wire.TouchCommitMessage, wire.TouchResetMessage, wire.TouchUpMessage
@@ -134,22 +135,166 @@ describe('server generated touch identity', function() {
       for (const [index, event] of ['input.touchDown', 'input.touchMove', 'input.touchCommit'
         , 'input.touchReset', 'input.touchUp', 'input.gestureStop'].entries()) {
         await f.dispatch(event, {seq: index + 1, contact: 0, x: 0.5, y: 0.5
-          , gestureId: 'spoof', reservationId: 'victim', cancel: true})
+          , gestureId: 'spoof', reservationId: 'victim', cancel: true, cancelThrough: true})
       }
       const packets = f.envelopes().map((envelope, index) => types[index]!.decode(envelope.message))
       const gestureId = packets[0]!.gestureId
-      assert.match(gestureId!, /^[a-f0-9-]{36}:1$/)
+      assert.match(gestureId!, /^[a-f0-9-]{36}:1:[0-9]+$/)
+      const issuedAt = Number(gestureId!.split(':')[2])
+      assert.ok(issuedAt >= before && issuedAt <= Date.now())
       for (const packet of packets) {
         assert.equal(packet.gestureId, gestureId)
         assert.equal(packet.reservationId, 'first')
       }
       assert.equal((packets[4] as any).cancel, false)
+      assert.notEqual((packets[4] as any).cancelThrough, true)
       await f.dispatch('input.gestureStart', {seq: 7})
       await f.close()
       const reset = wire.TouchResetMessage.decode(f.envelopes().at(-1)!.message)
       assert.equal(reset.cancel, true)
       assert.equal(reset.reservationId, 'first')
-      assert.equal(reset.gestureId, gestureId!.replace(/:1$/, ':2'))
+      assert.equal(reset.gestureId!.split(':')[0], gestureId!.split(':')[0])
+      assert.equal(reset.gestureId!.split(':')[1], '2')
+      assert.ok(Number(reset.gestureId!.split(':')[2]) >= issuedAt)
+    }
+    finally {
+      await f.close()
+    }
+  })
+
+  it('keeps the current gesture when an older Start is dispatched late', async function() {
+    const f = fixture()
+    try {
+      const first = await f.dispatch('input.gestureStart', {seq: 0}, true)
+      const second = await f.dispatch('input.gestureStart', {seq: 6}, true)
+      second()
+      first()
+      assert.equal(f.envelopes().filter(envelope =>
+        envelope.type === wire.TouchResetMessage.$code).length, 0)
+      await f.close()
+      const starts = f.envelopes()
+        .filter(envelope => envelope.type === wire.GestureStartMessage.$code)
+        .map(envelope => wire.GestureStartMessage.decode(envelope.message))
+      const resets = f.envelopes()
+        .filter(envelope => envelope.type === wire.TouchResetMessage.$code)
+        .map(envelope => wire.TouchResetMessage.decode(envelope.message))
+      assert.equal(starts.length, 2)
+      assert.equal(resets.length, 1, 'One fence cancels the unfinished source chain atomically')
+      assert.equal(resets[0]!.gestureId, starts[0]!.gestureId)
+      assert.equal(resets[0]!.cancelThrough, true)
+      assert.equal(starts[0]!.gestureId!.split(':')[1], '2')
+    }
+    finally {
+      await f.close()
+    }
+  })
+
+  it('preserves the previous tail when its Stop dispatch is delayed past the next Start',
+    async function() {
+    const f = fixture()
+    try {
+      await f.dispatch('input.gestureStart', {seq: 0})
+      await f.dispatch('input.touchDown', {seq: 1, contact: 0, x: 0.5, y: 0.5})
+      const up = await f.dispatch('input.touchUp', {seq: 2, contact: 0}, true)
+      const stop = await f.dispatch('input.gestureStop', {seq: 3}, true)
+      await f.dispatch('input.gestureStart', {seq: 4})
+      assert.equal(f.envelopes().filter(envelope =>
+        envelope.type === wire.TouchResetMessage.$code).length, 0)
+      up()
+      stop()
+      await f.close()
+      const resets = f.envelopes().filter(envelope =>
+        envelope.type === wire.TouchResetMessage.$code)
+      assert.equal(resets.length, 1)
+      const reset = wire.TouchResetMessage.decode(resets[0]!.message)
+      assert.equal(reset.gestureId!.split(':')[1], '2')
+    }
+    finally {
+      await f.close()
+    }
+  })
+
+  it('retains the highest cleanup fence after the newer Stop dispatches', async function() {
+    const f = fixture()
+    try {
+      await f.dispatch('input.gestureStart', {seq: 0})
+      await f.dispatch('input.gestureStop', {seq: 3}, true)
+      await f.dispatch('input.gestureStart', {seq: 4})
+      await f.dispatch('input.gestureStop', {seq: 7})
+      await f.close()
+      const resets = f.envelopes().filter(envelope =>
+        envelope.type === wire.TouchResetMessage.$code)
+      assert.equal(resets.length, 1)
+      assert.equal(wire.TouchResetMessage.decode(resets[0]!.message)
+        .gestureId!.split(':')[1], '2')
+    }
+    finally {
+      await f.close()
+    }
+  })
+
+  it('retains the source fence when every Stop has already been sent to the provider',
+    async function() {
+    const f = fixture()
+    try {
+      await f.dispatch('input.gestureStart', {seq: 0})
+      await f.dispatch('input.gestureStop', {seq: 3})
+      await f.dispatch('input.gestureStart', {seq: 4})
+      await f.dispatch('input.gestureStop', {seq: 7})
+      await f.close()
+      const resets = f.envelopes().filter(envelope =>
+        envelope.type === wire.TouchResetMessage.$code)
+      assert.equal(resets.length, 1)
+      const reset = wire.TouchResetMessage.decode(resets[0]!.message)
+      assert.equal(reset.gestureId!.split(':')[1], '2')
+      assert.equal(reset.cancelThrough, true)
+    }
+    finally {
+      await f.close()
+    }
+  })
+
+  it('cancels all unfinished gestures in the denied reservation', async function() {
+    const f = fixture()
+    try {
+      await f.dispatch('input.gestureStart', {seq: 0})
+      await f.dispatch('input.gestureStart', {seq: 4})
+      f.failLoad()
+      await new Promise(resolve => setTimeout(resolve, 110))
+      await assert.rejects(f.dispatch('input.touchMove', {seq: 5, contact: 0, x: 0.5, y: 0.4}))
+      await f.close()
+      const resets = f.envelopes().filter(envelope =>
+        envelope.type === wire.TouchResetMessage.$code)
+        .map(envelope => wire.TouchResetMessage.decode(envelope.message))
+      assert.equal(resets.length, 1)
+      assert.equal(resets[0]!.gestureId!.split(':')[1], '2')
+      assert.equal(resets[0]!.reservationId, 'first')
+      assert.equal(resets[0]!.cancel, true)
+      assert.equal(resets[0]!.cancelThrough, true)
+    }
+    finally {
+      await f.close()
+    }
+  })
+
+  it('bounds reservation cleanup contexts and cancels the oldest when full', async function() {
+    const f = fixture()
+    try {
+      for (let count = 0; count < 129; count++) {
+        f.owner('context-' + count)
+        await f.dispatch('input.gestureStart', {seq: count % 100})
+      }
+      const resets = () => f.envelopes().filter(envelope =>
+        envelope.type === wire.TouchResetMessage.$code)
+        .map(envelope => wire.TouchResetMessage.decode(envelope.message))
+      assert.equal(resets().length, 1)
+      assert.equal(resets()[0]!.gestureId!.split(':')[1], '1')
+      assert.equal(resets()[0]!.cancelThrough, true)
+      assert.equal(resets()[0]!.reservationId, 'context-0')
+      await f.close()
+      assert.equal(resets().length, 129)
+      assert.equal(new Set(resets().map(reset => reset.gestureId)).size, 129)
+      assert.equal(resets().at(-1)!.gestureId!.split(':')[1], '129')
     }
     finally {
       await f.close()
@@ -193,6 +338,14 @@ describe('server generated touch identity', function() {
       assert.equal(starts[0]!.reservationId, 'first')
       assert.equal(starts[1]!.reservationId, 'replacement')
       assert.notEqual(starts[0]!.gestureId, starts[1]!.gestureId)
+      await f.close()
+      const resets = f.envelopes()
+        .filter(envelope => envelope.type === wire.TouchResetMessage.$code)
+        .map(envelope => wire.TouchResetMessage.decode(envelope.message))
+      assert.equal(resets.length, 2)
+      assert.deepEqual(new Set(resets.map(reset => reset.reservationId)),
+        new Set(['first', 'replacement']))
+      assert.ok(resets.every(reset => reset.cancelThrough === true))
     }
     finally {
       await f.close()

@@ -168,6 +168,13 @@ export default syrup.serial()
         })
       }
 
+      touchFinish(heldContacts: ReadonlySet<number>) {
+        const contacts = new Set(heldContacts)
+        this._queueWrite(function(this: TouchConsumer) {
+          this.protocol.finish(contacts)
+        })
+      }
+
       tap(point: TouchContactPoint) {
         this.touchDown(point)
         this.touchCommit()
@@ -594,6 +601,7 @@ export default syrup.serial()
       .then(function(touchConsumer) {
         const queue = new TouchGesture(() => touchConsumer.touchReset(), {
           report: error => log.warn(error.message)
+        , onFinish: contacts => touchConsumer.touchFinish(contacts)
         })
         queue.setOwner(null)
         group.on('join', owner => queue.setOwner(owner.reservationId || null))
@@ -614,30 +622,30 @@ export default syrup.serial()
           .on(wire.TouchDownMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchDown(message)
-            }, message.gestureId, message.reservationId)
+            }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
           })
           .on(wire.TouchMoveMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchMove(message)
-            }, message.gestureId, message.reservationId)
+            }, message.gestureId, message.reservationId, {type: 'move', contact: message.contact})
           })
           .on(wire.TouchUpMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchUp(message)
-            }, message.gestureId, message.reservationId)
+            }, message.gestureId, message.reservationId, {type: 'up', contact: message.contact})
           })
           .on(wire.TouchCommitMessage, function(channel, message) {
             queue.push(message.seq, function() {
               touchConsumer.touchCommit()
-            }, message.gestureId, message.reservationId)
+            }, message.gestureId, message.reservationId, {type: 'commit'})
           })
           .on(wire.TouchResetMessage, function(channel, message) {
             if (message.gestureId && message.cancel !== false) {
-              queue.clear(message.gestureId, message.reservationId)
+              queue.clear(message.gestureId, message.reservationId, message.cancelThrough === true)
             }
             else {
               queue.push(message.seq, () => touchConsumer.touchReset(),
-                message.gestureId, message.reservationId)
+                message.gestureId, message.reservationId, {type: 'reset'})
             }
           })
 

@@ -47,7 +47,9 @@ export class IosBridge {
   , private readonly disconnect: () => void
   , private readonly report: (error: unknown) => void
   ) {
-    this.gestures = new TouchGesture(() => this.resetTouch(), {report: error => this.report(error)})
+    this.gestures = new TouchGesture(() => this.resetTouch(), {
+      report: error => this.report(error), onFinish: () => this.resetTouch()
+    })
     this.gestures.setOwner(null)
     this.channel = 'ios:' + options.serial
     this.timeout = options.groupTimeout
@@ -88,24 +90,26 @@ export class IosBridge {
         })
       })
       .on(wire.TouchDownMessage, (_channel, message) => {
+        const arrived = performance.now()
         this.gestures.push(message.seq, () => {
           if (message.contact !== 0 || this.touch) {
             this.multitouch = true
             this.touch = null
           }
           else if (!this.multitouch && this.point(message)) {
-            this.touch = {from: message, to: message, started: Date.now()}
+            this.touch = {from: message, to: message, started: arrived}
           }
-        }, message.gestureId, message.reservationId)
+        }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
       })
       .on(wire.TouchMoveMessage, (_channel, message) => {
         this.gestures.push(message.seq, () => {
           if (this.touch && message.contact === 0 && this.point(message)) {
             this.touch.to = message
           }
-        }, message.gestureId, message.reservationId)
+        }, message.gestureId, message.reservationId, {type: 'move', contact: message.contact})
       })
       .on(wire.TouchUpMessage, (_channel, message) => {
+        const arrived = performance.now()
         this.gestures.push(message.seq, () => {
           const touch = this.touch
           this.touch = null
@@ -114,29 +118,36 @@ export class IosBridge {
             if (distance < 0.005) {
               this.command('/tap', touch.to)
             }
+            else if (arrived < touch.started) {
+              // Up-before-Down arrival cannot recover the hold time. Dropping the
+              // swipe avoids turning an unknown duration into a fast fling.
+              this.report(new Error('Touch swipe duration is unknown; retry the gesture'))
+            }
             else {
               this.command('/swipe', {
                 from: touch.from, to: touch.to
-              , durationMs: Math.max(50, Math.min(5000, Date.now() - touch.started))
+              , durationMs: Math.max(50, Math.min(5000, Math.round(arrived - touch.started)))
               })
             }
           }
-        }, message.gestureId, message.reservationId)
+        }, message.gestureId, message.reservationId, {type: 'up', contact: message.contact})
       })
       .on(wire.GestureStartMessage, (_channel, message) => {
         this.gestures.start(message.seq, message.gestureId, message.reservationId)
       })
       .on(wire.TouchResetMessage, (_channel, message) => {
         if (message.gestureId && message.cancel !== false) {
-          this.gestures.clear(message.gestureId, message.reservationId)
+          this.gestures.clear(message.gestureId, message.reservationId,
+            message.cancelThrough === true)
         }
         else {
           this.gestures.push(message.seq, () => this.resetTouch(),
-            message.gestureId, message.reservationId)
+            message.gestureId, message.reservationId, {type: 'reset'})
         }
       })
       .on(wire.TouchCommitMessage, (_channel, message) => {
-        this.gestures.push(message.seq, () => {}, message.gestureId, message.reservationId)
+        this.gestures.push(message.seq, () => {}, message.gestureId, message.reservationId,
+          {type: 'commit'})
       })
       .on(wire.GestureStopMessage, (_channel, message) => {
         this.gestures.stop(message.seq, message.gestureId, message.reservationId)

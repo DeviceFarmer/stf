@@ -71,8 +71,12 @@ Each channel has a bounded queue and a two-second lookup deadline. A stalled
 or overloaded channel cancels its pending requests and resets its incomplete
 gesture, without disconnecting unrelated devices. Reset messages identify the
 old gesture so they cannot cancel a newer owner's input. A fresh gesture can
-resume after authorization recovers. Ordinary iOS administrator access within
-subscribed groups remains available outside automation. If the connection reaches
+resume after authorization recovers. Outside automation, administrators with
+access to the device group can send input to another user's manual reservation.
+Those packets carry the current owner's reservation ID; the reservation check
+does not require the sender to be that owner. This preserves existing
+administrator access on Android and iOS. Automation still rejects manual input,
+including administrator input. If the connection reaches
 its limit for tracking permission changes, it denies further commands; refresh
 the page to reconnect after the database catches up.
 
@@ -80,10 +84,26 @@ Run `stf migrate` when upgrading to create the device channel index. Deploy
 websocket units and providers from the same build: during a rolling upgrade,
 update websocket units first, then release devices and restart their providers.
 Protected providers reject touch packets without the acknowledged reservation
-and server-generated gesture identity; the browser API remains unchanged.
-Gesture queues tolerate reordered transport packets, bound pending prefixes,
-and expire sequence gaps without imposing a long-press timeout. Conditional
-release requests supply both `reservationId` and `deviceChannel`; they fail if
+and server-generated gesture identity; the browser API remains unchanged. The
+identity includes its issue time. Providers accept a new gesture for ten seconds,
+allowing at most five seconds of clock lead, so keep websocket and provider host
+clocks synchronized. A gesture that has already been accepted can continue beyond
+that interval, including a long press. Idle connection sources are recycled only
+after their known gesture IDs have expired. A burst of more than 128 sources can
+temporarily reach the limit until an idle source becomes eligible for recycling.
+
+Gesture queues bound pending prefixes and wait for the previous gesture from the
+same connection to finish. A different connection takes over immediately.
+On disconnect or denied input, a source-order cancellation fence discards the
+affected waiting gestures together, before any of them can be promoted. It does
+not cancel a higher gesture counter, a different connection or another reservation.
+Missing sequence numbers can be skipped after Down when enough safe continuation
+packets are waiting; a missing first Down is not skipped. Sequence gaps expire
+without imposing a long-press timeout. Normal Android gesture completion commits
+pending releases without resetting unrelated VNC contacts. Web and VNC input
+still share contact numbers; abort cleanup can reset the shared touch consumer.
+
+Conditional release requests supply both `reservationId` and `deviceChannel`; they fail if
 the reservation changed. The existing unconditional DELETE API remains available
 for automation cleanup.
 

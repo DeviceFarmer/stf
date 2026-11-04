@@ -573,6 +573,7 @@ message TouchResetMessage {
   optional string gestureId = 2;
   optional bool cancel = 3;
   optional string reservationId = 4;
+  optional bool cancelThrough = 5;
 }
 
 message GestureStartMessage {
