@@ -16,6 +16,7 @@
 /build.mts
 /component.json
 /docker
+/kubernetes
 /eslint.config.mts
 /npm-debug.log
 /rethinkdb_data/

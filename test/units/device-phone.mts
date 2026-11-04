@@ -15,6 +15,8 @@ type Properties = Record<string, string>
 interface FetchOptions {
   fromService: Properties
   deviceProperties?: Properties
+  phoneRetries?: number
+  phoneRetryDelay?: number
   shell?: (command: string) => PromiseLike<Readable>
 }
 
@@ -37,8 +39,21 @@ function fetch(options: FetchOptions) {
   var service = {
     getProperties: sinon.stub().resolves(options.fromService)
   }
+  var pluginOptions: {
+    serial: string
+    phoneRetries?: number
+    phoneRetryDelay?: number
+  } = {
+    serial: 'test-device'
+  , phoneRetryDelay: typeof options.phoneRetryDelay === 'number' ?
+      options.phoneRetryDelay :
+      0
+  }
+  if (typeof options.phoneRetries === 'number') {
+    pluginOptions.phoneRetries = options.phoneRetries
+  }
   var result = phoneSyrup.invoke(
-    {serial: 'test-device'}
+    pluginOptions
   , adb
   , {path: '/data/app/stf.apk', main: 'jp.co.cyberagent.stf.Agent'}
   , service
@@ -201,7 +216,7 @@ describe('device phone info', function() {
       expect(command).to.contain('jp.co.cyberagent.stf.Agent')
     })
 
-  it('should leave the fields blank against an agent without the argument',
+    it('should leave the fields blank against an agent without the argument',
     async function() {
       var run = await fetch({
         fromService: {}
@@ -212,7 +227,63 @@ describe('device phone info', function() {
         }
       })
 
+      expect(run.adb.shell.calledOnce).to.equal(true)
       expect(run.properties).to.deep.equal({})
+    })
+
+  ;['READY', 'LOADED', 'ABSENT,READY'].forEach(function(state) {
+    it('should retry missing subscriber fields while SIM records finish loading in state ' + state,
+      async function() {
+        var call = 0
+        var run = await fetch({
+          fromService: {}
+        , deviceProperties: {'gsm.sim.state': state}
+        , phoneRetries: 3
+        , phoneRetryDelay: 1
+        , shell: function() {
+            call += 1
+            if (call === 1) {
+              return Promise.resolve(agentOutput(
+                'imei=867400022047199\nimsi=310260000000000\niccid=89860318640220133897\n'
+              ))
+            }
+            return Promise.resolve(agentOutput(
+              'imei=867400022047199\nimsi=310260000000000\n' +
+              'iccid=89860318640220133897\nphoneNumber=+15551234567\n'
+            ))
+          }
+        })
+
+        expect(run.adb.shell.callCount).to.equal(2)
+        expect(run.properties).to.deep.equal({
+          imei: '867400022047199'
+        , imsi: '310260000000000'
+        , iccid: '89860318640220133897'
+        , phoneNumber: '+15551234567'
+        })
+      })
+  })
+
+  it('should stop retrying after phoneRetries when a SIM has no phoneNumber',
+    async function() {
+      var run = await fetch({
+        fromService: {}
+      , deviceProperties: {'gsm.sim.state': 'READY'}
+      , phoneRetries: 2
+      , phoneRetryDelay: 1
+      , shell: function() {
+          return Promise.resolve(agentOutput(
+            'imei=867400022047199\nimsi=310260000000000\niccid=89860318640220133897\n'
+          ))
+        }
+      })
+
+      expect(run.adb.shell.callCount).to.equal(3)
+      expect(run.properties).to.deep.equal({
+        imei: '867400022047199'
+      , imsi: '310260000000000'
+      , iccid: '89860318640220133897'
+      })
     })
 
   it('should never overwrite what the service already answered',
