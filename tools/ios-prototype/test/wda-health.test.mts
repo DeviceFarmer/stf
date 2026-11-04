@@ -55,6 +55,7 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
   let mode: 'ready' | 'blocked' | 'invalid' | 'hung' | 'slow-checks' = 'ready'
   let pendingHealth: AbortSignal | null = null
   let pendingLock = false
+  let pendingLockSignal: AbortSignal | null = null
   let gatedSession = false
   let release: () => void = () => {}
   let blocked: Promise<void> = Promise.resolve()
@@ -92,6 +93,7 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
     }
     if (mode === 'slow-checks' && lock && gatedSession) {
       pendingLock = true
+      pendingLockSignal = healthSignals.at(-1)!
       await lockGate
     }
     if (res.destroyed) {
@@ -172,10 +174,14 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
   , healthStarted: () => pendingHealth !== null
   , healthSignal: () => pendingHealth!
   , lockStarted: () => pendingLock
+  , lockSignal: () => pendingLockSignal!
   , deleted: () => calls.some(call => call.method === 'DELETE')
   , setMode: (value: typeof mode) => {
       calls.length = 0
       pendingHealth = null
+      pendingLock = false
+      pendingLockSignal = null
+      gatedSession = false
       mode = value
       if (value === 'blocked') {
         blocked = new Promise<void>(resolve => {
@@ -198,7 +204,11 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
   , lock: () => {
       locked = true
     }
-  , releaseSession: () => releaseSession()}
+  , releaseSession: () => releaseSession()
+  , releaseLock: () => {
+      mode = 'ready'
+      releaseLock()
+    }}
 }
 
 describe('WDA session health budget', () => {
@@ -258,17 +268,61 @@ describe('WDA session health budget', () => {
     await until(() => f.sessions() === f.baseline.sessions + 1 && f.runtime.state === 'ready')
   })
 
-  it('shares one finite budget across the session and lock checks', async(t) => {
+  it('gives the session and lock checks separate health timeouts', async(t) => {
+    const f = await fixture(t)
+    f.setMode('slow-checks')
+    f.lock()
+    await until(() => f.healthStarted())
+    f.clock.advance(400)
+    f.releaseSession()
+    await until(() => f.lockStarted())
+    // The combined 600 ms exceeds the 500 ms timeout, but neither check does.
+    f.clock.advance(200)
+    assert.equal(f.lockSignal().aborted, false)
+    f.releaseLock()
+    await until(() => f.runtime.telemetry.status.locked === true)
+    assert.equal(f.runtime.state, 'ready')
+    assert.equal(f.runtime.generation, f.baseline.generation)
+    assert.equal(f.wda.sessionId, f.baseline.sessionId)
+    assert.equal(f.sessions(), f.baseline.sessions)
+    assert.deepEqual(f.children.filter(child => !child.stopped), f.baseline.children)
+    assert.equal(f.deleted(), false)
+  })
+
+  it('recovers when the lock check exhausts its own health timeout', async(t) => {
     const f = await fixture(t)
     f.setMode('slow-checks')
     await until(() => f.healthStarted())
-    f.clock.advance(300)
+    f.clock.advance(400)
     f.releaseSession()
     await until(() => f.lockStarted())
-    f.clock.advance(200)
+    f.clock.advance(499)
+    assert.equal(f.lockSignal().aborted, false)
+    assert.equal(f.runtime.generation, f.baseline.generation)
+    assert.equal(f.deleted(), false)
+    f.clock.advance(1)
     await until(() => f.runtime.generation > f.baseline.generation)
     assert.match(f.runtime.lastError!, /timeout/i)
-    await until(() => f.deleted())
+    f.releaseLock()
+    await until(() => f.deleted() && f.baseline.children.every(child => child.stopped))
+    await until(() => f.sessions() === f.baseline.sessions + 1 && f.runtime.state === 'ready')
+  })
+
+  it('cancels the lock check when the runtime stops', async(t) => {
+    const f = await fixture(t, {healthTimeout: 5000})
+    f.setMode('slow-checks')
+    await until(() => f.healthStarted())
+    f.clock.advance(4000)
+    f.releaseSession()
+    await until(() => f.lockStarted())
+    assert.equal(f.lockSignal().aborted, false)
+    const stopped = f.runtime.stop()
+    await until(() => f.runtime.state === 'stopped')
+    await stopped
+    assert.equal(f.lockSignal().aborted, true)
+    assert.equal(f.deleted(), true)
+    assert.ok(f.children.every(child => child.stopped))
+    assert.equal(f.sessions(), f.baseline.sessions)
   })
 
   it('cancels an in-flight health check when the runtime stops', async(t) => {

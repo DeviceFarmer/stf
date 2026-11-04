@@ -55,12 +55,12 @@ export class WdaClient {
       throw new Error('WDA session is not ready')
     }
     const path = '/session/' + encodeURIComponent(this.sessionId)
-    // An external WDA command can keep XCTest busy longer than an input request.
-    const active = AbortSignal.any([
+    // Each health check may wait behind a different external XCTest command.
+    const healthSignal = () => AbortSignal.any([
       AbortSignal.timeout(this.healthTimeout), ...(signal ? [signal] : [])
     ])
-    await this.requestWithSignal('GET', path, undefined, active)
-    return this.requestWithSignal('GET', path + '/wda/locked', undefined, active)
+    await this.requestWithSignal('GET', path, undefined, healthSignal())
+    return this.requestWithSignal('GET', path + '/wda/locked', undefined, healthSignal())
   }
 
   async open(): Promise<void> {
