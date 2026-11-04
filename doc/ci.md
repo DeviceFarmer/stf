@@ -309,16 +309,22 @@ which one applies depends on whether the emulator was ever reached.
 packages that are already on the image, caps `apt-get update` at
 `APT_UPDATE_TIMEOUT` seconds (120 by default) because a stalling mirror will
 otherwise spend the whole step budget inside apt's own retries, and then retries
-the install three times, refreshing the indexes between the tries. The Playwright
-install is wrapped in `retry.sh`, since `playwright install --with-deps` shells
-out to apt as well and reports a failure there as a bare
-`Installation process exited with code: 100`. The Android SDK packages the
+the install three times, refreshing the indexes between the tries. `build`
+caches `test/playwright/node_modules` and `~/.cache/ms-playwright` for the
+browser jobs, and `.github/scripts/install-playwright.sh` installs only the
+Chromium binary under `retry.sh` and smoke-tests `chromium.launch()` before
+touching apt at all (routing any missing library packages from
+`playwright install-deps --dry-run` through `apt-install.sh`), because
+`playwright install --with-deps` otherwise runs a bare `apt-get` across every
+leg even when `ubuntu-24.04` already has every shared library Chromium links
+against. The Android SDK packages the
 emulator action needs (platform, emulator, system image) are installed ahead of
 it by `install-android-sdk.sh` under `retry.sh`, because the action downloads
 them once with no retry and a truncated archive from `dl.google.com` would
 otherwise fail the leg before the emulator starts.
 
-**From the emulator on**, the leg itself is retried once. The verdict is derived,
+**From the emulator on**, each Android matrix leg (and the `compose` AVD leg)
+is retried once. The verdict is derived,
 and if it failed the leg runs a second time from a fresh AVD and the second
 verdict is the one recorded. The gate is the verdict rather than the emulator
 step's exit status on purpose: `android-leg.sh` never exits non-zero for a test
