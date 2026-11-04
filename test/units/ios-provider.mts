@@ -124,7 +124,14 @@ describe('Linux iOS integration', function() {
       ], usage), true)
       await until(() => bridge.owner !== null)
     }
-    return {bridge, client, state, requests, sent, send, join, errors
+    const gestures = new Map<number, string>()
+    const gesture = (order: number) => {
+      if (!gestures.has(order)) {
+        gestures.set(order, '11111111-1111-4111-8111-111111111111:' + order + ':' + Date.now())
+      }
+      return {gestureId: gestures.get(order)!, reservationId: bridge.owner?.reservationId || null}
+    }
+    return {bridge, client, state, requests, sent, send, join, gesture, errors
       , failKeepalive: () => {
  failKeepalive = true
 }
@@ -293,8 +300,11 @@ describe('Linux iOS integration', function() {
     assert.equal(identity.platform, 'iOS')
     assert.equal(identity.model, 'iPhone17,4')
     assert.equal(identity.display.width, 1290)
-    f.send(new wire.TouchDownMessage(0, 0, 0.3, 0.4))
-    f.send(new wire.TouchUpMessage(1, 0))
+    const gesture = f.gesture(1)
+    f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
+    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...gesture}))
+    f.send(new wire.GestureStopMessage({seq: 3, ...gesture}))
     f.send(new wire.PasteMessage('Hello iPhone'), true)
     f.send(new wire.KeyPressMessage('home'))
     await until(() => f.requests.length === 3)
@@ -368,62 +378,329 @@ describe('Linux iOS integration', function() {
     await until(() => f.bridge.owner === null)
   })
 
-  it('ignores a scoped reset from a previous gesture', async function() {
+  it('reorders an iOS gesture whose prefix and Stop arrive before Start', async function() {
     const f = await fixture()
     await f.join()
-    f.send(new wire.GestureStartMessage(0, 'old-gesture'))
-    f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
-    f.send(new wire.GestureStartMessage(2, 'current-gesture'))
-    f.send(new wire.TouchDownMessage(3, 0, 0.7, 0.8))
-    f.send(new wire.TouchResetMessage(0, 'old-gesture'))
-    f.send(new wire.TouchUpMessage(4, 0))
+    const gesture = f.gesture(1)
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+    f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+    assert.equal(f.requests.length, 0)
+    f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
     await until(() => f.requests.length === 1)
     assert.equal(f.requests[0]!.path, '/tap')
-    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
-    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
   })
 
-  it('clears scoped gesture state when a reservation ends', async function() {
+  it('preserves swipe arrival duration when Start arrives 1.4 seconds late', async function() {
     const f = await fixture()
     await f.join()
-    f.send(new wire.GestureStartMessage(0, 'previous-session'))
-    f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
-    f.bridge.leave('test')
-    await f.join()
-    // Legacy clients can start a gesture without a token after the old session.
-    f.send(new wire.TouchDownMessage(0, 0, 0.7, 0.8))
-    f.send(new wire.TouchResetMessage(0, 'previous-session'))
-    f.send(new wire.TouchUpMessage(1, 0))
-    await until(() => f.requests.length === 1)
-    assert.equal(f.requests[0]!.path, '/tap')
-    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
-    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+    const clock = sinon.useFakeTimers({toFake: ['performance']})
+    try {
+      const gesture = f.gesture(1)
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
+      clock.tick(1400)
+      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      await until(() => f.requests.length === 1)
+      assert.equal(f.requests[0]!.path, '/swipe')
+      assert.equal(f.requests[0]!.body.durationMs, 1400)
+    }
+    finally {
+      clock.restore()
+    }
   })
 
-  for (const resetId of ['current-gesture', null]) {
-    it(`cancels touch with a ${resetId ? 'matching scoped' : 'legacy'} reset`, async function() {
+  for (const lateStart of [false, true]) {
+    it(`recovers a missing Move with ${lateStart ? 'late' : 'early'} Start`, async function() {
       const f = await fixture()
       await f.join()
-      f.send(new wire.GestureStartMessage(0, 'current-gesture'))
-      f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
-      f.send(new wire.TouchResetMessage(2, resetId))
-      f.send(new wire.TouchUpMessage(3, 0))
-      // Use the ordered command queue as a barrier after the rejected tap.
+      const clock = sinon.useFakeTimers({toFake: ['performance']})
+      try {
+        const gesture = f.gesture(1)
+        if (!lateStart) {
+          f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+        }
+        f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
+        clock.tick(1400)
+        // Move 2 is lost; four later packets make the gap safe to skip.
+        f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.3, y: 0.2, ...gesture}))
+        f.send(new wire.TouchCommitMessage({seq: 4, ...gesture}))
+        f.send(new wire.TouchUpMessage({seq: 5, contact: 0, ...gesture}))
+        f.send(new wire.TouchCommitMessage({seq: 6, ...gesture}))
+        f.send(new wire.GestureStopMessage({seq: 7, ...gesture}))
+        if (lateStart) {
+          f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+        }
+        await until(() => f.requests.length === 1)
+        assert.equal(f.requests[0]!.path, '/swipe')
+        assert.equal(f.requests[0]!.body.durationMs, 1400)
+        assert.equal(f.requests[0]!.body.to.y, Math.fround(0.2))
+        const next = f.gesture(2)
+        f.send(new wire.GestureStartMessage({seq: 0, ...next}))
+        f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
+        f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...next}))
+        f.send(new wire.GestureStopMessage({seq: 3, ...next}))
+        await until(() => f.requests.length === 2)
+        assert.equal(f.requests[1]!.path, '/tap')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+  }
+
+  it('does not add command queue delay to the swipe duration', async function() {
+    const f = await fixture()
+    await f.join()
+    let release: () => void = () => {}
+    const gate = new Promise<void>(resolve => {
+      release = resolve
+    })
+    const device = f.client.device.bind(f.client)
+    const load = sinon.stub(f.client, 'device').callsFake(async() => {
+      await gate
+      return device()
+    })
+    const clock = sinon.useFakeTimers({toFake: ['performance']})
+    try {
+      f.send(new wire.KeyPressMessage('home'))
+      await until(() => load.called)
+      const gesture = f.gesture(1)
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
+      clock.tick(300)
+      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+      clock.tick(1100)
+      release()
+      await until(() => f.requests.length === 2)
+      assert.deepEqual(f.requests.map(request => request.path), ['/home', '/swipe'])
+      assert.equal(f.requests[1]!.body.durationMs, 300)
+    }
+    finally {
+      release()
+      load.restore()
+      clock.restore()
+    }
+  })
+
+  for (const taps of [2, 3]) {
+    it(`keeps all ${taps} taps when their prefix arrives before Start`, async function() {
+      const f = await fixture()
+      await f.join()
+      const gesture = f.gesture(1)
+      f.send(new wire.GestureStopMessage({seq: taps * 2 + 1, ...gesture}))
+      for (let tap = taps - 1; tap >= 0; tap--) {
+        f.send(new wire.TouchUpMessage({seq: tap * 2 + 2, contact: 0, ...gesture}))
+        f.send(new wire.TouchDownMessage({
+          seq: tap * 2 + 1, contact: 0, x: 0.3 + tap * 0.1, y: 0.4, ...gesture
+        }))
+      }
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      await until(() => f.requests.length === taps)
+      assert.deepEqual(f.requests.map(request => request.path), Array(taps).fill('/tap'))
+      assert.deepEqual(f.requests.map(request => request.body.x),
+        Array.from({length: taps}, (_, tap) => Math.fround(0.3 + tap * 0.1)))
+    })
+  }
+
+  it('cancels an ambiguous reordered swipe and accepts the next gesture', async function() {
+    const f = await fixture()
+    await f.join()
+    const clock = sinon.useFakeTimers({toFake: ['performance']})
+    try {
+      const ambiguous = f.gesture(1)
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...ambiguous}))
+      clock.tick(1400)
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...ambiguous}))
+      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...ambiguous}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...ambiguous}))
+      f.send(new wire.GestureStartMessage({seq: 0, ...ambiguous}))
+      const next = f.gesture(2)
+      f.send(new wire.GestureStartMessage({seq: 0, ...next}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
+      clock.tick(300)
+      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.7, y: 0.2, ...next}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...next}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...next}))
+      await until(() => f.requests.length >= 1)
+      assert.equal(f.requests.length, 1)
+      assert.equal(f.requests[0]!.body.from.x, Math.fround(0.7))
+      assert.equal(f.requests[0]!.body.durationMs, 300)
+      assert.match(String(f.errors[0]), /duration.*unknown/i)
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  for (const [elapsed, expected] of [[0, 50], [6000, 5000]] as const) {
+    it(`bounds a ${elapsed} ms swipe to ${expected} ms`, async function() {
+      const f = await fixture()
+      await f.join()
+      const clock = sinon.useFakeTimers({toFake: ['performance']})
+      try {
+        const gesture = f.gesture(1)
+        f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+        f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
+        clock.tick(elapsed)
+        f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...gesture}))
+        f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+        f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+        await until(() => f.requests.length === 1)
+        assert.equal(f.requests[0]!.body.durationMs, expected)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+  }
+
+  it('drops swipe timing from the previous owner', async function() {
+    const f = await fixture()
+    await f.join()
+    const clock = sinon.useFakeTimers({toFake: ['performance']})
+    try {
+      const old = f.gesture(1)
+      f.send(new wire.GestureStartMessage({seq: 0, ...old}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...old}))
+      clock.tick(3000)
+      f.bridge.leave('test')
+      await f.join()
+      f.send(new wire.GestureStartMessage({seq: 0, ...old}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...old}))
+      const gesture = f.gesture(2)
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...gesture}))
+      clock.tick(300)
+      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.7, y: 0.2, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+      await until(() => f.requests.length === 1)
+      assert.equal(f.requests[0]!.path, '/swipe')
+      assert.equal(f.requests[0]!.body.durationMs, 300)
+      assert.equal(f.requests[0]!.body.from.x, Math.fround(0.7))
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('ignores a scoped reset and delayed Start from a previous gesture', async function() {
+    const f = await fixture()
+    await f.join()
+    const old = f.gesture(1); const current = f.gesture(2)
+    f.send(new wire.GestureStartMessage({seq: 0, ...old}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
+    f.send(new wire.GestureStartMessage({seq: 2, ...current}))
+    f.send(new wire.TouchDownMessage({seq: 3, contact: 0, x: 0.7, y: 0.8, ...current}))
+    f.send(new wire.TouchResetMessage({seq: 0, ...old, cancel: true}))
+    f.send(new wire.GestureStartMessage({seq: 0, ...old}))
+    f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 5, ...current}))
+    await until(() => f.requests.length === 1)
+    assert.equal(f.requests[0]!.path, '/tap')
+    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
+    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+  })
+
+  it('fences delayed gesture input across an ownership change', async function() {
+    const f = await fixture()
+    await f.join()
+    const old = f.gesture(1)
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
+    f.bridge.leave('test')
+    await f.join()
+    const current = f.gesture(2)
+    f.send(new wire.GestureStartMessage({seq: 0, ...old}))
+    f.send(new wire.GestureStartMessage({seq: 0, ...current}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...current}))
+    f.send(new wire.TouchResetMessage({seq: 0, ...old, cancel: true}))
+    for (const reservationId of [old.reservationId, null]) {
+      for (const cancel of [true, null]) {
+        f.send(new wire.TouchResetMessage({seq: 0, gestureId: null, reservationId, cancel}))
+      }
+    }
+    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 3, ...current}))
+    await until(() => f.requests.length === 1)
+    assert.equal(f.requests[0]!.path, '/tap')
+    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
+    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+  })
+
+  it('cancels a gesture range before promoting its buffered taps', async function() {
+    const f = await fixture()
+    await f.join()
+    const first = f.gesture(1)
+    f.send(new wire.GestureStartMessage({seq: 0, ...first}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...first}))
+    for (const order of [2, 3]) {
+      const gesture = f.gesture(order)
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.4, y: 0.5, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 3, ...gesture}))
+    }
+    f.send(new wire.TouchResetMessage({seq: 0, ...f.gesture(3), cancel: true, cancelThrough: true}))
+    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...first}))
+    f.send(new wire.GestureStopMessage({seq: 3, ...first}))
+    const next = f.gesture(4)
+    f.send(new wire.GestureStartMessage({seq: 0, ...next}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
+    f.send(new wire.TouchResetMessage({seq: 0, ...f.gesture(3), cancel: true, cancelThrough: true}))
+    f.send(new wire.TouchResetMessage({seq: 0, ...next, reservationId: 'another-reservation'
+      , cancel: true, cancelThrough: true}))
+    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...next}))
+    f.send(new wire.GestureStopMessage({seq: 3, ...next}))
+    await until(() => f.requests.length >= 1)
+    assert.equal(f.requests.length, 1)
+    assert.equal(f.requests[0]!.path, '/tap')
+    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
+    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+  })
+
+  for (const cancel of [true, false]) {
+    it(`cancels iOS touch with a ${cancel ? 'scoped' : 'sequenced'} reset`, async function() {
+      const f = await fixture()
+      await f.join()
+      const gesture = f.gesture(1)
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...gesture}))
+      f.send(new wire.TouchResetMessage({seq: 2, ...gesture, cancel}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
       f.send(new wire.KeyPressMessage('home'))
       await until(() => f.requests.length === 1)
       assert.deepEqual(f.requests.map(item => item.path), ['/home'])
     })
   }
 
-  it('retains scoped cleanup across a legacy reset within a gesture', async function() {
+  it('retains scoped cleanup after a sequenced reset within a gesture', async function() {
     const f = await fixture()
     await f.join()
-    f.send(new wire.GestureStartMessage(0, 'current-gesture'))
-    f.send(new wire.TouchDownMessage(1, 0, 0.2, 0.3))
-    f.send(new wire.TouchResetMessage(2))
-    f.send(new wire.TouchDownMessage(3, 0, 0.7, 0.8))
-    f.send(new wire.TouchResetMessage(0, 'current-gesture'))
-    f.send(new wire.TouchUpMessage(4, 0))
+    const gesture = f.gesture(1)
+    f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...gesture}))
+    f.send(new wire.TouchResetMessage({seq: 2, ...gesture, cancel: false}))
+    f.send(new wire.TouchDownMessage({seq: 3, contact: 0, x: 0.7, y: 0.8, ...gesture}))
+    f.send(new wire.TouchResetMessage({seq: 0, ...gesture, cancel: true}))
+    f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...gesture}))
+    f.send(new wire.KeyPressMessage('home'))
+    await until(() => f.requests.length === 1)
+    assert.deepEqual(f.requests.map(item => item.path), ['/home'])
+  })
+
+  it('refuses legacy touch without protected reservation and gesture identities', async function() {
+    const f = await fixture()
+    await f.join()
+    f.send(new wire.GestureStartMessage(0))
+    f.send(new wire.TouchDownMessage(1, 0, 0.3, 0.4))
+    f.send(new wire.TouchUpMessage(2, 0))
     f.send(new wire.KeyPressMessage('home'))
     await until(() => f.requests.length === 1)
     assert.deepEqual(f.requests.map(item => item.path), ['/home'])
@@ -450,12 +727,21 @@ describe('Linux iOS integration', function() {
   it('does not turn a multi-finger gesture into an unintended tap', async function() {
     const f = await fixture()
     await f.join()
-    f.send(new wire.TouchDownMessage(0, 0, 0.3, 0.4))
-    f.send(new wire.TouchDownMessage(1, 1, 0.6, 0.4))
-    f.send(new wire.TouchUpMessage(2, 0))
-    f.send(new wire.GestureStopMessage(3))
+    const gesture = f.gesture(1)
+    f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
+    f.send(new wire.TouchDownMessage({seq: 2, contact: 1, x: 0.6, y: 0.4, ...gesture}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
     await new Promise(resolve => setTimeout(resolve, 30))
     assert.equal(f.requests.length, 0)
+    const next = f.gesture(2)
+    f.send(new wire.GestureStartMessage({seq: 5, ...next}))
+    f.send(new wire.TouchDownMessage({seq: 6, contact: 0, x: 0.7, y: 0.8, ...next}))
+    f.send(new wire.TouchUpMessage({seq: 7, contact: 0, ...next}))
+    f.send(new wire.GestureStopMessage({seq: 8, ...next}))
+    await until(() => f.requests.length === 1)
+    assert.equal(f.requests[0]!.path, '/tap')
   })
 
   it('accepts IPA blobs only and binds job status and cancellation to ownership', async function() {
