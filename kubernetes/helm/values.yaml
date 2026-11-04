@@ -79,6 +79,15 @@ proxy:
   resources:
     requests: {cpu: 25m, memory: 32Mi}
     limits: {cpu: '1', memory: 256Mi}
+networkPolicy:
+  # Only pods of this release may reach internal units; needs an enforcing CNI.
+  enabled: true
+  # NetworkPolicyPeers allowed to reach the proxy in addition to this release's
+  # pods; empty allows any source.
+  proxyFrom: []
+  # NetworkPolicyPeers for providers of other releases that connect to this
+  # release's triproxy-dev; they get its pub and pull ports only.
+  remoteProvidersFrom: []
 core:
   nodeSelector: {}
   tolerations: []

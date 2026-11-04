@@ -59,6 +59,7 @@ Keep installation values in an environment-specific file outside the STF checkou
 | `database.external` | External host, port and optional existing authentication Secret |
 | `database.persistence` | Database claim, StorageClass and size |
 | `storage.persistence` | Optional persistent upload volume; temporary storage metadata remains process-local |
+| `networkPolicy` | Ingress isolation of internal units, allowed proxy sources and remote providers |
 | `proxy.ingress` | Optional Ingress, controller class, annotations and existing TLS Secret references |
 | `core.nodeSelector`, `core.units` | Core scheduling and per-unit overrides |
 | `ports.http`, `messaging.app`, `messaging.dev` | HTTP and ZeroMQ ports; override when adopting existing endpoints |
@@ -70,6 +71,17 @@ Keep installation values in an environment-specific file outside the STF checkou
 The bundled database is a single StatefulSet, not a highly available database service. If `database.bundled: false`, set `database.external.host`, port and database name, and verify the database is reachable from the release namespace. Refer to [`values.yaml`](values.yaml) for the exact keys. A claim alone does not preserve in-progress upload metadata across a storage-process restart.
 
 For remote access, set `publicOrigin` to the URL users open and configure `proxy.ingress` or an equivalent private gateway. Keep HTTP and WebSocket traffic on that same origin. TLS certificates and DNS records are operator inputs.
+
+## Network isolation
+
+RethinkDB, the ZeroMQ triproxies, provider ports and USB ADB servers do not authenticate their clients. By default the chart renders NetworkPolicies so that internal units accept connections only from pods of the same release, and the proxy accepts connections on its HTTP port. Public HTTP and WebSocket routes must enter through the chart proxy. Existing Ingress routes that target core Services directly need to be moved to the proxy or covered by separately reviewed policies. Egress is not restricted. The policies take effect only with a CNI plugin that enforces NetworkPolicy; without one, every unit is reachable from any pod in the cluster.
+
+- `networkPolicy.proxyFrom` narrows who can reach the proxy, for example to the Ingress controller's namespace. Pods of the release are always allowed. Traffic arriving through a NodePort or LoadBalancer Service, or from a `hostNetwork` Ingress controller, comes from node addresses that a `namespaceSelector` does not match; add an `ipBlock` for them or leave `proxyFrom` empty.
+- `networkPolicy.remoteProvidersFrom` admits providers of another release to this release's `triproxy-dev` pub and pull ports only. Their storage/API requests also need HTTP access; include those sources in `proxyFrom` when restricting the proxy, or add a narrow policy for direct internal access.
+- `proxy.extraScreenRoutes` pointing at iOS screen Services of another release need a policy in that release admitting this release's proxy on port 17440.
+- Network selectors use fixed release and component labels on pod templates, independently of `selectorOverrides`. Legacy Deployment and Service selectors stay unchanged. Overrides may omit these labels, but conflicting values are rejected while isolation is enabled.
+- Existing NetworkPolicies are additive: another policy can allow traffic this chart does not. Review them when adopting an existing installation. Externally managed databases and ADB servers need their own policies.
+- Additional services such as Appium or a coordinator need narrowly scoped policies for their required connections; do not grant them unrestricted access to the internal units.
 
 ## USB providers
 
@@ -117,7 +129,11 @@ ios:
         size: 5Gi
 ```
 
-The [USB values example](examples/usb.yaml) combines Android and iOS configuration. Replace its synthetic identifiers and image before applying it. Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](../../doc/ios-provider.md).
+The [USB values example](examples/usb.yaml) combines Android and iOS configuration with OAuth2 for its public Ingress. Replace the domain, identity-provider URLs, device identifiers and runtime image before applying it.
+
+Register the OAuth client callback as `https://stf.example.com/auth/oauth/callback` and create an existing Secret named `stf-oauth` in the release namespace with keys `STF_AUTH_OAUTH2_OAUTH_CLIENT_ID` and `STF_AUTH_OAUTH2_OAUTH_CLIENT_SECRET`. Keep the secret values out of Helm values files. The provider's UserInfo response must include `email`; `email_verified: false` is rejected.
+
+Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](../../doc/ios-provider.md).
 
 ## Database migration and upgrades
 

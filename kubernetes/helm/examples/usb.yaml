@@ -2,6 +2,17 @@
 session:
   existingSecret: stf-session
 publicOrigin: https://stf.example.com
+# The Ingress below makes the farm reachable, so replace the default mock login.
+# stf-oauth holds STF_AUTH_OAUTH2_OAUTH_CLIENT_ID and STF_AUTH_OAUTH2_OAUTH_CLIENT_SECRET.
+auth:
+  type: oauth2
+  existingSecret: stf-oauth
+  env:
+    STF_AUTH_OAUTH2_OAUTH_AUTHORIZATION_URL: https://idp.example.com/oauth2/authorize
+    STF_AUTH_OAUTH2_OAUTH_TOKEN_URL: https://idp.example.com/oauth2/token
+    STF_AUTH_OAUTH2_OAUTH_USERINFO_URL: https://idp.example.com/oauth2/userinfo
+    STF_AUTH_OAUTH2_OAUTH_CALLBACK_URL: https://stf.example.com/auth/oauth/callback
+    STF_AUTH_OAUTH2_OAUTH_SCOPE: openid email profile
 proxy:
   ingress:
     enabled: true

@@ -22,11 +22,19 @@ app.kubernetes.io/instance: {{ .root.Release.Name | quote }}
 app.kubernetes.io/component: {{ .component | quote }}
 {{- end -}}
 {{- end -}}
+{{- define "stf.podLabels" -}}
+{{- $labels := include "stf.selector" . | fromYaml -}}
+{{- if .root.Values.networkPolicy.enabled -}}
+{{- $_ := set $labels "app.kubernetes.io/instance" .root.Release.Name -}}
+{{- $_ := set $labels "app.kubernetes.io/component" .component -}}
+{{- end -}}
+{{ toYaml $labels }}
+{{- end -}}
 {{- define "stf.dbhost" -}}
 {{- if .Values.database.bundled -}}{{ include "stf.name" (dict "root" . "component" "rethinkdb") }}{{- else -}}{{ required "database.external.host is required for an external database" .Values.database.external.host }}{{- end -}}
 {{- end -}}
 {{- define "stf.migration" -}}
-{{- $fingerprint := dict "image" .Values.image "database" .Values.database "bootstrap" .Values.bootstrap "revision" .Values.migration "session" .Values.session "pullSecrets" .Values.imagePullSecrets "resources" .Values.core.resources "databaseHost" (include "stf.dbhost" .) "environment" (include "stf.env" .) "migrateLabels" (include "stf.selector" (dict "root" . "component" "migrate")) "httpPort" .Values.ports.http -}}
+{{- $fingerprint := dict "image" .Values.image "database" .Values.database "bootstrap" .Values.bootstrap "revision" .Values.migration "session" .Values.session "pullSecrets" .Values.imagePullSecrets "resources" .Values.core.resources "databaseHost" (include "stf.dbhost" .) "environment" (include "stf.env" .) "migrateLabels" (include "stf.podLabels" (dict "root" . "component" "migrate")) "httpPort" .Values.ports.http -}}
 {{- printf "%s-%s" (include "stf.name" (dict "root" . "component" "migrate") | trunc 52 | trimSuffix "-") (toJson $fingerprint | sha256sum | trunc 10) -}}
 {{- end -}}
 {{- define "stf.env" -}}

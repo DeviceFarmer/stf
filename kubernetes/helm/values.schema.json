@@ -553,6 +553,175 @@
         }
       },
       "additionalProperties": false
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "proxyFrom": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/networkPolicyPeer"
+          }
+        },
+        "remoteProvidersFrom": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/networkPolicyPeer"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "networkPolicyPeer": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "podSelector": {
+          "$ref": "#/definitions/networkPolicyLabelSelector"
+        },
+        "namespaceSelector": {
+          "$ref": "#/definitions/networkPolicyLabelSelector"
+        },
+        "ipBlock": {
+          "type": "object",
+          "required": [
+            "cidr"
+          ],
+          "properties": {
+            "cidr": {
+              "type": "string",
+              "minLength": 1
+            },
+            "except": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "ipBlock"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "podSelector"
+                ]
+              },
+              {
+                "required": [
+                  "namespaceSelector"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "podSelector"
+              ]
+            },
+            {
+              "required": [
+                "namespaceSelector"
+              ]
+            }
+          ],
+          "not": {
+            "required": [
+              "ipBlock"
+            ]
+          }
+        }
+      ]
+    },
+    "networkPolicyLabelSelector": {
+      "type": "object",
+      "properties": {
+        "matchLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "matchExpressions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "operator"
+            ],
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "operator": {
+                "enum": [
+                  "In",
+                  "NotIn",
+                  "Exists",
+                  "DoesNotExist"
+                ]
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "operator": {
+                      "enum": [
+                        "In",
+                        "NotIn"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "values"
+                  ],
+                  "properties": {
+                    "values": {
+                      "minItems": 1
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "values": {
+                      "maxItems": 0
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

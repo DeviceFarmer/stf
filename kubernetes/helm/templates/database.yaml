@@ -20,7 +20,7 @@ spec:
     matchLabels: {{ include "stf.selector" (dict "root" . "component" "rethinkdb") | nindent 6 }}
   template:
     metadata:
-      labels: {{ include "stf.selector" (dict "root" . "component" "rethinkdb") | nindent 8 }}
+      labels: {{ include "stf.podLabels" (dict "root" . "component" "rethinkdb") | nindent 8 }}
     spec:
       automountServiceAccountToken: false
       {{- with .Values.imagePullSecrets }}

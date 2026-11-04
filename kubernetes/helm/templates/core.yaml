@@ -42,7 +42,7 @@ spec:
     matchLabels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 6 }}
   template:
     metadata:
-      labels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 8 }}
+      labels: {{ include "stf.podLabels" (dict "root" $r "component" $component) | nindent 8 }}
       annotations:
         checksum/config: {{ toJson (dict "publicOrigin" $r.Values.publicOrigin "auth" $r.Values.auth "session" $r.Values.session "database" $r.Values.database "migration" (include "stf.migration" $r)) | sha256sum }}
         {{- with $r.Values.core.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}

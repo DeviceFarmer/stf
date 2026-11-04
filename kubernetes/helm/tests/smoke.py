@@ -49,6 +49,7 @@ class Smoke:
         self.checks = []
         self.admin_email = 'chart-admin@example.test'
         self.admin_name = 'Chart administrator'
+        self.network_results = []
         self.jar = http.cookiejar.CookieJar()
         self.client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar))
         self.anonymous = urllib.request.build_opener()
@@ -76,9 +77,9 @@ class Smoke:
             raise SmokeError('Command failed: ' + args[0] + ' (see sanitized commands.log)')
         return result
 
-    def kubectl(self, *args, **kwargs):
+    def kubectl(self, *args, namespace='stf-smoke', **kwargs):
         return self.command([self.args.kubectl, '--kubeconfig', str(self.kubeconfig),
-                             '--context', self.context, '-n', 'stf-smoke', *args], **kwargs)
+                             '--context', self.context, '-n', namespace, *args], **kwargs)
 
     def step(self, text):
         self.stage = text
@@ -143,11 +144,13 @@ class Smoke:
             self.forward_log.close()
             self.forward_log = None
 
-    def install(self, revision):
+    def install(self, revision, network_policy=None):
         values = {'session': {'existingSecret': 'stf-session'},
                   'publicOrigin': self.origin,
                   'database': {'persistence': {'enabled': True}},
                   'migration': {'revision': revision}}
+        if network_policy is not None:
+            values['networkPolicy'] = network_policy
         if revision == 'fresh':
             values['bootstrap'] = {'adminName': self.admin_name, 'adminEmail': self.admin_email}
         if self.args.image:
@@ -216,11 +219,146 @@ class Smoke:
         self.require(self.http('/api/v1/devices', client=self.anonymous)[0] == 401,
                      'Unauthenticated device access was not rejected')
 
+    def network_targets(self):
+        services = json.loads(self.kubectl('get', 'services', '-o', 'json').stdout)['items']
+        services = {service['metadata']['name']: service['spec'] for service in services}
+        targets = []
+        for name, service, port in [
+                ('database', 'stf-rethinkdb', 'driver'),
+                ('proxy', 'stf-proxy', 'http'),
+                ('api', 'stf-api', 'http'),
+                ('dev-pub', 'stf-triproxy-dev', 'pub'),
+                ('dev-pull', 'stf-triproxy-dev', 'pull'),
+                ('dev-dealer', 'stf-triproxy-dev', 'dealer'),
+                ('app-pub', 'stf-triproxy-app', 'pub'),
+                ('app-pull', 'stf-triproxy-app', 'pull'),
+                ('app-dealer', 'stf-triproxy-app', 'dealer')]:
+            spec = services[service]
+            endpoint = next(item['port'] for item in spec['ports'] if item['name'] == port)
+            targets.append({'name': name, 'host': spec['clusterIP'], 'port': endpoint})
+        return targets
+
+    def probe(self, role, namespace, labels, targets, expected):
+        # Reuse the installed image. Structured arguments avoid shell interpolation,
+        # and a failed/image-pending pod must never count as a denied connection.
+        image = json.loads(self.kubectl('get', 'deployment', 'stf-api', '-o', 'json')
+                           .stdout)['spec']['template']['spec']['containers'][0]['image']
+        script = r"""
+import net from 'node:net'
+await new Promise(resolve => setTimeout(resolve, 2000))
+const results = []
+for (const target of JSON.parse(process.argv[1])) {
+  results.push(await new Promise(resolve => {
+    const socket = net.createConnection({host: target.host, port: target.port})
+    let complete = false
+    const finish = (reachable, error = null) => {
+      if (complete) return
+      complete = true
+      socket.destroy()
+      resolve({name: target.name, reachable, error})
+    }
+    socket.setTimeout(2500)
+    socket.once('connect', () => finish(true))
+    socket.once('timeout', () => finish(false, 'timeout'))
+    socket.once('error', error => finish(false, error.code))
+  }))
+}
+console.log(JSON.stringify(results))
+"""
+        pod = {'apiVersion': 'v1', 'kind': 'Pod', 'metadata': {
+            'generateName': 'stf-netpol-' + role + '-', 'namespace': namespace,
+            'labels': labels}, 'spec': {'restartPolicy': 'Never',
+            'automountServiceAccountToken': False, 'activeDeadlineSeconds': 120,
+            'terminationGracePeriodSeconds': 1, 'containers': [{
+                'name': 'probe', 'image': image, 'imagePullPolicy': 'IfNotPresent',
+                'command': ['node', '--input-type=module', '--eval', script, json.dumps(targets)],
+                'securityContext': {'allowPrivilegeEscalation': False,
+                                    'capabilities': {'drop': ['ALL']}},
+                'resources': {'requests': {'cpu': '10m', 'memory': '32Mi'},
+                              'limits': {'cpu': '250m', 'memory': '128Mi'}}}]}}
+        name = None
+        try:
+            created = json.loads(self.kubectl('create', '-f', '-', '-o', 'json',
+                namespace=namespace, data=json.dumps(pod)).stdout)
+            name = created['metadata']['name']
+            deadline = time.monotonic() + 180
+            while time.monotonic() < deadline:
+                current = json.loads(self.kubectl('get', 'pod', name, '-o', 'json',
+                    namespace=namespace, timeout=15).stdout)
+                phase = current.get('status', {}).get('phase')
+                if phase in ('Succeeded', 'Failed'):
+                    break
+                time.sleep(1)
+            else:
+                raise SmokeError('Network probe pod did not complete: ' + role)
+            logs = self.kubectl('logs', name, '-c', 'probe', namespace=namespace,
+                                timeout=15, check=False)
+            self.require(phase == 'Succeeded' and logs.returncode == 0,
+                         'Network probe failed to execute: ' + role)
+            observations = json.loads(logs.stdout)
+            self.require(len(observations) == len(expected) and
+                         {item['name'] for item in observations} == set(expected),
+                         'Network probe returned incomplete results: ' + role)
+            self.network_results.append({'role': role, 'namespace': namespace,
+                                         'observations': observations})
+            (self.artifacts / 'network-policy.json').write_text(
+                json.dumps(self.network_results, indent=2) + '\n')
+            for item in observations:
+                self.require(item['reachable'] is expected[item['name']],
+                             'Network isolation mismatch: ' + role + ' -> ' + item['name'])
+        finally:
+            if name:
+                cleanup = self.kubectl('delete', 'pod', name, '--ignore-not-found',
+                    '--wait=true', '--timeout=30s', namespace=namespace, timeout=40, check=False)
+                self.require(cleanup.returncode == 0, 'Network probe cleanup failed: ' + role)
+
+    def verify_isolation(self):
+        targets = self.network_targets()
+        self.probe('member', 'stf-smoke', {'app.kubernetes.io/instance': 'stf'},
+                   targets, {item['name']: True for item in targets})
+        public = [item for item in targets if item['name'] in ('database', 'proxy')]
+        self.probe('outsider', 'stf-smoke', {}, public, {'database': False, 'proxy': True})
+
+    def verify_restricted_isolation(self):
+        suffix = secrets.token_hex(6)
+        ingress = 'stf-chart-ingress-' + suffix
+        remote = 'stf-chart-remote-' + suffix
+        namespaces = []
+        try:
+            for name in (ingress, remote):
+                self.kubectl('create', '-f', '-', data=json.dumps({
+                    'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {'name': name}}))
+                namespaces.append(name)
+            policies = {'enabled': True, 'proxyFrom': [{'namespaceSelector': {
+                'matchLabels': {'kubernetes.io/metadata.name': ingress}}}],
+                'remoteProvidersFrom': [{'namespaceSelector': {
+                    'matchLabels': {'kubernetes.io/metadata.name': remote}},
+                    'podSelector': {'matchLabels': {'stf-chart-client': 'provider'}}}]}
+            # Keep the migration payload unchanged; this upgrade changes policies only.
+            self.install('upgrade', network_policy=policies)
+            targets = self.network_targets()
+            self.probe('restricted-member', 'stf-smoke', {'app.kubernetes.io/instance': 'stf'},
+                       targets, {item['name']: True for item in targets})
+            self.probe('remote-provider', remote, {'stf-chart-client': 'provider'}, targets,
+                       {item['name']: item['name'] in ('dev-pub', 'dev-pull') for item in targets})
+            self.probe('remote-outsider', remote, {}, targets,
+                       {item['name']: False for item in targets})
+            self.probe('ingress', ingress, {}, targets,
+                       {item['name']: item['name'] == 'proxy' for item in targets})
+        finally:
+            failed = []
+            for name in reversed(namespaces):
+                cleanup = self.kubectl('delete', 'namespace', name, '--ignore-not-found',
+                    '--wait=true', '--timeout=30s', timeout=40, check=False)
+                if cleanup.returncode:
+                    failed.append(name)
+            self.require(not failed, 'Network probe namespace cleanup failed')
+
     def collect(self):
         if not self.owned:
             return
         try:
-            result = self.kubectl('get', 'deployments,statefulsets,pods,jobs,pvc,services,events',
+            result = self.kubectl('get', 'deployments,statefulsets,pods,jobs,pvc,services,networkpolicies,events',
                                   '-o', 'json', check=False, timeout=30)
             (self.artifacts / 'resources.json').write_text(self.redact(result.stdout))
             pods = json.loads(self.kubectl('get', 'pods', '-o', 'json',
@@ -268,6 +406,8 @@ class Smoke:
             self.verify_owner()
             self.checks += ['fresh_install', 'migration', 'mock_login', 'cookie_session',
                             'authenticated_devices', 'anonymous_401']
+            self.verify_isolation()
+            self.checks.append('network_isolation')
 
             self.step('Upgrade the chart and preserve the existing session and database')
             self.stop_forward()
@@ -280,6 +420,11 @@ class Smoke:
             self.verify_owner()
             self.checks += ['bootstrap_owner_after_upgrade', 'upgrade_migration', 'same_secret_uid', 'same_pvc_uid',
                             'session_after_upgrade', 'user_after_upgrade']
+
+            self.step('Restrict proxy sources and admit only remote provider bus ports')
+            self.verify_restricted_isolation()
+            self.checks += ['restricted_proxy', 'same_release_proxy', 'remote_provider_ports',
+                            'remote_provider_namespace_and_pod_selector']
 
             self.step('Replace the database pod and check persisted user with the same cookie')
             old_pod_uid = self.uid('pod', 'stf-rethinkdb-0')

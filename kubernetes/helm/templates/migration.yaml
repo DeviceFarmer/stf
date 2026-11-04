@@ -48,7 +48,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "stf.selector" (dict "root" . "component" "migrate") | nindent 8 }}
+        {{- include "stf.podLabels" (dict "root" . "component" "migrate") | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       automountServiceAccountToken: false

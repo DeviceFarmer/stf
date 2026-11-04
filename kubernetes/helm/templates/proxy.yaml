@@ -69,7 +69,7 @@ spec:
     matchLabels: {{ include "stf.selector" (dict "root" . "component" "proxy") | nindent 6 }}
   template:
     metadata:
-      labels: {{ include "stf.selector" (dict "root" . "component" "proxy") | nindent 8 }}
+      labels: {{ include "stf.podLabels" (dict "root" . "component" "proxy") | nindent 8 }}
       annotations:
         checksum/config: {{ toJson (dict "names" .Values.resourceNames "httpPort" .Values.ports.http "proxyPort" .Values.proxy.containerPort "extraRoutes" .Values.proxy.extraScreenRoutes "android" .Values.android.providers "ios" .Values.ios.devices "maxFileSize" .Values.storage.maxFileSize "migration" (include "stf.migration" .)) | sha256sum }}
     spec:

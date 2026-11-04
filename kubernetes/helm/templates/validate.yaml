@@ -51,3 +51,10 @@
 {{- if hasKey $routes .path }}{{ fail "extra screen paths must be unique" }}{{ end -}}
 {{- $_ := set $routes .path true -}}
 {{- end -}}
+{{- if .Values.networkPolicy.enabled -}}
+{{- range $component, $labels := .Values.selectorOverrides -}}
+{{- range $key, $expected := dict "app.kubernetes.io/instance" $.Release.Name "app.kubernetes.io/component" $component -}}
+{{- if and (hasKey $labels $key) (ne (get $labels $key) $expected) }}{{ fail (printf "selectorOverrides.%s must not override %s: %s while networkPolicy is enabled" $component $key $expected) }}{{ end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

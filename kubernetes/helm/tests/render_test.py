@@ -53,7 +53,8 @@ class ChartTest(unittest.TestCase):
 
     def test_nondefault_namespace_and_resource_identity_overrides(self):
         values = {'fullnameOverride': 'custom', 'resourceNames': {'api': 'previous-api'},
-                  'selectorOverrides': {'api': {'app': 'previous-api'}}}
+                  'selectorOverrides': {'api': {'app': 'previous-api'}},
+                  'networkPolicy': {'enabled': False}}
         items = render(values, namespace='another-ns', release='custom-release')
         api = obj(items, 'Deployment', 'previous-api')['spec']
         self.assertEqual(api['selector']['matchLabels'], {'app': 'previous-api'})
@@ -84,8 +85,26 @@ class ChartTest(unittest.TestCase):
         for v in [{'image': {'tag': 'changed'}}, {'migration': {'revision': '2'}},
                   {'session': {'existingSecret': 'other'}}, {'bootstrap': {'adminEmail': 'other@example.com'}},
                   {'ports': {'http': 3100}}, {'resourceNames': {'rethinkdb': 'previous-db'}},
-                  {'selectorOverrides': {'migrate': {'app': 'previous-migrate'}}}]:
+                  {'selectorOverrides': {'migrate': {'app.kubernetes.io/instance': 'stf',
+                                                 'app': 'previous-migrate'}}}]:
             self.assertNotEqual(name(), name(v))
+
+    def test_enabling_isolation_replaces_migration_job_without_changing_legacy_selectors(self):
+        overrides = {'migrate': {'app': 'previous-migrate'}, 'api': {'app': 'previous-api'}}
+        renders = [render({'selectorOverrides': overrides, 'networkPolicy': {'enabled': enabled}},
+                          upgrade=True) for enabled in (False, True)]
+        jobs = [next(x for x in items if x['kind'] == 'Job') for items in renders]
+        self.assertNotEqual(jobs[0]['spec']['template']['metadata']['labels'],
+                            jobs[1]['spec']['template']['metadata']['labels'])
+        self.assertNotEqual(jobs[0]['metadata']['name'], jobs[1]['metadata']['name'])
+        for items, job in zip(renders, jobs):
+            api = obj(items, 'Deployment', 'stf-api')['spec']
+            self.assertEqual(api['selector']['matchLabels'], overrides['api'])
+            self.assertEqual(obj(items, 'Service', 'stf-api')['spec']['selector'], overrides['api'])
+            barrier = api['template']['spec']['initContainers'][0]
+            self.assertIn({'name': 'MIGRATION_JOB', 'value': job['metadata']['name']}, barrier['env'])
+            role = next(x for x in items if x['kind'] == 'Role')
+            self.assertEqual(role['rules'][0]['resourceNames'], [job['metadata']['name']])
 
     def test_default_migration_preserves_existing_admin_and_explicit_override_is_forwarded(self):
         def env(values=None):
@@ -266,6 +285,181 @@ class ChartTest(unittest.TestCase):
             self.assertFalse(any(v['name'] == 'migration-identity' for v in pod.get('volumes', [])))
         ios = obj(items, 'Deployment', 'stf-ios-iphone-a')['spec']['template']['spec']
         self.assertEqual([c['name'] for c in ios['initContainers']], ['state'])
+
+    def test_network_policy_isolates_every_release_pod_and_keeps_only_proxy_http_public(self):
+        release = {'matchLabels': {'app.kubernetes.io/instance': 'stf'}}
+        items = render()
+        internal = obj(items, 'NetworkPolicy', 'stf-internal')['spec']
+        self.assertEqual(internal['podSelector'], release)
+        self.assertEqual(internal['policyTypes'], ['Ingress'])
+        self.assertEqual(internal['ingress'], [{'from': [{'podSelector': release}]}])
+        proxy = obj(items, 'NetworkPolicy', 'stf-proxy')['spec']
+        self.assertEqual(proxy['podSelector'], {'matchLabels': {
+            'app.kubernetes.io/instance': 'stf', 'app.kubernetes.io/component': 'proxy'}})
+        self.assertEqual(proxy['policyTypes'], ['Ingress'])
+        self.assertEqual(proxy['ingress'], [{'ports': [{'protocol': 'TCP', 'port': 'http'}]}])
+        self.assertFalse(any(x['metadata']['name'] == 'stf-remote-providers' for x in items))
+        with open(CHART / 'examples' / 'usb.yaml') as f:
+            usb = yaml.safe_load(f)
+        for scenario in (items, render(usb)):
+            for x in scenario:
+                if x['kind'] not in ('Deployment', 'StatefulSet', 'Job'):
+                    continue
+                labels = x['spec']['template']['metadata']['labels']
+                role = 'migrate' if x['kind'] == 'Job' else x['metadata']['name'][4:]
+                with self.subTest(kind=x['kind'], name=x['metadata']['name']):
+                    self.assertEqual(labels['app.kubernetes.io/instance'], 'stf')
+                    self.assertEqual(labels['app.kubernetes.io/component'], role)
+
+    def test_network_policy_restricted_proxy_still_accepts_own_providers(self):
+        release = {'podSelector': {'matchLabels': {'app.kubernetes.io/instance': 'stf'}}}
+        ingress = {'namespaceSelector': {'matchLabels': {'kubernetes.io/metadata.name': 'ingress-nginx'}}}
+        floor2 = {'namespaceSelector': {'matchLabels': {'kubernetes.io/metadata.name': 'stf-floor2'}}}
+        items = render({'networkPolicy': {'proxyFrom': [ingress], 'remoteProvidersFrom': [floor2]},
+                        'messaging': {'dev': {'pub': 7250, 'dealer': 7260, 'pull': 7270}},
+                        'android': {'providers': [{'name': 'a', 'externalAdb': {'host': 'adb'}}]}})
+        self.assertEqual(obj(items, 'NetworkPolicy', 'stf-proxy')['spec']['ingress'], [{
+            'ports': [{'protocol': 'TCP', 'port': 'http'}], 'from': [release, ingress]}])
+        self.assertEqual(obj(items, 'NetworkPolicy', 'stf-internal')['spec']['ingress'], [{'from': [release]}])
+        provider = obj(items, 'Deployment', 'stf-android-a')['spec']['template']['spec']['containers'][0]
+        self.assertIn('--storage-url=http://stf-proxy:7100/', provider['args'])
+        remote = obj(items, 'NetworkPolicy', 'stf-remote-providers')['spec']
+        self.assertEqual(remote['podSelector'], {'matchLabels': {
+            'app.kubernetes.io/instance': 'stf', 'app.kubernetes.io/component': 'triproxy-dev'}})
+        self.assertEqual(remote['policyTypes'], ['Ingress'])
+        self.assertEqual(remote['ingress'], [{'ports': [{'protocol': 'TCP', 'port': 'pub'},
+                                                      {'protocol': 'TCP', 'port': 'pull'}],
+                                             'from': [floor2]}])
+        bus = obj(items, 'Deployment', 'stf-triproxy-dev')['spec']['template']['spec']['containers'][0]
+        self.assertEqual(bus['ports'], [{'name': 'pub', 'containerPort': 7250},
+                                       {'name': 'dealer', 'containerPort': 7260},
+                                       {'name': 'pull', 'containerPort': 7270}])
+
+    def test_network_labels_preserve_legacy_selectors_for_adoption(self):
+        roles = ['api', 'proxy', 'triproxy-dev', 'rethinkdb', 'android-a', 'adb-a', 'ios-iphone-a', 'migrate']
+        overrides = {role: {'app': 'previous-' + role} for role in roles}
+        values = {'fullnameOverride': 'custom', 'selectorOverrides': overrides,
+                  'resourceNames': {'api': 'previous-api'},
+                  'android': {'providers': [{'name': 'a', 'nodeSelector': {'kubernetes.io/hostname': 'usb-a'}}]},
+                  'ios': {'image': IOS_IMAGE, 'devices': [iphone()]}}
+        items = render(values, namespace='another-ns', release='custom-release')
+        for role in roles:
+            name = 'previous-api' if role == 'api' else 'custom-' + role
+            kind = 'StatefulSet' if role == 'rethinkdb' else 'Deployment'
+            item = next(x for x in items if x['kind'] == 'Job') if role == 'migrate' else obj(items, kind, name)
+            spec = item['spec']
+            with self.subTest(role=role):
+                self.assertEqual(spec['template']['metadata']['labels'], {
+                    **overrides[role], 'app.kubernetes.io/instance': 'custom-release',
+                    'app.kubernetes.io/component': role})
+                if role != 'migrate':
+                    self.assertEqual(spec['selector']['matchLabels'], overrides[role])
+                if role not in ('migrate',):
+                    self.assertEqual(obj(items, 'Service', name)['spec']['selector'], overrides[role])
+        self.assertEqual(obj(items, 'NetworkPolicy', 'custom-internal')['spec']['podSelector'], {
+            'matchLabels': {'app.kubernetes.io/instance': 'custom-release'}})
+        self.assertEqual(obj(items, 'NetworkPolicy', 'custom-proxy')['spec']['podSelector'], {'matchLabels': {
+            'app.kubernetes.io/instance': 'custom-release', 'app.kubernetes.io/component': 'proxy'}})
+        binding = next(x for x in items if x['kind'] == 'RoleBinding')
+        self.assertEqual(binding['subjects'][0]['namespace'], 'another-ns')
+
+    def test_broad_legacy_selectors_cannot_broaden_network_policy_targets(self):
+        release = {'app.kubernetes.io/instance': 'stf'}
+        peer = {'namespaceSelector': {'matchLabels': {'kubernetes.io/metadata.name': 'remote'}}}
+        items = render({'selectorOverrides': {'proxy': release, 'triproxy-dev': release},
+                        'networkPolicy': {'remoteProvidersFrom': [peer]}})
+        for policy, role in [('stf-proxy', 'proxy'), ('stf-remote-providers', 'triproxy-dev')]:
+            with self.subTest(policy=policy):
+                selector = obj(items, 'NetworkPolicy', policy)['spec']['podSelector']['matchLabels']
+                self.assertEqual(selector, {**release, 'app.kubernetes.io/component': role})
+                api_labels = obj(items, 'Deployment', 'stf-api')['spec']['template']['metadata']['labels']
+                self.assertFalse(all(api_labels.get(k) == v for k, v in selector.items()))
+
+    def test_conflicting_network_identity_labels_fail_before_install(self):
+        for role, labels in [('api', {'app.kubernetes.io/component': 'proxy'}),
+                             ('proxy', {'app.kubernetes.io/component': 'api'}),
+                             ('triproxy-dev', {'app.kubernetes.io/component': 'proxy'}),
+                             ('api', {'app.kubernetes.io/instance': 'another-release'}),
+                             ('migrate', {'app.kubernetes.io/instance': 'another-release'})]:
+            with self.subTest(role=role, labels=labels):
+                render({'selectorOverrides': {role: labels}}, failure='selectorOverrides')
+        render({'selectorOverrides': {'api': {'app.kubernetes.io/instance': 'stf',
+                                             'app.kubernetes.io/component': 'api', 'app': 'previous-api'}}})
+
+    def test_disabled_network_policy_preserves_old_template_labels(self):
+        overrides = {'api': {'app': 'previous-api'},
+                     'proxy': {'app.kubernetes.io/instance': 'old-release'},
+                     'migrate': {'app': 'previous-migrate'}}
+        items = render({'selectorOverrides': overrides, 'networkPolicy': {'enabled': False}})
+        self.assertFalse(any(x['kind'] == 'NetworkPolicy' for x in items))
+        for role in ['api', 'proxy']:
+            spec = obj(items, 'Deployment', 'stf-' + role)['spec']
+            self.assertEqual(spec['selector']['matchLabels'], overrides[role])
+            self.assertEqual(spec['template']['metadata']['labels'], overrides[role])
+        job = next(x for x in items if x['kind'] == 'Job')
+        self.assertEqual(job['spec']['template']['metadata']['labels'], overrides['migrate'])
+
+    def test_network_policy_accepts_selector_and_ip_peers(self):
+        peers = [{'podSelector': {}}, {'namespaceSelector': {}},
+                 {'namespaceSelector': {'matchLabels': {'environment': 'test'}},
+                  'podSelector': {'matchExpressions': [
+                      {'key': 'role', 'operator': 'In', 'values': ['provider']},
+                      {'key': 'blocked', 'operator': 'NotIn', 'values': ['true']},
+                      {'key': 'approved', 'operator': 'Exists'},
+                      {'key': 'quarantine', 'operator': 'DoesNotExist', 'values': []}]}},
+                 {'ipBlock': {'cidr': '192.0.2.0/24', 'except': ['192.0.2.128/25']}},
+                 {'ipBlock': {'cidr': '2001:db8::/32'}}]
+        items = render({'networkPolicy': {'proxyFrom': peers, 'remoteProvidersFrom': peers}})
+        self.assertEqual(obj(items, 'NetworkPolicy', 'stf-proxy')['spec']['ingress'][0]['from'][1:], peers)
+        self.assertEqual(obj(items, 'NetworkPolicy', 'stf-remote-providers')['spec']['ingress'][0]['from'], peers)
+
+    def test_invalid_network_policy_peers_fail_schema_validation(self):
+        invalid = [{}, {'unknown': {}}, {'podSelector': {'unknown': True}},
+                   {'namespaceSelector': {'matchLabels': {'role': 1}}},
+                   {'ipBlock': {'cidr': '192.0.2.0/24'}, 'podSelector': {}},
+                   {'ipBlock': {'cidr': '192.0.2.0/24'}, 'namespaceSelector': {}},
+                   {'ipBlock': {}}, {'ipBlock': {'cidr': '192.0.2.0/24', 'except': [7]}},
+                   {'podSelector': {'matchExpressions': [{}]}},
+                   {'podSelector': {'matchExpressions': [{'key': 'role'}]}},
+                   {'podSelector': {'matchExpressions': [{'key': 'role', 'operator': 'Unknown'}]}},
+                   {'podSelector': {'matchExpressions': [{'key': 'role', 'operator': 'In'}]}},
+                   {'podSelector': {'matchExpressions': [{'key': 'role', 'operator': 'NotIn', 'values': []}]}},
+                   {'namespaceSelector': {'matchExpressions': [{'key': 'role', 'operator': 'Exists', 'values': ['x']}]}},
+                   {'namespaceSelector': {'matchExpressions': [{'key': 'role', 'operator': 'DoesNotExist', 'values': ['x']}]}},
+                   {'namespaceSelector': {'matchExpressions': [{'key': 'role', 'operator': 'Exists', 'unknown': True}]}}]
+        for setting in ['proxyFrom', 'remoteProvidersFrom']:
+            for peer in invalid:
+                with self.subTest(setting=setting, peer=peer):
+                    render({'networkPolicy': {setting: [peer]}}, failure=setting)
+
+    def test_public_usb_example_uses_oauth_and_confines_its_secret_to_auth(self):
+        with open(CHART / 'examples' / 'usb.yaml') as f:
+            values = yaml.safe_load(f)
+        self.assertTrue(values['proxy']['ingress']['enabled'])
+        self.assertEqual(values['auth']['type'], 'oauth2')
+        self.assertEqual(values['auth']['existingSecret'], 'stf-oauth')
+        items = render(values)
+        auth = obj(items, 'Deployment', 'stf-auth')['spec']['template']['spec']['containers'][0]
+        self.assertEqual(auth['command'], ['stf', 'auth-oauth2', '--app-url', values['publicOrigin'] + '/'])
+        self.assertEqual(auth['envFrom'], [{'secretRef': {'name': 'stf-oauth'}}])
+        auth_env = {e['name']: e.get('value') for e in auth['env']}
+        self.assertEqual(auth_env['STF_AUTH_OAUTH2_OAUTH_CALLBACK_URL'],
+                         values['publicOrigin'] + '/auth/oauth/callback')
+        for key, value in values['auth']['env'].items():
+            self.assertEqual(auth_env[key], value)
+        self.assertNotIn('STF_AUTH_OAUTH2_OAUTH_CLIENT_ID', auth_env)
+        self.assertNotIn('STF_AUTH_OAUTH2_OAUTH_CLIENT_SECRET', auth_env)
+        app = obj(items, 'Deployment', 'stf-app')['spec']['template']['spec']['containers'][0]
+        self.assertIn(values['publicOrigin'] + '/auth/oauth/', app['command'])
+        self.assertFalse(any(x['kind'] == 'Secret' for x in items))
+        for item in items:
+            if item['kind'] not in ('Deployment', 'StatefulSet', 'Job'):
+                continue
+            for container in item['spec']['template']['spec']['containers']:
+                if item['metadata']['name'] == 'stf-auth':
+                    continue
+                self.assertNotIn('stf-oauth', json.dumps(container))
+                self.assertFalse(any(e['name'].startswith('STF_AUTH_OAUTH2_') for e in container.get('env', [])))
 
     def test_external_iphone_routes_are_explicit_screen_only_routes(self):
         route = {'path': '/d/existing-iphone-screen/17440/',

@@ -20,7 +20,7 @@ spec:
     matchLabels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 6 }}
   template:
     metadata:
-      labels: {{ include "stf.selector" (dict "root" $r "component" $component) | nindent 8 }}
+      labels: {{ include "stf.podLabels" (dict "root" $r "component" $component) | nindent 8 }}
       annotations:
         checksum/config: {{ toJson (dict "provider" . "origin" $r.Values.publicOrigin "migration" (include "stf.migration" $r)) | sha256sum }}
     spec:
@@ -95,7 +95,7 @@ spec:
     matchLabels: {{ include "stf.selector" (dict "root" $r "component" (printf "adb-%s" .name)) | nindent 6 }}
   template:
     metadata:
-      labels: {{ include "stf.selector" (dict "root" $r "component" (printf "adb-%s" .name)) | nindent 8 }}
+      labels: {{ include "stf.podLabels" (dict "root" $r "component" (printf "adb-%s" .name)) | nindent 8 }}
     spec:
       automountServiceAccountToken: false
       nodeSelector: {{ toYaml .nodeSelector | nindent 8 }}

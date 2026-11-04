@@ -1,0 +1,55 @@
+{{- if .Values.networkPolicy.enabled -}}
+{{- $release := dict "podSelector" (dict "matchLabels" (dict "app.kubernetes.io/instance" .Release.Name)) -}}
+# RethinkDB, the triproxies, provider ports and USB ADB servers do not
+# authenticate their clients, so only pods of this release may connect.
+# The proxy is included; its public HTTP access is added by the next policy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stf.name" (dict "root" . "component" "internal") }}
+  labels: {{ include "stf.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{{ toJson $release }}]
+---
+# The proxy serves browsers and the release's own Android providers, which
+# fetch install URLs through it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stf.name" (dict "root" . "component" "proxy") }}
+  labels: {{ include "stf.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+      app.kubernetes.io/component: proxy
+  policyTypes: [Ingress]
+  ingress:
+    - ports: [{protocol: TCP, port: http}]
+      {{- with .Values.networkPolicy.proxyFrom }}
+      from: {{ toJson (prepend . $release) }}
+      {{- end }}
+{{- with .Values.networkPolicy.remoteProvidersFrom }}
+---
+# Providers of other releases need only the device bus, not the database or ADB.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stf.name" (dict "root" $ "component" "remote-providers") }}
+  labels: {{ include "stf.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+      app.kubernetes.io/component: triproxy-dev
+  policyTypes: [Ingress]
+  ingress:
+    - ports: [{protocol: TCP, port: pub}, {protocol: TCP, port: pull}]
+      from: {{ toJson . }}
+{{- end }}
+{{- end }}
