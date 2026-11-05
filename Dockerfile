@@ -44,14 +44,26 @@ USER stf
 # A root lockfile is optional. Keep npm install's existing prepare behavior;
 # npm pack builds the application after its sources have been copied.
 COPY --chown=stf:stf package*.json ./
-RUN npm install --omit=optional --no-audit --no-fund
+RUN --mount=type=secret,id=npmrc,mode=0444 \
+    if [ -f /run/secrets/npmrc ]; then \
+      export NPM_CONFIG_USERCONFIG=/run/secrets/npmrc; \
+    fi; \
+    npm install --omit=optional --no-audit --no-fund
 
 FROM dependencies AS production-dependencies
-RUN npm prune --omit=dev --no-audit --no-fund
+RUN --mount=type=secret,id=npmrc,mode=0444 \
+    if [ -f /run/secrets/npmrc ]; then \
+      export NPM_CONFIG_USERCONFIG=/run/secrets/npmrc; \
+    fi; \
+    npm prune --omit=dev --no-audit --no-fund
 
 FROM dependencies AS build
 COPY --chown=stf:stf . .
-RUN npm pack --quiet > /tmp/package-name \
+RUN --mount=type=secret,id=npmrc,mode=0444 \
+    if [ -f /run/secrets/npmrc ]; then \
+      export NPM_CONFIG_USERCONFIG=/run/secrets/npmrc; \
+    fi; \
+    npm pack --quiet > /tmp/package-name \
     && mkdir /tmp/app \
     && tar -xzf "$(tail -n 1 /tmp/package-name)" --no-same-owner --strip-components=1 -C /tmp/app \
     && cd /tmp/app \

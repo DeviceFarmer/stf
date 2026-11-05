@@ -166,6 +166,16 @@ docker run --rm stf:local
 
 The Dockerfile supports `linux/amd64` and `linux/arm64`. Build tools stay in separate stages; the runtime contains production dependencies, GraphicsMagick and a headless Java runtime. Dependency installation is cached independently of application sources. A root `package-lock.json` is included when present. The bundled AAB-to-APK tool requires amd64; native ARM64 AAB conversion remains unsupported.
 
+To use a custom npm registry or credentials, pass an npm config as a BuildKit secret:
+
+```bash
+docker build --secret id=npmrc,src="$HOME/.npmrc" -t stf:local .
+```
+
+The config file is mounted only for npm build steps and is not copied into image layers. `.npmrc` files are excluded from the build context. Without the secret, npm uses its defaults. Host environment variables referenced by the file (such as `${NPM_TOKEN}`) are not forwarded.
+
+Secret contents do not invalidate the build cache; after changing the config, rebuild with `docker buildx build --no-cache-filter dependencies,production-dependencies,build --secret id=npmrc,src="$HOME/.npmrc" --load -t stf:local .`.
+
 After you've got all the [requirements](#requirements) installed, it's time to fetch the rest of the dependencies.
 
 First, fetch all NPM modules:

@@ -49,6 +49,13 @@ jobs:
           cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=stf-runtime-${{ matrix.arch }}
 
+      - name: Check optional npm configuration secrets
+        timeout-minutes: 5
+        run: |
+          python3 .github/scripts/docker-npmrc-smoke.py \
+            --image stf-runtime-check:${{ matrix.arch }} --platform linux/${{ matrix.arch }} \
+            --output "$RUNNER_TEMP/docker-npmrc-${{ matrix.arch }}.json"
+
       - name: Fetch the Android app bundle fixture
         if: matrix.arch == 'amd64'
         env:
@@ -92,6 +99,7 @@ jobs:
           name: docker-runtime-${{ matrix.arch }}
           path: |
             ${{ runner.temp }}/docker-runtime-${{ matrix.arch }}.json
+            ${{ runner.temp }}/docker-npmrc-${{ matrix.arch }}.json
             ${{ runner.temp }}/docker-compose-runtime/
           if-no-files-found: ignore
           retention-days: 7
