@@ -2,7 +2,6 @@
 *.tgz
 .DS_Store
 .env
-**/.npmrc
 ios.local.json
 .git/
 .idea/

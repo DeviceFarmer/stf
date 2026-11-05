@@ -172,7 +172,7 @@ To use a custom npm registry or credentials, pass an npm config as a BuildKit se
 docker build --secret id=npmrc,src="$HOME/.npmrc" -t stf:local .
 ```
 
-The config file is mounted only for npm build steps and is not copied into image layers. `.npmrc` files are excluded from the build context. Without the secret, npm uses its defaults. Host environment variables referenced by the file (such as `${NPM_TOKEN}`) are not forwarded.
+The config file is mounted only for npm build steps and is not copied into image layers. The Ubuntu build excludes `.npmrc` files from its context via `Dockerfile.dockerignore`. Without the secret, npm uses its defaults. Host environment variables referenced by the file (such as `${NPM_TOKEN}`) are not forwarded.
 
 Secret contents do not invalidate the build cache; after changing the config, rebuild with `docker buildx build --no-cache-filter dependencies,production-dependencies,build --secret id=npmrc,src="$HOME/.npmrc" --load -t stf:local .`.
 

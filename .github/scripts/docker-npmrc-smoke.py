@@ -224,6 +224,7 @@ def main():
     repository = Path(__file__).resolve().parents[2]
     source = (args.dockerfile or repository / 'Dockerfile').read_text()
     ignore = repository / '.dockerignore'
+    scoped_ignore = repository / 'Dockerfile.dockerignore'
     image = json.loads(run(['docker', 'image', 'inspect', args.image]))[0]
     if image['Os'] + '/' + image['Architecture'] != args.platform:
         raise ValueError('The existing image must match --platform')
@@ -269,6 +270,8 @@ def main():
                                                                            'operation': uuid.uuid4().hex}))
                     dockerfile = temporary / (variant + '.Dockerfile')
                     dockerfile.write_text(fixture_dockerfile(source, base, uid))
+                    if scoped_ignore.exists():
+                        shutil.copyfile(scoped_ignore, Path(str(dockerfile) + '.dockerignore'))
                     tags = []
                     for stage in ('dependencies', 'production-dependencies', 'build'):
                         tag = prefix + ':' + variant + '-' + stage
