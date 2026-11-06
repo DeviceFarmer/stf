@@ -24,6 +24,7 @@ import cookieSession from './middleware/cookie-session.js'
 import ip from './middleware/remote-ip.js'
 import auth from './middleware/auth.js'
 import {createDevicePacketGuard} from './ios-access.js'
+import type {AuthorizedInput} from './ios-access.js'
 import {DevicePacketAccess, isDeviceCommand} from './device-access.js'
 import {readIosProperties} from '../../util/ios-device-status.js'
 import jwtutil from '../../util/jwtutil.js'
@@ -242,12 +243,34 @@ export default function(options: WebsocketOptions) {
     var channels: string[] = []
     var messageListener: MessageListener
 
-    const gestures = new Map<string, string>()
-    const resetGesture = (channel: string) => {
-      const gestureId = gestures.get(channel)
-      if (gestureId) {
-        gestures.delete(channel)
-        push.send([channel, wireutil.envelope(new wire.TouchResetMessage({seq: 0, gestureId}))])
+    const cleanupFences = new Map<string, {channel: string, identity: AuthorizedInput}>()
+    const authorizedInput = new WeakMap<object, AuthorizedInput>()
+    const inputIdentity = (data: object): AuthorizedInput =>
+      authorizedInput.get(data) || {gestureId: null, reservationId: null}
+    const fenceKey = (channel: string, identity: AuthorizedInput) =>
+      JSON.stringify([channel, identity.reservationId, identity.gestureId?.split(':')[0]])
+    const cancelGesture = (channel: string, identity: AuthorizedInput) => {
+      push.send([channel, wireutil.envelope(new wire.TouchResetMessage({
+        seq: 0, ...identity, cancel: true, cancelThrough: true
+      }))])
+    }
+    const resetGesture = (channel: string, identity?: AuthorizedInput) => {
+      if (identity) {
+        const key = fenceKey(channel, identity)
+        const latest = cleanupFences.get(key)
+        if (!latest || Number(latest.identity.gestureId?.split(':')[1]) <=
+            Number(identity.gestureId?.split(':')[1])) {
+          cleanupFences.delete(key)
+        }
+        cancelGesture(channel, identity)
+      }
+      else {
+        for (const [key, fence] of [...cleanupFences]) {
+          if (fence.channel === channel) {
+            cleanupFences.delete(key)
+            cancelGesture(channel, fence.identity)
+          }
+        }
       }
     }
     const deviceAccess = new DevicePacketAccess(dbapi.loadDeviceByChannel, dbapi.loadDeviceBySerial)
@@ -261,7 +284,23 @@ export default function(options: WebsocketOptions) {
     , session: channel => deviceAccess.session(channel)
     , checkpoint: () => deviceAccess.checkpoint()
     , current: (channel, checkpoint) => deviceAccess.current(channel, checkpoint)
-    }, {resetGesture}))
+    }, {resetGesture, onAuthorizedInput(packet, identity) {
+      const data = packet[2]
+      if (data && typeof data === 'object') {
+        authorizedInput.set(data, identity)
+      }
+      if (packet[0] === 'input.gestureStart' && typeof packet[1] === 'string' &&
+          identity.gestureId) {
+        const key = fenceKey(packet[1], identity)
+        cleanupFences.delete(key)
+        cleanupFences.set(key, {channel: packet[1], identity})
+        if (cleanupFences.size > 128) {
+          const oldest = cleanupFences.values().next().value!
+          cleanupFences.delete(fenceKey(oldest.channel, oldest.identity))
+          cancelGesture(oldest.channel, oldest.identity)
+        }
+      }
+    }}))
     socket.on('error', error => log.warn('Socket request rejected: %s', error.message))
 
     user.ip = socket.handshake.query.uip as string | undefined || req.ip
@@ -735,26 +774,20 @@ export default function(options: WebsocketOptions) {
         .on('input.touchDown', function(channel, data) {
           push.send([
             channel
-          , wireutil.envelope(new wire.TouchDownMessage(
-              data.seq
-            , data.contact
-            , data.x
-            , data.y
-            , data.pressure
-            ))
+          , wireutil.envelope(new wire.TouchDownMessage({
+              seq: data.seq, contact: data.contact, x: data.x, y: data.y
+            , pressure: data.pressure, ...inputIdentity(data)
+            }))
           ])
         })
         .on('input.touchMove', function(channel, data) {
           try {
             push.send([
               channel
-            , wireutil.envelope(new wire.TouchMoveMessage(
-                data.seq
-              , data.contact
-              , data.x
-              , data.y
-              , data.pressure
-              ))
+            , wireutil.envelope(new wire.TouchMoveMessage({
+                seq: data.seq, contact: data.contact, x: data.x, y: data.y
+              , pressure: data.pressure, ...inputIdentity(data)
+              }))
             ])
           }
           catch(err) {
@@ -765,44 +798,39 @@ export default function(options: WebsocketOptions) {
         .on('input.touchUp', function(channel, data) {
           push.send([
             channel
-          , wireutil.envelope(new wire.TouchUpMessage(
-              data.seq
-            , data.contact
-            ))
+          , wireutil.envelope(new wire.TouchUpMessage({
+              seq: data.seq, contact: data.contact, ...inputIdentity(data)
+            }))
           ])
         })
         .on('input.touchCommit', function(channel, data) {
           push.send([
             channel
-          , wireutil.envelope(new wire.TouchCommitMessage(
-              data.seq
-            ))
+          , wireutil.envelope(new wire.TouchCommitMessage({seq: data.seq, ...inputIdentity(data)}))
           ])
         })
         .on('input.touchReset', function(channel, data) {
           push.send([
             channel
-          , wireutil.envelope(new wire.TouchResetMessage(
-              data.seq
-            ))
+          , wireutil.envelope(new wire.TouchResetMessage({
+              seq: data.seq, ...inputIdentity(data), cancel: false
+            }))
           ])
         })
         .on('input.gestureStart', function(channel, data) {
-          resetGesture(channel)
-          const gestureId = uuid.v4()
-          gestures.set(channel, gestureId)
+          const identity = inputIdentity(data)
           push.send([
             channel
-          , wireutil.envelope(new wire.GestureStartMessage({seq: data.seq, gestureId}))
+          , wireutil.envelope(new wire.GestureStartMessage({seq: data.seq, ...identity}))
           ])
         })
         .on('input.gestureStop', function(channel, data) {
-          gestures.delete(channel)
+          const identity = inputIdentity(data)
+          // Dispatch does not acknowledge completion at the provider. Keep the
+          // source fence so disconnect also cancels buffered, already sent gestures.
           push.send([
             channel
-          , wireutil.envelope(new wire.GestureStopMessage(
-              data.seq
-            ))
+          , wireutil.envelope(new wire.GestureStopMessage({seq: data.seq, ...identity}))
           ])
         })
         // Key events
@@ -1286,7 +1314,8 @@ export default function(options: WebsocketOptions) {
         })
     })
     .finally(function() {
-      for (const channel of gestures.keys()) {
+      const cleanupChannels = new Set([...cleanupFences.values()].map(fence => fence.channel))
+      for (const channel of cleanupChannels) {
         resetGesture(channel)
       }
       // Clean up all listeners and subscriptions

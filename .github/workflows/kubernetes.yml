@@ -1,0 +1,81 @@
+name: Kubernetes
+
+on:
+  pull_request:
+    paths:
+      - kubernetes/helm/**
+      - README.md
+      - .github/workflows/kubernetes.yml
+  push:
+    branches: [master]
+    paths:
+      - kubernetes/helm/**
+      - README.md
+      - .github/workflows/kubernetes.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kubernetes-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  chart:
+    name: Helm render, install and upgrade
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install verified Helm and Kind binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/stf-chart-tools"
+          cd "$RUNNER_TEMP/stf-chart-tools"
+          curl --fail --location --retry 3 --output helm.tar.gz \
+            https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz
+          curl --fail --location --retry 3 --output kind \
+            https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          # Official versioned .sha256sum files from get.helm.sh and kind.sigs.k8s.io.
+          printf '%s  %s\n' \
+            0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b helm.tar.gz \
+            aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d kind \
+            | sha256sum --check
+          tar -xzf helm.tar.gz linux-amd64/helm
+          mv linux-amd64/helm helm
+          chmod +x helm kind
+          echo "$RUNNER_TEMP/stf-chart-tools" >> "$GITHUB_PATH"
+          echo "STF_CHART_KUBECONFIG=$RUNNER_TEMP/stf-chart-ci.kubeconfig" >> "$GITHUB_ENV"
+          python3 -m venv "$RUNNER_TEMP/stf-chart-venv"
+          "$RUNNER_TEMP/stf-chart-venv/bin/pip" install --disable-pip-version-check PyYAML==6.0.3
+
+      - name: Validate chart contracts without a cluster
+        run: |
+          helm lint kubernetes/helm --set session.existingSecret=stf-session
+          "$RUNNER_TEMP/stf-chart-venv/bin/python" kubernetes/helm/tests/render_test.py
+
+      - name: Install and upgrade the core using HTTP APIs
+        run: |
+          "$RUNNER_TEMP/stf-chart-venv/bin/python" kubernetes/helm/tests/smoke.py \
+            --cluster-name stf-chart-ci-smoke \
+            --kubeconfig "$STF_CHART_KUBECONFIG" \
+            --artifacts test-results/kubernetes
+
+      - name: Remove the isolated cluster
+        if: always()
+        run: |
+          chart_kubeconfig="${STF_CHART_KUBECONFIG:-$RUNNER_TEMP/stf-chart-ci.kubeconfig}"
+          if command -v kind >/dev/null 2>&1; then
+            kind delete cluster --name stf-chart-ci-smoke --kubeconfig "$chart_kubeconfig"
+          fi
+          rm -f "$chart_kubeconfig"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kubernetes-core-smoke
+          path: test-results/kubernetes
+          if-no-files-found: ignore
+          retention-days: 7

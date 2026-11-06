@@ -34,6 +34,47 @@ describe('touch protocol shared by native minitouch and STFService', function() 
     assert.deepEqual(writes, ['d 0 10 20 30\nc\n', 'u 0\nc\n'])
   })
 
+  it('finishes a web gesture without lifting an unrelated VNC contact', function() {
+    const {protocol, writes} = fixture()
+    protocol.down(1, point)
+    protocol.commit()
+    protocol.down(0, point)
+    protocol.commit()
+    protocol.up(0)
+    protocol.commit()
+    const before = writes.length
+    protocol.finish(new Set())
+    assert.equal(writes.length, before)
+    protocol.move(1, {...point, x: 15})
+    protocol.commit()
+    assert.equal(writes.at(-1), 'm 1 15 20 30\nc\n')
+  })
+
+  it('finishes an incomplete web contact without resetting the VNC contact', function() {
+    const {protocol, writes} = fixture()
+    protocol.down(1, point)
+    protocol.down(0, point)
+    protocol.commit()
+    protocol.finish(new Set([0]))
+    assert.equal(writes.at(-1), 'u 0\nc\n')
+    protocol.move(1, {...point, x: 15})
+    protocol.commit()
+    assert.equal(writes.at(-1), 'm 1 15 20 30\nc\n')
+  })
+
+  it('commits a pending web up on completion without an extra down or VNC up', function() {
+    const {protocol, writes} = fixture()
+    protocol.down(1, point)
+    protocol.down(0, point)
+    protocol.commit()
+    protocol.up(0)
+    protocol.finish(new Set())
+    assert.equal(writes.at(-1), 'u 0\nc\n')
+    protocol.down(0, point)
+    protocol.finish(new Set([0]))
+    assert.equal(writes.length, 2, 'An uncommitted down is discarded')
+  })
+
   it('discards uncommitted down packets instead of injecting an unintended tap', function() {
     const {protocol, writes} = fixture()
     protocol.down(0, point)

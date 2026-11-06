@@ -81,7 +81,7 @@
     "machinepack-http": "^9.0.0",
     "markdown-serve": "^0.10.0",
     "mime": "^4.1.0",
-    "minimatch": "^10.2.6",
+    "minimatch": "^11.0.3",
     "my-local-ip": "^1.0.0",
     "openid": "^2.0.13",
     "passport": "^0.7.0",
