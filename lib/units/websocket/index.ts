@@ -224,10 +224,21 @@ export default function(options: WebsocketOptions) {
     channelRouter.emit(channel.toString(), channel, data)
   })
 
-  io.use(cookieSession({
+  var sameSite = options.cookieSameSite || 'lax'
+  var sessionOptions: CookieSessionInterfaces.CookieSessionOptions = {
     name: options.ssid
   , keys: [options.secret]
-  }))
+  , sameSite: sameSite
+  }
+
+  if (typeof options.cookieSecure !== 'undefined') {
+    sessionOptions.secure = options.cookieSecure
+  }
+  else if (sameSite === 'none') {
+    sessionOptions.secure = true
+  }
+
+  io.use(cookieSession(sessionOptions))
 
   io.use(ip({
     trust: function() {

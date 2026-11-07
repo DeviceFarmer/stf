@@ -10,6 +10,8 @@ export interface WebsocketOptions {
     sub: string[]
     push: string[]
   }
+  cookieSameSite?: 'lax' | 'strict' | 'none' | undefined
+  cookieSecure?: boolean | undefined
 }
 
 export interface WebsocketSessionJwt {

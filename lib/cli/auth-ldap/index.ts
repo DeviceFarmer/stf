@@ -95,6 +95,17 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: process.env.SSID || 'ssid'
     })
+    .option('cookie-same-site', {
+      describe: 'The SameSite attribute for session and CSRF cookies.'
+    , type: 'string'
+    , choices: ['lax', 'strict', 'none'] as const
+    , default: (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase()
+    , coerce: (val: string) => val.toLowerCase()
+    })
+    .option('cookie-secure', {
+      describe: 'Whether to force session and CSRF cookies to be sent only over HTTPS.'
+    , type: 'boolean'
+    })
     .epilog('Each option can be be overwritten with an environment variable ' +
       'by converting the option to uppercase, replacing dashes with ' +
       'underscores and prefixing it with `STF_AUTH_LDAP_` (e.g. ' +
@@ -104,11 +115,18 @@ var builder = function(yargs: Argv) {
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
+  var cookieSecure = argv.cookieSecure
+  if (typeof cookieSecure === 'undefined' && typeof process.env.COOKIE_SECURE !== 'undefined') {
+    cookieSecure = process.env.COOKIE_SECURE === 'true'
+  }
+
   return require('../../units/auth/ldap.js').default({
     port: argv.port
   , secret: argv.secret
   , ssid: argv.ssid
   , appUrl: argv.appUrl
+  , cookieSameSite: argv.cookieSameSite
+  , cookieSecure: cookieSecure
   , ldap: {
       url: argv.ldapUrl
     , timeout: argv.ldapTimeout

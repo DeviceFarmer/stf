@@ -38,6 +38,8 @@ interface AppOptions {
   authUrl: string
   websocketUrl: string
   userProfileUrl?: string
+  cookieSameSite?: 'lax' | 'strict' | 'none' | undefined
+  cookieSecure?: boolean | undefined
 }
 
 interface AppState {
@@ -97,11 +99,22 @@ export default function(options: AppOptions) {
   app.use(serveFavicon(pathutil.resource(
     'common/logo/exports/STF-128.png')))
 
-  app.use(cookieSession({
+  var sameSite = options.cookieSameSite || 'lax'
+  var sessionOptions: CookieSessionInterfaces.CookieSessionOptions = {
     name: options.ssid
   , keys: [options.secret]
   , httpOnly: false
-  }))
+  , sameSite: sameSite
+  }
+
+  if (typeof options.cookieSecure !== 'undefined') {
+    sessionOptions.secure = options.cookieSecure
+  }
+  else if (sameSite === 'none') {
+    sessionOptions.secure = true
+  }
+
+  app.use(cookieSession(sessionOptions))
 
   app.use(auth({
     secret: options.secret
@@ -119,7 +132,12 @@ export default function(options: AppOptions) {
   app.use(csrf())
 
   app.use(function(req, res, next) {
-    res.cookie('XSRF-TOKEN', req.csrfToken())
+    res.cookie('XSRF-TOKEN', req.csrfToken(), {
+      sameSite: sameSite
+    , secure: typeof options.cookieSecure !== 'undefined' ?
+        options.cookieSecure :
+        (sameSite === 'none' || req.protocol === 'https')
+    })
     next()
   })
 

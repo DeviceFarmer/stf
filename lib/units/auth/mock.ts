@@ -36,6 +36,8 @@ interface MockAuthOptions {
       password?: string
     }
   }
+  cookieSameSite?: 'lax' | 'strict' | 'none' | undefined
+  cookieSecure?: boolean | undefined
 }
 
 export default function(options: MockAuthOptions) {
@@ -82,17 +84,34 @@ export default function(options: MockAuthOptions) {
   app.set('views', pathutil.resource('auth/mock/views'))
   app.set('strict routing', true)
   app.set('case sensitive routing', true)
+  app.set('trust proxy', true)
 
-  app.use(cookieSession({
+  var sameSite = options.cookieSameSite || 'lax'
+  var sessionOptions: CookieSessionInterfaces.CookieSessionOptions = {
     name: options.ssid
   , keys: [options.secret]
-  }))
+  , sameSite: sameSite
+  }
+
+  if (typeof options.cookieSecure !== 'undefined') {
+    sessionOptions.secure = options.cookieSecure
+  }
+  else if (sameSite === 'none') {
+    sessionOptions.secure = true
+  }
+
+  app.use(cookieSession(sessionOptions))
   app.use(bodyParser.json())
   app.use(csrf())
   app.use('/static/auth/mock', serveStatic(pathutil.resource('auth/mock')))
 
   app.use(function(req, res, next) {
-    res.cookie('XSRF-TOKEN', req.csrfToken())
+    res.cookie('XSRF-TOKEN', req.csrfToken(), {
+      sameSite: sameSite
+    , secure: typeof options.cookieSecure !== 'undefined' ?
+        options.cookieSecure :
+        (sameSite === 'none' || req.protocol === 'https')
+    })
     next()
   })
 

@@ -141,11 +141,24 @@ export default function(options: ApiUnitOptions) {
     next()
   })
 
-  // TODO: Remove this once frontend is stateless
-  app.use(cookieSession({
+  app.set('trust proxy', true)
+
+  var sameSite = options.cookieSameSite || 'lax'
+  var sessionOptions: CookieSessionInterfaces.CookieSessionOptions = {
     name: options.ssid
   , keys: [options.secret]
-  }))
+  , sameSite: sameSite
+  }
+
+  if (typeof options.cookieSecure !== 'undefined') {
+    sessionOptions.secure = options.cookieSecure
+  }
+  else if (sameSite === 'none') {
+    sessionOptions.secure = true
+  }
+
+  // TODO: Remove this once frontend is stateless
+  app.use(cookieSession(sessionOptions))
 
   app.disable('x-powered-by')
 

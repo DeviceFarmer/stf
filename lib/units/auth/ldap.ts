@@ -34,6 +34,8 @@ interface LdapAuthOptions {
       field: string
     }
   }
+  cookieSameSite?: 'lax' | 'strict' | 'none' | undefined
+  cookieSecure?: boolean | undefined
 }
 
 export default function(options: LdapAuthOptions) {
@@ -53,17 +55,34 @@ export default function(options: LdapAuthOptions) {
   app.set('views', pathutil.resource('auth/ldap/views'))
   app.set('strict routing', true)
   app.set('case sensitive routing', true)
+  app.set('trust proxy', true)
 
-  app.use(cookieSession({
+  var sameSite = options.cookieSameSite || 'lax'
+  var sessionOptions: CookieSessionInterfaces.CookieSessionOptions = {
     name: options.ssid
   , keys: [options.secret]
-  }))
+  , sameSite: sameSite
+  }
+
+  if (typeof options.cookieSecure !== 'undefined') {
+    sessionOptions.secure = options.cookieSecure
+  }
+  else if (sameSite === 'none') {
+    sessionOptions.secure = true
+  }
+
+  app.use(cookieSession(sessionOptions))
   app.use(bodyParser.json())
   app.use(csrf())
   app.use('/static/auth/ldap', serveStatic(pathutil.resource('auth/ldap')))
 
   app.use(function(req, res, next) {
-    res.cookie('XSRF-TOKEN', req.csrfToken())
+    res.cookie('XSRF-TOKEN', req.csrfToken(), {
+      sameSite: sameSite
+    , secure: typeof options.cookieSecure !== 'undefined' ?
+        options.cookieSecure :
+        (sameSite === 'none' || req.protocol === 'https')
+    })
     next()
   })
 

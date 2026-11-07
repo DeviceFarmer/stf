@@ -118,4 +118,6 @@ export interface ApiUnitOptions {
     pushdev: string[]
     subdev: string[]
   }
+  cookieSameSite?: 'lax' | 'strict' | 'none' | undefined
+  cookieSecure?: boolean | undefined
 }

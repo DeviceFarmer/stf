@@ -137,6 +137,17 @@ var builder = function(yargs: Argv) {
     , type: 'array'
     , default: []
     })
+    .option('cookie-same-site', {
+      describe: 'The SameSite attribute for session and CSRF cookies.'
+    , type: 'string'
+    , choices: ['lax', 'strict', 'none'] as const
+    , default: (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase()
+    , coerce: (val: string) => val.toLowerCase()
+    })
+    .option('cookie-secure', {
+      describe: 'Whether to force session and CSRF cookies to be sent only over HTTPS.'
+    , type: 'boolean'
+    })
     .option('group-timeout', {
       alias: 't'
     , describe: 'Timeout in seconds for automatic release of inactive devices.'
@@ -354,6 +365,21 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
   }
 
   function run() {
+    var cookieArgs: CliArg[] = [
+      '--cookie-same-site', argv.cookieSameSite
+    ]
+    var cookieSecure = argv.cookieSecure
+    if (typeof cookieSecure === 'undefined' && typeof process.env.COOKIE_SECURE !== 'undefined') {
+      cookieSecure = process.env.COOKIE_SECURE === 'true'
+    }
+
+    if (cookieSecure === true) {
+      cookieArgs.push('--cookie-secure')
+    }
+    else if (cookieSecure === false) {
+      cookieArgs.push('--no-cookie-secure')
+    }
+
     var procs = [
       // app triproxy
       procutil.fork(path.resolve(import.meta.dirname, '..'), [
@@ -395,7 +421,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         ])
 
       // auth
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), [
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
           util.format('auth-%s', argv.authType)
         , '--port', argv.authPort
         , '--secret', argv.authSecret
@@ -404,10 +430,12 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
           , argv.publicIp
           , argv.port
           )
-        ].concat(JSON.parse(argv.authOptions)))
+        ] as CliArg[])
+        .concat(cookieArgs)
+        .concat(JSON.parse(argv.authOptions)))
 
       // app
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), [
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
           'app'
         , '--port', argv.appPort
         , '--secret', argv.authSecret
@@ -425,7 +453,9 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
           , argv.publicIp
           , argv.websocketPort
           )
-        ].concat((function() {
+        ] as CliArg[])
+        .concat(cookieArgs)
+        .concat((function() {
           var extra: string[] = []
           if (argv.userProfileUrl) {
             extra.push('--user-profile-url', argv.userProfileUrl)
@@ -434,7 +464,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         })()))
 
       // api
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), [
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
           'api'
         , '--port', argv.apiPort
         , '--secret', argv.authSecret
@@ -442,7 +472,8 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         , '--connect-sub', argv.bindAppPub
         , '--connect-push-dev', argv.bindDevPull
         , '--connect-sub-dev', argv.bindDevPub
-      ])
+      ] as CliArg[])
+      .concat(cookieArgs))
 
       // groups engine
     , procutil.fork(path.resolve(import.meta.dirname, '..'), [
@@ -454,7 +485,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
       ])
 
       // websocket
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), [
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
           'websocket'
         , '--port', argv.websocketPort
         , '--secret', argv.authSecret
@@ -462,7 +493,8 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         , util.format('http://localhost:%d/', argv.port)
         , '--connect-sub', argv.bindAppPub
         , '--connect-push', argv.bindAppPull
-        ])
+        ] as CliArg[])
+        .concat(cookieArgs))
 
       // storage
     , procutil.fork(path.resolve(import.meta.dirname, '..'), [

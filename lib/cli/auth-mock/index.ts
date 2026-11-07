@@ -49,6 +49,17 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: process.env.SSID || 'ssid'
     })
+    .option('cookie-same-site', {
+      describe: 'The SameSite attribute for session and CSRF cookies.'
+    , type: 'string'
+    , choices: ['lax', 'strict', 'none'] as const
+    , default: (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase()
+    , coerce: (val: string) => val.toLowerCase()
+    })
+    .option('cookie-secure', {
+      describe: 'Whether to force session and CSRF cookies to be sent only over HTTPS.'
+    , type: 'boolean'
+    })
     .option('use-basic-auth', {
       describe: 'Whether to "secure" the login page with basic authentication.'
     , type: 'boolean'
@@ -62,11 +73,18 @@ var builder = function(yargs: Argv) {
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
+  var cookieSecure = argv.cookieSecure
+  if (typeof cookieSecure === 'undefined' && typeof process.env.COOKIE_SECURE !== 'undefined') {
+    cookieSecure = process.env.COOKIE_SECURE === 'true'
+  }
+
   return require('../../units/auth/mock.js').default({
     port: argv.port
   , secret: argv.secret
   , ssid: argv.ssid
   , appUrl: argv.appUrl
+  , cookieSameSite: argv.cookieSameSite
+  , cookieSecure: cookieSecure
   , mock: {
       useBasicAuth: argv.useBasicAuth
     , basicAuth: {

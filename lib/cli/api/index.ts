@@ -61,6 +61,17 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: process.env.SSID || 'ssid'
     })
+    .option('cookie-same-site', {
+      describe: 'The SameSite attribute for session and CSRF cookies.'
+    , type: 'string'
+    , choices: ['lax', 'strict', 'none'] as const
+    , default: (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase()
+    , coerce: (val: string) => val.toLowerCase()
+    })
+    .option('cookie-secure', {
+      describe: 'Whether to force session and CSRF cookies to be sent only over HTTPS.'
+    , type: 'boolean'
+    })
     .epilog('Each option can be be overwritten with an environment variable ' +
       'by converting the option to uppercase, replacing dashes with ' +
       'underscores and prefixing it with `STF_API_` (e.g. ' +
@@ -68,10 +79,17 @@ var builder = function(yargs: Argv) {
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
+  var cookieSecure = argv.cookieSecure
+  if (typeof cookieSecure === 'undefined' && typeof process.env.COOKIE_SECURE !== 'undefined') {
+    cookieSecure = process.env.COOKIE_SECURE === 'true'
+  }
+
   return require('../../units/api/index.js').default({
     port: argv.port
   , ssid: argv.ssid
   , secret: argv.secret
+  , cookieSameSite: argv.cookieSameSite
+  , cookieSecure: cookieSecure
   , endpoints: {
       push: argv.connectPush
     , sub: argv.connectSub
