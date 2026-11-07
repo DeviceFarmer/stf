@@ -11,6 +11,19 @@ import classes from '../Dashboard.module.css'
 
 const selectedBrowsers = createDeviceStore<string | null>(null)
 
+const BUNDLED_BROWSER_ICONS = new Set([
+  'chrome'
+, 'chromium'
+, 'firefox'
+, 'edge'
+, 'opera'
+, 'brave'
+, 'vivaldi'
+, 'samsung'
+, 'duckduckgo'
+, 'yandex'
+])
+
 function defaultBrowser(apps: DeviceBrowserApp[]): DeviceBrowserApp | undefined {
   return apps.find((app) => app.selected) ??
     apps.find((app) => app.name === 'Browser') ??
@@ -102,7 +115,7 @@ export function NavigationCard({device, control}: {device: Device, control: Cont
       {apps.length > 0 && (
         <Group gap='xs' mt='sm' className='browser-buttons'>
           {apps.map((app) => (
-            <Tooltip key={app.id} label={`${app.name} (${app.developer})`}>
+            <Tooltip key={app.id} label={app.developer ? `${app.name} (${app.developer})` : app.name}>
               <UnstyledButton
                 className={classes.browserChip}
                 data-active={app.id === browser?.id || undefined}
@@ -112,17 +125,16 @@ export function NavigationCard({device, control}: {device: Device, control: Cont
                   input.current?.focus()
                 }}
               >
-                {app.type && (
+                {app.type && BUNDLED_BROWSER_ICONS.has(app.type) ? (
                   <img
                     className='browser-icon'
-                    src={`/static/app/browsers/icon/36x36/${app.type}.png`}
-                    width={18}
-                    height={18}
+                    src={`/static/app/browsers/icon/${app.type}.svg`}
+                    width={16}
+                    height={16}
                     alt=''
-                    onError={(event) => {
-                      event.currentTarget.hidden = true
-                    }}
                   />
+                ) : (
+                  <IconWorld size={16} className='browser-icon' aria-hidden />
                 )}
                 <Text span size='xs' fw={500}>{app.name}</Text>
               </UnstyledButton>
