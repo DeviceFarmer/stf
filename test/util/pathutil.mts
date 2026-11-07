@@ -175,6 +175,66 @@ describe('pathutil', function() {
       expect(resolved).to.equal(localFile)
     })
 
+    it('should not fall through to an ancestor copy when the closest lacks the file', function() {
+      writeJson(
+        path.join(appDir, 'node_modules', 'dep', 'package.json')
+      , {name: 'dep', version: '2.0.0'}
+      )
+      createDummyFile(path.join(parentDir, 'node_modules', 'dep', 'foo.js'), 'hoisted')
+
+      var resolved = pathutil.module('dep/foo.js', appDir)
+      expect(resolved).to.equal(path.join(appDir, 'node_modules', 'dep', 'foo.js'))
+    })
+
+    it('should skip a package directory without package.json', function() {
+      fs.mkdirSync(path.join(appDir, 'node_modules', 'dep'), {recursive: true})
+      writeJson(
+        path.join(parentDir, 'node_modules', 'dep', 'package.json')
+      , {name: 'dep', version: '1.0.0'}
+      )
+
+      var resolved = pathutil.module('dep/missing.js', appDir)
+      expect(resolved).to.equal(path.join(parentDir, 'node_modules', 'dep', 'missing.js'))
+    })
+
+    it('should not stop at a scope directory of another package', function() {
+      writeJson(
+        path.join(appDir, 'node_modules', '@devicefarmer', 'other', 'package.json')
+      , {name: '@devicefarmer/other', version: '1.0.0'}
+      )
+      var hoistedFile = path.join(
+        parentDir
+      , 'node_modules'
+      , '@devicefarmer'
+      , 'minicap-prebuilt'
+      , 'prebuilt'
+      , 'noarch'
+      , 'minicap.apk'
+      )
+      createDummyFile(hoistedFile)
+
+      var resolved = pathutil.module(
+        '@devicefarmer//minicap-prebuilt/prebuilt/noarch/minicap.apk'
+      , appDir
+      )
+      expect(resolved).to.equal(hoistedFile)
+    })
+
+    it('should return an absolute path and walk ancestors for a relative base', function() {
+      var hoistedFile = path.join(parentDir, 'node_modules', 'dep', 'foo.js')
+      createDummyFile(hoistedFile)
+
+      var resolved = pathutil.module('dep/foo.js', path.relative(process.cwd(), appDir))
+      expect(path.isAbsolute(resolved)).to.be.true
+      expect(resolved).to.equal(hoistedFile)
+    })
+
+    it('should resolve installed dependencies from the stf root by default', function() {
+      var resolved = pathutil.module('@devicefarmer/stfservice-prebuilt/package.json')
+      expect(path.isAbsolute(resolved)).to.be.true
+      expect(fs.existsSync(resolved)).to.be.true
+    })
+
     it('should fall back to resolving against root node_modules when not found', function() {
       var resolved = pathutil.module('@devicefarmer/missing/file.txt', appDir)
       var expected = path.resolve(

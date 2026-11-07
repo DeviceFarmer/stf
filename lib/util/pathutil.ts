@@ -2,14 +2,19 @@ import path from 'path'
 import fs from 'fs'
 import util from 'util'
 
+// Returns '' for anything that isn't a package name (a bare scope, a relative
+// segment), so the lookup below never stops at an unrelated directory.
 function getPackageName(target: string): string {
-  var parts = target.split(/[/\\]/)
+  var parts = target.split(/[/\\]+/).filter(Boolean)
   var first = parts[0]
-  if (first && first.startsWith('@')) {
-    var second = parts[1]
-    return second ? first + '/' + second : first
+  if (!first || first === '.' || first === '..') {
+    return ''
   }
-  return first || ''
+  if (first.startsWith('@')) {
+    var second = parts[1]
+    return second && second !== '.' && second !== '..' ? first + '/' + second : ''
+  }
+  return first
 }
 
 // Export
@@ -25,7 +30,7 @@ var resource = function(target: string) {
 
 // Export
 var nodeModule = function(target: string, from?: string) {
-  var start = from || path.resolve(import.meta.dirname, '../..')
+  var start = from ? path.resolve(from) : path.resolve(import.meta.dirname, '../..')
   var pkg = getPackageName(target)
 
   for (var dir = start; ; dir = path.dirname(dir)) {
@@ -35,8 +40,10 @@ var nodeModule = function(target: string, from?: string) {
     if (fs.existsSync(candidate)) {
       return candidate
     }
+    // The closest installed copy owns the path even when the file is missing,
+    // so probing for an optional file never falls through to another version.
     // eslint-disable-next-line no-sync
-    if (pkg && fs.existsSync(path.join(dir, 'node_modules', pkg))) {
+    if (pkg && fs.existsSync(path.join(dir, 'node_modules', pkg, 'package.json'))) {
       return candidate
     }
     if (dir === path.dirname(dir)) {
