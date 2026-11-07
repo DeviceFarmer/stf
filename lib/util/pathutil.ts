@@ -2,9 +2,20 @@ import path from 'path'
 import fs from 'fs'
 import util from 'util'
 
+function getPackageName(target: string): string {
+  var parts = target.split(/[/\\]/)
+  var first = parts[0]
+  if (first && first.startsWith('@')) {
+    var second = parts[1]
+    return second ? first + '/' + second : first
+  }
+  return first || ''
+}
+
 // Export
-var root = function(target: string) {
-  return path.resolve(import.meta.dirname, '../..', target)
+var root = function(target: string, from?: string) {
+  var base = from || path.resolve(import.meta.dirname, '../..')
+  return path.resolve(base, target)
 }
 
 // Export
@@ -13,8 +24,27 @@ var resource = function(target: string) {
 }
 
 // Export
-var nodeModule = function(target: string) {
-  return path.resolve(import.meta.dirname, '../../node_modules', target)
+var nodeModule = function(target: string, from?: string) {
+  var start = from || path.resolve(import.meta.dirname, '../..')
+  var pkg = getPackageName(target)
+
+  for (var dir = start; ; dir = path.dirname(dir)) {
+    var candidate = path.join(dir, 'node_modules', target)
+    // this resolver is synchronous by contract, callers use it at init time
+    // eslint-disable-next-line no-sync
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+    // eslint-disable-next-line no-sync
+    if (pkg && fs.existsSync(path.join(dir, 'node_modules', pkg))) {
+      return candidate
+    }
+    if (dir === path.dirname(dir)) {
+      break
+    }
+  }
+
+  return path.resolve(start, 'node_modules', target)
 }
 
 // Export
