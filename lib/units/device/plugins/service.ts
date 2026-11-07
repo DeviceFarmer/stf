@@ -12,6 +12,7 @@ import streamutil from '../../../util/streamutil.js'
 import logger from '../../../util/logger.js'
 import ms from '../../../wire/messagestream.js'
 import lifecycle from '../../../util/lifecycle.js'
+import {computeDisplaySize} from '../../../util/displayutil.js'
 import type {Transform} from 'stream'
 import type {
   Adb
@@ -416,9 +417,11 @@ export default syrup.serial()
             , density: response.density
             , rotation: response.rotation
             , secure: response.secure
-            , size: Math.sqrt(
-                Math.pow(response.width / response.xdpi, 2) +
-                Math.pow(response.height / response.ydpi, 2)
+            , size: computeDisplaySize(
+                response.width
+              , response.height
+              , response.xdpi
+              , response.ydpi
               )
             }
           }

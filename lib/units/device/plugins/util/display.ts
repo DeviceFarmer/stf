@@ -5,6 +5,7 @@ import EventEmitter from 'eventemitter3'
 
 import logger from '../../../../util/logger.js'
 import streamutil from '../../../../util/streamutil.js'
+import {computeDisplaySize} from '../../../../util/displayutil.js'
 import type Bluebird from 'bluebird'
 import type {
   Adb
@@ -19,6 +20,30 @@ import adbSyrup from '../../support/adb.js'
 import minicapSyrup from '../../resources/minicap.js'
 import serviceSyrup from '../service.js'
 import optionsSyrup from '../screen/options.js'
+
+export function normalizeDisplayProperties(properties: DisplayProperties): DisplayProperties {
+  if (!Number.isFinite(properties.size) || properties.size <= 0) {
+    properties.size = computeDisplaySize(
+      properties.width
+    , properties.height
+    , properties.xdpi
+    , properties.ydpi
+    )
+  }
+  if (!Number.isFinite(properties.xdpi) || properties.xdpi < 0) {
+    properties.xdpi = 0
+  }
+  if (!Number.isFinite(properties.ydpi) || properties.ydpi < 0) {
+    properties.ydpi = 0
+  }
+  if (!Number.isFinite(properties.fps) || properties.fps < 0) {
+    properties.fps = 0
+  }
+  if (!Number.isFinite(properties.density) || properties.density < 0) {
+    properties.density = 0
+  }
+  return properties
+}
 
 export default syrup.serial()
   .dependency(adbSyrup)
@@ -81,7 +106,7 @@ export default syrup.serial()
         })
         .then(function(properties) {
           properties.url = screenOptions.publicUrl
-          return new Display(id, properties)
+          return new Display(id, normalizeDisplayProperties(properties))
         })
     }
 
