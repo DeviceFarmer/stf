@@ -7,7 +7,10 @@ let instance: Socket | null = null
 export function getSocket(): Socket {
   if (!instance) {
     instance = io(appState.config.websocketUrl || '', {
-      reconnection: false
+      reconnection: true
+      , reconnectionAttempts: Infinity
+      , reconnectionDelay: 1000
+      , reconnectionDelayMax: 5000
       , transports: ['websocket']
     })
   }

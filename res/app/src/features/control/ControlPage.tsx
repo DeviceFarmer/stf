@@ -26,7 +26,7 @@ import {
   , IconSitemap
 } from '@tabler/icons-react'
 import {createControl, type Control} from '@/core/control'
-import {useDevice} from '@/core/devices/store'
+import {onTrackersReloaded, useDevice} from '@/core/devices/store'
 import {isAutomated, likelyLeaveReason} from '@/core/devices/enhance'
 import type {Device, DeviceOwner} from '@/core/devices/types'
 import {inviteDevice, releaseDevice} from '@/core/group'
@@ -99,8 +99,9 @@ export const panes: PaneDefinition[] = [
   }
 ]
 
-function DeviceLostModal({device, onReconnect, onLeave, onDismiss}: {
+function DeviceLostModal({device, reconnecting, onReconnect, onLeave, onDismiss}: {
   device: Device
+  reconnecting?: boolean
   onReconnect: () => void
   onLeave: () => void
   onDismiss: () => void
@@ -119,7 +120,12 @@ function DeviceLostModal({device, onReconnect, onLeave, onDismiss}: {
         <Text fw={600}>{device.enhancedName}</Text>
         <Text c={stateColor(device.state)} fw={500}>{t(device.enhancedStatePassive)}</Text>
         <Group justify='space-between' w='100%' mt='md'>
-          <Button leftSection={<IconRefresh size={16} />} onClick={onReconnect}>
+          <Button
+            leftSection={<IconRefresh size={16} />}
+            loading={Boolean(reconnecting)}
+            disabled={!device.usable || isAutomated(device)}
+            onClick={onReconnect}
+          >
             {t('Try to reconnect')}
           </Button>
           <Button variant='default' leftSection={<IconSitemap size={16} />} onClick={onLeave}>
@@ -245,6 +251,9 @@ function ControlSession() {
   }, [device])
   const [joined, setJoined] = useState<Device | null>(null)
   const [lost, setLost] = useState(false)
+  const [reconnecting, setReconnecting] = useState(false)
+  const [sessionEpoch, setSessionEpoch] = useState(0)
+  const needsSocketRecovery = useRef(false)
   const automated = Boolean(device && isAutomated(device))
   const watching = watchMode || automated
   const [observedAutomation, setObservedAutomation] = useState(false)
@@ -363,6 +372,78 @@ function ControlSession() {
       setLost(true)
     }
   }, [deviceState, joined, watching])
+
+  function reconnectSession(silent = false) {
+    const target = currentDevice.current
+    if (!target || reconnecting || watching || !target.usable || isAutomated(target)) {
+      return
+    }
+    setReconnecting(true)
+    inviteDevice(target)
+      .then((accepted) => {
+        if (!sessionActive.current) {
+          return
+        }
+        const current = currentDevice.current
+        if (!current || current.serial !== target.serial || isAutomated(current)) {
+          return
+        }
+        needsSocketRecovery.current = false
+        previousState.current = null
+        setAcceptedManual(manualSession(accepted))
+        setJoined(current)
+        setSessionEpoch((epoch) => epoch + 1)
+        setLost(false)
+        setSetting('lastUsedDevice', current.serial)
+      })
+      .catch((err) => {
+        if (sessionActive.current && !silent) {
+          notifyFailure(err, t('Error'))
+        }
+      })
+      .finally(() => {
+        if (sessionActive.current) {
+          setReconnecting(false)
+        }
+      })
+  }
+
+  const autoReconnect = useEffectEvent(() => reconnectSession(true))
+
+  useEffect(() => onTrackersReloaded(() => {
+    if (!joined) {
+      return
+    }
+    needsSocketRecovery.current = true
+    setSessionEpoch((epoch) => epoch + 1)
+  }), [joined])
+
+  useEffect(() => {
+    if (!needsSocketRecovery.current || !joined || !device) {
+      return
+    }
+    if (watching) {
+      if (device.present && device.status === 3 && device.ready) {
+        needsSocketRecovery.current = false
+        setJoined(device)
+        setSessionEpoch((epoch) => epoch + 1)
+      }
+      return
+    }
+    if (device.usable && !isAutomated(device) && (!device.owner || device.using)) {
+      autoReconnect()
+    }
+  }, [
+    joined
+    , device
+    , watching
+    , device?.present
+    , device?.status
+    , device?.ready
+    , device?.usable
+    , device?.using
+    , device?.owner?.email
+  ])
 
   const readOnly = watching || !device?.using
   const control: Control | null = useMemo(
@@ -485,18 +566,15 @@ function ControlSession() {
       <Box style={{flex: '1 1 0%', minHeight: 0}}>
         {basicMode || standalone ?
           <Box className='fill-height'>
-            <DeviceControlPanel device={device} control={control} standalone />
+            <DeviceControlPanel key={sessionEpoch} device={device} control={control} standalone />
           </Box> :
-          <ControlWorkspace device={device} control={control} />}
+          <ControlWorkspace key={sessionEpoch} device={device} control={control} />}
       </Box>
       {lost && (
         <DeviceLostModal
           device={device}
-          onReconnect={() => {
-            setLost(false)
-            previousState.current = null
-            setJoined(null)
-          }}
+          reconnecting={reconnecting}
+          onReconnect={() => reconnectSession(false)}
           onLeave={() => {
             setLost(false)
             navigate('/devices')

@@ -124,7 +124,8 @@ export function openSocketDisconnected(message: string): void {
   }
   disconnectedOpen = true
   modals.open({
-    title: <ModalTitle icon={IconPlugConnectedX} color='red' title={translate('Disconnected')} />
+    modalId: 'socket-disconnected'
+    , title: <ModalTitle icon={IconPlugConnectedX} color='red' title={translate('Disconnected')} />
     , centered: true
     , onClose: () => {
       disconnectedOpen = false
@@ -144,6 +145,13 @@ export function openSocketDisconnected(message: string): void {
       </Stack>
     )
   })
+}
+
+export function closeSocketDisconnected(): void {
+  if (disconnectedOpen) {
+    modals.close('socket-disconnected')
+    disconnectedOpen = false
+  }
 }
 
 export function openVersionUpdate(): void {

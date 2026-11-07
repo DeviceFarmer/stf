@@ -61,6 +61,9 @@ export async function request<T = any>(
   const data = await parseBody(response)
 
   if (!response.ok) {
+    if (response.status === 401 && !url.startsWith('/auth/')) {
+      window.location.href = '/'
+    }
     throw new ApiError(response.status, response.statusText, data)
   }
 

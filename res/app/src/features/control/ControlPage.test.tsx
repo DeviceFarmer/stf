@@ -12,6 +12,8 @@ const state = vi.hoisted(() => ({
   , release: vi.fn(), confirm: vi.fn(), report: vi.fn()
   , user: {email: 'viewer@example.test', privilege: 'user'}
   , listeners: new Set<() => void>()
+  , reloadListeners: new Set<() => void>()
+  , mountCount: 0
 }))
 vi.mock('@/core/devices/store', async() => {
   const {useSyncExternalStore} = await import('react')
@@ -23,7 +25,14 @@ vi.mock('@/core/devices/store', async() => {
       }
     }
     , () => state.device
-  ), loading: false})}
+  ), loading: false})
+    , onTrackersReloaded: (listener: () => void) => {
+      state.reloadListeners.add(listener)
+      return () => {
+        state.reloadListeners.delete(listener)
+      }
+    }
+  }
 })
 vi.mock('@/core/group', () => ({inviteDevice: state.invite, releaseDevice: state.release}))
 vi.mock('@/core/user', () => ({currentUser: state.user}))
@@ -38,8 +47,16 @@ vi.mock('@/core/control', () => ({createControl: (_device: Device, _channel: str
     return readOnly()
   }
 })}))
-vi.mock('./device-control/DeviceControlPanel', () => ({default: ({control}: {control: Control}) =>
-  <button data-testid='home' disabled={control.readOnly}>Home</button>}))
+vi.mock('./device-control/DeviceControlPanel', async() => {
+  const {useEffect} = await import('react')
+  function MockDeviceControlPanel({control}: {control: Control}) {
+    useEffect(() => {
+      state.mountCount += 1
+    }, [])
+    return <button data-testid='home' disabled={control.readOnly}>Home</button>
+  }
+  return {default: MockDeviceControlPanel}
+})
 import ControlPage from './ControlPage'
 
 function phone(overrides: Partial<Device> = {}): Device {
@@ -76,6 +93,7 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     state.release.mockReset().mockResolvedValue(undefined)
     state.confirm.mockReset().mockResolvedValue(true)
     state.report.mockReset()
+    state.mountCount = 0
     state.device = phone({platform})
     host = document.createElement('div')
     document.body.append(host)
@@ -90,7 +108,7 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     await act(async() => {
       root.render(<AuthProviders><MemoryRouter initialEntries={[path]}>
         <Location />
-        <Routes><Route path='/control/:serial' element={<ControlPage />} /></Routes>
+        <Routes><Route path='/' element={null} /><Route path='/control/:serial' element={<ControlPage />} /></Routes>
       </MemoryRouter></AuthProviders>)
     })
   }
@@ -389,5 +407,47 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     await act(async() => release.click())
     expect(state.notify).toHaveBeenCalledOnce()
     expect(home().disabled).toBe(true)
+  })
+  it('leaves to the device list when the initial manual invite fails', async() => {
+    state.device = phone({platform, owner: null, usage: null})
+    state.invite.mockRejectedValueOnce(new Error('Device refused to join'))
+    await render('/control/phone')
+    expect(location()).toBe('/')
+  })
+  it('recovers manual control and remounts the screen stream after an STF server restart', async() => {
+    const owned = phone({platform, owner: {email: state.user.email, reservationId: 'r1'}, usage: null, using: true})
+    state.device = phone({platform, owner: null, usage: null})
+    state.invite.mockResolvedValueOnce(owned)
+    await render('/control/phone')
+    state.device = owned
+    await render()
+    expect(home().disabled).toBe(false)
+    const mountsBeforeRestart = state.mountCount
+
+    // Server restarts: device briefly prepares, then trackers reload and device becomes available
+    state.device = phone({platform, owner: null, usage: null, ready: false})
+    await render()
+    expect(document.body.textContent).toContain('Device was disconnected')
+
+    const reowned = phone({
+      platform
+      , channel: 'new-device-channel'
+      , owner: {email: state.user.email, reservationId: 'r2'}
+      , usage: null
+      , using: true
+    })
+    state.invite.mockResolvedValueOnce(reowned)
+    await act(async() => {
+      state.reloadListeners.forEach((listener) => listener())
+    })
+    state.device = phone({platform, channel: 'new-device-channel', owner: null, usage: null, ready: true})
+    await render()
+    state.device = reowned
+    await render()
+
+    expect(state.invite).toHaveBeenCalledTimes(2)
+    expect(document.body.textContent).not.toContain('Device was disconnected')
+    expect(home().disabled).toBe(false)
+    expect(state.mountCount).toBeGreaterThan(mountsBeforeRestart)
   })
 })
