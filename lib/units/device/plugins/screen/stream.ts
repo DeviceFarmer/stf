@@ -61,6 +61,111 @@ interface FrameProducerEvents {
   error: (err: Error) => void
 }
 
+var log = logger.createLogger('device:plugins:screen:stream')
+
+export interface ScreenClient {
+  onStart: (producer?: any) => Promise<unknown>
+  onFrame: (frame: Buffer) => Promise<unknown>
+}
+
+export interface ScreenFrameProducer {
+  banner: unknown
+  updateProjection: (width: number, height: number) => void
+}
+
+export function handleScreenConnection(
+  ws: WebSocket
+, broadcastSet: BroadcastSet<ScreenClient>
+, frameProducer: ScreenFrameProducer
+, pingInterval: number
+) {
+  var id = uuid.v4()
+  var pingTimer: NodeJS.Timeout
+
+  function send(message: string | Buffer, options?: {binary: boolean}) {
+    return new Promise<void>(function(resolve, reject) {
+      switch (ws.readyState) {
+      case WebSocket.CONNECTING:
+        // This should never happen.
+        log.warn('Unable to send to CONNECTING client "%s"', id)
+        break
+      case WebSocket.OPEN:
+        // This is what SHOULD happen.
+        ws.send(message, options!, function(err) {
+          return err ? reject(err) : resolve()
+        })
+        break
+      case WebSocket.CLOSING:
+        // Ok, a 'close' event should remove the client from the set
+        // soon.
+        break
+      case WebSocket.CLOSED:
+        // This should never happen.
+        log.warn('Unable to send to CLOSED client "%s"', id)
+        clearInterval(pingTimer)
+        broadcastSet.remove(id)
+        break
+      }
+    })
+  }
+
+  function wsStartNotifier() {
+    return send(util.format(
+      'start %s'
+    , JSON.stringify(frameProducer.banner)
+    ))
+  }
+
+  function wsPingNotifier() {
+    return send('ping')
+  }
+
+  function wsFrameNotifier(frame: Buffer) {
+    return send(frame, {
+      binary: true
+    })
+  }
+
+  // Sending a ping message every now and then makes sure that
+  // reverse proxies like nginx don't time out the connection [1].
+  //
+  // [1] http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_read_timeout
+  pingTimer = setInterval(wsPingNotifier, pingInterval)
+
+  ws.on('message', function(data) {
+    var match = /^(on|off|(size) ([0-9]+)x([0-9]+))$/.exec(data as unknown as string)
+    if (match) {
+      switch (match[2] || match[1]) {
+      case 'on':
+        broadcastSet.insert(id, {
+          onStart: wsStartNotifier
+        , onFrame: wsFrameNotifier
+        })
+        break
+      case 'off':
+        broadcastSet.remove(id)
+        // Keep pinging even when the screen is off.
+        break
+      case 'size':
+        frameProducer.updateProjection(
+          Number(match[3]), Number(match[4]))
+        break
+      }
+    }
+  })
+
+  ws.on('error', function(err) {
+    log.warn('Screen WebSocket client "%s" error: %s', id, err.message)
+    clearInterval(pingTimer)
+    broadcastSet.remove(id)
+  })
+
+  ws.on('close', function() {
+    clearInterval(pingTimer)
+    broadcastSet.remove(id)
+  })
+}
+
 export default syrup.serial()
   .dependency(adbSyrup)
   .dependency(minicapSyrup)
@@ -73,14 +178,8 @@ export default syrup.serial()
   , display: Display
   , screenOptions: ScreenOptions
   ) {
-    var log = logger.createLogger('device:plugins:screen:stream')
     log.info('ScreenGrabber set to %s', minicap.grabber)
     log.info('ScreenFrameRate option set to %d', options.screenFrameRate)
-
-    interface ScreenClient {
-      onStart: (producer: FrameProducer) => Promise<unknown>
-      onFrame: (frame: Buffer) => Promise<unknown>
-    }
 
     class FrameProducer extends EventEmitter.EventEmitter<FrameProducerEvents> {
       static STATE_STOPPED = 1
@@ -590,88 +689,17 @@ export default syrup.serial()
         })
 
         wss.on('connection', function(ws) {
-          var id = uuid.v4()
-          var pingTimer: NodeJS.Timeout
+          handleScreenConnection(ws, broadcastSet, frameProducer, options.screenPingInterval)
+        })
 
-          function send(message: string | Buffer, options?: {binary: boolean}) {
-            return new Promise<void>(function(resolve, reject) {
-              switch (ws.readyState) {
-              case WebSocket.CONNECTING:
-                // This should never happen.
-                log.warn('Unable to send to CONNECTING client "%s"', id)
-                break
-              case WebSocket.OPEN:
-                // This is what SHOULD happen.
-                ws.send(message, options!, function(err) {
-                  return err ? reject(err) : resolve()
-                })
-                break
-              case WebSocket.CLOSING:
-                // Ok, a 'close' event should remove the client from the set
-                // soon.
-                break
-              case WebSocket.CLOSED:
-                // This should never happen.
-                log.warn('Unable to send to CLOSED client "%s"', id)
-                clearInterval(pingTimer)
-                broadcastSet.remove(id)
-                break
-              }
-            })
-          }
-
-          function wsStartNotifier() {
-            return send(util.format(
-              'start %s'
-            , JSON.stringify(frameProducer.banner)
-            ))
-          }
-
-          function wsPingNotifier() {
-            return send('ping')
-          }
-
-          function wsFrameNotifier(frame: Buffer) {
-            return send(frame, {
-              binary: true
-            })
-          }
-
-          // Sending a ping message every now and then makes sure that
-          // reverse proxies like nginx don't time out the connection [1].
-          //
-          // [1] http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_read_timeout
-          pingTimer = setInterval(wsPingNotifier, options.screenPingInterval)
-
-          ws.on('message', function(data) {
-            var match = /^(on|off|(size) ([0-9]+)x([0-9]+))$/.exec(data as unknown as string)
-            if (match) {
-              switch (match[2] || match[1]) {
-              case 'on':
-                broadcastSet.insert(id, {
-                  onStart: wsStartNotifier
-                , onFrame: wsFrameNotifier
-                })
-                break
-              case 'off':
-                broadcastSet.remove(id)
-                // Keep pinging even when the screen is off.
-                break
-              case 'size':
-                frameProducer.updateProjection(
-                  Number(match[3]), Number(match[4]))
-                break
-              }
-            }
-          })
-
-          ws.on('close', function() {
-            clearInterval(pingTimer)
-            broadcastSet.remove(id)
-          })
+        wss.on('error', function(err) {
+          log.error('Screen WebSocket server error: %s', err.message)
         })
 
         lifecycle.observe(function() {
+          for (var client of wss.clients) {
+            client.terminate()
+          }
           wss.close()
         })
 
