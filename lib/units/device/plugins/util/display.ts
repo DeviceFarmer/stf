@@ -22,13 +22,19 @@ import serviceSyrup from '../service.js'
 import optionsSyrup from '../screen/options.js'
 
 export function normalizeDisplayProperties(properties: DisplayProperties): DisplayProperties {
-  if (!Number.isFinite(properties.size) || properties.size <= 0) {
-    properties.size = computeDisplaySize(
+  if (typeof properties.size !== 'number' || !Number.isFinite(properties.size) || properties.size <= 0) {
+    var size = computeDisplaySize(
       properties.width
     , properties.height
     , properties.xdpi
     , properties.ydpi
     )
+    if (typeof size === 'number') {
+      properties.size = size
+    }
+    else {
+      delete properties.size
+    }
   }
   if (!Number.isFinite(properties.xdpi) || properties.xdpi < 0) {
     properties.xdpi = 0

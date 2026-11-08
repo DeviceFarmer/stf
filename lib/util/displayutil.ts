@@ -5,7 +5,7 @@ export function computeDisplaySize(
 , height: number
 , xdpi: number
 , ydpi: number
-): number {
+): number | undefined {
   if (
     Number.isFinite(width) && width > 0 &&
     Number.isFinite(height) && height > 0 &&
@@ -17,7 +17,9 @@ export function computeDisplaySize(
       return diag
     }
   }
-  return 0
+  // Unknown (e.g. headless displays reporting 0 dpi): leave the size out
+  // rather than inventing a value, exactly like devices that never reported one.
+  return undefined
 }
 
 export function cleanDisplay<T extends Partial<DeviceDisplayMessageFields>>(
@@ -27,9 +29,11 @@ export function cleanDisplay<T extends Partial<DeviceDisplayMessageFields>>(
     return display
   }
   const clean = Object.assign({}, display)
+  if (typeof clean.size === 'number' && !Number.isFinite(clean.size)) {
+    delete clean.size
+  }
   const numericKeys = [
-    'size'
-  , 'xdpi'
+    'xdpi'
   , 'ydpi'
   , 'fps'
   , 'density'

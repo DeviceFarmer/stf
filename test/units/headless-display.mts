@@ -14,33 +14,19 @@ describe('headless display handling (GH #232)', function() {
       expect(size).to.be.closeTo(6.26, 0.05)
     })
 
-    it('returns 0 for headless devices with non-zero dimensions and xdpi=0, ydpi=0', function() {
+    it('returns undefined for headless devices with non-zero dimensions and xdpi=0, ydpi=0', function() {
       // Odroid C4 / N2 without HDMI attached reports 1920x1080 with xdpi=0, ydpi=0
-      const size = computeDisplaySize(1920, 1080, 0, 0)
-      expect(size).to.equal(0)
-      expect(Number.isFinite(size)).to.be.true
-      expect(Number.isNaN(size)).to.be.false
+      expect(computeDisplaySize(1920, 1080, 0, 0)).to.equal(undefined)
     })
 
-    it('returns 0 for headless devices with zero dimensions and zero DPI', function() {
-      const size = computeDisplaySize(0, 0, 0, 0)
-      expect(size).to.equal(0)
-      expect(Number.isFinite(size)).to.be.true
-      expect(Number.isNaN(size)).to.be.false
+    it('returns undefined for headless devices with zero dimensions and zero DPI', function() {
+      expect(computeDisplaySize(0, 0, 0, 0)).to.equal(undefined)
     })
 
-    it('returns 0 if either xdpi or ydpi is zero or negative', function() {
-      expect(computeDisplaySize(1920, 1080, 0, 420)).to.equal(0)
-      expect(computeDisplaySize(1920, 1080, 420, 0)).to.equal(0)
-      expect(computeDisplaySize(1920, 1080, -1, 420)).to.equal(0)
-      expect(computeDisplaySize(1920, 1080, 420, -1)).to.equal(0)
-    })
-
-    it('returns 0 if dimensions or DPI values are non-finite', function() {
-      expect(computeDisplaySize(Infinity, 1080, 420, 420)).to.equal(0)
-      expect(computeDisplaySize(1920, NaN, 420, 420)).to.equal(0)
-      expect(computeDisplaySize(1920, 1080, Infinity, 420)).to.equal(0)
-      expect(computeDisplaySize(1920, 1080, 420, NaN)).to.equal(0)
+    it('returns undefined if either xdpi or ydpi is zero or negative', function() {
+      expect(computeDisplaySize(1920, 1080, 0, 420)).to.equal(undefined)
+      expect(computeDisplaySize(1920, 1080, 420, 0)).to.equal(undefined)
+      expect(computeDisplaySize(1920, 1080, -1, 420)).to.equal(undefined)
     })
   })
 
@@ -60,7 +46,7 @@ describe('headless display handling (GH #232)', function() {
       , url: 'ws://localhost:7100'
       }
       const normalized = normalizeDisplayProperties(raw)
-      expect(normalized.size).to.equal(0)
+      expect(normalized).to.not.have.property('size')
       expect(normalized.xdpi).to.equal(0)
       expect(normalized.ydpi).to.equal(0)
       expect(normalized.fps).to.equal(0)
@@ -93,7 +79,7 @@ describe('headless display handling (GH #232)', function() {
       expect(cleanDisplay()).to.equal(undefined)
     })
 
-    it('sanitizes non-finite size, xdpi, ydpi, fps, density to 0', function() {
+    it('drops a non-finite size and sanitizes xdpi, ydpi, fps, density to 0', function() {
       const dirty = {
         id: 0
       , width: 1920
@@ -119,7 +105,6 @@ describe('headless display handling (GH #232)', function() {
       , density: 0
       , secure: false
       , url: 'ws://localhost:7100'
-      , size: 0
       })
     })
 
@@ -143,6 +128,15 @@ describe('headless display handling (GH #232)', function() {
   })
 
   describe('wire round-trip with headless display', function() {
+    it('serializes DeviceDisplayMessage without a size (optional field)', function() {
+      const displayMsg = new wire.DeviceDisplayMessage(
+        0, 1920, 1080, 0, 0, 0, 59.94, 1.5, false, 'ws://localhost:7100'
+      )
+      const decoded = wire.DeviceDisplayMessage.decode(displayMsg.encode())
+      expect(decoded.xdpi).to.equal(0)
+      expect(decoded.size == null).to.be.true
+    })
+
     it('serializes and deserializes DeviceDisplayMessage with zero DPI and size 0', function() {
       const displayMsg = new wire.DeviceDisplayMessage(
         0
@@ -175,7 +169,7 @@ describe('headless display handling (GH #232)', function() {
   })
 
   describe('datautil.applyData with headless display', function() {
-    it('leaves inches undefined when display has size=0 and xdpi=0, ydpi=0', function() {
+    it('leaves inches undefined when size is unknown and xdpi=0, ydpi=0', function() {
       const device: datautil.Device = {
         model: 'Odroid C4'
       , display: {
@@ -183,14 +177,13 @@ describe('headless display handling (GH #232)', function() {
         , height: 1080
         , xdpi: 0
         , ydpi: 0
-        , size: 0
         , density: 1.5
         , fps: 59.94
         }
       }
       datautil.applyData(device)
       expect(device.display?.inches).to.equal(undefined)
-      expect(device.display?.size).to.equal(0)
+      expect(device.display).to.not.have.property('size')
     })
 
     it('calculates inches normally for devices with valid size', function() {

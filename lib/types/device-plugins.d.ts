@@ -119,7 +119,7 @@ export interface DisplayProperties {
   density: number
   rotation: number
   secure: boolean
-  size: number
+  size?: number
   url?: string
 }
 

@@ -407,6 +407,12 @@ export default syrup.serial()
           var response = apk.wire.GetDisplayResponse.decode(data) as
             NonNullableFields<GetDisplayResponse>
           if (response.success) {
+            var size = computeDisplaySize(
+              response.width
+            , response.height
+            , response.xdpi
+            , response.ydpi
+            )
             return {
               id: id
             , width: response.width
@@ -417,12 +423,7 @@ export default syrup.serial()
             , density: response.density
             , rotation: response.rotation
             , secure: response.secure
-            , size: computeDisplaySize(
-                response.width
-              , response.height
-              , response.xdpi
-              , response.ydpi
-              )
+            , ...(size === undefined ? {} : {size: size})
             }
           }
           throw new Error('Unable to retrieve display information')
