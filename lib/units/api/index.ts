@@ -26,6 +26,7 @@ export default function(options: ApiUnitOptions) {
   var app = express()
   var server = http.createServer(app)
   var channelRouter = new events.EventEmitter()
+  channelRouter.setMaxListeners(0)
 
   var push = zmqutil.socket('push')
   Promise.map(options.endpoints.push, function(endpoint) {
