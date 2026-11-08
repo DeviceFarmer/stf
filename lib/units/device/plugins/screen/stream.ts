@@ -93,25 +93,29 @@ export function handleScreenConnection(
       case WebSocket.CONNECTING:
         // This should never happen.
         log.warn('Unable to send to CONNECTING client "%s"', id)
+        reject(new Error(util.format('Unable to send to CONNECTING client "%s"', id)))
         break
       case WebSocket.OPEN:
         // This is what SHOULD happen.
         ws.send(message, options!, function(err) {
           if (err) {
             log.warn('Failed to send to client "%s": %s', id, err.message)
-            return reject(err)
+            reject(err)
+            return
           }
-          return resolve()
+          resolve()
         })
         break
       case WebSocket.CLOSING:
         // Ok, a 'close' event should remove the client from the set
         // soon.
+        reject(new Error(util.format('Unable to send to CLOSING client "%s"', id)))
         break
       case WebSocket.CLOSED:
         // This should never happen.
         log.warn('Unable to send to CLOSED client "%s"', id)
         cleanup()
+        reject(new Error(util.format('Unable to send to CLOSED client "%s"', id)))
         break
       }
     })
