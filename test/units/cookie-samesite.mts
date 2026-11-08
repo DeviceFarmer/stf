@@ -108,13 +108,13 @@ describe('Cookie SameSite and Secure configuration', function() {
       expect(cookieutil.parseBoolean(undefined)).to.equal(undefined)
     })
 
-    it('should build session options with correct secure and sameSite defaults', function() {
+    it('should build session options that keep the legacy attributes by default', function() {
       var defaultOpts = cookieutil.sessionOptions({
         ssid: 'test-ssid'
       , secret: 'test-secret'
       })
       expect(defaultOpts.name).to.equal('test-ssid')
-      expect(defaultOpts.sameSite).to.equal('lax')
+      expect(typeof defaultOpts.sameSite).to.equal('undefined')
       expect(typeof defaultOpts.secure).to.equal('undefined')
 
       var noneOpts = cookieutil.sessionOptions({
@@ -123,7 +123,8 @@ describe('Cookie SameSite and Secure configuration', function() {
       , cookieSameSite: 'none'
       })
       expect(noneOpts.sameSite).to.equal('none')
-      expect(noneOpts.secure).to.equal(true)
+      // Left to cookie-session, which marks HTTPS requests Secure and never throws on HTTP
+      expect(typeof noneOpts.secure).to.equal('undefined')
 
       var explicitSecure = cookieutil.sessionOptions({
         ssid: 'test-ssid'
@@ -138,19 +139,30 @@ describe('Cookie SameSite and Secure configuration', function() {
       var httpReq = {protocol: 'http'} as any
       var httpsReq = {protocol: 'https'} as any
 
-      var defaultHttp = cookieutil.xsrfCookieOptions({}, httpReq)
-      expect(defaultHttp.sameSite).to.equal('lax')
-      expect(defaultHttp.secure).to.equal(false)
+      expect(cookieutil.xsrfCookieOptions({}, httpReq)).to.deep.equal({})
+      expect(cookieutil.xsrfCookieOptions({}, httpsReq)).to.deep.equal({})
 
-      var defaultHttps = cookieutil.xsrfCookieOptions({}, httpsReq)
-      expect(defaultHttps.secure).to.equal(true)
+      var laxHttps = cookieutil.xsrfCookieOptions({cookieSameSite: 'lax'}, httpsReq)
+      expect(laxHttps).to.deep.equal({sameSite: 'lax'})
 
       var noneHttp = cookieutil.xsrfCookieOptions({cookieSameSite: 'none'}, httpReq)
-      expect(noneHttp.sameSite).to.equal('none')
-      expect(noneHttp.secure).to.equal(true)
+      expect(noneHttp).to.deep.equal({sameSite: 'none'})
+
+      var noneHttps = cookieutil.xsrfCookieOptions({cookieSameSite: 'none'}, httpsReq)
+      expect(noneHttps).to.deep.equal({sameSite: 'none', secure: true})
+
+      var explicitSecure = cookieutil.xsrfCookieOptions({cookieSecure: true}, httpReq)
+      expect(explicitSecure).to.deep.equal({secure: true})
 
       var explicitInsecure = cookieutil.xsrfCookieOptions({cookieSecure: false}, httpsReq)
-      expect(explicitInsecure.secure).to.equal(false)
+      expect(explicitInsecure).to.deep.equal({secure: false})
+    })
+
+    it('should only trust the proxy when a cookie option depends on it', function() {
+      expect(cookieutil.needsProxyTrust({})).to.equal(false)
+      expect(cookieutil.needsProxyTrust({cookieSameSite: 'lax'})).to.equal(false)
+      expect(cookieutil.needsProxyTrust({cookieSameSite: 'none'})).to.equal(true)
+      expect(cookieutil.needsProxyTrust({cookieSecure: false})).to.equal(true)
     })
   })
 
@@ -165,7 +177,7 @@ describe('Cookie SameSite and Secure configuration', function() {
       process.env = originalEnv
     })
 
-    it('should default --cookie-same-site to lax for app and auth-mock', function() {
+    it('should leave --cookie-same-site unset by default', function() {
       var appParsed = parseCli(appCli, [
         'app', '--secret', 's3cret', '--auth-url', 'http://127.0.0.1:7120/'
       , '--websocket-url', 'http://127.0.0.1:7110/'
@@ -175,9 +187,9 @@ describe('Cookie SameSite and Secure configuration', function() {
       ])
       var localParsed = parseCli(localCli, ['local'])
 
-      expect(appParsed.cookieSameSite).to.equal('lax')
-      expect(authParsed.cookieSameSite).to.equal('lax')
-      expect(localParsed.cookieSameSite).to.equal('lax')
+      expect(typeof appParsed.cookieSameSite).to.equal('undefined')
+      expect(typeof authParsed.cookieSameSite).to.equal('undefined')
+      expect(typeof localParsed.cookieSameSite).to.equal('undefined')
       expect(typeof appParsed.cookieSecure).to.equal('undefined')
       expect(typeof authParsed.cookieSecure).to.equal('undefined')
       expect(typeof localParsed.cookieSecure).to.equal('undefined')
@@ -402,34 +414,27 @@ describe('Cookie SameSite and Secure configuration', function() {
       })
     }
 
-    it('should set SameSite=Lax without Secure over plain HTTP by default', async function() {
+    it('should keep the legacy cookie attributes by default', async function() {
       await startAuthMock({})
-      var res = await request({port: port, path: '/auth/mock/'})
-      var cookies = getCookies(res.headers)
-      var ssidCookie = findCookie(cookies, 'ssid')
-      var xsrfCookie = findCookie(cookies, 'XSRF-TOKEN')
+      for (var headers of [{}, {'x-forwarded-proto': 'https'}]) {
+        var res = await request({port: port, path: '/auth/mock/', headers: headers})
+        var cookies = getCookies(res.headers)
+        var ssidCookie = findCookie(cookies, 'ssid')
+        var xsrfCookie = findCookie(cookies, 'XSRF-TOKEN')
 
-      expect(ssidCookie).to.include('samesite=lax')
-      expect(ssidCookie).to.not.include('secure')
-      expect(xsrfCookie).to.include('SameSite=Lax')
-      expect(xsrfCookie).to.not.include('Secure')
+        expect(ssidCookie).to.not.include('samesite')
+        expect(ssidCookie).to.not.include('secure')
+        expect(xsrfCookie).to.not.include('SameSite')
+        expect(xsrfCookie).to.not.include('Secure')
+      }
     })
 
-    it('should set SameSite=Lax and Secure behind X-Forwarded-Proto https', async function() {
-      await startAuthMock({})
-      var res = await request({
-        port: port
-      , path: '/auth/mock/'
-      , headers: {'x-forwarded-proto': 'https'}
-      })
+    it('should set SameSite=Lax explicitly when asked', async function() {
+      await startAuthMock({cookieSameSite: 'lax'})
+      var res = await request({port: port, path: '/auth/mock/'})
       var cookies = getCookies(res.headers)
-      var ssidCookie = findCookie(cookies, 'ssid')
-      var xsrfCookie = findCookie(cookies, 'XSRF-TOKEN')
-
-      expect(ssidCookie).to.include('samesite=lax')
-      expect(ssidCookie).to.include('secure')
-      expect(xsrfCookie).to.include('SameSite=Lax')
-      expect(xsrfCookie).to.include('Secure')
+      expect(findCookie(cookies, 'ssid')).to.include('samesite=lax')
+      expect(findCookie(cookies, 'XSRF-TOKEN')).to.include('SameSite=Lax')
     })
 
     it('should set SameSite=None and Secure when cookieSameSite is none', async function() {
@@ -612,13 +617,13 @@ describe('Cookie SameSite and Secure configuration', function() {
       })
     }
 
-    it('should set SameSite=Lax without Secure over plain HTTP by default', async function() {
+    it('should keep the legacy cookie attributes by default', async function() {
       await startApp({})
       var authRes = await request({port: port, path: '/?jwt=' + encodeURIComponent(token)})
       var authCookies = getCookies(authRes.headers)
       var ssidCookie = findCookie(authCookies, 'ssid')
 
-      expect(ssidCookie).to.include('samesite=lax')
+      expect(ssidCookie).to.not.include('samesite')
       expect(ssidCookie).to.not.include('secure')
 
       var cookieHeader = authCookies.map((c) => c.split(';')[0]).join('; ')
@@ -628,7 +633,7 @@ describe('Cookie SameSite and Secure configuration', function() {
       , headers: {cookie: cookieHeader}
       })
       var xsrfCookie = findCookie(getCookies(appRes.headers), 'XSRF-TOKEN')
-      expect(xsrfCookie).to.include('SameSite=Lax')
+      expect(xsrfCookie).to.not.include('SameSite')
       expect(xsrfCookie).to.not.include('Secure')
     })
 

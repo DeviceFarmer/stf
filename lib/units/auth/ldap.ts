@@ -56,7 +56,9 @@ export default function(options: LdapAuthOptions) {
   app.set('views', pathutil.resource('auth/ldap/views'))
   app.set('strict routing', true)
   app.set('case sensitive routing', true)
-  app.set('trust proxy', true)
+  if (cookieutil.needsProxyTrust(options)) {
+    app.set('trust proxy', true)
+  }
 
   app.use(cookieSession(cookieutil.sessionOptions({
     ssid: options.ssid

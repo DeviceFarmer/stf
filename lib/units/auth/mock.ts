@@ -85,7 +85,9 @@ export default function(options: MockAuthOptions) {
   app.set('views', pathutil.resource('auth/mock/views'))
   app.set('strict routing', true)
   app.set('case sensitive routing', true)
-  app.set('trust proxy', true)
+  if (cookieutil.needsProxyTrust(options)) {
+    app.set('trust proxy', true)
+  }
 
   app.use(cookieSession(cookieutil.sessionOptions({
     ssid: options.ssid

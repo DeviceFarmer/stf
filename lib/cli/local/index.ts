@@ -386,9 +386,9 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
   }
 
   function run() {
-    var cookieArgs: CliArg[] = [
-      '--cookie-same-site', argv.cookieSameSite
-    ]
+    var cookieArgs: CliArg[] = argv.cookieSameSite ?
+      ['--cookie-same-site', argv.cookieSameSite] :
+      []
     var cookieSecure = cookieutil.resolveCookieSecure(argv.cookieSecure)
     if (cookieSecure === true) {
       cookieArgs.push('--cookie-secure')

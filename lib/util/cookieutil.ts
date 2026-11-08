@@ -4,7 +4,7 @@ import type {CookieOptions, Request} from 'express'
 export type CookieSameSite = 'lax' | 'strict' | 'none'
 
 export interface CookieCliOptions {
-  cookieSameSite: CookieSameSite
+  cookieSameSite?: CookieSameSite | undefined
   cookieSecure?: boolean | undefined
 }
 
@@ -40,18 +40,17 @@ export function resolveCookieSecure(cookieSecure?: unknown): boolean | undefined
 }
 
 export function addCookieOptions<T>(yargs: Argv<T>): Argv<T & CookieCliOptions> {
-  var defaultSameSite = (
-    process.env.COOKIE_SAME_SITE ||
-    process.env.STF_COOKIE_SAME_SITE ||
-    'lax'
-  ).toLowerCase()
+  // No built-in default: when neither the option nor the environment sets it,
+  // cookies keep exactly the attributes they had before this option existed.
+  var envSameSite = process.env.COOKIE_SAME_SITE || process.env.STF_COOKIE_SAME_SITE
+  var defaultSameSite = envSameSite ? envSameSite.toLowerCase() : undefined
 
   return yargs
     .option('cookie-same-site', {
       describe: 'The SameSite attribute for session and CSRF cookies.'
     , type: 'string'
     , choices: ['lax', 'strict', 'none'] as const
-    , default: defaultSameSite
+    , ...(defaultSameSite ? {default: defaultSameSite} : {})
     , coerce: (val: string) => val.toLowerCase()
     })
     .option('cookie-secure', {
@@ -71,38 +70,52 @@ export function addCookieOptions<T>(yargs: Argv<T>): Argv<T & CookieCliOptions> 
 export function sessionOptions(
   options: CookieUnitOptions & {ssid: string, secret: string, httpOnly?: boolean | undefined}
 ): CookieSessionInterfaces.CookieSessionOptions {
-  var sameSite = options.cookieSameSite || 'lax'
   var sessionOpts: CookieSessionInterfaces.CookieSessionOptions = {
     name: options.ssid
   , keys: [options.secret]
-  , sameSite: sameSite
+  }
+
+  if (options.cookieSameSite) {
+    sessionOpts.sameSite = options.cookieSameSite
   }
 
   if (typeof options.httpOnly !== 'undefined') {
     sessionOpts.httpOnly = options.httpOnly
   }
 
+  // When unset, cookie-session marks the cookie Secure by itself for requests
+  // it sees as HTTPS (see needsProxyTrust), and never throws on plain HTTP.
   if (typeof options.cookieSecure !== 'undefined') {
     sessionOpts.secure = options.cookieSecure
   }
-  else if (sameSite === 'none') {
-    sessionOpts.secure = true
-  }
 
   return sessionOpts
+}
+
+// Units that terminate no TLS themselves need `trust proxy` to see
+// X-Forwarded-Proto, but only when a cookie option actually depends on it.
+export function needsProxyTrust(options: CookieUnitOptions): boolean {
+  return options.cookieSameSite === 'none' || typeof options.cookieSecure !== 'undefined'
 }
 
 export function xsrfCookieOptions(
   options: CookieUnitOptions
 , req: Request
 ): CookieOptions {
-  var sameSite = options.cookieSameSite || 'lax'
-  return {
-    sameSite: sameSite
-  , secure: typeof options.cookieSecure !== 'undefined' ?
-      options.cookieSecure :
-      (sameSite === 'none' || req.protocol === 'https')
+  var opts: CookieOptions = {}
+
+  if (options.cookieSameSite) {
+    opts.sameSite = options.cookieSameSite
   }
+
+  if (typeof options.cookieSecure !== 'undefined') {
+    opts.secure = options.cookieSecure
+  }
+  else if (options.cookieSameSite === 'none' && req.protocol === 'https') {
+    opts.secure = true
+  }
+
+  return opts
 }
 
 export function warnIfInsecureSameSiteNone(
@@ -122,6 +135,7 @@ export default {
 , resolveCookieSecure
 , addCookieOptions
 , sessionOptions
+, needsProxyTrust
 , xsrfCookieOptions
 , warnIfInsecureSameSiteNone
 }
