@@ -50,7 +50,7 @@ jobs:
           tags: stf-runtime-check:${{ matrix.arch }}
           provenance: false
           cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=stf-runtime-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=stf-runtime-${{ matrix.arch }},ignore-error=true
 
       - name: Load the Node base for the npmrc check
         uses: docker/build-push-action@v7
