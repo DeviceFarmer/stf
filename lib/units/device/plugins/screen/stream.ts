@@ -82,6 +82,11 @@ export function handleScreenConnection(
   var id = uuid.v4()
   var pingTimer: NodeJS.Timeout
 
+  function cleanup() {
+    clearInterval(pingTimer)
+    broadcastSet.remove(id)
+  }
+
   function send(message: string | Buffer, options?: {binary: boolean}) {
     return new Promise<void>(function(resolve, reject) {
       switch (ws.readyState) {
@@ -92,7 +97,11 @@ export function handleScreenConnection(
       case WebSocket.OPEN:
         // This is what SHOULD happen.
         ws.send(message, options!, function(err) {
-          return err ? reject(err) : resolve()
+          if (err) {
+            log.warn('Failed to send to client "%s": %s', id, err.message)
+            return reject(err)
+          }
+          return resolve()
         })
         break
       case WebSocket.CLOSING:
@@ -102,8 +111,7 @@ export function handleScreenConnection(
       case WebSocket.CLOSED:
         // This should never happen.
         log.warn('Unable to send to CLOSED client "%s"', id)
-        clearInterval(pingTimer)
-        broadcastSet.remove(id)
+        cleanup()
         break
       }
     })
@@ -113,11 +121,15 @@ export function handleScreenConnection(
     return send(util.format(
       'start %s'
     , JSON.stringify(frameProducer.banner)
-    ))
+    )).catch(function(err) {
+      log.warn('Failed to notify start to client "%s": %s', id, err.message)
+    })
   }
 
   function wsPingNotifier() {
-    return send('ping')
+    return send('ping').catch(function(err) {
+      log.warn('Failed to ping client "%s": %s', id, err.message)
+    })
   }
 
   function wsFrameNotifier(frame: Buffer) {
@@ -156,13 +168,11 @@ export function handleScreenConnection(
 
   ws.on('error', function(err) {
     log.warn('Screen WebSocket client "%s" error: %s', id, err.message)
-    clearInterval(pingTimer)
-    broadcastSet.remove(id)
+    cleanup()
   })
 
   ws.on('close', function() {
-    clearInterval(pingTimer)
-    broadcastSet.remove(id)
+    cleanup()
   })
 }
 

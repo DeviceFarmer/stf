@@ -97,14 +97,16 @@ export function createScreenServer(options: {
               }
             })
           }, 5000)
+          const cleanup = () => {
+            clearInterval(timer)
+            stop()
+          }
           ws.on('error', err => {
             options.onError?.(err)
-            clearInterval(timer)
-            stop()
+            cleanup()
           })
           ws.on('close', () => {
-            clearInterval(timer)
-            stop()
+            cleanup()
           })
           ws.on('message', data => {
             if (!authorized()) {
