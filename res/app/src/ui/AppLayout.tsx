@@ -92,12 +92,14 @@ function useSocketState() {
 
   useEffect(() => {
     let hasFailedOnce = false
+    let hasConnected = false
     function lost(message: string) {
       hasFailedOnce = true
       openSocketDisconnected(message)
     }
     const unsubscribers = [
       onSocket('connect', () => {
+        hasConnected = true
         if (hasFailedOnce) {
           queryClient.invalidateQueries()
           closeSocketDisconnected()
@@ -116,7 +118,10 @@ function useSocketState() {
         lost(gettext('Socket connection was lost'))
       })
       , onSocket('connect_error', (err?: Error) => {
-        if (err?.message === 'Missing authorization token' || err?.message === 'Invalid user') {
+        // Only a reconnect that is refused for lack of a valid session sends the
+        // user back to sign in; a failure on first load keeps the old behaviour.
+        if (hasConnected &&
+          (err?.message === 'Missing authorization token' || err?.message === 'Invalid user')) {
           window.location.href = '/'
           return
         }
