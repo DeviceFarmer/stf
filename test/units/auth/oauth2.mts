@@ -187,12 +187,12 @@ describe('auth-oauth2', function() {
       expect(setCookie).to.be.an('array')
       var cookies = setCookie as string[]
       expect(cookies.some(function(c) {
-        return c.startsWith('stf_oauth_ssid=') &&
+        return c.startsWith('stf_oauth_ssid-oauth=') &&
           c.includes('samesite=lax') &&
           c.includes('httponly')
       })).to.equal(true)
       expect(cookies.some(function(c) {
-        return c.startsWith('stf_oauth_ssid.sig=')
+        return c.startsWith('stf_oauth_ssid-oauth.sig=')
       })).to.equal(true)
     })
 
@@ -207,6 +207,18 @@ describe('auth-oauth2', function() {
       var location = String(res.headers.location)
       var redirectUrl = new URL(location)
       expect(redirectUrl.searchParams.has('state')).to.equal(false)
+      // Without --oauth-state nothing is stored in a session, so no cookie is set
+      expect(res.headers['set-cookie']).to.equal(undefined)
+    })
+
+    it('should keep the session cookie separate from the STF session cookie', async function() {
+      var app = createApp(defaultOptions)
+      var res = await makeRequest(app, '/auth/oauth/')
+      var names = (res.headers['set-cookie'] as string[]).map(function(c) {
+        return c.split('=')[0]
+      })
+      expect(names).to.not.include('stf_oauth_ssid')
+      expect(names).to.include('stf_oauth_ssid-oauth')
     })
   })
 
@@ -298,7 +310,7 @@ describe('auth-oauth2', function() {
       var state = redirectUrl.searchParams.get('state')!
 
       // Tampered cookie signature
-      var tamperedCookie = 'stf_oauth_ssid=eyJmb28iOiJiYXIifQ==; stf_oauth_ssid.sig=bad_sig'
+      var tamperedCookie = 'stf_oauth_ssid-oauth=eyJmb28iOiJiYXIifQ==; stf_oauth_ssid-oauth.sig=bad_sig'
 
       var callbackPath = '/auth/oauth/callback?code=good_code&state=' + state
       var callbackRes = await makeRequest(app, callbackPath, {

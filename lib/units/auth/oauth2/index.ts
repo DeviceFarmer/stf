@@ -65,11 +65,16 @@ export function createApp(options: OAuth2AuthOptions) {
 
   passport.use(new Strategy(options.oauth, verify))
 
-  app.use(cookieSession({
-    name: options.ssid
-  , keys: [options.secret]
-  , sameSite: 'lax'
-  }))
+  if (options.oauth.state) {
+    // passport-oauth2 keeps the state in req.session. Use a cookie of its own
+    // so it can never collide with the STF session cookie (options.ssid) that
+    // the app, api and websocket units read with the same secret.
+    app.use(cookieSession({
+      name: options.ssid + '-oauth'
+    , keys: [options.secret]
+    , sameSite: 'lax'
+    }))
+  }
 
   app.use(passport.initialize())
   app.use(passport.authenticate('oauth2', {
@@ -104,18 +109,20 @@ export function createApp(options: OAuth2AuthOptions) {
     }
   )
 
-  app.use(function(
-    err: unknown
-  , req: express.Request
-  , res: express.Response
-  , next: express.NextFunction
-  ) {
-    if (res.headersSent) {
-      return next(err)
-    }
-    log.error('Authentication error:', (err as Error)?.stack || err)
-    return res.redirect('/auth/oauth/')
-  })
+  if (options.oauth.state) {
+    app.use(function(
+      err: unknown
+    , req: express.Request
+    , res: express.Response
+    , next: express.NextFunction
+    ) {
+      if (res.headersSent) {
+        return next(err)
+      }
+      log.error('Authentication error:', (err as Error)?.stack || err)
+      return res.redirect('/auth/oauth/')
+    })
+  }
 
   return app
 }
