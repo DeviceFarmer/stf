@@ -14,7 +14,7 @@ describe('headless display handling (GH #232)', function() {
       expect(size).to.be.closeTo(6.26, 0.05)
     })
 
-    it('returns undefined for headless devices with non-zero dimensions and xdpi=0, ydpi=0', function() {
+    it('returns undefined for headless devices with dimensions but xdpi=0, ydpi=0', function() {
       // Odroid C4 / N2 without HDMI attached reports 1920x1080 with xdpi=0, ydpi=0
       expect(computeDisplaySize(1920, 1080, 0, 0)).to.equal(undefined)
     })
@@ -134,7 +134,7 @@ describe('headless display handling (GH #232)', function() {
       )
       const decoded = wire.DeviceDisplayMessage.decode(displayMsg.encode())
       expect(decoded.xdpi).to.equal(0)
-      expect(decoded.size == null).to.be.true
+      expect(decoded.size === null || decoded.size === undefined).to.be.true
     })
 
     it('serializes and deserializes DeviceDisplayMessage with zero DPI and size 0', function() {
