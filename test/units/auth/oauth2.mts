@@ -310,7 +310,8 @@ describe('auth-oauth2', function() {
       var state = redirectUrl.searchParams.get('state')!
 
       // Tampered cookie signature
-      var tamperedCookie = 'stf_oauth_ssid-oauth=eyJmb28iOiJiYXIifQ==; stf_oauth_ssid-oauth.sig=bad_sig'
+      var tamperedCookie = 'stf_oauth_ssid-oauth=eyJmb28iOiJiYXIifQ==; ' +
+        'stf_oauth_ssid-oauth.sig=bad_sig'
 
       var callbackPath = '/auth/oauth/callback?code=good_code&state=' + state
       var callbackRes = await makeRequest(app, callbackPath, {
