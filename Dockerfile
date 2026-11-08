@@ -108,6 +108,7 @@ USER stf
 CMD ["stf", "--help"]
 
 FROM runtime-base AS runtime
-COPY --from=production-dependencies --chown=root:root /build/node_modules/ /app/node_modules/
-COPY --from=bundletool --chown=root:root /opt/bundletool/ /app/bundletool/
-COPY --from=build --chown=root:root /tmp/app/ /app/
+# Keep packaged files readable even when the build context uses a restrictive umask.
+COPY --from=production-dependencies --chown=root:root --chmod=u=rwX,go=rX /build/node_modules/ /app/node_modules/
+COPY --from=bundletool --chown=root:root --chmod=u=rwX,go=rX /opt/bundletool/ /app/bundletool/
+COPY --from=build --chown=root:root --chmod=u=rwX,go=rX /tmp/app/ /app/
