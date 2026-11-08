@@ -1,6 +1,7 @@
 import {createRequire} from 'module'
 import type {Argv} from 'yargs'
 import type {CommandArgv} from '../../types/cli.js'
+import cookieutil from '../../util/cookieutil.js'
 
 var require = createRequire(import.meta.url)
 
@@ -9,7 +10,7 @@ var command = 'auth-mock'
 var describe = 'Start a mock auth unit that accepts any user.'
 
 var builder = function(yargs: Argv) {
-  return yargs
+  var y = yargs
     .env('STF_AUTH_MOCK')
     .strict()
     .option('app-url', {
@@ -49,17 +50,6 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: process.env.SSID || 'ssid'
     })
-    .option('cookie-same-site', {
-      describe: 'The SameSite attribute for session and CSRF cookies.'
-    , type: 'string'
-    , choices: ['lax', 'strict', 'none'] as const
-    , default: (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase()
-    , coerce: (val: string) => val.toLowerCase()
-    })
-    .option('cookie-secure', {
-      describe: 'Whether to force session and CSRF cookies to be sent only over HTTPS.'
-    , type: 'boolean'
-    })
     .option('use-basic-auth', {
       describe: 'Whether to "secure" the login page with basic authentication.'
     , type: 'boolean'
@@ -70,21 +60,18 @@ var builder = function(yargs: Argv) {
       '`STF_AUTH_MOCK_SECRET`). Legacy environment variables like ' +
       'BASIC_AUTH_USERNAME are still accepted, too, but consider them ' +
       'deprecated.')
+
+  return cookieutil.addCookieOptions(y)
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
-  var cookieSecure = argv.cookieSecure
-  if (typeof cookieSecure === 'undefined' && typeof process.env.COOKIE_SECURE !== 'undefined') {
-    cookieSecure = process.env.COOKIE_SECURE === 'true'
-  }
-
   return require('../../units/auth/mock.js').default({
     port: argv.port
   , secret: argv.secret
   , ssid: argv.ssid
   , appUrl: argv.appUrl
   , cookieSameSite: argv.cookieSameSite
-  , cookieSecure: cookieSecure
+  , cookieSecure: cookieutil.resolveCookieSecure(argv.cookieSecure)
   , mock: {
       useBasicAuth: argv.useBasicAuth
     , basicAuth: {

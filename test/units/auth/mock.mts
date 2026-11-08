@@ -21,14 +21,10 @@ mockModule(new URL('../../../lib/db/index.js', import.meta.url), {default: {
   }
 }})
 
-var authMock: typeof AuthMock
+var authMock: typeof AuthMock =
+  (await importFresh(new URL('../../../lib/units/auth/mock.js', import.meta.url))).default
 
 describe('auth-mock', function() {
-  before(async function() {
-    authMock = (await importFresh(
-      new URL('../../../lib/units/auth/mock.js', import.meta.url)
-    )).default
-  })
   describe('basic auth', function() {
     var USERNAME = 'alice'
     var PASSWORD = 's3cret'

@@ -6,6 +6,7 @@ import {createRequire} from 'module'
 import type {Argv} from 'yargs'
 import type {CommandArgv} from '../../types/cli.js'
 import {prepareLocalIos} from '../../units/ios-provider/local.js'
+import cookieutil from '../../util/cookieutil.js'
 
 var require = createRequire(import.meta.url)
 
@@ -16,7 +17,7 @@ var describe = 'Start a complete local development environment.'
 var builder = function(yargs: Argv) {
   var os = require('os')
 
-  return yargs
+  var y = yargs
     .env('STF_LOCAL')
     .strict()
     .positional('serial', {
@@ -136,17 +137,6 @@ var builder = function(yargs: Argv) {
         'eg. "--cleanup-folder /data/local /tmp"'
     , type: 'array'
     , default: []
-    })
-    .option('cookie-same-site', {
-      describe: 'The SameSite attribute for session and CSRF cookies.'
-    , type: 'string'
-    , choices: ['lax', 'strict', 'none'] as const
-    , default: (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase()
-    , coerce: (val: string) => val.toLowerCase()
-    })
-    .option('cookie-secure', {
-      describe: 'Whether to force session and CSRF cookies to be sent only over HTTPS.'
-    , type: 'boolean'
     })
     .option('group-timeout', {
       alias: 't'
@@ -290,6 +280,8 @@ var builder = function(yargs: Argv) {
       'by converting the option to uppercase, replacing dashes with ' +
       'underscores and prefixing it with `STF_LOCAL_` (e.g. ' +
       '`STF_LOCAL_ALLOW_REMOTE`).')
+
+  return cookieutil.addCookieOptions(y)
 }
 
 type CliArg = string | number
@@ -330,6 +322,35 @@ var providerArgs = function(argv: CommandArgv<typeof builder>) {
     .concat(!argv.screenReset ? ['--no-screen-reset'] : [])
 }
 
+var authArgs = function(
+  argv: {
+    authType: string
+    authPort: number
+    authSecret: string
+    appUrl?: string | undefined
+    publicIp: string
+    port: number
+    authOptions: string
+  }
+, cookieArgs: CliArg[] = []
+): CliArg[] {
+  var util = require('util')
+  var args: CliArg[] = [
+    util.format('auth-%s', argv.authType)
+  , '--port', argv.authPort
+  , '--secret', argv.authSecret
+  , '--app-url', argv.appUrl || util.format(
+      'http://%s:%d/'
+    , argv.publicIp
+    , argv.port
+    )
+  ]
+  if (argv.authType === 'mock' || argv.authType === 'ldap') {
+    args = args.concat(cookieArgs)
+  }
+  return args.concat(JSON.parse(argv.authOptions))
+}
+
 var handler = async function(argv: CommandArgv<typeof builder>) {
   var util = require('util')
   var path = require('path')
@@ -368,11 +389,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
     var cookieArgs: CliArg[] = [
       '--cookie-same-site', argv.cookieSameSite
     ]
-    var cookieSecure = argv.cookieSecure
-    if (typeof cookieSecure === 'undefined' && typeof process.env.COOKIE_SECURE !== 'undefined') {
-      cookieSecure = process.env.COOKIE_SECURE === 'true'
-    }
-
+    var cookieSecure = cookieutil.resolveCookieSecure(argv.cookieSecure)
     if (cookieSecure === true) {
       cookieArgs.push('--cookie-secure')
     }
@@ -421,21 +438,10 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         ])
 
       // auth
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
-          util.format('auth-%s', argv.authType)
-        , '--port', argv.authPort
-        , '--secret', argv.authSecret
-        , '--app-url', argv.appUrl || util.format(
-            'http://%s:%d/'
-          , argv.publicIp
-          , argv.port
-          )
-        ] as CliArg[])
-        .concat(cookieArgs)
-        .concat(JSON.parse(argv.authOptions)))
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), authArgs(argv, cookieArgs))
 
       // app
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), [
           'app'
         , '--port', argv.appPort
         , '--secret', argv.authSecret
@@ -453,10 +459,10 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
           , argv.publicIp
           , argv.websocketPort
           )
-        ] as CliArg[])
+        ]
         .concat(cookieArgs)
         .concat((function() {
-          var extra: string[] = []
+          var extra: CliArg[] = []
           if (argv.userProfileUrl) {
             extra.push('--user-profile-url', argv.userProfileUrl)
           }
@@ -464,7 +470,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         })()))
 
       // api
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), [
           'api'
         , '--port', argv.apiPort
         , '--secret', argv.authSecret
@@ -472,8 +478,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         , '--connect-sub', argv.bindAppPub
         , '--connect-push-dev', argv.bindDevPull
         , '--connect-sub-dev', argv.bindDevPub
-      ] as CliArg[])
-      .concat(cookieArgs))
+      ])
 
       // groups engine
     , procutil.fork(path.resolve(import.meta.dirname, '..'), [
@@ -485,7 +490,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
       ])
 
       // websocket
-    , procutil.fork(path.resolve(import.meta.dirname, '..'), ([
+    , procutil.fork(path.resolve(import.meta.dirname, '..'), [
           'websocket'
         , '--port', argv.websocketPort
         , '--secret', argv.authSecret
@@ -493,8 +498,7 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
         , util.format('http://localhost:%d/', argv.port)
         , '--connect-sub', argv.bindAppPub
         , '--connect-push', argv.bindAppPull
-        ] as CliArg[])
-        .concat(cookieArgs))
+        ])
 
       // storage
     , procutil.fork(path.resolve(import.meta.dirname, '..'), [
@@ -589,4 +593,4 @@ var handler = async function(argv: CommandArgv<typeof builder>) {
   }
 }
 
-export {command, describe, builder, handler, providerArgs}
+export {command, describe, builder, handler, providerArgs, authArgs}

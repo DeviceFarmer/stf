@@ -9,9 +9,12 @@ import yargs from 'yargs'
 var expect = chai.expect
 
 import jwtutil from '../../lib/util/jwtutil.js'
+import pathutil from '../../lib/util/pathutil.js'
+import cookieutil from '../../lib/util/cookieutil.js'
 import * as appCli from '../../lib/cli/app/index.js'
 import * as authMockCli from '../../lib/cli/auth-mock/index.js'
 import * as localCli from '../../lib/cli/local/index.js'
+import {authArgs} from '../../lib/cli/local/index.js'
 import type AuthMock from '../../lib/units/auth/mock.js'
 import type AppUnit from '../../lib/units/app/index.js'
 import {importFresh, mockModule} from '../helpers/module-mock.mts'
@@ -90,6 +93,67 @@ function findCookie(cookies: string[], name: string): string | null {
 }
 
 describe('Cookie SameSite and Secure configuration', function() {
+  describe('cookieutil helpers', function() {
+    it('should correctly parse boolean values', function() {
+      expect(cookieutil.parseBoolean(true)).to.equal(true)
+      expect(cookieutil.parseBoolean(false)).to.equal(false)
+      expect(cookieutil.parseBoolean('true')).to.equal(true)
+      expect(cookieutil.parseBoolean('TRUE')).to.equal(true)
+      expect(cookieutil.parseBoolean('1')).to.equal(true)
+      expect(cookieutil.parseBoolean('yes')).to.equal(true)
+      expect(cookieutil.parseBoolean('false')).to.equal(false)
+      expect(cookieutil.parseBoolean('0')).to.equal(false)
+      expect(cookieutil.parseBoolean('no')).to.equal(false)
+      expect(cookieutil.parseBoolean('invalid')).to.equal(undefined)
+      expect(cookieutil.parseBoolean(undefined)).to.equal(undefined)
+    })
+
+    it('should build session options with correct secure and sameSite defaults', function() {
+      var defaultOpts = cookieutil.sessionOptions({
+        ssid: 'test-ssid'
+      , secret: 'test-secret'
+      })
+      expect(defaultOpts.name).to.equal('test-ssid')
+      expect(defaultOpts.sameSite).to.equal('lax')
+      expect(typeof defaultOpts.secure).to.equal('undefined')
+
+      var noneOpts = cookieutil.sessionOptions({
+        ssid: 'test-ssid'
+      , secret: 'test-secret'
+      , cookieSameSite: 'none'
+      })
+      expect(noneOpts.sameSite).to.equal('none')
+      expect(noneOpts.secure).to.equal(true)
+
+      var explicitSecure = cookieutil.sessionOptions({
+        ssid: 'test-ssid'
+      , secret: 'test-secret'
+      , cookieSameSite: 'lax'
+      , cookieSecure: true
+      })
+      expect(explicitSecure.secure).to.equal(true)
+    })
+
+    it('should build xsrf cookie options respecting protocol and explicit settings', function() {
+      var httpReq = {protocol: 'http'} as any
+      var httpsReq = {protocol: 'https'} as any
+
+      var defaultHttp = cookieutil.xsrfCookieOptions({}, httpReq)
+      expect(defaultHttp.sameSite).to.equal('lax')
+      expect(defaultHttp.secure).to.equal(false)
+
+      var defaultHttps = cookieutil.xsrfCookieOptions({}, httpsReq)
+      expect(defaultHttps.secure).to.equal(true)
+
+      var noneHttp = cookieutil.xsrfCookieOptions({cookieSameSite: 'none'}, httpReq)
+      expect(noneHttp.sameSite).to.equal('none')
+      expect(noneHttp.secure).to.equal(true)
+
+      var explicitInsecure = cookieutil.xsrfCookieOptions({cookieSecure: false}, httpsReq)
+      expect(explicitInsecure.secure).to.equal(false)
+    })
+  })
+
   describe('CLI option parsing', function() {
     var originalEnv: NodeJS.ProcessEnv
 
@@ -150,6 +214,17 @@ describe('Cookie SameSite and Secure configuration', function() {
       expect(appInsecure.cookieSecure).to.equal(false)
     })
 
+    it('should reject --cookie-same-site none with --no-cookie-secure', function() {
+      expect(function() {
+        parseCli(appCli, [
+          'app', '--secret', 's3cret', '--auth-url', 'http://127.0.0.1:7120/'
+        , '--websocket-url', 'http://127.0.0.1:7110/'
+        , '--cookie-same-site', 'none'
+        , '--no-cookie-secure'
+        ])
+      }).to.throw(/requires secure cookies/)
+    })
+
     it('should respect COOKIE_SAME_SITE and COOKIE_SECURE environment variables', function() {
       process.env.COOKIE_SAME_SITE = 'none'
       process.env.COOKIE_SECURE = 'true'
@@ -164,23 +239,101 @@ describe('Cookie SameSite and Secure configuration', function() {
 
       expect(appParsed.cookieSameSite).to.equal('none')
       expect(authParsed.cookieSameSite).to.equal('none')
+      expect(cookieutil.resolveCookieSecure(appParsed.cookieSecure)).to.equal(true)
+      expect(cookieutil.resolveCookieSecure(authParsed.cookieSecure)).to.equal(true)
+    })
+
+    it('should respect STF_COOKIE_SAME_SITE and STF_COOKIE_SECURE env variables', function() {
+      delete process.env.COOKIE_SAME_SITE
+      delete process.env.COOKIE_SECURE
+      process.env.STF_COOKIE_SAME_SITE = 'strict'
+      process.env.STF_COOKIE_SECURE = '1'
+
+      var appParsed = parseCli(appCli, [
+        'app', '--secret', 's3cret', '--auth-url', 'http://127.0.0.1:7120/'
+      , '--websocket-url', 'http://127.0.0.1:7110/'
+      ])
+
+      expect(appParsed.cookieSameSite).to.equal('strict')
+      expect(cookieutil.resolveCookieSecure(appParsed.cookieSecure)).to.equal(true)
+    })
+  })
+
+  describe('local CLI authArgs forwarding', function() {
+    it('should forward cookieArgs to auth-mock and auth-ldap only', function() {
+      var cookieArgs = ['--cookie-same-site', 'none', '--cookie-secure']
+
+      var mockArgs = authArgs({
+        authType: 'mock'
+      , authPort: 7120
+      , authSecret: 'test-secret'
+      , publicIp: '127.0.0.1'
+      , port: 7100
+      , authOptions: '[]'
+      }, cookieArgs)
+      expect(mockArgs).to.include('--cookie-same-site')
+      expect(mockArgs).to.include('--cookie-secure')
+
+      var ldapArgs = authArgs({
+        authType: 'ldap'
+      , authPort: 7120
+      , authSecret: 'test-secret'
+      , publicIp: '127.0.0.1'
+      , port: 7100
+      , authOptions: '[]'
+      }, cookieArgs)
+      expect(ldapArgs).to.include('--cookie-same-site')
+      expect(ldapArgs).to.include('--cookie-secure')
+
+      var oauth2Args = authArgs({
+        authType: 'oauth2'
+      , authPort: 7120
+      , authSecret: 'test-secret'
+      , publicIp: '127.0.0.1'
+      , port: 7100
+      , authOptions: '[]'
+      }, cookieArgs)
+      expect(oauth2Args).to.not.include('--cookie-same-site')
+      expect(oauth2Args).to.not.include('--cookie-secure')
+
+      var saml2Args = authArgs({
+        authType: 'saml2'
+      , authPort: 7120
+      , authSecret: 'test-secret'
+      , publicIp: '127.0.0.1'
+      , port: 7100
+      , authOptions: '[]'
+      }, cookieArgs)
+      expect(saml2Args).to.not.include('--cookie-same-site')
+
+      var openidArgs = authArgs({
+        authType: 'openid'
+      , authPort: 7120
+      , authSecret: 'test-secret'
+      , publicIp: '127.0.0.1'
+      , port: 7100
+      , authOptions: '[]'
+      }, cookieArgs)
+      expect(openidArgs).to.not.include('--cookie-same-site')
     })
   })
 
   describe('auth-mock cookie headers and CSRF verification', function() {
     var authMock: typeof AuthMock
+      , restoreDbIndex: (() => void) | undefined
+      , restoreDbApi: (() => void) | undefined
     var server: http.Server | null = null
     var port = 0
 
     before(async function() {
-      mockModule(new URL('../../lib/db/index.js', import.meta.url), {
+      restoreDbIndex = mockModule(new URL('../../lib/db/index.js', import.meta.url), {
         default: {
           run: function() {
             return Promise.resolve({})
           }
         }
       })
-      mockModule(new URL('../../lib/db/api.js', import.meta.url), {
+      restoreDbApi = mockModule(new URL('../../lib/db/api.js', import.meta.url), {
         default: {
           checkUserBeforeLogin: function() {
             return Promise.resolve(true)
@@ -194,6 +347,11 @@ describe('Cookie SameSite and Secure configuration', function() {
       authMock = (await importFresh(
         new URL('../../lib/units/auth/mock.js', import.meta.url)
       )).default
+    })
+
+    after(function() {
+      restoreDbIndex?.()
+      restoreDbApi?.()
     })
 
     afterEach(function(done) {
@@ -213,11 +371,11 @@ describe('Cookie SameSite and Secure configuration', function() {
       cookieSecure?: boolean
     }): Promise<number> {
       return new Promise(function(resolve) {
-        var createServer: any = http.createServer
-        http.createServer = function(...args: any[]) {
-          server = createServer.apply(http, args)
+        var createServer = http.createServer
+        var serverStub = sinon.stub(http, 'createServer').callsFake(function(...args: any[]) {
+          server = createServer.apply(http, args as any)
           return server
-        } as any
+        })
 
         try {
           authMock({
@@ -234,7 +392,7 @@ describe('Cookie SameSite and Secure configuration', function() {
           })
         }
         finally {
-          http.createServer = createServer as typeof http.createServer
+          serverStub.restore()
         }
 
         server!.once('listening', function() {
@@ -363,6 +521,8 @@ describe('Cookie SameSite and Secure configuration', function() {
   describe('app unit cookie headers', function() {
     var appUnit: typeof AppUnit
       , existsStub: sinon.SinonStub
+      , restoreDb: (() => void) | undefined
+      , restoreAuth: (() => void) | undefined
     var server: http.Server | null = null
     var port = 0
     var token = jwtutil.encode({
@@ -371,8 +531,10 @@ describe('Cookie SameSite and Secure configuration', function() {
     })
 
     before(async function() {
-      existsStub = sinon.stub(fs, 'existsSync').returns(true)
-      mockModule(new URL('../../lib/db/api.js', import.meta.url), {
+      existsStub = sinon.stub(fs, 'existsSync').callThrough()
+      existsStub.withArgs(pathutil.resource('build')).returns(true)
+
+      restoreDb = mockModule(new URL('../../lib/db/api.js', import.meta.url), {
         default: {
           saveUserAfterLogin: function() {
             return Promise.resolve({})
@@ -390,7 +552,10 @@ describe('Cookie SameSite and Secure configuration', function() {
       const freshAuth = await importFresh(
         new URL('../../lib/units/app/middleware/auth.js', import.meta.url)
       )
-      mockModule(new URL('../../lib/units/app/middleware/auth.js', import.meta.url), freshAuth)
+      restoreAuth = mockModule(
+        new URL('../../lib/units/app/middleware/auth.js', import.meta.url)
+      , freshAuth
+      )
       appUnit = (await importFresh(
         new URL('../../lib/units/app/index.js', import.meta.url)
       )).default
@@ -398,6 +563,8 @@ describe('Cookie SameSite and Secure configuration', function() {
 
     after(function() {
       existsStub.restore()
+      restoreAuth?.()
+      restoreDb?.()
     })
 
     afterEach(function(done) {
@@ -417,11 +584,11 @@ describe('Cookie SameSite and Secure configuration', function() {
       cookieSecure?: boolean
     }): Promise<number> {
       return new Promise(function(resolve) {
-        var createServer: any = http.createServer
-        http.createServer = function(...args: any[]) {
-          server = createServer.apply(http, args)
+        var createServer = http.createServer
+        var serverStub = sinon.stub(http, 'createServer').callsFake(function(...args: any[]) {
+          server = createServer.apply(http, args as any)
           return server
-        } as any
+        })
 
         try {
           appUnit({
@@ -435,7 +602,7 @@ describe('Cookie SameSite and Secure configuration', function() {
           })
         }
         finally {
-          http.createServer = createServer as typeof http.createServer
+          serverStub.restore()
         }
 
         server!.once('listening', function() {

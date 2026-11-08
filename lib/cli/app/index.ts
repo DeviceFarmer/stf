@@ -1,6 +1,7 @@
 import {createRequire} from 'module'
 import type {Argv} from 'yargs'
 import type {CommandArgv} from '../../types/cli.js'
+import cookieutil from '../../util/cookieutil.js'
 
 var require = createRequire(import.meta.url)
 
@@ -9,7 +10,7 @@ var command = 'app'
 var describe = 'Start an app unit.'
 
 var builder = function(yargs: Argv) {
-  return yargs
+  var y = yargs
     .env('STF_APP')
     .strict()
     .option('auth-url', {
@@ -39,17 +40,6 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: process.env.SSID || 'ssid'
     })
-    .option('cookie-same-site', {
-      describe: 'The SameSite attribute for session and CSRF cookies.'
-    , type: 'string'
-    , choices: ['lax', 'strict', 'none'] as const
-    , default: (process.env.COOKIE_SAME_SITE || 'lax').toLowerCase()
-    , coerce: (val: string) => val.toLowerCase()
-    })
-    .option('cookie-secure', {
-      describe: 'Whether to force session and CSRF cookies to be sent only over HTTPS.'
-    , type: 'boolean'
-    })
     .option('user-profile-url', {
       describe: 'URL to an external user profile page.'
     , type: 'string'
@@ -64,14 +54,11 @@ var builder = function(yargs: Argv) {
       'by converting the option to uppercase, replacing dashes with ' +
       'underscores and prefixing it with `STF_APP_` (e.g. ' +
       '`STF_APP_AUTH_URL`).')
+
+  return cookieutil.addCookieOptions(y)
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
-  var cookieSecure = argv.cookieSecure
-  if (typeof cookieSecure === 'undefined' && typeof process.env.COOKIE_SECURE !== 'undefined') {
-    cookieSecure = process.env.COOKIE_SECURE === 'true'
-  }
-
   return require('../../units/app/index.js').default({
     port: argv.port
   , secret: argv.secret
@@ -80,7 +67,7 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   , websocketUrl: argv.websocketUrl
   , userProfileUrl: argv.userProfileUrl
   , cookieSameSite: argv.cookieSameSite
-  , cookieSecure: cookieSecure
+  , cookieSecure: cookieutil.resolveCookieSecure(argv.cookieSecure)
   })
 }
 

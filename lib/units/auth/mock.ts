@@ -21,10 +21,11 @@ import jwtutil from '../../util/jwtutil.js'
 import pathutil from '../../util/pathutil.js'
 import urlutil from '../../util/urlutil.js'
 import lifecycle from '../../util/lifecycle.js'
+import cookieutil, {type CookieUnitOptions} from '../../util/cookieutil.js'
 
 import dbapi from '../../db/api.js'
 
-interface MockAuthOptions {
+interface MockAuthOptions extends CookieUnitOptions {
   port: number
   secret: string
   ssid: string
@@ -36,14 +37,14 @@ interface MockAuthOptions {
       password?: string
     }
   }
-  cookieSameSite?: 'lax' | 'strict' | 'none' | undefined
-  cookieSecure?: boolean | undefined
 }
 
 export default function(options: MockAuthOptions) {
   var log = logger.createLogger('auth-mock')
   var app = express()
   var server = Promise.promisifyAll(http.createServer(app))
+
+  cookieutil.warnIfInsecureSameSiteNone(options, log)
 
   lifecycle.observe(function() {
     log.info('Waiting for client connections to end')
@@ -86,32 +87,18 @@ export default function(options: MockAuthOptions) {
   app.set('case sensitive routing', true)
   app.set('trust proxy', true)
 
-  var sameSite = options.cookieSameSite || 'lax'
-  var sessionOptions: CookieSessionInterfaces.CookieSessionOptions = {
-    name: options.ssid
-  , keys: [options.secret]
-  , sameSite: sameSite
-  }
-
-  if (typeof options.cookieSecure !== 'undefined') {
-    sessionOptions.secure = options.cookieSecure
-  }
-  else if (sameSite === 'none') {
-    sessionOptions.secure = true
-  }
-
-  app.use(cookieSession(sessionOptions))
+  app.use(cookieSession(cookieutil.sessionOptions({
+    ssid: options.ssid
+  , secret: options.secret
+  , cookieSameSite: options.cookieSameSite
+  , cookieSecure: options.cookieSecure
+  })))
   app.use(bodyParser.json())
   app.use(csrf())
   app.use('/static/auth/mock', serveStatic(pathutil.resource('auth/mock')))
 
   app.use(function(req, res, next) {
-    res.cookie('XSRF-TOKEN', req.csrfToken(), {
-      sameSite: sameSite
-    , secure: typeof options.cookieSecure !== 'undefined' ?
-        options.cookieSecure :
-        (sameSite === 'none' || req.protocol === 'https')
-    })
+    res.cookie('XSRF-TOKEN', req.csrfToken(), cookieutil.xsrfCookieOptions(options, req))
     next()
   })
 
