@@ -4,6 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 const handlers = new Map<string, Set<(...args: any[]) => void>>()
 const requests: string[] = []
 let failNextLoad = false
+let failAllLoads = false
 
 function respond(url: string) {
   if (url === '/api/v1/devices') {
@@ -36,12 +37,15 @@ vi.mock('../api', () => ({
         failNextLoad = false
         throw new Error('502 Bad Gateway')
       }
+      if (failAllLoads) {
+        throw new Error('500 Server Error')
+      }
       return respond(url)
     }
   }
 }))
 
-const {onTrackersReloaded, releaseGracePeriod, useDevice, useDevices, useUserDevices} = await import('./store')
+const {onTrackersReloaded, reloadTrackers, releaseGracePeriod, useDevice, useDevices, useUserDevices} = await import('./store')
 
 function fire(event: string, payload: unknown) {
   handlers.get(event)?.forEach((handler) => handler(payload))
@@ -62,6 +66,7 @@ describe('shared device trackers', () => {
     vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame']})
     requests.length = 0
     failNextLoad = false
+    failAllLoads = false
   })
 
   afterEach(async() => {
@@ -167,6 +172,19 @@ describe('shared device trackers', () => {
     expect(requests).toEqual(['/api/v1/devices/a', '/api/v1/devices/a'])
     expect(reloaded).toHaveBeenCalledTimes(1)
     unsubscribe()
+    single.unmount()
+  })
+
+  it('surfaces the error when tracker reload attempts are exhausted', async() => {
+    const single = renderHook(() => useDevice('a'))
+    await advance(50)
+    expect(single.result.current.device?.serial).toBe('a')
+    expect(single.result.current.error).toBeNull()
+
+    failAllLoads = true
+    const ok = await reloadTrackers(true)
+    expect(ok).toBe(false)
+    expect(single.result.current.error).toBeInstanceOf(Error)
     single.unmount()
   })
 })

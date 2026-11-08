@@ -62,7 +62,9 @@ export async function request<T = any>(
 
   if (!response.ok) {
     if (response.status === 401 && !url.startsWith('/auth/')) {
-      window.location.href = '/'
+      if (window.location.pathname !== '/' || window.location.hash !== '') {
+        window.location.href = '/'
+      }
     }
     throw new ApiError(response.status, response.statusText, data)
   }

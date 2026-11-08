@@ -253,6 +253,7 @@ function ControlSession() {
   const [lost, setLost] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
   const [sessionEpoch, setSessionEpoch] = useState(0)
+  const [recoveryEpoch, setRecoveryEpoch] = useState(0)
   const needsSocketRecovery = useRef(false)
   const automated = Boolean(device && isAutomated(device))
   const watching = watchMode || automated
@@ -388,13 +389,14 @@ function ControlSession() {
         if (!current || current.serial !== target.serial || isAutomated(current)) {
           return
         }
+        const resolved = accepted ? {...current, ...accepted} : current
         needsSocketRecovery.current = false
         previousState.current = null
-        setAcceptedManual(manualSession(accepted))
-        setJoined(current)
+        setAcceptedManual(manualSession(resolved))
+        setJoined(resolved)
         setSessionEpoch((epoch) => epoch + 1)
         setLost(false)
-        setSetting('lastUsedDevice', current.serial)
+        setSetting('lastUsedDevice', resolved.serial)
       })
       .catch((err) => {
         if (sessionActive.current && !silent) {
@@ -415,7 +417,7 @@ function ControlSession() {
       return
     }
     needsSocketRecovery.current = true
-    setSessionEpoch((epoch) => epoch + 1)
+    setRecoveryEpoch((epoch) => epoch + 1)
   }), [joined])
 
   useEffect(() => {
@@ -430,7 +432,7 @@ function ControlSession() {
       }
       return
     }
-    if (device.usable && !isAutomated(device) && (!device.owner || device.using)) {
+    if (device.usable && !isAutomated(device)) {
       autoReconnect()
     }
   }, [
@@ -443,6 +445,7 @@ function ControlSession() {
     , device?.usable
     , device?.using
     , device?.owner?.email
+    , recoveryEpoch
   ])
 
   const readOnly = watching || !device?.using

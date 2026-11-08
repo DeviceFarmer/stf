@@ -90,6 +90,14 @@ export class DeviceTracker {
   }
 
   reset(devices: Device[]): void {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    if (this.frame !== null) {
+      cancelAnimationFrame(this.frame)
+      this.frame = null
+    }
     this.devices = []
     this.bySerial.clear()
     devices.forEach((device) => {
@@ -255,7 +263,7 @@ export function onTrackersReloaded(listener: () => void): () => void {
   }
 }
 
-export async function reloadTrackers(): Promise<boolean> {
+export async function reloadTrackers(isFinalAttempt = false): Promise<boolean> {
   const results = await Promise.all(Array.from(shared.values(), (entry) =>
     entry.load()
       .then((devices) => {
@@ -264,7 +272,13 @@ export async function reloadTrackers(): Promise<boolean> {
         entry.tracker.reset(devices)
         return true
       })
-      .catch(() => false)
+      .catch((err) => {
+        if (isFinalAttempt) {
+          entry.error = err
+          entry.tracker.reset([])
+        }
+        return false
+      })
   ))
   const ok = results.every(Boolean)
   if (ok) {
@@ -285,7 +299,8 @@ function clearReloadRetry(): void {
 
 function reloadWithRetry(attemptsLeft = 10): void {
   clearReloadRetry()
-  reloadTrackers()
+  const isFinal = attemptsLeft <= 1
+  reloadTrackers(isFinal)
     .then((ok) => {
       if (!ok && attemptsLeft > 1 && !hasDisconnected) {
         reloadRetryTimer = setTimeout(() => reloadWithRetry(attemptsLeft - 1), 1000)
