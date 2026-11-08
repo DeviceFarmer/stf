@@ -16,6 +16,7 @@ import apiutil from '../util/apiutil.js'
 import Promise from 'bluebird'
 import _ from 'lodash'
 import logger from '../util/logger.js'
+import {cleanDisplay} from '../util/displayutil.js'
 import deviceutil from '../util/deviceutil.js'
 import type {
   AccessTokenDocument
@@ -1795,7 +1796,7 @@ dbapi.saveDeviceIdentity = function(serial, identity) {
   , version: identity.version
   , abi: identity.abi
   , sdk: identity.sdk
-  , display: identity.display
+  , display: cleanDisplay(identity.display)
   , phone: identity.phone
   , product: identity.product
   , cpuPlatform: identity.cpuPlatform

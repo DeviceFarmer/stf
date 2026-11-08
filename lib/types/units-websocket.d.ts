@@ -1,4 +1,5 @@
 import type {IncomingMessage} from 'http'
+import type events from 'events'
 import type {UserDocument} from './stf.js'
 
 export interface WebsocketOptions {
@@ -10,6 +11,7 @@ export interface WebsocketOptions {
     sub: string[]
     push: string[]
   }
+  channelRouter?: events.EventEmitter
 }
 
 export interface WebsocketSessionJwt {
