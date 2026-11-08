@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the production Dockerfile's optional npmrc secret using a built image.
+"""Check the production Dockerfile's optional npmrc secret using its node-base stage.
 
 The fixtures reuse the real USER, COPY and npm RUN instructions. Only the npm
 install/prune/pack commands become registry probes, so no registry or native
@@ -125,7 +125,7 @@ def fixture_dockerfile(source, base, uid):
         if body is None:
             raise ValueError('Missing Dockerfile stage: ' + stage)
         if stage == 'dependencies':
-            # The existing runtime image supplies Node. Skip only tool installation.
+            # The node-base image supplies Node and npm. Skip native tool installation.
             start = next((i for i, item in enumerate(body)
                           if re.match(r'WORKDIR\s+/build\s*$', item, re.I)), None)
             if start is None:
@@ -216,7 +216,7 @@ def scan_saved_layers(tags, markers):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--image', required=True, help='Already-built local runtime image')
+    parser.add_argument('--image', required=True, help='Already-built local node-base image')
     parser.add_argument('--dockerfile', type=Path, default=None, help='Dockerfile to exercise (default: repository Dockerfile)')
     parser.add_argument('--platform', required=True, choices=['linux/amd64', 'linux/arm64'])
     parser.add_argument('--output', type=Path, help='Write a JSON check report')

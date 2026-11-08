@@ -80,14 +80,27 @@ RUN mkdir -p /opt/bundletool \
       -o /opt/bundletool/bundletool.jar \
     && echo "${BUNDLETOOL_SHA256}  /opt/bundletool/bundletool.jar" | sha256sum -c -
 
-FROM node-base AS runtime-base
-RUN export DEBIAN_FRONTEND=noninteractive \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-      graphicsmagick openjdk-8-jre-headless libzmq5 libprotobuf23 \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /app \
-    && chown stf:stf /app
+FROM ${UBUNTU_IMAGE} AS runtime-base
+ARG TARGETARCH
+# CI supplies a new value for each run attempt to refresh Ubuntu packages.
+ARG SECURITY_UPDATES_REFRESH
+RUN set -eu; \
+    export DEBIAN_FRONTEND=noninteractive; \
+    apt-get update; \
+    apt-get -y dist-upgrade; \
+    apt-get install -y --no-install-recommends ca-certificates libstdc++6 libatomic1 \
+      graphicsmagick openjdk-8-jre-headless libzmq5 libprotobuf23; \
+    case "$TARGETARCH" in \
+      amd64) stf_uid=998;; \
+      arm64) stf_uid=999;; \
+      *) echo "Unsupported target architecture: $TARGETARCH" >&2; exit 1;; \
+    esac; \
+    groupadd --system --gid "$stf_uid" stf; \
+    useradd --system --uid "$stf_uid" --gid stf --create-home --shell /usr/sbin/nologin stf; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=node-base /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-base /usr/local/LICENSE /usr/local/share/doc/nodejs/LICENSE
 ENV PATH=/app/bin:$PATH
 WORKDIR /app
 EXPOSE 3000
@@ -95,6 +108,6 @@ USER stf
 CMD ["stf", "--help"]
 
 FROM runtime-base AS runtime
-COPY --from=production-dependencies --chown=stf:stf /build/node_modules/ /app/node_modules/
-COPY --from=bundletool --chown=stf:stf /opt/bundletool/ /app/bundletool/
-COPY --from=build --chown=stf:stf /tmp/app/ /app/
+COPY --from=production-dependencies --chown=root:root /build/node_modules/ /app/node_modules/
+COPY --from=bundletool --chown=root:root /opt/bundletool/ /app/bundletool/
+COPY --from=build --chown=root:root /tmp/app/ /app/

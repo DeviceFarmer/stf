@@ -164,7 +164,9 @@ docker build -t stf:local .
 docker run --rm stf:local
 ```
 
-The Dockerfile supports `linux/amd64` and `linux/arm64`. Build tools stay in separate stages; the runtime contains production dependencies, GraphicsMagick and a headless Java runtime. Dependency installation is cached independently of application sources. A root `package-lock.json` is included when present. The bundled AAB-to-APK tool requires amd64; native ARM64 AAB conversion remains unsupported.
+The Dockerfile supports `linux/amd64` and `linux/arm64`. Build tools stay in separate stages. The runtime contains Node.js, production dependencies, GraphicsMagick and a headless Java runtime. STF runs as an unprivileged user with read-only access to the application files in `/app`. Dependency installation is cached independently of application sources. A root `package-lock.json` is included when present. The bundled AAB-to-APK tool requires amd64.
+
+For custom health checks inside STF containers, replace `wget` with a Node.js probe like the one in [Docker Compose](docker-compose.yaml). Derived images that use `npm` or compile native modules should do so in a build stage and copy the resulting files into the runtime image. To refresh Ubuntu packages in a local build, pass `--no-cache-filter runtime-base` to `docker buildx build`.
 
 To use a custom npm registry or credentials, pass an npm config as a BuildKit secret:
 

@@ -106,6 +106,21 @@ try {
     return {uid: process.getuid(), gid: process.getgid(), arch: process.arch}
   })
 
+  await check('application-permissions', async () => {
+    const {stdout} = await command('find', [root, '(', '!', '-uid', '0', '-o',
+      '!', '-gid', '0', '-o', '-writable', ')', '-print', '-quit'])
+    assert.equal(stdout, '', 'Application files must be owned by root and read-only to stf')
+    return {owner: 'root:root', writable: false}
+  })
+
+  await check('runtime-tooling', async () => {
+    for (const tool of ['curl', 'xz', 'wget', 'npm', 'npx', 'corepack']) {
+      await command('sh', ['-c', '! command -v "$1"', 'sh', tool])
+    }
+    await assert.rejects(fs.lstat('/usr/local/include/node'), {code: 'ENOENT'})
+    return {buildTools: 'absent', nodeHeaders: 'absent'}
+  })
+
   await check('cli-and-dependencies', async () => {
     assert.deepEqual(require('./lib/util/depcheck.js').findProblems(root), [])
     const manifest = require('./package.json')

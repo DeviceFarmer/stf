@@ -24,6 +24,8 @@ jobs:
     name: Standard image (${{ matrix.arch }})
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 60
+    env:
+      SECURITY_UPDATES_REFRESH: ${{ github.run_id }}-${{ github.run_attempt }}
     permissions:
       contents: read
       id-token: write
@@ -43,17 +45,29 @@ jobs:
         with:
           context: .
           platforms: linux/${{ matrix.arch }}
+          build-args: SECURITY_UPDATES_REFRESH=${{ env.SECURITY_UPDATES_REFRESH }}
           load: true
           tags: stf-runtime-check:${{ matrix.arch }}
           provenance: false
           cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=stf-runtime-${{ matrix.arch }}
 
+      - name: Load the Node base for the npmrc check
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          target: node-base
+          load: true
+          tags: stf-node-base-check:${{ matrix.arch }}
+          provenance: false
+          cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
+
       - name: Check optional npm configuration secrets
         timeout-minutes: 5
         run: |
           python3 .github/scripts/docker-npmrc-smoke.py \
-            --image stf-runtime-check:${{ matrix.arch }} --platform linux/${{ matrix.arch }} \
+            --image stf-node-base-check:${{ matrix.arch }} --platform linux/${{ matrix.arch }} \
             --output "$RUNNER_TEMP/docker-npmrc-${{ matrix.arch }}.json"
 
       - name: Fetch the Android app bundle fixture
@@ -83,6 +97,9 @@ jobs:
             --mount "type=bind,src=$RUNNER_TEMP/runtime-fixtures,dst=/tmp/fixtures,readonly" \
             "stf-runtime-check:$ARCH" node /tmp/runtime-smoke.mjs "${arguments[@]}" \
             | tee "$RUNNER_TEMP/docker-runtime-$ARCH.json"
+          docker run --rm --network none --platform "linux/$ARCH" --user 1000:1000 \
+            --cap-drop ALL --security-opt no-new-privileges \
+            "stf-runtime-check:$ARCH" stf ios-provider --help
 
       - name: Check the amd64 Compose core
         if: matrix.arch == 'amd64'
@@ -104,6 +121,24 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Record the checked config digest
+        id: checked-config
+        if: inputs.push
+        env:
+          CHECKED_IMAGE: stf-runtime-check:${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          archive=$(mktemp "$RUNNER_TEMP/stf-runtime.XXXXXX")
+          trap 'rm -f -- "$archive"' EXIT
+          # Docker's image ID depends on the image store. Hash the config itself.
+          docker image save --output "$archive" "$CHECKED_IMAGE"
+          config=$(tar -xOf "$archive" manifest.json | jq -er '
+            if length == 1 then .[0].Config else error("Expected one checked image") end
+            | strings | select(length > 0)
+          ')
+          checksum=$(tar -xOf "$archive" -- "$config" | sha256sum)
+          printf 'digest=sha256:%s\n' "${checksum%% *}" >> "$GITHUB_OUTPUT"
+
       - name: Log in to Docker Hub
         if: inputs.push
         uses: docker/login-action@v4
@@ -112,23 +147,50 @@ jobs:
         env:
           DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
 
-      - name: Publish the checked image
+      - name: Build and push the runtime image by digest
         id: publish
         if: inputs.push
         uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/${{ matrix.arch }}
+          build-args: SECURITY_UPDATES_REFRESH=${{ env.SECURITY_UPDATES_REFRESH }}
           outputs: ${{ format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', env.IMAGE) }}
           cache-from: type=gha,scope=stf-runtime-${{ matrix.arch }}
 
-      - name: Export the digest
+      - name: Verify and export the published digest
         if: inputs.push
         run: |
           set -euo pipefail
-          mkdir -p /tmp/digests
-          touch "/tmp/digests/${DIGEST#sha256:}"
+          digest_pattern='^sha256:[0-9a-f]{64}$'
+          if [[ ! "$CHECKED_CONFIG_DIGEST" =~ $digest_pattern || ! "$DIGEST" =~ $digest_pattern ]]; then
+            echo 'Missing or invalid runtime build digest' >&2
+            exit 1
+          fi
+
+          manifest=$(docker buildx imagetools inspect --raw "$IMAGE@$DIGEST")
+          if jq -e 'has("manifests")' <<< "$manifest" > /dev/null; then
+            platform_digest=$(jq -er --arg arch "$ARCH" '
+              [.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch)]
+              | if length == 1 then .[0].digest else error("Expected one linux/" + $arch + " image") end
+            ' <<< "$manifest")
+            if [[ ! "$platform_digest" =~ $digest_pattern ]]; then
+              echo 'Invalid platform manifest digest' >&2
+              exit 1
+            fi
+            manifest=$(docker buildx imagetools inspect --raw "$IMAGE@$platform_digest")
+          fi
+
+          actual=$(jq -er '.config.digest' <<< "$manifest")
+          if [[ "$actual" != "$CHECKED_CONFIG_DIGEST" ]]; then
+            echo "Published linux/$ARCH config $actual differs from checked config $CHECKED_CONFIG_DIGEST" >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
         env:
+          ARCH: ${{ matrix.arch }}
+          CHECKED_CONFIG_DIGEST: ${{ steps.checked-config.outputs.digest }}
           DIGEST: ${{ steps.publish.outputs.digest }}
 
       - name: Upload the digest
@@ -136,7 +198,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: digest-${{ matrix.arch }}
-          path: /tmp/digests/*
+          path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
 
