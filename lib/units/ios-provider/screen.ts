@@ -16,6 +16,9 @@ export function createScreenServer(options: {
     res.writeHead(404).end()
   })
   const sockets = new WebSocketServer({noServer: true, maxPayload: 1024})
+  sockets.on('error', error => {
+    options.onError?.(error)
+  })
   server.on('upgrade', (req, socket, head) => {
     const owner = options.owner()
     const deadline = setTimeout(() => socket.destroy(), 6000)
@@ -94,10 +97,16 @@ export function createScreenServer(options: {
               }
             })
           }, 5000)
-          ws.on('error', stop)
-          ws.on('close', () => {
+          const cleanup = () => {
             clearInterval(timer)
             stop()
+          }
+          ws.on('error', err => {
+            options.onError?.(err)
+            cleanup()
+          })
+          ws.on('close', () => {
+            cleanup()
           })
           ws.on('message', data => {
             if (!authorized()) {
