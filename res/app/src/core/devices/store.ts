@@ -282,7 +282,15 @@ export async function reloadTrackers(isFinalAttempt = false): Promise<boolean> {
   ))
   const ok = results.every(Boolean)
   if (ok) {
-    reloadListeners.forEach((listener) => listener())
+    reloadListeners.forEach((listener) => {
+      try {
+        listener()
+      }
+      catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Tracker reload listener failed', err)
+      }
+    })
   }
   return ok
 }
@@ -302,11 +310,22 @@ function reloadWithRetry(attemptsLeft = 10): void {
   const isFinal = attemptsLeft <= 1
   reloadTrackers(isFinal)
     .then((ok) => {
-      if (!ok && attemptsLeft > 1 && !hasDisconnected) {
-        reloadRetryTimer = setTimeout(() => reloadWithRetry(attemptsLeft - 1), 1000)
+      if (!ok) {
+        if (attemptsLeft > 1 && !hasDisconnected) {
+          const jitter = (Math.random() - 0.5) * 400
+          const delay = Math.round(1000 + jitter)
+          reloadRetryTimer = setTimeout(() => reloadWithRetry(attemptsLeft - 1), delay)
+        }
+        else if (attemptsLeft <= 1) {
+          // eslint-disable-next-line no-console
+          console.warn('Exhausted all retries attempting to reload device trackers after reconnect')
+        }
       }
     })
-    .catch(() => undefined)
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to reload device trackers', err)
+    })
 }
 
 onSocket('disconnect', () => {

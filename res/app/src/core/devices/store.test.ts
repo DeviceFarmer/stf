@@ -168,11 +168,31 @@ describe('shared device trackers', () => {
     expect(single.result.current.error).toBeNull()
     expect(reloaded).not.toHaveBeenCalled()
 
-    await advance(1050)
+    await advance(1300)
     expect(requests).toEqual(['/api/v1/devices/a', '/api/v1/devices/a'])
     expect(reloaded).toHaveBeenCalledTimes(1)
     unsubscribe()
     single.unmount()
+  })
+
+  it('does not break tracker reload if a listener throws', async() => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const badListener = vi.fn(() => {
+      throw new Error('Listener failure')
+    })
+    const goodListener = vi.fn()
+    const unsub1 = onTrackersReloaded(badListener)
+    const unsub2 = onTrackersReloaded(goodListener)
+
+    const ok = await reloadTrackers()
+    expect(ok).toBe(true)
+    expect(badListener).toHaveBeenCalled()
+    expect(goodListener).toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalled()
+
+    unsub1()
+    unsub2()
+    consoleError.mockRestore()
   })
 
   it('surfaces the error when tracker reload attempts are exhausted', async() => {
@@ -185,6 +205,28 @@ describe('shared device trackers', () => {
     const ok = await reloadTrackers(true)
     expect(ok).toBe(false)
     expect(single.result.current.error).toBeInstanceOf(Error)
+    single.unmount()
+  })
+
+  it('warns when reload retry attempts are exhausted', async() => {
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const single = renderHook(() => useDevice('a'))
+    await advance(50)
+    requests.length = 0
+    failAllLoads = true
+
+    act(() => fire('disconnect', undefined))
+    act(() => fire('connect', undefined))
+
+    // 10 attempts, each up to 1200ms
+    for (let i = 0; i < 11; i++) {
+      await advance(1300)
+    }
+
+    expect(consoleWarn).toHaveBeenCalledWith(
+      expect.stringContaining('Exhausted all retries attempting to reload device trackers')
+    )
+    consoleWarn.mockRestore()
     single.unmount()
   })
 })
