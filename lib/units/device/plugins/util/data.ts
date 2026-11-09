@@ -68,7 +68,10 @@ export function populateImageSlug(
     if (display.ydpi > 0 && !params.has('yd')) {
       params.set('yd', String(display.ydpi))
     }
-    if (!(display.xdpi > 0) && !(display.ydpi > 0) && display.density > 0 && !params.has('dpi')) {
+    const hasDensity = typeof display.density === 'number' &&
+      Number.isFinite(display.density) &&
+      display.density > 0
+    if (!(display.xdpi > 0) && !(display.ydpi > 0) && hasDensity && !params.has('dpi')) {
       params.set('dpi', String(Math.round(display.density * 160)))
     }
   }

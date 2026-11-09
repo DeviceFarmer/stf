@@ -15,7 +15,7 @@ interface DisplayView extends Partial<DeviceDisplayMessageFields> {
 }
 
 interface BrowserView {
-  apps: Array<{type: string, developer?: string}>
+  apps: Array<{type: string, developer?: string, id?: string}>
 }
 
 interface DeviceView extends deviceutil.Claimable {
@@ -143,8 +143,9 @@ datautil.applyData = function<D extends DeviceView>(device: D) {
 datautil.applyBrowsers = function<D extends DeviceView>(device: D) {
   if (device.browser) {
     device.browser.apps.forEach(function(app) {
-      var data = browserData[app.type]
-      if (data) {
+      var packageName = app.id ? app.id.split('/', 1)[0]! : ''
+      var data = (packageName && browserData[packageName]) || browserData[app.type]
+      if (data?.developer) {
         app.developer = data.developer
       }
     })

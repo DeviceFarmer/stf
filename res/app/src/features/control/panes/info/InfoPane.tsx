@@ -51,11 +51,17 @@ function withUnit(value: unknown, unit: string): string {
 }
 
 function plain(value: unknown): string {
-  return present(value) ? String(value) : '-'
+  if (!present(value)) {
+    return '-'
+  }
+  if (typeof value === 'number' && !Number.isFinite(value)) {
+    return '-'
+  }
+  return String(value)
 }
 
 function rounded(value?: number): string {
-  return present(value) ? String(Math.round(Number(value) * 100) / 100) : '-'
+  return present(value) && Number.isFinite(Number(value)) ? String(Math.round(Number(value) * 100) / 100) : '-'
 }
 
 function translatedLookup(table: Record<string, string>, key?: string | null): string {
@@ -67,7 +73,7 @@ function translatedLookup(table: Record<string, string>, key?: string | null): s
 }
 
 function density(value?: number): string {
-  if (!present(value)) {
+  if (!present(value) || !Number.isFinite(Number(value))) {
     return '-'
   }
   return displayDensities[String(value)] || String(value)
@@ -155,11 +161,21 @@ function useSdCardMounted(control: PaneProps['control']): boolean | undefined {
   return mounted
 }
 
+function resolveDisplayInches(display?: Device['display']): number | undefined {
+  if (typeof display?.inches === 'number' && Number.isFinite(display.inches) && display.inches > 0) {
+    return display.inches
+  }
+  if (typeof display?.size === 'number' && Number.isFinite(display.size) && display.size > 0) {
+    return display.size
+  }
+  return undefined
+}
+
 export default function InfoPane({device, control}: PaneProps) {
   const {t, language} = useTranslation()
   const sdCardMounted = useSdCardMounted(control)
   const {battery, display, network, phone, cpu, memory} = device
-  const displayInches = display?.inches || display?.size
+  const displayInches = resolveDisplayInches(display)
   const photoRows: InfoRow[] = device.name && device.image ? [{
     label: ''
     , value: (

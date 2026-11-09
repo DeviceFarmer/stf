@@ -70,15 +70,17 @@ describe('wiki rendering', function() {
 
   it('should serve the browser and app store icons but not their data', async function() {
     for (var icon of [
-      '/static/app/browsers/icon/16x16/chrome.png'
-    , '/static/app/browsers/icon/36x36/chrome.png'
-    , '/static/app/appstores/icon/24x24/google-play-store.png'
-    , '/static/app/appstores/icon/96x96/google-play-store.png'
+      {path: '/static/app/browsers/icon/chrome.svg', type: 'image/svg+xml'}
+    , {path: '/static/app/browser-icons/chrome.svg', type: 'image/svg+xml'}
+    , {path: '/static/app/browsers/icon/yandex.svg', type: 'image/svg+xml'}
+    , {path: '/static/app/browser-icons/yandex.svg', type: 'image/svg+xml'}
+    , {path: '/static/app/appstores/icon/24x24/google-play-store.png', type: 'image/png'}
+    , {path: '/static/app/appstores/icon/96x96/google-play-store.png', type: 'image/png'}
     ]) {
-      var response = await fetch(origin + icon)
+      var response = await fetch(origin + icon.path)
       await response.arrayBuffer()
-      expect(response.status, icon).to.equal(200)
-      expect(response.headers.get('content-type'), icon).to.equal('image/png')
+      expect(response.status, icon.path).to.equal(200)
+      expect(response.headers.get('content-type'), icon.path).to.equal(icon.type)
     }
     // Unknown paths fall through to the login redirect.
     var inventory = await fetch(origin + '/static/app/browsers/inventory.json', {
