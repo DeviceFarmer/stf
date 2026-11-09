@@ -6,8 +6,10 @@ import http from 'http'
 
 import express from 'express'
 import passport from 'passport'
+import cookieSession from 'cookie-session'
 
 import logger from '../../../util/logger.js'
+import pathutil from '../../../util/pathutil.js'
 import urlutil from '../../../util/urlutil.js'
 import jwtutil from '../../../util/jwtutil.js'
 import Strategy from './strategy.js'
@@ -25,11 +27,12 @@ interface OAuth2AuthOptions {
   oauth: ConstructorParameters<typeof Strategy>[0]
 }
 
-export default function(options: OAuth2AuthOptions) {
+export function createApp(options: OAuth2AuthOptions) {
   var log = logger.createLogger('auth-oauth2')
   var app = express()
-  var server = http.createServer(app)
 
+  app.set('view engine', 'pug')
+  app.set('views', pathutil.resource('app/views'))
   app.set('strict routing', true)
   app.set('case sensitive routing', true)
 
@@ -61,6 +64,17 @@ export default function(options: OAuth2AuthOptions) {
   }
 
   passport.use(new Strategy(options.oauth, verify))
+
+  if (options.oauth.state) {
+    // passport-oauth2 keeps the state in req.session. Use a cookie of its own
+    // so it can never collide with the STF session cookie (options.ssid) that
+    // the app, api and websocket units read with the same secret.
+    app.use(cookieSession({
+      name: options.ssid + '-oauth'
+    , keys: [options.secret]
+    , sameSite: 'lax'
+    }))
+  }
 
   app.use(passport.initialize())
   app.use(passport.authenticate('oauth2', {
@@ -95,6 +109,30 @@ export default function(options: OAuth2AuthOptions) {
     }
   )
 
+  if (options.oauth.state) {
+    app.use(function(
+      err: unknown
+    , req: express.Request
+    , res: express.Response
+    , next: express.NextFunction
+    ) {
+      if (res.headersSent) {
+        return next(err)
+      }
+      log.error('Authentication error:', (err as Error)?.stack || err)
+      return res.redirect('/auth/oauth/')
+    })
+  }
+
+  return app
+}
+
+export default function(options: OAuth2AuthOptions) {
+  var log = logger.createLogger('auth-oauth2')
+  var app = createApp(options)
+  var server = http.createServer(app)
+
   server.listen(options.port)
   log.info('Listening on port %d', options.port)
+  return server
 }
