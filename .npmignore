@@ -6,6 +6,9 @@
 /.env
 /ios.local.json
 /.gitignore
+/.github/scripts/docker-compose-smoke.py
+/.github/scripts/docker-npmrc-smoke.py
+/.github/scripts/docker-runtime-smoke.mjs
 /.idea/
 /.jscsrc
 /.npmignore
@@ -13,6 +16,7 @@
 /.python-version
 /.travis.yml
 /Dockerfile
+/Dockerfile.dockerignore
 /build.mts
 /component.json
 /docker
