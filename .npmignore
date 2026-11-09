@@ -8,7 +8,6 @@
 /.gitignore
 /.github/scripts/docker-compose-smoke.py
 /.github/scripts/docker-npmrc-smoke.py
-/.github/scripts/docker-publish-manifest.sh
 /.github/scripts/docker-runtime-smoke.mjs
 /.idea/
 /.jscsrc

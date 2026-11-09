@@ -224,10 +224,6 @@ jobs:
           name: digest-arm64
           path: ${{ runner.temp }}/digests/digest-arm64
 
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -238,4 +234,17 @@ jobs:
       - name: Create and push the manifest
         env:
           TAG: ${{ inputs.tag }}
-        run: bash .github/scripts/docker-publish-manifest.sh "$RUNNER_TEMP/digests" "$IMAGE" "$TAG"
+        run: |
+          set -euo pipefail
+          shopt -s nullglob dotglob
+          sources=()
+          for arch in amd64 arm64; do
+            files=("$RUNNER_TEMP/digests/digest-$arch/"*)
+            if (( ${#files[@]} != 1 )) || [[ ! -f "${files[0]}" ]]; then
+              echo "Expected one verified digest file for linux/$arch" >&2
+              exit 1
+            fi
+            sources+=("$IMAGE@sha256:${files[0]##*/}")
+          done
+          docker buildx imagetools create -t "$IMAGE:$TAG" "${sources[@]}"
+          docker buildx imagetools inspect "$IMAGE:$TAG"
