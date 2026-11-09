@@ -212,11 +212,21 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v8
+      - name: Download the amd64 digest
+        uses: actions/download-artifact@v8
         with:
-          path: /tmp/digests
-          pattern: digest-*
-          merge-multiple: true
+          name: digest-amd64
+          path: ${{ runner.temp }}/digests/digest-amd64
+
+      - name: Download the arm64 digest
+        uses: actions/download-artifact@v8
+        with:
+          name: digest-arm64
+          path: ${{ runner.temp }}/digests/digest-arm64
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
@@ -228,9 +238,4 @@ jobs:
       - name: Create and push the manifest
         env:
           TAG: ${{ inputs.tag }}
-        run: |
-          set -euo pipefail
-          cd /tmp/digests
-          docker buildx imagetools create -t "$IMAGE:$TAG" \
-            $(printf "$IMAGE@sha256:%s " *)
-          docker buildx imagetools inspect "$IMAGE:$TAG"
+        run: bash .github/scripts/docker-publish-manifest.sh "$RUNNER_TEMP/digests" "$IMAGE" "$TAG"
