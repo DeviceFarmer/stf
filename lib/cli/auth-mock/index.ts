@@ -1,6 +1,7 @@
 import {createRequire} from 'module'
 import type {Argv} from 'yargs'
 import type {CommandArgv} from '../../types/cli.js'
+import cookieutil from '../../util/cookieutil.js'
 
 var require = createRequire(import.meta.url)
 
@@ -9,7 +10,7 @@ var command = 'auth-mock'
 var describe = 'Start a mock auth unit that accepts any user.'
 
 var builder = function(yargs: Argv) {
-  return yargs
+  var y = yargs
     .env('STF_AUTH_MOCK')
     .strict()
     .option('app-url', {
@@ -59,6 +60,8 @@ var builder = function(yargs: Argv) {
       '`STF_AUTH_MOCK_SECRET`). Legacy environment variables like ' +
       'BASIC_AUTH_USERNAME are still accepted, too, but consider them ' +
       'deprecated.')
+
+  return cookieutil.addCookieOptions(y)
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
@@ -67,6 +70,8 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   , secret: argv.secret
   , ssid: argv.ssid
   , appUrl: argv.appUrl
+  , cookieSameSite: argv.cookieSameSite
+  , cookieSecure: cookieutil.resolveCookieSecure(argv.cookieSecure)
   , mock: {
       useBasicAuth: argv.useBasicAuth
     , basicAuth: {

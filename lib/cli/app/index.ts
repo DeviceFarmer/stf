@@ -1,6 +1,7 @@
 import {createRequire} from 'module'
 import type {Argv} from 'yargs'
 import type {CommandArgv} from '../../types/cli.js'
+import cookieutil from '../../util/cookieutil.js'
 
 var require = createRequire(import.meta.url)
 
@@ -9,7 +10,7 @@ var command = 'app'
 var describe = 'Start an app unit.'
 
 var builder = function(yargs: Argv) {
-  return yargs
+  var y = yargs
     .env('STF_APP')
     .strict()
     .option('auth-url', {
@@ -53,6 +54,8 @@ var builder = function(yargs: Argv) {
       'by converting the option to uppercase, replacing dashes with ' +
       'underscores and prefixing it with `STF_APP_` (e.g. ' +
       '`STF_APP_AUTH_URL`).')
+
+  return cookieutil.addCookieOptions(y)
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
@@ -63,6 +66,8 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   , authUrl: argv.authUrl
   , websocketUrl: argv.websocketUrl
   , userProfileUrl: argv.userProfileUrl
+  , cookieSameSite: argv.cookieSameSite
+  , cookieSecure: cookieutil.resolveCookieSecure(argv.cookieSecure)
   })
 }
 
