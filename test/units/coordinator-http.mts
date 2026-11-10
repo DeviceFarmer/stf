@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import net from 'node:net'
 import {once} from 'node:events'
 import {createHash} from 'node:crypto'
 import WebSocket from 'ws'
@@ -7,7 +8,7 @@ import {Coordinator} from '../../lib/units/coordinator/engine.js'
 import {HttpFarmBackend} from '../../lib/units/coordinator/backend.js'
 import {createCoordinatorApp, attachCoordinatorAdb} from '../../lib/units/coordinator/http.js'
 import {CoordinatorAccess} from '../../lib/units/coordinator/access.js'
-import {adbRequest} from '../../lib/units/coordinator/adb-bridge.js'
+import {adbRequest, readAdbBytes} from '../../lib/units/coordinator/adb-bridge.js'
 import type {StateStore} from '../../lib/units/coordinator/state.js'
 import type {CoordinatorOptions, CoordinatorState, FarmDevice, GridSlot, GridStatus} from
   '../../lib/units/coordinator/types.js'
@@ -75,7 +76,7 @@ describe('coordinator HTTP and real upstream adapters', function() {
     }
   })
 
-  async function fixture(start = true, projects = false) {
+  async function fixture(start = true, projects = false, adb = {host: 'adb.test', port: 5037}) {
     let time = Date.parse('2026-10-18T00:00:00Z')
     const store = new MemoryStore()
     const devices: FarmDevice[] = ['phone-a', 'phone-b'].map(serial => ({
@@ -205,8 +206,8 @@ describe('coordinator HTTP and real upstream adapters', function() {
     const backend = new HttpFarmBackend(stfUrl, gridUrl, stfToken, 1000)
     backend.maestroBaseline = async() => ({packages: [], settings: {}})
     backend.maestroPrepare = async() => {}
-    const engine = new Coordinator(options, [{provider: 'android-pool', host: 'adb.test'
-      , port: 5037, systemPorts: [8200, 8201]}], backend, store, () => time)
+    const engine = new Coordinator(options, [{provider: 'android-pool', ...adb
+      , systemPorts: [8200, 8201]}], backend, store, () => time)
     if (start) {
       await engine.start()
     }
@@ -414,6 +415,24 @@ describe('coordinator HTTP and real upstream adapters', function() {
     assert.equal(f.stfCalls.filter(item => item.method === 'POST').length, 0)
   })
 
+  it('does not persist allocation requests with array-valued platform or runner', async() => {
+    const f = await fixture(true, true)
+    const before = structuredClone(f.store.state)
+    const body = {runId: 'run-a', platform: 'Android', runner: 'appium'}
+    const key = {'Idempotency-Key': 'project-request'}
+    const auth = 'Bearer ' + projectA
+    for (const invalid of [{platform: ['Android']}, {platform: ['iOS']}
+      , {runner: ['appium']}, {runner: ['maestro']}]) {
+      const response = await f.call('/api/v1/requests', 'POST', {...body, ...invalid}, auth, key)
+      assert.equal(response.status, 400, JSON.stringify(invalid))
+      assert.equal(response.body.error.code, 'invalid_request')
+      assert.deepEqual(f.store.state, before)
+    }
+    assert.equal((await f.call('/api/v1/requests', 'POST', body, auth, key)).status, 202)
+    assert.equal(f.store.state.requests[0]?.input.runner, 'appium')
+    assert.equal(f.store.state.requests[0]?.input.platform, 'Android')
+  })
+
   it('runs W3C sessions, heartbeat and fenced cleanup over HTTP', async function() {
     const f = await fixture()
     f.grid.nodes.splice(1)
@@ -492,6 +511,40 @@ describe('coordinator HTTP and real upstream adapters', function() {
     }
   })
 
+  it('cancels declared and chunked oversized WebDriver responses before EOF', async function() {
+    this.timeout(7000)
+    const declaredClosed = deferred()
+    const streamedClosed = deferred()
+    const maxBytes = 32 * 1024 * 1024
+    const chunk = Buffer.alloc(1024 * 1024, 'a')
+    const grid = http.createServer((req, res) => {
+      if (req.url === '/declared') {
+        res.once('close', declaredClosed.resolve)
+        res.writeHead(200, {'Content-Length': maxBytes + 1})
+        res.flushHeaders()
+        return
+      }
+      res.once('close', streamedClosed.resolve)
+      res.writeHead(200, {'Content-Type': 'application/octet-stream'})
+      const write = async() => {
+        for (let sent = 0; sent <= maxBytes && !res.destroyed; sent += chunk.length) {
+          if (!res.write(chunk)) {
+            await Promise.race([once(res, 'drain'), streamedClosed.promise])
+          }
+        }
+      }
+      write().catch(error => res.destroy(error as Error))
+    })
+    servers.push(grid)
+    const origin = await listen(grid)
+    const backend = new HttpFarmBackend(origin, origin, stfToken, 5000)
+    const oversized = {status: 502, message: /Oversized WebDriver response/}
+    await assert.rejects(backend.webdriver('GET', '/declared'), oversized)
+    await declaredClosed.promise
+    await assert.rejects(backend.webdriver('GET', '/streamed'), oversized)
+    await streamedClosed.promise
+  })
+
   for (const phase of ['inventory', 'capture'] as const) {
     it(`keeps HTTP heartbeat and commands available during slow ${phase}`, async function() {
       const f = await fixture()
@@ -565,6 +618,96 @@ describe('coordinator HTTP and real upstream adapters', function() {
       assert.equal(response.body.value.stacktrace, '')
     }
     assert.equal(f.gridCalls.filter(call => call.route === '/session').length, 0)
+  })
+
+  it('forwards permitted Appium settings and rejects client control of the host and route',
+    async() => {
+      const f = await fixture()
+      const lease = await f.allocate()
+      const route = '/api/v1/leases/' + lease.id + '/webdriver/session'
+      for (const capability of [
+        {udid: 'another-phone'}
+      , {'appium:app': 'https://example.test/external.apk'}
+      , {'appium:otherApps': ['file:///tmp/other.apk']}
+      , {'appium:wdaBaseUrl': 'http://127.0.0.1:1234'}
+      , {'appium:mjpegScreenshotUrl': 'http://127.0.0.1:9100'}
+      , {'appium:chromedriverExecutable': '/tmp/executable'}
+      , {'appium:useNewWDA': true}
+      , {'appium:fullReset': true}
+      ]) {
+        const response = await f.call(route, 'POST', {capabilities: {firstMatch: [capability]}})
+        assert.equal(response.status, 400, JSON.stringify(capability))
+      }
+      assert.equal(f.gridCalls.filter(call => call.route === '/session').length, 0)
+      const response = await f.call(route, 'POST', {capabilities: {
+        alwaysMatch: {platformName: 'android', acceptInsecureCerts: true
+          , 'appium:appPackage': 'test.package', 'appium:appWaitDuration': 30000
+          , 'appium:appWaitForLaunch': false}
+      , firstMatch: [{'appium:appActivity': '.MainActivity', 'appium:language': 'en'}]
+      }})
+      assert.equal(response.status, 200)
+      const create = f.gridCalls.find(call => call.route === '/session')!
+      const sent = create.body.capabilities.alwaysMatch
+      assert.equal(sent.platformName, 'Android')
+      assert.equal(sent['appium:udid'], lease.device.serial)
+      assert.equal(sent['stf:leaseId'], lease.id)
+      assert.equal(sent.acceptInsecureCerts, true)
+      assert.equal(sent['appium:appPackage'], 'test.package')
+      assert.equal(sent['appium:appActivity'], '.MainActivity')
+      assert.equal(sent['appium:language'], 'en')
+      assert.equal(sent['appium:appWaitDuration'], 30000)
+      assert.equal(sent['appium:appWaitForLaunch'], false)
+    })
+
+  it('accepts typed device-scoped iOS startup options and rejects nonscalar values', async() => {
+    const f = await fixture()
+    const now = Date.parse('2026-10-18T00:00:00Z')
+    f.devices[0] = {...f.devices[0]!, serial: 'IPHONE-A', platform: 'iOS', version: '27.2'
+    , ios: {wda: {profile: 'valid', checkedAt: new Date(now).toISOString()
+        , expiresAt: new Date(now + 86400000).toISOString()}}}
+    f.grid.nodes[0]!.slots[0]!.stereotype = {platformName: 'iOS', 'appium:udid': 'IPHONE-A'
+      , 'appium:platformVersion': '27.2'}
+    const request = await f.call('/api/v1/requests', 'POST',
+      {runId: 'ios-options', platform: 'iOS', serial: 'IPHONE-A'}, bearer,
+      {'Idempotency-Key': 'ios-options'})
+    assert.equal(request.status, 202)
+    await f.engine.tick()
+    const allocated = f.engine.requestView(request.body.request.id)
+    assert.ok(allocated.leaseId)
+    const route = '/api/v1/leases/' + allocated.leaseId + '/webdriver/session'
+    for (const capability of [
+      {'appium:deviceName': ['iPhone']}
+    , {'appium:autoAcceptAlerts': 'true'}
+    , {'appium:autoDismissAlerts': 1}
+    , {'appium:orientation': {}}
+    , {'appium:orientation': 'diagonal'}
+    , {'appium:appLaunchStateTimeoutSec': '30'}
+    , {'appium:appLaunchStateTimeoutSec': 240}
+    , {'appium:appWaitDuration': 1.5}
+    , {'appium:waitForIdleTimeout': true}
+    , {'appium:wdaEventloopIdleDelay': -1}
+    ]) {
+      const response = await f.call(route, 'POST', {
+        capabilities: {alwaysMatch: capability}
+      })
+      assert.equal(response.status, 400, JSON.stringify(capability))
+    }
+    assert.equal(f.gridCalls.filter(call => call.route === '/session').length, 0)
+    const supplied = {
+      'appium:deviceName': 'iPhone', 'appium:autoAcceptAlerts': true
+    , 'appium:autoDismissAlerts': false, 'appium:orientation': 'PORTRAIT'
+    , 'appium:appLaunchStateTimeoutSec': 10.5, 'appium:waitForIdleTimeout': 0
+    , 'appium:wdaEventloopIdleDelay': 2
+    }
+    const result = await f.call(route, 'POST', {capabilities: {alwaysMatch: supplied}})
+    assert.equal(result.status, 200)
+    const create = f.gridCalls.find(call => call.route === '/session')!
+    const sent = create.body.capabilities.alwaysMatch
+    for (const [key, value] of Object.entries(supplied)) {
+      assert.equal(sent[key], value)
+    }
+    assert.equal(sent['appium:udid'], 'IPHONE-A')
+    assert.equal(sent['appium:platformVersion'], '27.2')
   })
 
   it('rejects malformed W3C arrays rather than silently rewriting them', async function() {
@@ -714,6 +857,69 @@ describe('coordinator HTTP and real upstream adapters', function() {
     const revoked = once(idle, 'close')
     await f.call('/api/v1/leases/' + lease.id, 'DELETE', undefined, 'Bearer ' + projectA)
     assert.notEqual((await revoked)[0], 1000)
+  })
+
+  it('closes an open ADB service when STF loses its original ownership fence', async function() {
+    this.timeout(4500)
+    const closedUpstream = deferred()
+    const upstream: {socket?: net.Socket} = {}
+    const request = async(socket: net.Socket) => {
+      const length = parseInt((await readAdbBytes(socket, 4)).toString(), 16)
+      return (await readAdbBytes(socket, length)).toString()
+    }
+    const adb = net.createServer(socket => {
+      upstream.socket = socket
+      socket.on('error', () => {})
+      socket.once('close', closedUpstream.resolve)
+      const serve = async() => {
+        assert.equal(await request(socket), 'host:transport:phone-a')
+        socket.write('OKAY')
+        assert.equal(await request(socket), 'shell:echo ready')
+        socket.write('OKAY')
+        socket.on('data', chunk => socket.write(chunk))
+      }
+      serve().catch(error => socket.destroy(error as Error))
+    })
+    adb.listen(0, '127.0.0.1')
+    await once(adb, 'listening')
+    try {
+      const port = (adb.address() as net.AddressInfo).port
+      const f = await fixture(true, true, {host: '127.0.0.1', port})
+      const auth = 'Bearer ' + projectA
+      const submitted = await f.call('/api/v1/requests', 'POST',
+        {runId: 'ownership-changes', runner: 'maestro', platform: 'Android'}
+      , auth, {'Idempotency-Key': 'ownership-changes'})
+      assert.equal(submitted.status, 202)
+      await f.engine.tick()
+      const allocated = f.engine.requestView(submitted.body.request.id)
+      assert.ok(allocated.leaseId)
+      const lease = f.engine.leaseView(allocated.leaseId)
+      const ws = new WebSocket(f.url.replace(/^http/, 'ws') + lease.connection.path,
+        {headers: {Authorization: auth}})
+      ws.on('error', () => {})
+      await once(ws, 'open')
+      const exchange = async(bytes: Buffer) => {
+        const reply = once(ws, 'message')
+        ws.send(bytes, {binary: true})
+        return (await reply)[0].toString()
+      }
+      assert.equal(await exchange(adbRequest('host:transport:phone-a')), 'OKAY')
+      assert.equal(await exchange(adbRequest('shell:echo ready')), 'OKAY')
+      assert.equal(await exchange(Buffer.from('interactive-shell')), 'interactive-shell')
+
+      const revoked = once(ws, 'close')
+      const device = f.devices.find(candidate => candidate.serial === 'phone-a')!
+      device.owner = {email: 'other-owner@example.test'}
+      device.automationLeaseId = 'other-lease'
+      assert.notEqual((await revoked)[0], 1000)
+      await closedUpstream.promise
+      assert.equal(f.engine.leaseView(lease.id).state, 'cleaning')
+      assert.equal(device.automationLeaseId, 'other-lease')
+    }
+    finally {
+      upstream.socket?.destroy()
+      adb.close()
+    }
   })
 
   it('reclaims normal ADB EOF streams across repeated Dadb metadata connections', async function() {

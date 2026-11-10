@@ -187,6 +187,10 @@ describe('Device group plugin', function() {
     expect(JSON.parse(reply.body!).owner.reservationId).to.equal(joined.owner.reservationId)
     expect((await context.plugin.get()).reservationId).to.equal(joined.owner.reservationId)
     expect(owner.reservationId).to.equal(null)
+    const legacyRelease = await transaction(context, wire.UngroupMessage,
+      new wire.UngroupMessage([]))
+    expect(legacyRelease.success).to.equal(false)
+    expect((await context.plugin.get()).reservationId).to.equal(joined.owner.reservationId)
     const renewal = await transaction(context, wire.AutomationLeaseMessage,
       new wire.AutomationLeaseMessage('test-device', owner, 'lease-a', 'renew', 10000))
     expect(renewal.success).to.equal(true)
@@ -295,9 +299,8 @@ describe('Device group Maestro cleanup fence', function() {
     adb.packages.add('dev.mobile.maestro')
     adb.packages.add('dev.mobile.maestro.test')
     adb.setFailCleanup(true)
-    const reservationId = (await context.plugin.get()).reservationId
-    const failed = await transaction(context, wire.UngroupMessage,
-      new wire.UngroupMessage([], reservationId))
+    const failed = await transaction(context, wire.AutomationLeaseMessage,
+      new wire.AutomationLeaseMessage('test-device', owner, 'lease-a', 'release'))
     expect(failed.success).to.equal(false)
     expect((await context.plugin.get()).email).to.equal(owner.email)
     expect(messages(context.push, wire.LeaveGroupMessage.$code)).to.have.length(0)

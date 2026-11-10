@@ -56,7 +56,8 @@ export default syrup.serial()
   ) {
     var log = logger.createLogger('device:plugins:group')
     var currentGroup: OwnerMessage | null = null
-    let currentAutomation: {email: string, id: string, baseline: MaestroBaseline} | null = null
+    let currentLeaseId: string | null = null
+    let maestroBaseline: MaestroBaseline | null = null
     let joining: Promise<OwnerMessage> | null = null
     let leaving: Promise<OwnerMessage> | null = null
     let stopping = false
@@ -124,7 +125,8 @@ export default syrup.serial()
               automationLease.start(group.email, leaseId, timeout || options.groupTimeout)
             }
             currentGroup = group
-            currentAutomation = baseline ? {email: newGroup.email, id: leaseId!, baseline} : null
+            currentLeaseId = usage === 'automation' ? leaseId || null : null
+            maestroBaseline = baseline
             log.important('Now owned by "%s"', currentGroup.email)
             log.info('Subscribing to group channel "%s"', currentGroup.group)
             channels.register(currentGroup.group, {
@@ -153,6 +155,10 @@ export default syrup.serial()
     }
 
     plugin.leave = function(reason, reservationId) {
+      const managedUngroup = () => reason === 'ungroup_request' && currentLeaseId !== null
+      if (managedUngroup()) {
+        return Promise.reject(new grouputil.RequirementMismatchError('leaseId'))
+      }
       if (leaving) {
         if (reservationId && currentGroup?.reservationId !== reservationId) {
           return Promise.reject(new grouputil.RequirementMismatchError('reservationId'))
@@ -161,13 +167,16 @@ export default syrup.serial()
       }
       const operation = Promise.resolve(joining).reflect().then(() => plugin.get())
         .then(async function(group) {
+          if (managedUngroup()) {
+            throw new grouputil.RequirementMismatchError('leaseId')
+          }
           if (reservationId && group.reservationId !== reservationId) {
             throw new grouputil.RequirementMismatchError('reservationId')
           }
-          if (currentAutomation) {
+          if (maestroBaseline) {
             // A timeout or coordinator outage may end access, but cannot make a running driver free.
             // Retain ownership and the lease ID after failure so the caller can retry cleanup.
-            await cleanupMaestroDevice(executeMaestro, currentAutomation.baseline)
+            await cleanupMaestroDevice(executeMaestro, maestroBaseline)
           }
           log.important('No longer owned by "%s" (reason: %s)', group.email, reason)
           log.info('Unsubscribing from group channel "%s"', group.group)
@@ -177,7 +186,8 @@ export default syrup.serial()
             options.serial, group, reason
           ))])
           automationLease.clear()
-          currentAutomation = null
+          currentLeaseId = null
+          maestroBaseline = null
           currentGroup = null
           plugin.emit('leave', group)
           return group
@@ -241,16 +251,10 @@ export default syrup.serial()
       .on(wire.AutomationLeaseMessage, function(channel, message) {
         const reply = wireutil.reply(options.serial)
         return Promise.try(function() {
-          if (message.serial !== options.serial) {
+          if (message.serial !== options.serial || currentLeaseId !== message.leaseId ||
+              currentGroup?.email !== message.owner.email) {
             throw new Error('Stale automation lease')
           }
-          if (message.action === 'release' && currentAutomation &&
-              currentAutomation.email === message.owner.email &&
-              currentAutomation.id === message.leaseId &&
-              currentGroup?.email === message.owner.email) {
-            return plugin.leave('automation_release').then(() => null)
-          }
-          automationLease.assertCurrent(message.owner.email, message.leaseId)
           if (message.action === 'renew') {
             return {expiresAt: automationLease.renew(
               message.owner.email, message.leaseId, message.timeout || 0
@@ -258,7 +262,7 @@ export default syrup.serial()
           }
           if (message.action === 'release') {
             automationLease.clear()
-            return plugin.leave('automation_release').then(() => null)
+            return plugin.leave('automation_release', currentGroup.reservationId).then(() => null)
           }
           throw new Error('Invalid automation lease action')
         }).then(function(body) {

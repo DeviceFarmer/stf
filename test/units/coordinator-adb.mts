@@ -18,7 +18,7 @@ async function listen(server: net.Server) {
   return (server.address() as net.AddressInfo).port
 }
 
-async function fixture() {
+async function fixture(checkOwnership?: (fresh?: boolean) => Promise<void>) {
   const upstreamRequests: string[] = []
   const upstreamSockets = new Set<net.Socket>()
   const upstream = net.createServer(socket => {
@@ -38,13 +38,19 @@ async function fixture() {
   const upstreamPort = await listen(upstream)
   const bridge = new LeaseAdbBridge()
   let active = true
-  const proxy = net.createServer(socket => bridge.accept(socket, {
-    leaseId: 'lease-one', serial: 'PHONE-A', host: '127.0.0.1', port: upstreamPort
-  }, () => {
- if (!active) {
- throw new Error('Expired lease')
-}
-}))
+  const proxySockets = new Set<net.Socket>()
+  const proxy = net.createServer(socket => {
+    proxySockets.add(socket)
+    socket.once('close', () => proxySockets.delete(socket))
+    bridge.accept(socket, {
+      leaseId: 'lease-one', serial: 'PHONE-A', host: '127.0.0.1', port: upstreamPort
+    }, fresh => {
+      if (!active) {
+        throw new Error('Expired lease')
+      }
+      return checkOwnership?.(fresh)
+    })
+  })
   const proxyPort = await listen(proxy)
   const sockets = new Set<net.Socket>()
   const connect = async() => {
@@ -54,7 +60,7 @@ async function fixture() {
     await once(socket, 'connect')
     return socket
   }
-  return {bridge, connect, upstreamRequests, upstreamSockets, expire: () => {
+  return {bridge, connect, upstreamRequests, upstreamSockets, proxySockets, expire: () => {
  active = false
 }
   , async close() {
@@ -71,6 +77,39 @@ async function fixture() {
 }
 
 describe('lease-isolated ADB smart socket', () => {
+  it('does not start a service after the client closes during the provider check', async() => {
+    let resume!: () => void, entered!: () => void
+    const proof = new Promise<void>(resolve => {
+      resume = resolve
+    })
+    const proofStarted = new Promise<void>(resolve => {
+      entered = resolve
+    })
+    const f = await fixture(async fresh => {
+      if (fresh) {
+        entered()
+        await proof
+      }
+    })
+    try {
+      const client = await f.connect()
+      assert.equal(await request(client, 'host:transport:PHONE-A'), 'OKAY')
+      client.write(adbRequest('shell:echo cancelled'))
+      await proofStarted
+      const clientClosed = once([...f.proxySockets][0]!, 'close')
+      const upstreamClosed = once([...f.upstreamSockets][0]!, 'close')
+      client.destroy()
+      await clientClosed
+      resume()
+      await upstreamClosed
+      assert.deepEqual(f.upstreamRequests, ['host:transport:PHONE-A'])
+    }
+    finally {
+      resume()
+      await f.close()
+    }
+  })
+
   it('exposes only the allocated serial and supports Dadb selected feature queries', async() => {
     const f = await fixture()
     try {

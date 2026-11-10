@@ -119,6 +119,7 @@ export interface Lease {
   deadlineAt: number
   createdAt: number
   sessionId?: string
+  appiumNodeId?: string
   creatingSession?: boolean
   commandInFlight?: boolean
   captureUncertain?: boolean

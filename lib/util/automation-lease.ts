@@ -1,3 +1,6 @@
+export const iosAutomationCaptureTimeoutMs = 40000
+export const automationReleaseTimeoutMs = 90000
+
 /** A provider-owned fence: commands and screen viewers cannot extend this deadline. */
 export class AutomationLease {
   private current: {email: string, id: string, expiresAt: number} | null = null

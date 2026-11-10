@@ -43,14 +43,28 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
   log.info('Automatic owner restore is %s', options.autoRestoreOwner ? 'on' : 'off')
 
   // App side
-  const ownershipUpdates = new Map<string, Promise<void>>()
-  function persistOwnership(serial: string, update: () => Promise<unknown>, publish: () => void) {
-    const pending = (ownershipUpdates.get(serial) || Promise.resolve())
-      .catch(() => {})
+  const ownershipWrites = new Map<string, Promise<void>>()
+  function persistOwnership(
+    serial: string, update: () => Promise<WriteResult>, publish: () => void
+  ) {
+    const pending: Promise<void> = (ownershipWrites.get(serial) ?? Promise.resolve())
       .then(update)
-      .then(publish)
-    ownershipUpdates.set(serial, pending)
-    pending.catch(error => log.error('Failed to persist device ownership', error.stack))
+      .then(stats => {
+        if (stats.errors) {
+          throw new Error(String(stats.first_error))
+        }
+        if (stats.replaced) {
+          publish()
+        }
+      })
+      .catch(error => log.error('Failed to persist device ownership', error))
+      .finally(() => {
+        if (ownershipWrites.get(serial) === pending) {
+          ownershipWrites.delete(serial)
+        }
+      })
+    ownershipWrites.set(serial, pending)
+    return pending
   }
 
   var appDealer = zmqutil.socket('dealer')
@@ -345,14 +359,13 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      persistOwnership(message.serial, () =>
-        dbapi.setDeviceOwner(message.serial, message.owner, message.leaseId)
-          .then(() => message.usage ? dbapi.setDeviceUsage(message.serial, message.usage) : null)
+      return persistOwnership(message.serial, () =>
+        dbapi.setDeviceOwner(message.serial, message.owner, message.leaseId, message.usage)
       , () => appDealer.send([channel, data]))
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
-      persistOwnership(message.serial, () => dbapi.unsetDeviceOwner(message.serial)
-        .then(() => dbapi.unsetDeviceUsage(message.serial))
+      return persistOwnership(message.serial, () =>
+        dbapi.unsetDeviceOwner(message.serial, message.owner)
       , () => appDealer.send([channel, data]))
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {
@@ -373,15 +386,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      const pending = ownershipUpdates.get(message.source)
-      if (pending) {
-        pending.then(() => appDealer.send([channel, data]))
-          .catch(() => appDealer.send([channel, wireutil.reply(message.source)
-            .fail('Ownership persistence failed')]))
-      }
-      else {
-        appDealer.send([channel, data])
-      }
+      appDealer.send([channel, data])
     })
     .on(wire.DeviceLogcatEntryMessage, function(channel, message, data) {
       appDealer.send([channel, data])

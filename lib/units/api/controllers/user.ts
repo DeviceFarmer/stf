@@ -3,6 +3,7 @@
 **/
 
 import util from 'util'
+import {setTimeout as delay} from 'node:timers/promises'
 
 import _ from 'lodash'
 import Promise from 'bluebird'
@@ -12,6 +13,9 @@ import dbapi from '../../../db/api.js'
 import logger from '../../../util/logger.js'
 import datautil from '../../../util/datautil.js'
 import deviceutil from '../../../util/deviceutil.js'
+import {
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs
+} from '../../../util/automation-lease.js'
 import wire from '../../../wire/index.js'
 import wireutil from '../../../wire/util.js'
 import wirerouter from '../../../wire/router.js'
@@ -76,17 +80,14 @@ function getUserDevices(req: ApiRequest, res: Response) {
     })
 }
 
-// Every device endpoint below opens the same way: find a device this user can see, and refuse
-// unless they are the one using it. Only the wording of the refusal differs, so the 404, the 403
-// and the 500 are all the helper's to answer.
-function withOwnedDevice(
+function withVisibleDevice(
   req: ApiRequest
 , res: Response
 , serial: string
-, notOwnedMessage: string
-, handler: (device: DeviceDocument) => void
-, access: 'manual' | 'read' | 'automation' = 'manual'
+, handler: (device: DeviceDocument) => unknown
 ) {
+  const fail = (err: Error) =>
+    apiutil.internalError(res, 'Failed to load device "%s": ', serial, err.stack)
   return dbapi.loadDevice(req.user.groups.subscribed, serial)
     .then(function(cursor) {
       cursor.next(function(err: Error, device: DeviceDocument) {
@@ -96,34 +97,33 @@ function withOwnedDevice(
         }
 
         datautil.normalize(device, req.user)
-        if (access === 'automation') {
-          if (device.owner && device.owner.email !== req.user.email) {
-            apiutil.respond(res, 403, notOwnedMessage)
-            return
-          }
-          if (!device.present || !device.ready || !device.owner) {
-            apiutil.respond(res, 409, 'Stale automation lease')
-            return
-          }
-          handler(device)
-          return
-        }
-        if (!deviceutil.isOwnedByUser(device, req.user)) {
-          apiutil.respond(res, 403, notOwnedMessage)
-          return
-        }
-
-        if (device.automationLeaseId && access === 'manual') {
-          apiutil.respond(res, 409,
-            'Device has a coordinator lease; use its fenced automation release endpoint')
-          return
-        }
-        handler(device)
+        Promise.try(() => handler(device)).catch(fail)
       })
     })
-    .catch(function(err) {
-      apiutil.internalError(res, 'Failed to load device "%s": ', serial, err.stack)
-    })
+    .catch(fail)
+}
+
+function withOwnedDevice(
+  req: ApiRequest
+, res: Response
+, serial: string
+, notOwnedMessage: string
+, handler: (device: DeviceDocument) => void
+, access: 'manual' | 'read' = 'manual'
+) {
+  return withVisibleDevice(req, res, serial, device => {
+    if (!deviceutil.isOwnedByUser(device, req.user)) {
+      apiutil.respond(res, 403, notOwnedMessage)
+      return
+    }
+
+    if (device.automationLeaseId && access === 'manual') {
+      apiutil.respond(res, 409,
+        'Device has a coordinator lease; use its fenced automation release endpoint')
+      return
+    }
+    handler(device)
+  })
 }
 
 function getUserDeviceBySerial(req: ApiRequest, res: Response) {
@@ -163,7 +163,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   const lock: ApiLock = {}
 
   lockutil.lockGenericDevice(req, res, lock, dbapi.lockDeviceByCurrent)
-    .then(function(lockingSuccessed) {
+    .then(async function(lockingSuccessed) {
       if (lockingSuccessed) {
         const device = lock.device!
 
@@ -176,10 +176,22 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
           })
           return
         }
+        if (automationRunner === 'maestro' && device.platform !== 'Android') {
+          lockutil.unlockDevice(lock)
+          apiutil.respond(res, 400, 'Maestro requires an Android device')
+          return
+        }
+        if (leaseId && await dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)) {
+          lockutil.unlockDevice(lock)
+          apiutil.respond(res, 409, 'Automation lease ID was already released')
+          return
+        }
 
         var messageListener: MessageListener
 
-        // Timer will be called if no JoinGroupMessage is received till 5 seconds
+        const defaultCaptureTimeout = automationRunner ? 15000 : 5000
+        const captureTimeout = leaseId && device.platform === 'iOS' ?
+          iosAutomationCaptureTimeoutMs : defaultCaptureTimeout
         var responseTimer = setTimeout(function() {
           req.options.channelRouter.removeListener(wireutil.global, messageListener)
           lockutil.unlockDevice(lock)
@@ -187,7 +199,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               success: false
             , description: 'Device is not responding'
           })
-        }, automationRunner ? 15000 : 5000)
+        }, captureTimeout)
 
         messageListener = wirerouter()
           .on(wire.JoinGroupMessage, function(channel, message) {
@@ -254,23 +266,72 @@ function automationLeaseOperation(
     return
   }
   const serial = req.swagger.params.serial.value
-  withOwnedDevice(req, res, serial, 'Device is not owned by you', function(device) {
-    if (device.usage !== 'automation' || device.automationLeaseId !== leaseId) {
+  const releasing = action === 'release'
+  const hasReceipt = () => dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)
+  withVisibleDevice(req, res, serial, async device => {
+    if (releasing && await hasReceipt()) {
+      res.json({success: true, leaseId})
+      return
+    }
+    if (device.owner && device.owner.email !== req.user.email) {
+      apiutil.respond(res, 403, 'Device is not owned by you')
+      return
+    }
+    if (!device.present || !device.ready || !device.owner || device.usage !== 'automation' ||
+        device.automationLeaseId !== leaseId) {
       apiutil.respond(res, 409, 'Stale automation lease')
       return
     }
     const responseChannel = 'txn_' + uuid.v4()
+    const pending = new AbortController()
     const cleanup = () => {
+      if (pending.signal.aborted) {
+        return
+      }
+      pending.abort()
       clearTimeout(timer)
+      res.off('close', cleanup)
       req.options.channelRouter.removeListener(responseChannel, listener)
       req.options.sub.unsubscribe(responseChannel)
     }
     const timer = setTimeout(() => {
       cleanup()
       apiutil.respond(res, 504, 'Device is not responding')
-    }, action === 'release' ? 90000 : 5000)
+    }, releasing ? automationReleaseTimeoutMs : 5000)
     const listener = wirerouter().on(wire.TransactionDoneMessage, (_channel, message) => {
       if (message.source !== serial) {
+        return
+      }
+      if (releasing) {
+        req.options.channelRouter.removeListener(responseChannel, listener)
+        const confirm = async() => {
+          let retryMs = 50
+          // A different STF processor may still be committing the matching LeaveGroup.
+          while (!pending.signal.aborted) {
+            const released = await hasReceipt()
+            if (pending.signal.aborted) {
+              return
+            }
+            if (released || !message.success) {
+              cleanup()
+              if (released) {
+                res.json({success: true, leaseId})
+              }
+              else {
+                apiutil.respond(res, 409, message.data || 'Stale automation lease')
+              }
+              return
+            }
+            await delay(retryMs, null, {signal: pending.signal})
+            retryMs = Math.min(500, retryMs * 2)
+          }
+        }
+        confirm().catch(error => {
+          if (!pending.signal.aborted) {
+            cleanup()
+            apiutil.internalError(res, 'Failed to confirm automation release: ', error.stack)
+          }
+        })
         return
       }
       cleanup()
@@ -281,6 +342,7 @@ function automationLeaseOperation(
       const body = message.body ? JSON.parse(message.body) : {}
       res.json({success: true, leaseId, ...body})
     }).handler()
+    res.once('close', cleanup)
     req.options.sub.subscribe(responseChannel)
     req.options.channelRouter.on(responseChannel, listener)
     req.options.push.send([device.channel, wireutil.transaction(responseChannel,
@@ -288,7 +350,7 @@ function automationLeaseOperation(
         req.user.email, req.user.name, req.user.group
       ), leaseId, action, timeout)
     )])
-  }, 'automation')
+  })
 }
 
 function renewAutomationLease(req: ApiRequest<AutomationLeaseBody>, res: Response) {

@@ -9,11 +9,13 @@ import type {StateStore} from './state.js'
 import type {
   AdbPool, AllocationInput, AllocationRequest, CaptureReconciliationInput, CoordinatorOptions
 , CoordinatorState, FarmBackend
-, FarmDevice, GridStatus, Lease, UpstreamResponse
+, FarmDevice, GridStatus, Lease, Runner, UpstreamResponse
 } from './types.js'
 
 const terminal = new Set(['released', 'expired'])
 const requestTerminal = new Set(['cancelled', 'expired', 'failed'])
+const requestRetentionMs = 7 * 24 * 60 * 60 * 1000
+const projectRequestLimit = 10000
 
 function matchesAdbRoute(capabilities: Record<string, unknown>, pool: AdbPool) {
   const port = capabilities['appium:adbPort']
@@ -28,7 +30,7 @@ export class Coordinator {
   private initialized = false
   private stopping = false
   private fault = false
-  private lastError: string | null = null
+  private readonly runnerErrors = new Map<Runner, string>()
   private readonly renewed = new Map<string, number>()
   private readonly commands = new Map<string, Promise<unknown>>()
   private readonly closingSessions = new Set<string>()
@@ -36,7 +38,7 @@ export class Coordinator {
   private readonly cleanups = new Map<string, Promise<void>>()
   private readonly reconciliations = new Map<string, {fingerprint: string
     , operation: Promise<ReturnType<Coordinator['leaseView']>>}>()
-  private ticking: Promise<void> | null = null
+  private readonly ticking = new Map<Runner, Promise<void>>()
   private closeAdb: (id: string) => void = () => {}
   private projectLimits = new Map<string, number>()
 
@@ -165,7 +167,7 @@ export class Coordinator {
       (item.projectId || 'legacy') === projectId
     return {ready: this.ready, requests: count(this.state.requests.filter(belongs))
     , leases: count(this.state.leases.filter(belongs))
-    , lastError: this.lastError}
+    , lastError: this.runnerErrors.get('appium') || this.runnerErrors.get('maestro') || null}
   }
 
   private lease(id: string) {
@@ -222,6 +224,27 @@ export class Coordinator {
       (lease.projectId || 'legacy') === projectId).map(lease => this.leaseView(lease.id))
   }
 
+  private async pruneHistory() {
+    const cutoff = this.now() - requestRetentionMs
+    const heldRequests = new Set(this.state.leases.filter(lease => this.held(lease))
+      .map(lease => lease.requestId))
+    const expired = new Set(this.state.requests.filter(request =>
+      request.createdAt <= cutoff && request.state !== 'queued' && !heldRequests.has(request.id))
+      .map(request => request.id))
+    if (!expired.size) {
+      return
+    }
+    this.state.requests = this.state.requests.filter(request => !expired.has(request.id))
+    this.state.leases = this.state.leases.filter(lease => {
+      if (expired.has(lease.requestId)) {
+        this.renewed.delete(lease.id)
+        return false
+      }
+      return true
+    })
+    await this.save()
+  }
+
   submit(input: AllocationInput, key: string, projectId = 'legacy') {
     return this.exclusive(async() => {
       this.assertReady()
@@ -232,6 +255,7 @@ export class Coordinator {
         throw new CoordinatorError(400, 'unsupported_runner',
           'Maestro requires physical Android devices')
       }
+      await this.pruneHistory()
       const fingerprint = createHash('sha256').update(JSON.stringify(input)).digest('hex')
       const existing = this.state.requests.find(request => request.key === key &&
         (request.projectId || 'legacy') === projectId)
@@ -245,8 +269,9 @@ export class Coordinator {
       if (input.runner !== 'maestro') {
         this.assertAppiumEnabled()
       }
-      if (this.state.requests.length >= 10000) {
-        throw new CoordinatorError(429, 'queue_limit', 'Prototype request history limit reached')
+      if (this.state.requests.filter(request => (request.projectId || 'legacy') === projectId)
+        .length >= projectRequestLimit) {
+        throw new CoordinatorError(429, 'queue_limit', 'Project request history limit reached')
       }
       const request: AllocationRequest = {
         id: randomUUID(), projectId, key, fingerprint, input, state: 'queued', createdAt: this.now()
@@ -686,28 +711,37 @@ export class Coordinator {
     , 'appium:adbPort': pool.port, 'appium:systemPort': port, 'appium:suppressKillServer': true}
   }
 
-  tick(): Promise<void> {
-    if (this.ticking) {
-      return this.ticking
+  async tick(): Promise<void> {
+    // Separate lanes keep Appium Grid I/O out of Maestro scheduling and cleanup.
+    await Promise.all([this.tickRunner('appium'), this.tickRunner('maestro')])
+  }
+
+  private tickRunner(runner: Runner): Promise<void> {
+    const pending = this.ticking.get(runner)
+    if (pending) {
+      return pending
     }
-    const operation = this.schedule()
-    this.ticking = operation
+    const operation = this.schedule(runner)
+    this.ticking.set(runner, operation)
     operation.finally(() => {
-      if (this.ticking === operation) {
-        this.ticking = null
+      if (this.ticking.get(runner) === operation) {
+        this.ticking.delete(runner)
       }
     }).catch(() => {})
     return operation
   }
 
-  private async schedule() {
+  private async schedule(runner: Runner) {
+    const queued = (request: AllocationRequest) => request.state === 'queued' &&
+      (request.input.runner || 'appium') === runner
     const maintenance = await this.exclusive(async() => {
       if (!this.ready) {
         return null
       }
       const cleaning: Lease[] = []
       const refreshing: Lease[] = []
-      for (const lease of this.state.leases.filter(item => this.held(item))) {
+      for (const lease of this.state.leases.filter(item => this.held(item) &&
+        (item.runner || 'appium') === runner)) {
         if (lease.state === 'active' &&
             (lease.expiresAt <= this.now() || lease.deadlineAt <= this.now())) {
           await this.beginCleanup(lease, 'expired', 'heartbeat_expired')
@@ -721,7 +755,7 @@ export class Coordinator {
           refreshing.push(lease)
         }
       }
-      for (const request of this.state.requests.filter(item => item.state === 'queued')) {
+      for (const request of this.state.requests.filter(queued)) {
         if (request.queueDeadlineAt <= this.now()) {
           request.state = 'expired'
           request.error = 'queue_timeout'
@@ -730,6 +764,9 @@ export class Coordinator {
           }
           await this.save()
         }
+      }
+      if (runner === 'maestro') {
+        await this.pruneHistory()
       }
       return {cleaning, refreshing}
     })
@@ -742,7 +779,7 @@ export class Coordinator {
     , ...maintenance.refreshing.map(lease => this.refreshOwnership(lease).catch(() => {}))
     ])
     const needed = await this.exclusive(async() => this.ready &&
-      this.state.requests.some(request => request.state === 'queued') &&
+      this.state.requests.some(queued) &&
       this.state.leases.filter(lease => this.held(lease)).length < this.options.maxParallel)
     if (!needed) {
       return
@@ -751,28 +788,27 @@ export class Coordinator {
       let grid: GridStatus | null = null
     try {
       devices = await this.backend.devices()
-      if (this.state.requests.some(request => request.state === 'queued' &&
-          request.input.runner !== 'maestro')) {
-        // Grid failure may delay Appium, but must not prevent independent Maestro allocations.
+      if (runner === 'appium') {
         try {
- grid = await this.backend.grid()
-}
+          grid = await this.backend.grid()
+        }
         catch {
- this.lastError = 'Appium Grid is temporarily unavailable'
-}
+          this.runnerErrors.set(runner, 'Appium Grid is temporarily unavailable')
+          return
+        }
       }
     }
     catch {
-      this.lastError = 'Farm inventory is temporarily unavailable'
+      this.runnerErrors.set(runner, 'Farm inventory is temporarily unavailable')
       return
     }
     const allocations = await this.exclusive(async() => {
       if (!this.ready) {
         return []
       }
-      this.lastError = null
+      this.runnerErrors.delete(runner)
       const reserved: {lease: Lease, request: AllocationRequest}[] = []
-      for (const request of this.state.requests.filter(item => item.state === 'queued')) {
+      for (const request of this.state.requests.filter(queued)) {
         if (request.queueDeadlineAt <= this.now()) {
           request.state = 'expired'
           request.error = 'queue_timeout'
@@ -799,14 +835,14 @@ export class Coordinator {
           if (!this.matches(device, request)) {
             continue
           }
-          const capabilities = this.connection(device, grid, request.input.runner || 'appium')
+          const capabilities = this.connection(device, grid, runner)
           if (!capabilities) {
             continue
           }
           const time = this.now()
           const lease: Lease = {
             id: randomUUID(), projectId, requestId: request.id, runId: request.input.runId
-          , runner: request.input.runner || 'appium', state: 'allocating'
+          , runner, state: 'allocating'
           , device: structuredClone(device), capabilities
           , createdAt: time, expiresAt: time + this.options.leaseTtlSeconds * 1000
           , deadlineAt: time + request.input.maxDurationSeconds * 1000
@@ -953,14 +989,18 @@ export class Coordinator {
       }
       if (lease.creatingSession) {
         const grid = await this.backend.grid({allowBusy: true})
-        const sessions = grid.nodes.flatMap(node => node.slots).flatMap(slot =>
+        const sessions = grid.nodes.flatMap(node => node.slots.flatMap(slot =>
           slot.session && slot.session.capabilities['stf:leaseId'] === lease.id ?
-            [slot.session.sessionId] : [])
+            [{id: slot.session.sessionId, nodeId: node.id}] : []))
         if (sessions.length !== 1) {
           throw new Error('Uncertain Appium session creation')
         }
+        const {id, nodeId} = sessions[0]!
         await this.exclusive(async() => {
-          lease.sessionId = sessions[0]!
+          lease.sessionId = id
+          if (typeof nodeId === 'string' && nodeId.trim() && nodeId.length <= 256) {
+            lease.appiumNodeId = nodeId
+          }
           delete lease.creatingSession
           if (!this.commands.has(lease.id)) {
             delete lease.commandInFlight
@@ -972,10 +1012,12 @@ export class Coordinator {
         const session = lease.sessionId
         const response = await this.backend.webdriver('DELETE',
           '/session/' + encodeURIComponent(session))
-        if (response.status >= 300 && response.status !== 404) {
+        const unknownSession = response.status === 404
+        if (response.status >= 300 && (!unknownSession || !lease.appiumNodeId)) {
           throw new Error('Appium session cleanup failed')
         }
-        await this.confirmAppiumSessionEnded(session)
+        await this.confirmAppiumSessionEnded(session,
+          unknownSession ? lease.appiumNodeId : undefined)
         const settled = await this.exclusive(async() => {
           // Preserve the SID until an accepted command settles; a late failure must
           // retain the identity needed to reconfirm termination on the next cleanup.
@@ -983,6 +1025,7 @@ export class Coordinator {
             return false
           }
           delete lease.sessionId
+          delete lease.appiumNodeId
           delete lease.commandInFlight
           await this.save()
           return true
@@ -1002,28 +1045,32 @@ export class Coordinator {
       if (!device) {
         throw new Error('Device is unavailable during cleanup')
       }
-      if (device.owner) {
-        if (device.owner.email !== this.owner || device.automationLeaseId !== lease.id) {
-          throw new Error('Device ownership changed; refusing to release another lease')
-        }
+      const maestro = lease.runner === 'maestro'
+      const owned = device.owner?.email === this.owner && device.automationLeaseId === lease.id
+      const maestroProof = maestro && lease.maestroCleanupConfirmed
+      if (owned || (maestro && !maestroProof && !lease.captureUncertain)) {
         // The provider owns Maestro cleanup, including after its heartbeat fence expires.
-        // Its release acknowledgment is emitted only after driver and baseline verification.
+        // Retry only our exact release to recover its durable receipt if the response was lost.
         await this.backend.release(device.serial, lease.id)
-        if (lease.runner === 'maestro') {
+        if (maestro) {
           await this.exclusive(async() => {
             lease.maestroCleanupConfirmed = true
+            delete lease.captureUncertain
             await this.save()
           })
         }
         const after = (await this.backend.devices()).find(item => item.serial === device.serial)
-        if (!after || after.owner || after.automationLeaseId) {
+        if (!after || after.automationLeaseId === lease.id) {
           throw new Error('STF ownership release is not confirmed')
         }
+      }
+      else if (device.automationLeaseId === lease.id || (device.owner && !maestroProof)) {
+        throw new Error('Device ownership changed; refusing to release another lease')
       }
       else if (lease.captureUncertain) {
         throw new Error('Uncertain STF capture; requires operator recovery')
       }
-      else if (lease.runner === 'maestro' && !lease.maestroCleanupConfirmed) {
+      else if (maestro && !maestroProof) {
         throw new Error('Missing provider Maestro cleanup acknowledgment')
       }
       await this.exclusive(async() => {
@@ -1041,14 +1088,21 @@ export class Coordinator {
     }
   }
 
-  private async confirmAppiumSessionEnded(sessionId: string) {
+  private async confirmAppiumSessionEnded(sessionId: string, expectedNodeId?: string) {
     // Grid updates the Distributor's slot after the relay acknowledges the DELETE.
     for (const delay of [0, 50, 100, 200, 400, 800]) {
       await wait(delay)
       const grid = await this.backend.grid({allowBusy: true})
       const stillActive = grid.nodes.some(node => node.slots.some(slot =>
         slot.session?.sessionId === sessionId))
-      if (!stillActive) {
+      // A Router 404 may only mean the Session Map lost its route. The original
+      // Node must independently report its slots before absence proves cleanup.
+      const matching = expectedNodeId ? grid.nodes.filter(node => node.id === expectedNodeId) : []
+      const node = matching.length === 1 ? matching[0] : null
+      const visible = node?.availability === 'UP' && node.slots.length > 0 &&
+        node.slots.every(slot => slot.session === null ||
+          typeof slot.session?.sessionId === 'string' && !!slot.session.sessionId.trim())
+      if (!stillActive && (!expectedNodeId || visible)) {
         return
       }
     }
@@ -1077,17 +1131,45 @@ export class Coordinator {
       , 'appium:webDriverAgentUrl', 'appium:derivedDataPath', 'appium:wdaLocalPort'
       , 'appium:newCommandTimeout', 'appium:autoLaunch', 'appium:shouldTerminateApp'
     , 'stf:leaseId'])
+    const clientTypes: Record<string, string> = {
+      browserName: 'string', acceptInsecureCerts: 'boolean', pageLoadStrategy: 'string'
+    , timeouts: 'object', unhandledPromptBehavior: 'string', strictFileInteractability: 'boolean'
+    , 'appium:appPackage': 'string', 'appium:appActivity': 'string'
+    , 'appium:appWaitPackage': 'string', 'appium:appWaitActivity': 'string'
+    , 'appium:appWaitDuration': 'number', 'appium:appWaitForLaunch': 'boolean'
+    , 'appium:bundleId': 'string', 'appium:autoGrantPermissions': 'boolean'
+    , 'appium:disableWindowAnimation': 'boolean', 'appium:language': 'string'
+    , 'appium:locale': 'string', 'appium:skipDeviceInitialization': 'boolean'
+    , 'appium:deviceName': 'string', 'appium:autoAcceptAlerts': 'boolean'
+    , 'appium:autoDismissAlerts': 'boolean', 'appium:orientation': 'string'
+    , 'appium:waitForIdleTimeout': 'number', 'appium:wdaEventloopIdleDelay': 'number'
+    , 'appium:appLaunchStateTimeoutSec': 'number'
+    }
     for (const [key, value] of Object.entries(supplied)) {
-      const matching = key === 'platformName' ?
-        String(lease.capabilities[key]).toLowerCase() === String(value).toLowerCase() :
-        lease.capabilities[key] === value
-      if (protectedKeys.has(key) && !matching) {
-        throw new CoordinatorError(409, 'capability_conflict',
-          'A requested capability conflicts with the allocated connection')
+      if (protectedKeys.has(key) || Object.hasOwn(lease.capabilities, key)) {
+        const matching = key === 'platformName' ?
+          typeof value === 'string' &&
+            String(lease.capabilities[key]).toLowerCase() === value.toLowerCase() :
+          lease.capabilities[key] === value
+        if (!matching) {
+          throw new CoordinatorError(409, 'capability_conflict',
+            'A requested capability conflicts with the allocated connection')
+        }
+        continue
       }
-      if (key === 'appium:options' || key === 'desiredCapabilities') {
+      const expected = Object.hasOwn(clientTypes, key) && clientTypes[key]
+      const valid = expected && typeof value === expected &&
+        (expected !== 'object' || record(value)) &&
+        (typeof value !== 'number' || Number.isFinite(value) && value >= 0)
+      const invalidOrientation = key === 'appium:orientation' && typeof value === 'string' &&
+        !['PORTRAIT', 'LANDSCAPE'].includes(value.toUpperCase())
+      const invalidLaunchTimeout = key === 'appium:appLaunchStateTimeoutSec' &&
+        typeof value === 'number' && (value <= 0 || value >= 240)
+      const invalidActivityTimeout = key === 'appium:appWaitDuration' &&
+        typeof value === 'number' && !Number.isSafeInteger(value)
+      if (!valid || invalidOrientation || invalidLaunchTimeout || invalidActivityTimeout) {
         throw new CoordinatorError(400, 'invalid_capabilities',
-          'Nested capability overrides are not supported')
+          'A requested capability is unsupported or has an invalid value')
       }
     }
     return {capabilities: {alwaysMatch: {...supplied, ...lease.capabilities
@@ -1141,12 +1223,36 @@ export class Coordinator {
         }
       })
       let response: UpstreamResponse
+        , sessionId: string | undefined
+        , appiumNodeId: string | undefined
       let sessionClosed = false
       try {
         response = await this.backend.webdriver(method, route, payload)
         if (closingSession && response.status >= 200 && response.status < 300) {
           await this.confirmAppiumSessionEnded(closingSession)
           sessionClosed = true
+        }
+        if (create && response.status < 300) {
+          try {
+            const result = JSON.parse(response.body.toString()) as {
+              value?: {sessionId?: string}, sessionId?: string
+            }
+            const candidate = result.value?.sessionId || result.sessionId
+            if (typeof candidate === 'string' && candidate.trim()) {
+              sessionId = candidate
+            }
+          }
+          catch {
+            // Preserve the creation marker so recovery cannot blindly reissue the phone.
+          }
+          if (sessionId) {
+            appiumNodeId = await this.backend.grid({allowBusy: true}).then(grid => {
+              const matching = grid.nodes.filter(node => node.slots.some(slot =>
+                slot.session?.sessionId === sessionId))
+              const id = matching.length === 1 ? matching[0]?.id : undefined
+              return typeof id === 'string' && id.trim() && id.length <= 256 ? id : undefined
+            }).catch(() => undefined)
+          }
         }
       }
       catch {
@@ -1160,27 +1266,21 @@ export class Coordinator {
       await this.exclusive(async() => {
         delete lease.commandInFlight
         if (create) {
-          let sessionId: string | undefined
-          try {
-            const result = JSON.parse(response.body.toString()) as {
-              value?: {sessionId?: string}, sessionId?: string
-            }
-            sessionId = result.value?.sessionId || result.sessionId
-          }
-          catch {
-            // Preserve the creation marker so recovery cannot blindly reissue the phone.
-          }
-          if (response.status >= 300 || !sessionId || typeof sessionId !== 'string') {
+          if (!sessionId) {
             lease.state = 'quarantined'
             lease.error = 'uncertain_session_creation'
             await this.save()
             throw new CoordinatorError(502, 'upstream_unknown', 'Appium session is uncertain')
           }
           lease.sessionId = sessionId
+          if (appiumNodeId) {
+            lease.appiumNodeId = appiumNodeId
+          }
           delete lease.creatingSession
         }
         else if (sessionClosed) {
           delete lease.sessionId
+          delete lease.appiumNodeId
         }
         await this.save()
         this.assertActive(lease)
@@ -1213,7 +1313,7 @@ export class Coordinator {
     })
     // Pending capture/commands cannot resurrect a lease after the stop marker.
     await Promise.allSettled([
-      ...(this.ticking ? [this.ticking] : [])
+      ...this.ticking.values()
     , ...this.allocations.values(), ...this.commands.values(), ...this.cleanups.values()
     ])
     await Promise.all(this.state.leases.filter(item => this.held(item))

@@ -3,23 +3,38 @@ import events from 'node:events'
 import Bluebird from 'bluebird'
 import sinon from 'sinon'
 import type {Response} from 'express'
-import type {ApiRequest, AutomationLeaseBody} from '../../lib/types/units-api.js'
+import type {AddUserDeviceBody, ApiLock, ApiRequest, AutomationLeaseBody}
+  from '../../lib/types/units-api.js'
+import {setTimeout as delay} from 'node:timers/promises'
 import wire from '../../lib/wire/index.js'
 import wireutil from '../../lib/wire/util.js'
 import {importFresh, mockModule} from '../helpers/module-mock.mts'
 
-let device: any
+let device: any, receipt: string | null
 const loadDevice = sinon.spy(() => Bluebird.resolve({next(callback: any) {
   callback(device ? null : new Error('missing'), device && {...device})
 }}))
+const hasDeviceAutomationRelease = sinon.spy(
+  async(serial: string, email: string, leaseId: string) => {
+    return serial === 'device' && email === 'runner@example.test' && receipt === leaseId
+  })
 const restoreMock = mockModule(new URL('../../lib/db/api.js', import.meta.url), {
-  default: {loadDevice}
+  default: {loadDevice, hasDeviceAutomationRelease}
 })
-const {renewAutomationLease, releaseAutomationLease, deleteUserDeviceBySerial,
+const unlockDevice = sinon.spy()
+const restoreLock = mockModule(new URL('../../lib/util/lockutil.js', import.meta.url), {default: {
+  unlockDevice
+, lockGenericDevice(_req: unknown, _res: unknown, lock: ApiLock) {
+    lock.device = device
+    return Bluebird.resolve(true)
+  }
+}})
+const {addUserDevice, renewAutomationLease, releaseAutomationLease, deleteUserDeviceBySerial,
   getUserDeviceBySerial, rebootUserDeviceBySerial, remoteConnectUserDeviceBySerial,
   remoteDisconnectUserDeviceBySerial} =
   await importFresh(new URL('../../lib/units/api/controllers/user.js', import.meta.url))
 restoreMock()
+restoreLock()
 const flush = () => new Promise<void>(resolve => setImmediate(resolve))
 
 function fixture(body: AutomationLeaseBody = {leaseId: 'lease-a', timeout: 180000}) {
@@ -35,19 +50,22 @@ function fixture(body: AutomationLeaseBody = {leaseId: 'lease-a', timeout: 18000
   } as unknown as ApiRequest<AutomationLeaseBody>
   let status = 200
   let result: any = null
-  const res = {status(code: number) {
+  const res = Object.assign(new events.EventEmitter(), {status(code: number) {
     status = code
     return res
   }, json(value: unknown) {
     result = value
     return res
-  }} as unknown as Response
+  }}) as unknown as Response
   return {req, res, router, sub, push, status: () => status, result: () => result}
 }
 
 describe('Automation lease API', function() {
   beforeEach(function() {
     loadDevice.resetHistory()
+    hasDeviceAutomationRelease.resetHistory()
+    unlockDevice.resetHistory()
+    receipt = null
     device = {serial: 'device', channel: 'device-channel', present: true, ready: true
       , owner: {email: 'runner@example.test'}, usage: 'automation', automationLeaseId: 'lease-a'}
   })
@@ -80,6 +98,7 @@ describe('Automation lease API', function() {
     assert.equal(message.action, 'release')
     f.router.emit(envelope.channel!, envelope.channel!,
       wireutil.reply('device').fail('Stale automation lease'))
+    await flush()
     assert.equal(f.status(), 409)
     assert.equal(f.result().success, false)
   })
@@ -93,7 +112,7 @@ describe('Automation lease API', function() {
     assert.equal(f.push.send.callCount, 0)
   })
 
-  it('returns conflict after a lease has already been released', async function() {
+  it('returns conflict without an exact durable receipt for an unowned device', async function() {
     device.owner = null
     device.automationLeaseId = null
     const f = fixture()
@@ -101,6 +120,43 @@ describe('Automation lease API', function() {
     await flush()
     assert.equal(f.status(), 409)
     assert.equal(f.push.send.callCount, 0)
+  })
+
+  it('returns an exact release receipt without contacting the replacement owner', async function() {
+    device.owner = {email: 'new-owner@example.test'}
+    device.automationLeaseId = 'lease-b'
+    receipt = 'lease-a'
+    const f = fixture()
+    releaseAutomationLease(f.req, f.res)
+    await flush()
+    assert.deepEqual(f.result(), {success: true, leaseId: 'lease-a'})
+    assert.equal(f.push.send.callCount, 0)
+    assert.equal(device.automationLeaseId, 'lease-b')
+  })
+
+  it('rejects Maestro on iOS before sending a reservation message', async function() {
+    Object.assign(device, {platform: 'iOS', owner: null, automationLeaseId: null, usage: null})
+    const f = fixture()
+    const req = f.req as unknown as ApiRequest<AddUserDeviceBody>
+    req.body = {serial: 'device', leaseId: 'lease-a', automationRunner: 'maestro'}
+    addUserDevice(req, f.res)
+    await flush()
+    assert.equal(f.status(), 400)
+    assert.equal(f.push.send.callCount, 0)
+    assert.equal(unlockDevice.callCount, 1)
+  })
+
+  it('rejects recapturing a completed lease ID under the device lock', async function() {
+    Object.assign(device, {platform: 'Android', owner: null, automationLeaseId: null, usage: null})
+    receipt = 'lease-a'
+    const f = fixture()
+    const req = f.req as unknown as ApiRequest<AddUserDeviceBody>
+    req.body = {serial: 'device', leaseId: 'lease-a'}
+    addUserDevice(req, f.res)
+    await flush()
+    assert.equal(f.status(), 409)
+    assert.equal(f.push.send.callCount, 0)
+    assert.equal(unlockDevice.callCount, 1)
   })
 
   it('rejects a nonowner including an administrator', async function() {
@@ -140,6 +196,7 @@ describe('Automation lease API', function() {
 
   it('fences conditional owner and administrator release of a managed lease', async function() {
     for (const privilege of ['user', 'admin']) {
+      receipt = null
       device.owner.reservationId = 'current-reservation'
       const manual = fixture()
       manual.req.user.privilege = privilege
@@ -170,6 +227,10 @@ describe('Automation lease API', function() {
       assert.equal(message.leaseId, device.automationLeaseId)
       assert.equal(message.action, 'release')
       fenced.router.emit(envelope.channel!, envelope.channel!, wireutil.reply('device').okay())
+      await flush()
+      assert.equal(fenced.result(), null, 'Provider ACK alone must not confirm the database write')
+      receipt = 'lease-a'
+      await delay(60)
       assert.equal(fenced.status(), 200)
       assert.deepEqual(fenced.result(), {success: true, leaseId: 'lease-a'})
       assert.equal(fenced.router.listenerCount(envelope.channel!), 0)

@@ -1,5 +1,5 @@
 import net from 'node:net'
-import type {Duplex} from 'node:stream'
+import {Transform, type Duplex} from 'node:stream'
 import {CoordinatorError} from './config.js'
 
 export interface AdbTarget {
@@ -11,6 +11,7 @@ export interface AdbTarget {
 
 const MAX_REQUEST = 65535
 const FEATURES = 'cmd,shell_v2'
+type AssertActive = (fresh?: boolean) => void | Promise<void>
 
 export function adbRequest(value: string) {
   const body = Buffer.from(value)
@@ -99,7 +100,8 @@ async function expectOkay(stream: Duplex) {
 }
 
 /** Only the trusted coordinator may contact the pool ADB server. */
-export async function openAdbService(target: AdbTarget, service: string): Promise<net.Socket> {
+export async function openAdbService(target: AdbTarget, service: string,
+  assertActive?: AssertActive): Promise<net.Socket> {
   const socket = net.createConnection({host: target.host, port: target.port})
   socket.on('error', () => {})
   try {
@@ -117,6 +119,7 @@ export async function openAdbService(target: AdbTarget, service: string): Promis
     })
     socket.write(adbRequest('host:transport:' + target.serial))
     await expectOkay(socket)
+    await assertActive?.(true)
     socket.write(adbRequest(service))
     await expectOkay(socket)
     return socket
@@ -143,7 +146,7 @@ export class LeaseAdbBridge {
   private readonly streams = new Map<string, Set<Duplex>>()
   private closed = false
 
-  accept(stream: Duplex, target: AdbTarget, assertActive: () => void | Promise<void>) {
+  accept(stream: Duplex, target: AdbTarget, assertActive: AssertActive) {
     // Rejected admission also destroys a stream with an error; install its handler first.
     stream.on('error', () => {})
     const current = this.streams.get(target.leaseId) || new Set<Duplex>()
@@ -155,7 +158,7 @@ export class LeaseAdbBridge {
     current.add(stream)
     this.streams.set(target.leaseId, current)
     const check = setInterval(() => {
-      Promise.resolve().then(assertActive).catch(() => stream.destroy())
+      Promise.resolve().then(() => assertActive()).catch(() => stream.destroy())
     }, 1000)
     check.unref?.()
     stream.once('close', () => {
@@ -187,13 +190,22 @@ export class LeaseAdbBridge {
 }
   }
 
-  private async serve(stream: Duplex, target: AdbTarget, assertActive: () => void | Promise<void>) {
+  private async serve(stream: Duplex, target: AdbTarget, assertActive: AssertActive) {
+    const assertConnected = async(fresh?: boolean) => {
+      if (stream.destroyed) {
+        throw new Error('ADB client disconnected')
+      }
+      await assertActive(fresh)
+      if (stream.destroyed) {
+        throw new Error('ADB client disconnected')
+      }
+    }
     let selected = false
     // There is at most one selection and one service per connection.
     for (let requestNumber = 0; requestNumber < 2; requestNumber++) {
-      await assertActive()
+      await assertConnected()
       const request = await readRequest(stream)
-      await assertActive()
+      await assertConnected()
       if (!selected && request === 'host:version') {
         stream.end(valueResponse('0029'))
         return
@@ -226,9 +238,9 @@ export class LeaseAdbBridge {
       if (!selected || !allowedService(request)) {
         throw new CoordinatorError(403, 'adb_service_denied', 'ADB service is not allowed')
       }
-      const upstream = await openAdbService(target, request)
+      const upstream = await openAdbService(target, request, assertConnected)
       try {
-        await assertActive()
+        await assertConnected()
         if (stream.destroyed) {
  throw new Error('Client disconnected during ADB startup')
 }
@@ -237,7 +249,19 @@ export class LeaseAdbBridge {
         upstream.destroy()
         throw error
       }
-      stream.once('close', () => upstream.destroy())
+      const gate = () => new Transform({
+        transform(chunk: Buffer, _encoding, next) {
+          Promise.resolve().then(() => assertConnected()).then(
+            () => next(null, chunk), error => next(error as Error))
+        }
+      }).on('error', () => stream.destroy())
+      const toDevice = gate()
+      const toClient = gate()
+      stream.once('close', () => {
+        toDevice.destroy()
+        toClient.destroy()
+        upstream.destroy()
+      })
       stream.once('error', () => upstream.destroy())
       upstream.once('close', () => {
  if (!upstream.readableEnded) {
@@ -247,8 +271,8 @@ export class LeaseAdbBridge {
       upstream.once('error', () => stream.destroy())
       stream.write('OKAY')
       // Node streams preserve bounded backpressure in both directions, including sync/APK data.
-      stream.pipe(upstream)
-      upstream.pipe(stream)
+      stream.pipe(toDevice).pipe(upstream)
+      upstream.pipe(toClient).pipe(stream)
       return
     }
     throw new Error('Too many ADB requests')

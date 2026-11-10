@@ -46,6 +46,10 @@ export class FileStateStore implements StateStore {
           validTime(request.input.maxDurationSeconds) && request.input.maxDurationSeconds > 0) &&
         state.leases.every(lease => lease && typeof lease.id === 'string' && lease.id &&
           validProject(lease.projectId) &&
+          (lease.appiumNodeId === undefined || lease.runner !== 'maestro' &&
+            typeof lease.appiumNodeId === 'string' && !!lease.appiumNodeId.trim() &&
+            lease.appiumNodeId.length <= 256 &&
+            typeof lease.sessionId === 'string' && !!lease.sessionId.trim()) &&
           (lease.maestroCleanupConfirmed === undefined ||
             typeof lease.maestroCleanupConfirmed === 'boolean') &&
           (lease.captureReconciliation === undefined ||

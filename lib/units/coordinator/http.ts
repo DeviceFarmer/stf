@@ -17,8 +17,8 @@ function allocation(body: unknown, options: CoordinatorOptions): AllocationInput
   const keys = ['runId', 'runner', 'platform', 'serial', 'model', 'provider', 'queueTimeoutSeconds'
     , 'maxDurationSeconds']
   if (Object.keys(value).some(key => !keys.includes(key)) ||
-      !['Android', 'iOS'].includes(String(value.platform)) ||
-      value.runner !== undefined && !['appium', 'maestro'].includes(String(value.runner))) {
+      (value.platform !== 'Android' && value.platform !== 'iOS') ||
+      (value.runner !== undefined && value.runner !== 'appium' && value.runner !== 'maestro')) {
     throw new CoordinatorError(400, 'invalid_request', 'Unknown field or unsupported platform')
   }
   for (const key of ['runId', 'serial', 'model', 'provider']) {
@@ -39,13 +39,13 @@ function allocation(body: unknown, options: CoordinatorOptions): AllocationInput
     return number
   }
   const input: AllocationInput = {
-    runId: value.runId as string, platform: value.platform as AllocationInput['platform']
+    runId: value.runId as string, platform: value.platform
   , queueTimeoutSeconds: integer('queueTimeoutSeconds', 3600)
   , maxDurationSeconds: integer('maxDurationSeconds', options.maxDurationSeconds)
   }
   if (value.runner !== undefined) {
- input.runner = value.runner as AllocationInput['runner'] & string
-}
+    input.runner = value.runner
+  }
   if (input.maxDurationSeconds > options.maxDurationSeconds) {
     throw new CoordinatorError(400, 'duration_limit',
       'Requested duration exceeds coordinator limit')
@@ -221,7 +221,34 @@ export function attachCoordinatorAdb(server: http.Server, engine: Coordinator,
   const bridge = new LeaseAdbBridge()
   const sockets = new WebSocketServer({noServer: true, maxPayload: 1024 * 1024
     , perMessageDeflate: false})
-  engine.setAdbCloser(id => bridge.closeLease(id))
+  const ownership = new Map<string, {validUntil: number, pending: Promise<void> | null}>()
+  engine.setAdbCloser(id => {
+    ownership.delete(id)
+    bridge.closeLease(id)
+  })
+  async function assertOwner(id: string, refresh = false) {
+    engine.assertAdbActive(id)
+    let check = ownership.get(id)
+    if (!check) {
+      check = {validUntil: 0, pending: null}
+      ownership.set(id, check)
+    }
+    if (!check.pending && (refresh || check.validUntil <= performance.now())) {
+      const validUntil = performance.now() + 1000
+      const entry = check
+      entry.pending = engine.authorizeAdb(id).then(() => {
+        entry.validUntil = validUntil
+      }).finally(() => {
+        entry.pending = null
+      })
+    }
+    await check.pending
+    engine.assertAdbActive(id)
+    if (check.validUntil <= performance.now()) {
+      throw new CoordinatorError(503, 'adb_ownership_unconfirmed',
+        'STF ownership check was too slow')
+    }
+  }
   server.on('upgrade', async(req, socket, head) => {
     try {
       const match = /^\/api\/v1\/leases\/([A-Za-z0-9_-]{1,128})\/adb$/.exec(req.url || '')
@@ -234,7 +261,8 @@ export function attachCoordinatorAdb(server: http.Server, engine: Coordinator,
 }
       const id = match[1]!
       access.assertProject(identity, engine.leaseProject(id), 'lease')
-      const target = await engine.authorizeAdb(id)
+      await assertOwner(id, true)
+      const target = engine.adbTarget(id)
       sockets.handleUpgrade(req, socket, head, ws => {
         ws.on('error', () => {})
         ws.on('message', (_data, binary) => {
@@ -257,7 +285,7 @@ export function attachCoordinatorAdb(server: http.Server, engine: Coordinator,
             ws.close(1000)
           }
         }
-        bridge.accept(stream, target, () => engine.assertAdbActive(id))
+        bridge.accept(stream, target, fresh => assertOwner(id, fresh))
       })
     }
     catch (error) {
@@ -267,6 +295,7 @@ export function attachCoordinatorAdb(server: http.Server, engine: Coordinator,
   })
   return {close() {
     bridge.close()
+    ownership.clear()
     for (const ws of sockets.clients) {
  ws.terminate()
 }

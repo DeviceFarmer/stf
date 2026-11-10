@@ -51,6 +51,29 @@ describe('coordinator persistent state', () => {
     assert.equal(JSON.parse(await readFile(filename, 'utf8')).version, 2)
   })
 
+  it('keeps the Grid node identity tied to its Appium session across restart', async() => {
+    const store = new FileStateStore(filename)
+    const state: CoordinatorState = {...empty(), requests: [{
+      id: 'request', key: 'key', fingerprint: 'fingerprint', state: 'allocated'
+    , input: {runId: 'run', platform: 'Android', queueTimeoutSeconds: 60, maxDurationSeconds: 60}
+    , createdAt: 0, queueDeadlineAt: 60000, leaseId: 'lease'
+    }], leases: [{
+      id: 'lease', requestId: 'request', runId: 'run', state: 'quarantined'
+    , createdAt: 0, expiresAt: 10000, deadlineAt: 60000
+    , device: {serial: 'ANDROID-A', platform: 'Android', model: 'Phone', version: '16'
+        , provider: 'provider', present: true, ready: true}
+    , capabilities: {'appium:udid': 'ANDROID-A'}, sessionId: 'session', appiumNodeId: 'grid-node'
+    }]}
+    await store.save(state)
+    assert.deepEqual(await store.load(), state)
+    for (const invalid of [{appiumNodeId: ''}, {appiumNodeId: 9}, {sessionId: null}]) {
+      const malformed = structuredClone(state)
+      Object.assign(malformed.leases[0]!, invalid)
+      await writeFile(filename, JSON.stringify(malformed))
+      await assert.rejects(store.load(), /Invalid coordinator state/)
+    }
+  })
+
   it('persists drains and refuses malformed or duplicate maintenance instead of losing isolation',
     async() => {
     const store = new FileStateStore(filename)

@@ -114,7 +114,9 @@ describe('Provider automation lease fence', function() {
     await assert.rejects(Promise.resolve(f.plugin.get()))
   })
 
-  async function ios() {
+  async function ios(report: (error: unknown) => void = error => {
+    throw error
+  }) {
     const packets: Buffer[][] = []
     const png = Buffer.alloc(24)
     Buffer.from('89504e470d0a1a0a', 'hex').copy(png)
@@ -130,12 +132,10 @@ describe('Provider automation lease fence', function() {
     } as unknown as PrototypeClient
     const bridge = new IosBridge({serial, name: 'test', marketName: 'test', screenUrl: 'ws://test'
       , storageUrl: 'http://test', groupTimeout: 900}, client,
-    (channel, data) => packets.push([Buffer.from(channel), data]), () => {}, error => {
-      throw error
-    })
+    (channel, data) => packets.push([Buffer.from(channel), data]), () => {}, report)
     await bridge.poll()
     bridge.handle(bridge.solo, wireutil.envelope(new wire.DeviceRegisteredMessage(serial)))
-    return {bridge, packets, async send(message: wireutil.Message) {
+    return {bridge, client, packets, async send(message: wireutil.Message) {
       const replies = () => packets.filter(p =>
         wire.Envelope.decode(p[1]!).type === wire.TransactionDoneMessage.$code).length
       const before = replies()
@@ -166,7 +166,7 @@ describe('Provider automation lease fence', function() {
     assert.equal(decodeReply(f.packets).success, false)
     await f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-b', 'renew', 1000))
     assert.equal(decodeReply(f.packets).success, true)
-    f.bridge.leave('test_complete')
+    await f.bridge.leave('test_complete')
   })
 
   for (const [platform, setup] of [['Android', android], ['iOS', ios]] as const) {
@@ -188,7 +188,7 @@ describe('Provider automation lease fence', function() {
     clock.tick(99)
     f.bridge.keepalive()
     assert.equal(ownerEmail(f.bridge), owner.email)
-    clock.tick(1)
+    await clock.tickAsync(1)
     assert.equal(f.bridge.owner, null)
     await f.send(new wire.GroupMessage(owner, null, requirements))
     clock.tick(899999)
@@ -198,4 +198,28 @@ describe('Provider automation lease fence', function() {
     await f.bridge.poll()
     assert.equal(f.bridge.owner, null)
   })
+
+  it('iOS retains the expired reservation when WDA handback fails and retries exact release',
+    async function() {
+      const reported: unknown[] = []
+      const f = await ios(error => reported.push(error))
+      const clock = sinon.useFakeTimers({
+        now: 10000, toFake: ['Date', 'setTimeout', 'clearTimeout']
+      })
+      await f.send(new wire.GroupMessage(owner, 100, requirements, 'automation', 'lease-a'))
+      const reservation = f.bridge.owner
+      const failure = new Error('WDA handback unavailable')
+      const handback = sinon.stub(f.client, 'request').rejects(failure)
+      await clock.tickAsync(100)
+      assert.equal(f.bridge.owner, reservation)
+      assert.deepEqual(reported, [failure])
+      assert.equal(f.packets.some(packet =>
+        wire.Envelope.decode(packet[1]!).type === wire.LeaveGroupMessage.$code), false)
+      await f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-a', 'renew', 1000))
+      assert.equal(decodeReply(f.packets).success, false)
+      handback.restore()
+      await f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-a', 'release'))
+      assert.equal(decodeReply(f.packets).success, true)
+      assert.equal(f.bridge.owner, null)
+    })
 })

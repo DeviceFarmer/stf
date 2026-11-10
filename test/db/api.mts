@@ -1,4 +1,5 @@
 import * as chai from 'chai'
+import r from 'rethinkdb'
 var expect = chai.expect
 
 import type DbApi from '../../lib/db/api.js'
@@ -12,6 +13,10 @@ type InitialState = Parameters<typeof DbApi.saveDeviceInitialState>[1]
 // A built update term is [UPDATE, [[target], {document}]], so the document is the last argument.
 var lastUpdate: any = null
 var lastQuery: any = null
+
+function built(query: unknown): unknown {
+  return (query as {build(): unknown}).build()
+}
 
 mockModule(new URL('../../lib/db/index.js', import.meta.url), {default: {
   run: function(query: {build(): any}) {
@@ -66,51 +71,97 @@ describe('dbapi owner claim', function() {
   // The claim has to go when the device is taken, or a reboot that never happened could hand the
   // device back to an earlier user later. It rides the write that records the new owner.
   describe('setDeviceOwner', function() {
-    it('should persist the automation fence with its owner', function() {
-      dbapi.setDeviceOwner('serial', {email: 'runner@example.test'} as DeviceOwner, 'lease-a')
+    it('should persist the automation fence and usage with its owner', function() {
+      const owner = {email: 'runner@example.test', reservationId: 'reservation-a'} as DeviceOwner
+      dbapi.setDeviceOwner('serial', owner, 'lease-a', 'automation')
       expect(lastUpdate.automationLeaseId).to.equal('lease-a')
-      expect(lastUpdate.owner).to.deep.equal({email: 'runner@example.test'})
+      expect(lastUpdate.owner).to.deep.equal(owner)
+      expect(lastUpdate.usage).to.equal('automation')
     })
 
-    it('should clear a previous fence for legacy or manual ownership', function() {
+    it('should clear a previous fence and usage for legacy or manual ownership', function() {
       dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner)
       expect(lastUpdate.automationLeaseId).to.equal(null)
+      expect(lastUpdate.usage).to.equal(null)
+      expect(lastUpdate.owner.reservationId).to.equal(null)
     })
 
     it('should drop any claim in the same write that records the owner', function() {
       dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner)
-      expect(lastUpdate.owner).to.deep.equal({email: 'user@example.com'})
       expect(lastUpdate.restoreOwner).to.equal(null)
     })
   })
 
   describe('unsetDeviceOwner', function() {
-    it('should clear the automation fence in the same write', function() {
-      dbapi.unsetDeviceOwner('serial')
-      expect(lastUpdate.owner).to.equal(null)
-      expect(lastUpdate.automationLeaseId).to.equal(null)
+    const owner = {email: 'runner@example.test', reservationId: 'reservation-a'} as DeviceOwner
+    const currentOwner = r.row('owner').default({})
+    const leaseId = r.row('automationLeaseId').default(null)
+    const ownerMatches = currentOwner('email').default(null).eq(owner.email)
+
+    it('should clear the matching reservation and write its durable receipt', function() {
+      dbapi.unsetDeviceOwner('serial', owner)
+      const [matches, release, stale] = lastUpdate[1][1][1]
+      expect(matches).to.deep.equal(built(ownerMatches
+        .and(currentOwner('reservationId').default(null).eq(owner.reservationId))))
+      expect(stale).to.deep.equal({})
+      expect(release).to.include({owner: null, automationLeaseId: null, usage: null})
+      expect(release.automationRelease).to.deep.equal(built(r.branch(leaseId.ne(null)
+        , {email: owner.email, leaseId}, r.row('automationRelease').default(null))))
+      expect(lastQuery[2].durability).to.equal('hard')
+    })
+
+    it('should only release an unmanaged legacy owner if the event has no reservation ID',
+      function() {
+        dbapi.unsetDeviceOwner('serial', {email: owner.email} as DeviceOwner)
+        const [matches, , stale] = lastUpdate[1][1][1]
+        expect(matches).to.deep.equal(built(ownerMatches
+          .and(currentOwner('reservationId').default(null).eq(null)).and(leaseId.eq(null))))
+        expect(stale).to.deep.equal({})
+      })
+
+    it('should look up only an exact release receipt', function() {
+      dbapi.hasDeviceAutomationRelease('serial', owner.email, 'lease-a')
+      expect(lastQuery).to.deep.equal(built(r.table('devices').getAll('serial')
+        .filter({automationRelease: {email: owner.email, leaseId: 'lease-a'}}).isEmpty().not()))
     })
   })
+
+  describe('reserveDeviceOwner', function() {
+    it('should drop rather than record a restore claim for a managed lease', function() {
+      dbapi.reserveDeviceOwner('serial')
+      const [managed, clear, manual] = lastUpdate[1][1][1]
+      expect(managed[1][0][1][0][1][1]).to.equal('automationLeaseId')
+      expect(managed[1][1]).to.equal(null)
+      expect(clear).to.deep.equal({restoreOwner: null})
+      expect(manual[1][2].restoreOwner).to.have.property('email')
+    })
+  })
+
+  const manualRestoreClaim = built(r.branch(r.row('automationLeaseId').default(null).eq(null)
+    , r.row('restoreOwner').default(null), null))
 
   describe('setDeviceReady', function() {
     it('should set ready and hand the device back with no owner', function() {
       dbapi.setDeviceReady('serial', 'channel')
-      expect(lastUpdate.ready).to.equal(true)
-      expect(lastUpdate.owner).to.equal(null)
+      const update = lastUpdate[1][1]
+      expect(update.ready).to.equal(true)
+      expect(update).to.include({owner: null, automationLeaseId: null, usage: null})
     })
 
-    it('should not drop a pending claim before it can be honoured', function() {
+    it('should preserve a pending manual claim without restoring a managed lease', function() {
       dbapi.setDeviceReady('serial', 'channel')
-      expect(lastUpdate).to.not.have.property('restoreOwner')
+      expect(lastUpdate[1][1].restoreOwner).to.deep.equal(manualRestoreClaim)
     })
   })
 
   describe('saveDeviceInitialState', function() {
-    it('should not drop the pending claim of a device that is coming back', function() {
+    it('should preserve a pending manual claim and clear a stale managed lease', function() {
       dbapi.saveDeviceInitialState('serial', {
         provider: 'p', status: 3, statusTimeStamp: 0
       } as unknown as InitialState)
-      expect(lastUpdate).to.not.have.property('restoreOwner')
+      const update = lastUpdate[1][1]
+      expect(update.automationLeaseId).to.equal(null)
+      expect(update.restoreOwner).to.deep.equal(manualRestoreClaim)
     })
   })
 })

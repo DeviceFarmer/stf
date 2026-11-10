@@ -288,6 +288,8 @@ response echoes the supplied lease ID and, for Maestro, the runner.
 
 Use the same STF account and lease ID for the following requests. The provider
 rejects stale IDs, including older leases held by the same account.
+Each capture needs a new lease ID. Reusing an ID with a recorded release is
+rejected before reservation.
 
 | Method | STF API path | JSON body |
 | --- | --- | --- |
@@ -297,6 +299,11 @@ rejects stale IDs, including older leases held by the same account.
 The renewal timeout is in milliseconds. Test clients using
 [the coordinator](coordinator.md) call its lease API and let it manage the STF
 reservation.
+
+A successful release waits for the matching provider cleanup and its durable
+database receipt. STF keeps the latest release receipt for each device. Repeating
+that exact release with the original account can return the receipt after the
+device has changed owners. It leaves the current reservation intact.
 
 #### POST /user/devices/{serial}/remoteConnect
 

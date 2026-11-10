@@ -82,6 +82,7 @@ function fixture() {
       transports[1]!.emit('message', Buffer.from(wireutil.global), wireutil.envelope(message))
       return emitted.filter(item => item.event === 'device.change').at(-1)!.data.data
     }
+    , changes: () => emitted.filter(item => item.event === 'device.change').length
     , close: async() => {
       listeners.get('disconnect')!()
       await new Promise<void>(resolve => setImmediate(resolve))
@@ -119,6 +120,27 @@ describe('websocket ownership events', function() {
         , reservationId: 'reservation-two'}, 'automation', 'lease-two'))
       assert.equal(replacement.automationLeaseId, 'lease-two')
       assert.equal(replacement.owner.reservationId, 'reservation-two')
+    }
+    finally {
+      await f.close()
+    }
+  })
+
+  it('ignores a delayed leave from the preceding reservation', async function() {
+    const f = fixture()
+    try {
+      f.send(new wire.JoinGroupMessage('device', owner, 'automation', 'lease-one'))
+      const replacement = {...owner, reservationId: 'reservation-two'}
+      f.send(new wire.JoinGroupMessage('device', replacement, 'automation', 'lease-two'))
+      const before = f.changes()
+      const unchanged = f.send(new wire.LeaveGroupMessage('device', owner, 'automation_release'))
+      assert.equal(f.changes(), before)
+      assert.equal(unchanged.owner.reservationId, replacement.reservationId)
+      assert.equal(unchanged.automationLeaseId, 'lease-two')
+      const released = f.send(new wire.LeaveGroupMessage('device', replacement,
+        'automation_release'))
+      assert.equal(released.owner, null)
+      assert.equal(released.automationLeaseId, null)
     }
     finally {
       await f.close()

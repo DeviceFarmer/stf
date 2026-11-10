@@ -1,4 +1,7 @@
 import {CoordinatorError, endpoint} from './config.js'
+import {
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs
+} from '../../util/automation-lease.js'
 import {MaestroDeviceAdapter} from './maestro.js'
 import {readWdaProfile} from './wda-profile.js'
 import type {AdbPool, FarmBackend, FarmDevice, GridStatus, MaestroBaseline, Runner
@@ -26,9 +29,12 @@ export class HttpFarmBackend implements FarmBackend {
     this.maestro = new MaestroDeviceAdapter(pools)
   }
 
-  private async stf(method: string, route: string, body?: unknown): Promise<any> {
+  private async stf(
+    method: string, route: string, body?: unknown, minimumTimeoutMs = 0
+  ): Promise<any> {
     const response = await fetch(this.stfUrl + route, {
-      method, redirect: 'error', signal: AbortSignal.timeout(this.timeoutMs)
+      method, redirect: 'error'
+    , signal: AbortSignal.timeout(Math.max(this.timeoutMs, minimumTimeoutMs))
     , headers: {Authorization: 'Bearer ' + this.token, 'Content-Type': 'application/json'}
     , ...(body === undefined ? {} : {body: JSON.stringify(body)})
     })
@@ -90,7 +96,8 @@ export class HttpFarmBackend implements FarmBackend {
 
   async capture(serial: string, leaseId: string, timeout: number, runner?: Runner) {
     const result = await this.stf('POST', '/user/devices', {serial, leaseId, timeout
-      , ...(runner === 'maestro' ? {automationRunner: 'maestro'} : {})})
+      , ...(runner === 'maestro' ? {automationRunner: 'maestro'} : {})},
+    iosAutomationCaptureTimeoutMs + 5000)
     if (runner === 'maestro' && result.automationRunner !== 'maestro') {
       throw new Error('The STF provider did not confirm Maestro cleanup protection')
     }
@@ -104,7 +111,7 @@ export class HttpFarmBackend implements FarmBackend {
 
   async release(serial: string, leaseId: string) {
     await this.stf('POST', `/user/devices/${encodeURIComponent(serial)}/automation/release`,
-      {leaseId})
+      {leaseId}, automationReleaseTimeoutMs + 5000)
   }
 
   maestroBaseline(device: FarmDevice): Promise<MaestroBaseline> {
@@ -127,11 +134,23 @@ export class HttpFarmBackend implements FarmBackend {
     , headers: {'Content-Type': 'application/json'}
     , ...(hasBody ? {body: JSON.stringify(body)} : {})
     })
-    const bytes = Buffer.from(await response.arrayBuffer())
-    if (bytes.length > 32 * 1024 * 1024) {
+    const maxBytes = 32 * 1024 * 1024
+    if (Number(response.headers.get('content-length')) > maxBytes) {
+      await response.body?.cancel().catch(() => {})
       throw new BackendError(502, 'Oversized WebDriver response')
     }
+    const chunks: Buffer[] = []
+    let size = 0
+    if (response.body) {
+      for await (const chunk of response.body) {
+        size += chunk.byteLength
+        if (size > maxBytes) {
+          throw new BackendError(502, 'Oversized WebDriver response')
+        }
+        chunks.push(Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+      }
+    }
     return {status: response.status, contentType: response.headers.get('content-type') ||
-      'application/json', body: bytes}
+      'application/json', body: Buffer.concat(chunks, size)}
   }
 }

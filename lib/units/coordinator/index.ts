@@ -27,7 +27,6 @@ export default async function startCoordinator(options: CoordinatorOptions) {
   await once(server, 'listening')
   log.info('Coordinator HTTP endpoint started; recovering persistent leases')
   let timer: ReturnType<typeof setInterval> | undefined
-  let ticking = false
   lifecycle.shutdownTimeout = Math.max(lifecycle.shutdownTimeout, 110000)
   lifecycle.observe(async() => {
     if (timer) {
@@ -51,13 +50,7 @@ export default async function startCoordinator(options: CoordinatorOptions) {
     throw new Error('Coordinator recovery failed; persistent state was preserved')
   }
   timer = setInterval(() => {
-    if (!ticking) {
-      ticking = true
-      engine.tick().catch(() => log.error('Coordinator scheduling failed; inspect health status'))
-        .finally(() => {
-          ticking = false
-        })
-    }
+    engine.tick().catch(() => log.error('Coordinator scheduling failed; inspect health status'))
   }, options.pollIntervalSeconds * 1000)
   log.info('Coordinator is ready')
   return {engine, server}

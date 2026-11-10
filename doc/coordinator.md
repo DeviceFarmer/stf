@@ -15,8 +15,12 @@ the devices it should schedule.
 Appium requires a reachable Grid with slots for the devices you want to use.
 Android slots must advertise the provider pool's `appium:remoteAdbHost` and,
 when one host serves multiple ADB ports, `appium:adbPort`. iOS slots must
-advertise the device's `appium:udid` and `appium:platformVersion`. For Maestro
-on physical Android, the coordinator connects to the provider's ADB service.
+advertise the device's `appium:udid` and `appium:platformVersion`. Configure the
+iOS Appium node's `appium:webDriverAgentUrl` to reach the existing WDA forward
+or an adapter for that WDA session. The [iOS runtime](ios-provider.md) pauses
+its WDA health probes during a coordinator lease and restores its session on
+release. For Maestro on physical Android, the coordinator connects to the
+provider's ADB service.
 
 Keep the token files, ADB pool configuration and persistent state outside the
 checkout. The example prepares an operator token for local testing.
@@ -88,10 +92,10 @@ the same project authorization.
 
 ## Request and use a device
 
-Submit a request with a unique `Idempotency-Key`. Repeat that key and the same
-payload if a submission times out. A changed payload for an existing key
-returns HTTP 409. For the example, set `COORDINATOR_DIR` to the directory
-created when starting the coordinator.
+Submit a request with a unique `Idempotency-Key`. For seven days from
+submission, repeat that key and the same payload if the request times out.
+A changed payload for a retained key returns HTTP 409. For the example, set
+`COORDINATOR_DIR` to the directory created when starting the coordinator.
 
 ```sh
 printf 'header = "Authorization: Bearer %s"\n' \
@@ -104,16 +108,29 @@ curl --fail --config "$COORDINATOR_DIR/curl.conf" \
 
 Use `runner: maestro` for Maestro. Appium is the default runner. Optional
 `serial`, `model` and `provider` fields filter matching devices. Requests
-remain queued without holding a device. Poll the request for its `leaseId`,
-then fetch the lease and wait for `active`.
+remain queued without holding a device. Appium and Maestro schedule
+independently while sharing device and concurrency limits. Grid delays
+affect Appium scheduling. Poll the request for its `leaseId`, then fetch
+the lease and wait for `active`.
 
 - For Appium, create a W3C session at the returned `webdriverUrl` and use the
   lease's `connection.capabilities`. The gateway binds one session to the lease
-  and rejects overrides of the device and its assigned ADB route.
+  and rejects overrides of the device and its assigned ADB route. It accepts
+  `browserName`, `acceptInsecureCerts`, `pageLoadStrategy`, `timeouts`,
+  `unhandledPromptBehavior` and `strictFileInteractability` as W3C options.
+  Select an installed Android app with `appium:appPackage` and
+  `appium:appActivity`, or an installed iOS app with `appium:bundleId`.
+  Other accepted Appium options are
+  `appium:appWaitPackage`, `appium:appWaitActivity`, `appium:appWaitDuration`,
+  `appium:appWaitForLaunch`, `appium:autoGrantPermissions`,
+  `appium:disableWindowAnimation`, `appium:language`, `appium:locale` and
+  `appium:skipDeviceInitialization`. Host paths, app upload through session
+  capabilities, and emulator options are rejected.
 - For Maestro, forward each local ADB smart-socket connection over its own
   authenticated binary WebSocket at `connection.path`. Use the returned
-  `connection.serial`. The gateway exposes only that device and closes the
-  streams when the lease expires or is released.
+  `connection.serial`. The gateway checks provider ownership independently of
+  the worker heartbeat and can reuse a proof for at most one second. It
+  exposes only that device and closes the streams on lease expiry or release.
 
 Renew on a separate timer at the returned `heartbeatIntervalSeconds`.
 WebDriver and ADB activity do not renew the lease. The default worker lease
@@ -143,12 +160,17 @@ finished or the device entered quarantine.
 
 Keep the state file across restarts. Startup recovers interrupted leases before
 reusing their devices. A lease remains quarantined if cleanup cannot be proved.
-The coordinator retains request history and limits it to 10,000 requests.
+Each project can retain up to 10,000 requests. The coordinator prunes resolved
+history after seven days from submission and keeps queued requests and requests
+whose leases still hold resources.
 Use the recovery endpoint with `{}` to retry ordinary cleanup. For Maestro,
 the provider verifies that the driver has stopped, removes packages added by the
-runner and restores tracked settings before acknowledging release. If the
-provider loses that cleanup record and the device appears free, the coordinator
-keeps the lease quarantined.
+runner and restores tracked settings before acknowledging release. STF allows
+90 seconds for a release and the coordinator's STF client allows at least
+95 seconds. STF records a durable receipt for the exact account and lease ID,
+so a retry can confirm that release without touching another reservation.
+If cleanup cannot be confirmed for an apparently free Maestro device, the
+coordinator keeps the lease quarantined.
 
 An unconfirmed Appium capture can reach the provider after a timeout. To
 reconcile that specific quarantine, pause submissions, finish active work
