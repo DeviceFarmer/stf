@@ -38,7 +38,8 @@ import {useSetting, useSettingsStore} from '@/core/settings'
 import {acceptAdbKey} from '@/core/user'
 import {usersApi} from '@/core/users-api'
 import {basicMode, useAdminMode, usePlatform, useStandalone} from './modes'
-import {openAddAdbKey, openSocketDisconnected, openVersionUpdate} from './modals'
+import {closeSocketDisconnected, openAddAdbKey, openSocketDisconnected, openVersionUpdate} from './modals'
+import {queryClient} from './Providers'
 import classes from './AppLayout.module.css'
 
 const headerHeight = 56
@@ -91,13 +92,17 @@ function useSocketState() {
 
   useEffect(() => {
     let hasFailedOnce = false
+    let hasConnected = false
     function lost(message: string) {
       hasFailedOnce = true
       openSocketDisconnected(message)
     }
     const unsubscribers = [
       onSocket('connect', () => {
+        hasConnected = true
         if (hasFailedOnce) {
+          queryClient.invalidateQueries()
+          closeSocketDisconnected()
           notifications.show({
             color: 'green'
             , title: 'WebSocket'
@@ -106,8 +111,22 @@ function useSocketState() {
           })
         }
       })
-      , onSocket('disconnect', () => lost(gettext('Socket connection was lost')))
-      , onSocket('connect_error', () => lost(gettext('Error')))
+      , onSocket('disconnect', (reason?: string) => {
+        if (reason === 'io server disconnect') {
+          getSocket().connect()
+        }
+        lost(gettext('Socket connection was lost'))
+      })
+      , onSocket('connect_error', (err?: Error) => {
+        // Only a reconnect that is refused for lack of a valid session sends the
+        // user back to sign in; a failure on first load keeps the old behaviour.
+        if (hasConnected &&
+          (err?.message === 'Missing authorization token' || err?.message === 'Invalid user')) {
+          window.location.href = '/'
+          return
+        }
+        lost(gettext('Error'))
+      })
       , onSocket('error', () => lost(gettext('Error')))
       , onSocket('outdated', () => openVersionUpdate())
     ]

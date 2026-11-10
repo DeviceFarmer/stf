@@ -1,0 +1,20 @@
+# Keep common exclusions in sync with .dockerignore.
+*.mo
+*.tgz
+.DS_Store
+.env
+**/.npmrc
+ios.local.json
+.git/
+.idea/
+node_modules/
+**/package-lock.json
+!package-lock.json
+npm-debug.log
+res/build/
+rethinkdb_data/
+temp/
+tmp/
+.eslintcache
+doc/ios-media/
+doc/automation-media/

@@ -14,4 +14,11 @@ var removeParam = function(originalUrl: string, param: string) {
   return url.format(parsed)
 }
 
-export default {addParams, removeParam}
+// Collapses leading slashes/backslashes so a request path such as "//host" or
+// "/\\host" can never be read by a browser as a protocol-relative URL when it
+// is used as a redirect target.
+var toLocalPath = function(requestUrl: string) {
+  return '/' + requestUrl.replace(/^[/\\]+/, '')
+}
+
+export default {addParams, removeParam, toLocalPath}

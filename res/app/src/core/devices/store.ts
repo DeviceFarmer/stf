@@ -89,6 +89,26 @@ export class DeviceTracker {
     this.onAdd({important: true, data: device})
   }
 
+  reset(devices: Device[]): void {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+    if (this.frame !== null) {
+      cancelAnimationFrame(this.frame)
+      this.frame = null
+    }
+    this.devices = []
+    this.bySerial.clear()
+    devices.forEach((device) => {
+      const built = this.build(device)
+      if (this.filter(built)) {
+        this.insert(built)
+      }
+    })
+    this.flush()
+  }
+
   destroy(): void {
     this.unsubscribers.forEach((unsubscribe) => unsubscribe())
     this.unsubscribers = []
@@ -221,6 +241,7 @@ export class DeviceTracker {
 
 interface SharedTracker {
   tracker: DeviceTracker
+  load: () => Promise<Device[]>
   refs: number
   ready: Promise<void>
   loaded: boolean
@@ -232,6 +253,91 @@ interface SharedTracker {
 export const releaseGracePeriod = 10000
 
 const shared = new Map<string, SharedTracker>()
+
+const reloadListeners = new Set<() => void>()
+
+export function onTrackersReloaded(listener: () => void): () => void {
+  reloadListeners.add(listener)
+  return () => {
+    reloadListeners.delete(listener)
+  }
+}
+
+export async function reloadTrackers(isFinalAttempt = false): Promise<boolean> {
+  const results = await Promise.all(Array.from(shared.values(), (entry) =>
+    entry.load()
+      .then((devices) => {
+        entry.error = null
+        entry.loaded = true
+        entry.tracker.reset(devices)
+        return true
+      })
+      .catch((err) => {
+        if (isFinalAttempt) {
+          entry.error = err
+          entry.tracker.reset([])
+        }
+        return false
+      })
+  ))
+  const ok = results.every(Boolean)
+  if (ok) {
+    reloadListeners.forEach((listener) => {
+      try {
+        listener()
+      }
+      catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Tracker reload listener failed', err)
+      }
+    })
+  }
+  return ok
+}
+
+let hasDisconnected = false
+let reloadRetryTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearReloadRetry(): void {
+  if (reloadRetryTimer) {
+    clearTimeout(reloadRetryTimer)
+    reloadRetryTimer = null
+  }
+}
+
+function reloadWithRetry(attemptsLeft = 10): void {
+  clearReloadRetry()
+  const isFinal = attemptsLeft <= 1
+  reloadTrackers(isFinal)
+    .then((ok) => {
+      if (!ok) {
+        if (attemptsLeft > 1 && !hasDisconnected) {
+          const jitter = (Math.random() - 0.5) * 400
+          const delay = Math.round(1000 + jitter)
+          reloadRetryTimer = setTimeout(() => reloadWithRetry(attemptsLeft - 1), delay)
+        }
+        else if (attemptsLeft <= 1) {
+          // eslint-disable-next-line no-console
+          console.warn('Exhausted all retries attempting to reload device trackers after reconnect')
+        }
+      }
+    })
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to reload device trackers', err)
+    })
+}
+
+onSocket('disconnect', () => {
+  hasDisconnected = true
+  clearReloadRetry()
+})
+onSocket('connect', () => {
+  if (hasDisconnected) {
+    hasDisconnected = false
+    reloadWithRetry()
+  }
+})
 
 interface TrackerOptions {
   serial?: string | undefined
@@ -256,6 +362,7 @@ function acquire(
     const tracker = new DeviceTracker(filter, serial)
     const created: SharedTracker = {
       tracker
+      , load
       , refs: 0
       , loaded: false
       , error: null

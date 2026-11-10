@@ -1,6 +1,7 @@
 import {createRequire} from 'module'
 import type {Argv} from 'yargs'
 import type {CommandArgv} from '../../types/cli.js'
+import cookieutil from '../../util/cookieutil.js'
 
 var require = createRequire(import.meta.url)
 
@@ -9,7 +10,7 @@ var command = 'auth-ldap'
 var describe = 'Start an LDAP auth unit.'
 
 var builder = function(yargs: Argv) {
-  return yargs
+  var y = yargs
     .env('STF_AUTH_LDAP')
     .strict()
     .option('app-url', {
@@ -101,6 +102,8 @@ var builder = function(yargs: Argv) {
       '`STF_AUTH_LDAP_SECRET`). Legacy environment variables like ' +
       'LDAP_USERNAME_FIELD are still accepted, too, but consider them ' +
       'deprecated.')
+
+  return cookieutil.addCookieOptions(y)
 }
 
 var handler = function(argv: CommandArgv<typeof builder>) {
@@ -109,6 +112,8 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   , secret: argv.secret
   , ssid: argv.ssid
   , appUrl: argv.appUrl
+  , cookieSameSite: argv.cookieSameSite
+  , cookieSecure: cookieutil.resolveCookieSecure(argv.cookieSecure)
   , ldap: {
       url: argv.ldapUrl
     , timeout: argv.ldapTimeout

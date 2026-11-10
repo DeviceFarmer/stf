@@ -18,7 +18,7 @@ export default function(options: AppAuthOptions) {
     if (req.query.jwt) {
       // Coming from auth client
       var data = jwtutil.decode(req.query.jwt as string, options.secret)
-      var redir = urlutil.removeParam(req.url, 'jwt')
+      var redir = urlutil.toLocalPath(urlutil.removeParam(req.url, 'jwt'))
       if (data) {
         // Redirect once to get rid of the token
         dbapi.saveUserAfterLogin({

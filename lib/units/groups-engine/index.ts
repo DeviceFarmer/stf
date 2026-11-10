@@ -27,6 +27,7 @@ interface GroupsEngineOptions {
 export default function(options: GroupsEngineOptions) {
   const log = logger.createLogger('groups-engine')
   const channelRouter = new events.EventEmitter()
+  channelRouter.setMaxListeners(0)
 
   const push = zmqutil.socket('push')
   Promise.map(options.endpoints.push, function(endpoint) {

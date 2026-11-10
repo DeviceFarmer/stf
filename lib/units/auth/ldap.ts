@@ -21,10 +21,11 @@ import jwtutil from '../../util/jwtutil.js'
 import pathutil from '../../util/pathutil.js'
 import urlutil from '../../util/urlutil.js'
 import lifecycle from '../../util/lifecycle.js'
+import cookieutil, {type CookieUnitOptions} from '../../util/cookieutil.js'
 
 import dbapi from '../../db/api.js'
 
-interface LdapAuthOptions {
+interface LdapAuthOptions extends CookieUnitOptions {
   port: number
   secret: string
   ssid: string
@@ -41,6 +42,8 @@ export default function(options: LdapAuthOptions) {
   var app = express()
   var server = Promise.promisifyAll(http.createServer(app))
 
+  cookieutil.warnIfInsecureSameSiteNone(options, log)
+
   lifecycle.observe(function() {
     log.info('Waiting for client connections to end')
     return server.closeAsync()
@@ -53,17 +56,22 @@ export default function(options: LdapAuthOptions) {
   app.set('views', pathutil.resource('auth/ldap/views'))
   app.set('strict routing', true)
   app.set('case sensitive routing', true)
+  if (cookieutil.needsProxyTrust(options)) {
+    app.set('trust proxy', true)
+  }
 
-  app.use(cookieSession({
-    name: options.ssid
-  , keys: [options.secret]
-  }))
+  app.use(cookieSession(cookieutil.sessionOptions({
+    ssid: options.ssid
+  , secret: options.secret
+  , cookieSameSite: options.cookieSameSite
+  , cookieSecure: options.cookieSecure
+  })))
   app.use(bodyParser.json())
   app.use(csrf())
   app.use('/static/auth/ldap', serveStatic(pathutil.resource('auth/ldap')))
 
   app.use(function(req, res, next) {
-    res.cookie('XSRF-TOKEN', req.csrfToken())
+    res.cookie('XSRF-TOKEN', req.csrfToken(), cookieutil.xsrfCookieOptions(options, req))
     next()
   })
 

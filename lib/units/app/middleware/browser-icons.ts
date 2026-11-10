@@ -4,7 +4,7 @@ import pathutil from '../../../util/pathutil.js'
 
 export default function() {
   return serveStatic(
-    pathutil.resource('common/browsers/icon')
+    pathutil.resource('common/browser-icons')
   , {
       maxAge: '30d'
     }

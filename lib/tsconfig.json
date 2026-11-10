@@ -5,7 +5,6 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rootDir": ".",
-    "outDir": ".",
     "strict": true,
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,

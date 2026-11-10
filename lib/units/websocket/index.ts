@@ -180,7 +180,8 @@ export default function(options: WebsocketOptions) {
         serveClient: false
       , transports: ['websocket']
       })
-  var channelRouter = new events.EventEmitter()
+  var channelRouter = options.channelRouter || new events.EventEmitter()
+  channelRouter.setMaxListeners(0)
 
   // Output
   var push = zmqutil.socket('push')
@@ -240,7 +241,7 @@ export default function(options: WebsocketOptions) {
   io.on('connection', function(socket) {
     var req = socket.request as WebsocketRequest
     var user = req.user
-    var channels: string[] = []
+    const channels = new Set<string>()
     var messageListener: MessageListener
 
     const cleanupFences = new Map<string, {channel: string, identity: AuthorizedInput}>()
@@ -307,15 +308,23 @@ export default function(options: WebsocketOptions) {
     socket.emit('socket.ip', user.ip)
 
     function joinChannel(channel: string) {
-      channels.push(channel)
-      channelRouter.on(channel, messageListener)
-      sub.subscribe(channel)
+      if (channel && channel !== wireutil.global && !channels.has(channel)) {
+        channels.add(channel)
+        if (channelRouter.listenerCount(channel) === 0) {
+          sub.subscribe(channel)
+        }
+        channelRouter.on(channel, messageListener)
+      }
     }
 
     function leaveChannel(channel: string) {
-      _.pull(channels, channel)
-      channelRouter.removeListener(channel, messageListener)
-      sub.unsubscribe(channel)
+      if (channel && channels.has(channel)) {
+        channels.delete(channel)
+        channelRouter.removeListener(channel, messageListener)
+        if (channel !== wireutil.global && channelRouter.listenerCount(channel) === 0) {
+          sub.unsubscribe(channel)
+        }
+      }
     }
 
     function createKeyHandler(Klass: new(key: string) => WireEnvelopeMessage) {
@@ -1322,9 +1331,15 @@ export default function(options: WebsocketOptions) {
       channelRouter.removeListener(wireutil.global, messageListener)
       channels.forEach(function(channel) {
         channelRouter.removeListener(channel, messageListener)
-        sub.unsubscribe(channel)
+        if (channel !== wireutil.global && channelRouter.listenerCount(channel) === 0) {
+          sub.unsubscribe(channel)
+        }
       })
+      channels.clear()
       socket.disconnect(true)
+      if (typeof socket.removeAllListeners === 'function') {
+        socket.removeAllListeners()
+      }
     })
     .catch(function(err) {
       // Cannot guarantee integrity of client
@@ -1349,4 +1364,10 @@ export default function(options: WebsocketOptions) {
 
   server.listen(options.port)
   log.info('Listening on port %d', options.port)
+
+  return {
+    server
+  , io
+  , channelRouter
+  }
 }
