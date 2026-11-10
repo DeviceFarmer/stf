@@ -212,11 +212,17 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v8
+      - name: Download the amd64 digest
+        uses: actions/download-artifact@v8
         with:
-          path: /tmp/digests
-          pattern: digest-*
-          merge-multiple: true
+          name: digest-amd64
+          path: ${{ runner.temp }}/digests/digest-amd64
+
+      - name: Download the arm64 digest
+        uses: actions/download-artifact@v8
+        with:
+          name: digest-arm64
+          path: ${{ runner.temp }}/digests/digest-arm64
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
@@ -230,7 +236,16 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          cd /tmp/digests
-          docker buildx imagetools create -t "$IMAGE:$TAG" \
-            $(printf "$IMAGE@sha256:%s " *)
+          shopt -s nullglob dotglob
+          digest_pattern='^[0-9a-f]{64}$'
+          sources=()
+          for arch in amd64 arm64; do
+            files=("$RUNNER_TEMP/digests/digest-$arch/"*)
+            if (( ${#files[@]} != 1 )) || [[ ! -f "${files[0]}" || ! "${files[0]##*/}" =~ $digest_pattern ]]; then
+              echo "Expected one verified digest file for linux/$arch" >&2
+              exit 1
+            fi
+            sources+=("$IMAGE@sha256:${files[0]##*/}")
+          done
+          docker buildx imagetools create -t "$IMAGE:$TAG" "${sources[@]}"
           docker buildx imagetools inspect "$IMAGE:$TAG"
