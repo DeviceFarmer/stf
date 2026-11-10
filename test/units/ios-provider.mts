@@ -345,6 +345,7 @@ describe('Linux iOS integration', function() {
     assert.equal(identity.platform, 'iOS')
     assert.equal(identity.model, 'iPhone17,4')
     assert.equal(identity.display.width, 1290)
+    assert.equal(identity.display.fps, 0)
     f.send(new wire.PasteMessage('Hello iPhone'), true)
     f.send(new wire.KeyPressMessage('home'))
     await until(() => f.requests.length === 2)

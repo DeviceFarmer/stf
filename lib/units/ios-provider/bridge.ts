@@ -452,7 +452,7 @@ export class IosBridge {
         , marketName: this.options.marketName || catalog?.name || model
         , display: new wire.DeviceDisplayMessage({
             id: 0, width: image.readUInt32BE(16), height: image.readUInt32BE(20), rotation: 0
-          , xdpi: 0, ydpi: 0, fps: 10, density: 1, secure: true, url: this.options.screenUrl
+          , xdpi: 0, ydpi: 0, fps: 0, density: 1, secure: true, url: this.options.screenUrl
           })
         , phone: new wire.DevicePhoneMessage({})
         })
