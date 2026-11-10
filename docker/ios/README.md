@@ -204,7 +204,7 @@ Only the tunnel is privileged. The init job has only the ownership capabilities
 needed to prepare its state volume. Runtime and provider run as UID 1000.
 
 All three processes for a phone share its network namespace. Different phones
-can use the same internal API/WDA/MJPEG/tunnel/screen ports without collisions.
+can use the same internal API, WDA, tunnel and screen ports without collisions.
 No raw WDA or device API ports are published. Nginx routes each same-origin
 `/ios/ios-<id>/screen` WebSocket to exactly one provider, preserving cookies,
 Origin and authorization; the provider enforces STF ownership.

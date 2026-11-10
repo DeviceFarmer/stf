@@ -7,6 +7,7 @@ import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
 import type {IosOwner} from './access.js'
 import {findCatalogDevice} from '../../util/device-catalog.js'
+import {CoreDeviceInput} from './coredevice-input.js'
 
 export interface BridgeOptions {
   serial: string
@@ -23,6 +24,7 @@ export class IosBridge {
   readonly channel: string
   readonly solo = wireutil.makePrivateChannel()
   owner: IosOwner | null = null
+  private automated = false
   private state: IosDeviceState | null = null
   private identity: InstanceType<typeof wire.DeviceIdentityMessage> | null = null
   private registered = false
@@ -30,9 +32,10 @@ export class IosBridge {
   private activity = 0
   private timeout: number
   private queue = Promise.resolve()
-  private touch: {from: Point, to: Point, started: number} | null = null
+  private touch: {sessionId: string, position: Point} | null = null
   private multitouch = false
   private readonly gestures: TouchGesture
+  private readonly nativeInput: CoreDeviceInput
   private lease = randomUUID()
   private installId: string | null = null
   private lastObservation: IosDeviceState | null = null
@@ -47,6 +50,7 @@ export class IosBridge {
   , private readonly disconnect: () => void
   , private readonly report: (error: unknown) => void
   ) {
+    this.nativeInput = new CoreDeviceInput(client)
     this.gestures = new TouchGesture(() => this.resetTouch(), {
       report: error => this.report(error), onFinish: () => this.resetTouch()
     })
@@ -90,45 +94,36 @@ export class IosBridge {
         })
       })
       .on(wire.TouchDownMessage, (_channel, message) => {
-        const arrived = performance.now()
+        const sessionId = this.nativeInput.active
         this.gestures.push(message.seq, () => {
+          if (!sessionId || sessionId !== this.nativeInput.active) {
+            return
+          }
           if (message.contact !== 0 || this.touch) {
+            this.resetTouch()
             this.multitouch = true
-            this.touch = null
           }
           else if (!this.multitouch && this.point(message)) {
-            this.touch = {from: message, to: message, started: arrived}
+            this.touch = {sessionId, position: message}
+            this.nativeInput.send(sessionId, 'down', message)
           }
         }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
       })
       .on(wire.TouchMoveMessage, (_channel, message) => {
+        const sessionId = this.nativeInput.active
         this.gestures.push(message.seq, () => {
-          if (this.touch && message.contact === 0 && this.point(message)) {
-            this.touch.to = message
+          if (sessionId && this.touch?.sessionId === sessionId &&
+              message.contact === 0 && this.point(message)) {
+            this.touch.position = message
+            this.nativeInput.send(sessionId, 'move', message)
           }
         }, message.gestureId, message.reservationId, {type: 'move', contact: message.contact})
       })
       .on(wire.TouchUpMessage, (_channel, message) => {
-        const arrived = performance.now()
+        const sessionId = this.nativeInput.active
         this.gestures.push(message.seq, () => {
-          const touch = this.touch
-          this.touch = null
-          if (touch && message.contact === 0 && !this.multitouch) {
-            const distance = Math.hypot(touch.to.x - touch.from.x, touch.to.y - touch.from.y)
-            if (distance < 0.005) {
-              this.command('/tap', touch.to)
-            }
-            else if (arrived < touch.started) {
-              // Up-before-Down arrival cannot recover the hold time. Dropping the
-              // swipe avoids turning an unknown duration into a fast fling.
-              this.report(new Error('Touch swipe duration is unknown; retry the gesture'))
-            }
-            else {
-              this.command('/swipe', {
-                from: touch.from, to: touch.to
-              , durationMs: Math.max(50, Math.min(5000, Math.round(arrived - touch.started)))
-              })
-            }
+          if (sessionId && this.touch?.sessionId === sessionId && message.contact === 0) {
+            this.resetTouch()
           }
         }, message.gestureId, message.reservationId, {type: 'up', contact: message.contact})
       })
@@ -252,8 +247,37 @@ export class IosBridge {
   }
 
   private resetTouch() {
+    if (this.touch) {
+      this.nativeInput.send(this.touch.sessionId, 'up', this.touch.position)
+    }
     this.touch = null
     this.multitouch = false
+  }
+
+  screenMode(): 'control' | 'view' | 'unsupported' | 'unavailable' {
+    const device = this.lastObservation
+    if (!device?.coreDevice) {
+      return 'unsupported'
+    }
+    if (!this.owner || !this.registered || device.state !== 'ready' ||
+        device.ios?.locked !== false) {
+      return 'unavailable'
+    }
+    return this.automated ? 'view' : 'control'
+  }
+
+  connectCoreDeviceInput(
+    sessionId: string, signal: AbortSignal, fail: (error: unknown) => void
+  ) {
+    if (this.screenMode() !== 'control' || signal.aborted || this.nativeInput.active) {
+      return undefined
+    }
+    const active = AbortSignal.any([signal, this.ownerAbort.signal])
+    const disconnect = this.nativeInput.connect(sessionId, active, fail)
+    return () => {
+      disconnect()
+      this.resetTouch()
+    }
   }
 
   private key(key: string) {
@@ -268,7 +292,7 @@ export class IosBridge {
   private command(path: string, body: unknown, replyChannel?: string) {
     const operation = () => this.enqueue(this.epoch, async signal => {
       await this.ownedRequest(path, body, signal)
-    }, ['/tap', '/swipe', '/home', '/text'].includes(path))
+    }, path === '/home' || path === '/text')
     if (replyChannel) {
       this.transaction(replyChannel, operation)
     }
@@ -323,6 +347,7 @@ export class IosBridge {
     if (!this.owner) {
       this.ownerAbort = new AbortController()
       this.owner = {...owner, reservationId: randomUUID()}
+      this.automated = usage === 'automation'
       this.gestures.setOwner(this.owner.reservationId!)
       this.lease = randomUUID()
       this.epoch++
@@ -344,6 +369,7 @@ export class IosBridge {
       this.client.request('/installations/cancel', {id, lease}).catch(this.report)
     }
     this.owner = null
+    this.automated = false
     this.epoch++
     this.gestures.setOwner(null)
     this.disconnect()

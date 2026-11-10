@@ -18,7 +18,7 @@ const options: RuntimeOptions = {
   udid: '00000000-0000000000000001', bundleId: 'test.wda.xctrunner'
 , xctest: 'WebDriverAgentRunner.xctest', goIos: 'ios', iproxy: 'iproxy'
 , imageMounter: 'go-ios', pymobiledevice3: '/venv/bin/pymobiledevice3'
-, wdaPort: 18100, mjpegPort: 19100, tunnelPort: 28100, retryMs: 30, startupMs: 500
+, wdaPort: 18100, tunnelPort: 28100, retryMs: 30, startupMs: 500
 }
 
 afterEach(async() => {
@@ -148,9 +148,53 @@ describe('iOS prototype HTTP and WDA integration', () => {
   it('reports not-ready without issuing device commands', async() => {
     const f = await fixture()
     f.runtime.state = 'waiting'
-    assert.equal((await f.request('/tap', {x: 0.5, y: 0.5})).status, 503)
+    assert.equal((await f.request('/coredevice/touch', {
+      sessionId: 'screen-session', type: 'contact', x: 0.5, y: 0.5
+    })).status, 503)
     assert.equal((await f.request('/device')).status, 200)
     assert.equal(f.calls.length, 1)
+  })
+
+  it('rejects CoreDevice requests without a capability or a current screen session', async() => {
+    const f = await fixture()
+    const device = await (await f.request('/device')).json() as object
+    assert.equal(Object.hasOwn(device, 'coreDevice'), false)
+    assert.equal((await f.request('/coredevice/screen')).status, 404)
+    assert.equal((await f.request('/coredevice/touch', {type: 'tap'})).status, 400)
+    assert.equal((await f.request('/coredevice/touch', {
+      type: 'contact', x: 0.5, y: 0.5, sessionId: 'expired'
+    })).status, 409)
+    assert.equal((await f.request('/coredevice/keyframe', {sessionId: 'expired'})).status, 409)
+    assert.equal(f.calls.length, 1)
+  })
+
+  it('passes native video through the authenticated screen and cancels on disconnect', async t => {
+    const f = await fixture()
+    let disconnected: AbortSignal | undefined
+    let cancelled = false
+    const frame = Buffer.from([0, 0, 0, 3, 0, 1, 2])
+    t.mock.method(f.runtime, 'openCoreDevice', async(signal: AbortSignal) => {
+      disconnected = signal
+      return {
+        sessionId: 'screen-session', codec: 'hev1.1.6.L120.B0', description: 'AAAB'
+      , body: new ReadableStream<Uint8Array>({
+          start: controller => controller.enqueue(frame)
+        , cancel: () => {
+            cancelled = true
+          }
+        })
+      }
+    })
+    assert.equal((await fetch(f.api + '/coredevice/screen')).status, 401)
+    const response = await f.request('/coredevice/screen')
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('x-stf-coredevice-session'), 'screen-session')
+    assert.equal(response.headers.get('x-stf-hevc-codec'), 'hev1.1.6.L120.B0')
+    assert.equal(response.headers.get('x-stf-hevc-description'), 'AAAB')
+    const reader = response.body!.getReader()
+    assert.deepEqual(Buffer.from((await reader.read()).value!), frame)
+    await reader.cancel()
+    await until(() => disconnected?.aborted === true && cancelled)
   })
 
   it('uses the device home-screen endpoint instead of a hardware Home button', async() => {
@@ -174,12 +218,8 @@ describe('iOS prototype HTTP and WDA integration', () => {
     assert.deepEqual(await (await f.request('/lock', {})).json(), {locked: true})
     assert.equal(f.calls.filter(call => call.path.endsWith('/wda/performIoHidEvent')).length, 1)
     assert.equal(f.runtime.telemetry.status.locked, true)
-    for (const [route, input] of [
-      ['/tap', {x: 0.5, y: 0.5}], ['/swipe', {from: {x: 0.5, y: 0.9}, to: {x: 0.5, y: 0.2}}]
-    , ['/text', {text: '123456'}], ['/home', {}]
-    ] as const) {
-      assert.equal((await f.request(route, input)).status, 200)
-    }
+    assert.equal((await f.request('/text', {text: '123456'})).status, 200)
+    assert.equal((await f.request('/home', {})).status, 200)
     assert.equal((await f.request('/screenshot')).status, 200)
     assert.equal((await f.request('/apps/activate', {bundleId: 'test.app'})).status, 502)
     assert.deepEqual(await (await f.request('/unlock', {})).json(), {locked: false})
@@ -230,18 +270,15 @@ describe('iOS prototype HTTP and WDA integration', () => {
     assert.equal(runtime.generation, 0)
   })
 
-  it('converts normalized coordinates to WDA points and preserves swipe duration', async() => {
+  it('converts internal AssistiveTouch taps to WDA points', async() => {
     const f = await fixture()
-    const response = await f.request('/swipe', {
-      from: {x: 0.5, y: 1}, to: {x: 0, y: 0}, durationMs: 750
-    })
-    assert.equal(response.status, 200)
+    await f.wda.tap({x: 0.5, y: 1}, 100)
     const action = f.calls.find(call => call.path.endsWith('/actions'))!
     assert.equal(action.path, '/session/owned-session/actions')
     assert.deepEqual(action.body.actions[0].actions, [
       {type: 'pointerMove', duration: 0, origin: 'viewport', x: 195, y: 844}
     , {type: 'pointerDown', button: 0}
-    , {type: 'pointerMove', duration: 750, origin: 'viewport', x: 0, y: 0}
+    , {type: 'pause', duration: 100}
     , {type: 'pointerUp', button: 0}
     ])
   })
@@ -249,9 +286,8 @@ describe('iOS prototype HTTP and WDA integration', () => {
   it('rejects malformed commands before sending anything to WDA', async() => {
     const f = await fixture()
     for (const input of [{x: -1, y: 0}, {x: '0.5', y: 0}, {x: 0, y: 2}]) {
-      assert.equal((await f.request('/tap', input)).status, 400)
+      assert.equal((await f.request('/coredevice/touch', {...input, type: 'contact'})).status, 400)
     }
-    assert.equal((await f.request('/swipe', {from: {}, to: {x: 0, y: 0}})).status, 400)
     assert.equal((await f.request('/text', {text: 'x'.repeat(4097)})).status, 400)
     assert.equal((await f.request('/text', {text: 'x'.repeat(17000)})).status, 400)
     assert.equal((await f.request('/text', null)).status, 400)
@@ -354,30 +390,17 @@ describe('iOS prototype HTTP and WDA integration', () => {
     assert.equal(runtime.state, 'ready')
   })
 
-  it('proxies MJPEG and closes the upstream when the viewer disconnects', async() => {
+  it('does not expose the retired manual screen and gesture routes', async() => {
     const f = await fixture()
-    let closed = false
-    const upstream = await listen(http.createServer((req, res) => {
-      res.writeHead(200, {'Content-Type': 'multipart/x-mixed-replace; boundary=frame'})
-      res.write('--frame\r\nContent-Type: image/jpeg\r\n\r\nframe-bytes\r\n')
-      res.once('close', () => {
-        closed = true
-      })
-    }))
-    f.runtime.options.mjpegPort = Number(new URL(upstream).port)
-    const response = await f.request('/screen')
-    assert.equal(response.status, 200)
-    assert.match(response.headers.get('content-type')!, /multipart/)
-    const reader = response.body!.getReader()
-    const chunk = await reader.read()
-    assert.match(Buffer.from(chunk.value!).toString(), /frame-bytes/)
-    await reader.cancel()
-    await until(() => closed)
+    assert.equal((await f.request('/screen')).status, 404)
+    assert.equal((await f.request('/tap', {x: 0.5, y: 0.5})).status, 404)
+    assert.equal((await f.request('/swipe', {from: {x: 0, y: 1}, to: {x: 0, y: 0}})).status, 404)
+    assert.equal(f.calls.length, 1)
   })
 })
 
 describe('iOS prototype lifecycle', () => {
-  function dependencies(f: Awaited<ReturnType<typeof fixture>>) {
+  function dependencies(f: Awaited<ReturnType<typeof fixture>>, version = '18.0') {
     const spawned: Array<{
       binary: string, args: string[], stopped: boolean, failure: Error | null
     }> = []
@@ -396,7 +419,7 @@ describe('iOS prototype lifecycle', () => {
         if (args.includes('ls')) {
           return [{udid: options.udid, address: 'fd00::1', rsdPort: 58783, userspaceTun: false}]
         }
-        return {ProductVersion: '18.0'}
+        return {ProductVersion: version}
       }
     , start: (binary, args) => {
         const child = {binary, args, stopped: false, failure: null as Error | null
@@ -412,6 +435,23 @@ describe('iOS prototype lifecycle', () => {
     }}
   }
 
+  it('enables CoreDevice on iOS 27 and keeps WDA ready on screen failure', async() => {
+    const f = await fixture()
+    const d = dependencies(f, '27.0.1')
+    const runtime = new IosRuntime(options, d.deps)
+    cleanups.push(() => runtime.stop())
+    runtime.start()
+    await until(() => runtime.state === 'ready' && runtime.telemetry.status.locked === false)
+    assert.equal(runtime.coreDevice, true)
+    const api = await listen(createServer(runtime, token))
+    const headers = {Authorization: 'Bearer ' + token, 'Content-Type': 'application/json'}
+    const inventory = await (await fetch(api + '/device', {headers})).json() as {coreDevice?: true}
+    assert.equal(inventory.coreDevice, true)
+    assert.equal((await fetch(api + '/coredevice/screen', {headers})).status, 503)
+    assert.equal((await fetch(api + '/home', {headers, method: 'POST', body: '{}'})).status, 200)
+    assert.equal(runtime.state, 'ready')
+  })
+
   it('selects one UDID, uses loopback forwards and cleans up only its own processes', async() => {
     const f = await fixture()
     const d = dependencies(f)
@@ -419,8 +459,9 @@ describe('iOS prototype lifecycle', () => {
     cleanups.push(() => runtime.stop())
     runtime.start()
     await until(() => runtime.state === 'ready')
+    assert.equal(runtime.coreDevice, false)
     assert.deepEqual(d.spawned[0]!.args, [
-      '-u', options.udid, '-l', '-s', '127.0.0.1', '18100:8100', '19100:9100'
+      '-u', options.udid, '-l', '-s', '127.0.0.1', '18100:8100'
     ])
     assert.ok(d.commands.filter(args => args[0] !== 'list')
       .every(args => args.includes('--udid=' + options.udid)))
@@ -445,15 +486,17 @@ describe('iOS prototype lifecycle', () => {
 
   it('restarts after a child dies and never presents the failed session as ready', async() => {
     const f = await fixture()
-    const d = dependencies(f)
+    const d = dependencies(f, '27.0.1')
     const runtime = new IosRuntime({...options}, d.deps)
     cleanups.push(() => runtime.stop())
     runtime.start()
-    await until(() => runtime.state === 'ready')
+    await until(() => runtime.state === 'ready' && runtime.telemetry.status.locked === false)
     const generation = runtime.generation
     d.spawned[1]!.failure = new Error('USB disconnected')
     await until(() => runtime.generation > generation)
-    await until(() => runtime.state === 'ready')
+    assert.equal(runtime.telemetry.status.locked, null)
+    assert.equal(runtime.coreDevice, false)
+    await until(() => runtime.state === 'ready' && runtime.telemetry.status.locked === false)
     assert.ok(d.spawned.slice(0, 2).every(child => child.stopped))
     assert.equal(d.spawned.length, 4)
   })

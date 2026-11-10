@@ -7,6 +7,8 @@ import {runPowerCommand} from './power.mts'
 import {selectedTunnel, rsdEndpoint} from './tunnel.mts'
 import {Telemetry, diagnosticReason} from './telemetry.mts'
 import {AssistiveTouch} from './assistive-touch.mts'
+import {CoreDeviceError, CoreDeviceSession} from './coredevice.mts'
+import type {CoreDeviceScreen} from './coredevice.mts'
 import type {ImageMounter} from './tunnel.mts'
 
 export interface RuntimeOptions {
@@ -18,7 +20,6 @@ export interface RuntimeOptions {
   imageMounter: ImageMounter
   pymobiledevice3: string
   wdaPort: number
-  mjpegPort: number
   tunnelPort: number
   retryMs: number
   startupMs: number
@@ -55,6 +56,8 @@ export class IosRuntime {
   private queue: Promise<unknown> = Promise.resolve()
   private dependencies: RuntimeDependencies
   private assistiveTouch: AssistiveTouch
+  private coreDeviceRsd: [string, string] | null = null
+  private coreDeviceSession: CoreDeviceSession | null = null
 
   constructor(options: RuntimeOptions, dependencies?: Partial<RuntimeDependencies>) {
     this.options = {...options}
@@ -134,8 +137,7 @@ export class IosRuntime {
     this.checkChildren()
     this.telemetry.phase('wda')
     this.children.push(start(o.iproxy, [
-      '-u', o.udid, '-l', '-s', '127.0.0.1'
-    , o.wdaPort + ':8100', o.mjpegPort + ':9100'
+      '-u', o.udid, '-l', '-s', '127.0.0.1', o.wdaPort + ':8100'
     ]))
     // Catch a failed bind before asking the device to start WDA.
     await this.sleep(300)
@@ -152,6 +154,16 @@ export class IosRuntime {
         this.telemetry.phase('session')
         await this.wda.open()
         this.checkChildren()
+        const productVersion = (this.info as {ProductVersion?: string})?.ProductVersion
+        const version = Number.parseInt(productVersion || '', 10)
+        if (version >= 27) {
+          try {
+            this.coreDeviceRsd = rsdEndpoint(tunnel)
+          }
+          catch (error) {
+            this.dependencies.log('CoreDevice screen unavailable: ' + (error as Error).message)
+          }
+        }
         return
       }
       catch (error) {
@@ -165,6 +177,9 @@ export class IosRuntime {
 
   private async cleanup(): Promise<void> {
     this.generation += 1
+    this.coreDeviceRsd = null
+    this.telemetry.status.locked = null
+    await this.coreDeviceSession?.stop()
     await this.queue.catch(() => null)
     await this.wda.close().catch(() => null)
     await Promise.all(this.children.splice(0).map(child => child.stop()))
@@ -172,6 +187,7 @@ export class IosRuntime {
 
   private async loop(): Promise<void> {
     await this.telemetry.load()
+    this.telemetry.status.locked = null
     while (!this.abort.signal.aborted) {
       try {
         this.state = 'starting'
@@ -197,6 +213,7 @@ export class IosRuntime {
             reason = 'wda_profile_' + profile
           }
           if (locked.value === true) {
+            this.coreDeviceSession?.stop()
             reason = 'locked'
           }
           this.telemetry.phase('ready', reason)
@@ -234,8 +251,64 @@ export class IosRuntime {
       AbortSignal.any([signal, AbortSignal.timeout(45000)]))
   }
 
+  get coreDevice(): boolean {
+    return this.coreDeviceRsd !== null
+  }
+
+  async openCoreDevice(signal: AbortSignal): Promise<CoreDeviceScreen> {
+    signal.throwIfAborted()
+    const previous = this.coreDeviceSession
+    if (previous?.signal.aborted) {
+      const wait = new AbortController()
+      const waiting = AbortSignal.any([signal, this.abort.signal, wait.signal])
+      try {
+        await Promise.race([previous.closed, delay(6000, null, {signal: waiting})])
+      }
+      finally {
+        wait.abort()
+      }
+      signal.throwIfAborted()
+    }
+    if (!this.coreDeviceRsd) {
+      throw new CoreDeviceError('IOS_COREDEVICE_UNAVAILABLE', 404)
+    }
+    if (this.state !== 'ready' || this.telemetry.status.locked !== false) {
+      throw new CoreDeviceError('IOS_COREDEVICE_NOT_READY', 503)
+    }
+    if (this.coreDeviceSession) {
+      throw new CoreDeviceError('IOS_COREDEVICE_SCREEN_BUSY', 409)
+    }
+    const session = new CoreDeviceSession(this.options.pymobiledevice3, this.options.udid,
+      this.coreDeviceRsd, AbortSignal.any([signal, this.abort.signal]), this.dependencies.log)
+    this.coreDeviceSession = session
+    session.closed.then(() => {
+      if (this.coreDeviceSession === session) {
+        this.coreDeviceSession = null
+      }
+    })
+    try {
+      return await session.screen()
+    }
+    catch (error) {
+      session.stop()
+      this.dependencies.log('CoreDevice screen unavailable: ' + (error as Error).message)
+      throw new CoreDeviceError('IOS_COREDEVICE_SCREEN_UNAVAILABLE', 503)
+    }
+  }
+
+  coreDeviceInput(sessionId: unknown): CoreDeviceSession {
+    const session = this.coreDeviceSession
+    if (!session || session.signal.aborted || session.id !== sessionId ||
+        this.state !== 'ready' || this.telemetry.status.locked !== false) {
+      throw new CoreDeviceError('IOS_COREDEVICE_SESSION_ENDED', 409)
+    }
+    return session
+  }
+
   lock(signal: AbortSignal): Promise<{locked: boolean}> {
     return this.execute(async(wda, active) => {
+      await this.coreDeviceSession?.stop()
+      active.throwIfAborted()
       if ((await this.lockState(active)).locked) {
         return {locked: true}
       }
@@ -285,6 +358,8 @@ export class IosRuntime {
 
   power(action: 'reboot' | 'shutdown', signal?: AbortSignal): Promise<{accepted: boolean}> {
     return this.execute(async(_wda, active) => {
+      await this.coreDeviceSession?.stop()
+      active.throwIfAborted()
       await this.dependencies.power(this.options.goIos, this.args(action), active)
       this.state = 'waiting'
       this.generation++
@@ -303,7 +378,7 @@ export class IosRuntime {
         }
         catch (error) {
           // Protected locks may reject app activation or automatic dismissal.
-          // Keep the screen available for manual entry; transport errors fail.
+          // Report the resulting lock state; transport errors still fail.
           if (!(error instanceof WdaError) || error.code !== 'unknown error') {
             throw error
           }

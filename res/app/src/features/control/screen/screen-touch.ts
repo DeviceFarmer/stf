@@ -20,6 +20,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
   const slots: number[] = []
   const slotted: Record<string, number> = Object.create(null)
   let seq = -1
+  let activeGesture: 'mouse' | 'touch' | null = null
   let fakePinch = false
   let lastPossiblyBuggyMouseUpEvent: MouseEvent | null = null
 
@@ -35,6 +36,14 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     for (let i = 9; i >= 0; --i) {
       slots.push(i)
     }
+  }
+
+  function resetSlots() {
+    for (const id of Object.keys(slotted)) {
+      delete slotted[id]
+    }
+    slots.length = 0
+    createSlots()
   }
 
   function activateFinger(index: number, x: number, y: number, pressure: number) {
@@ -106,6 +115,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
   }
 
   function stopMousing() {
+    activeGesture = null
     root.removeEventListener('mousemove', mouseMoveListener)
     document.removeEventListener('mouseup', mouseUpListener)
     document.removeEventListener('mouseleave', mouseUpListener)
@@ -114,7 +124,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
   }
 
   function mouseUpListener(e: MouseEvent) {
-    if (e.which === SECONDARY_BUTTON) {
+    if (activeGesture !== 'mouse' || e.which === SECONDARY_BUTTON) {
       return
     }
     e.preventDefault()
@@ -137,12 +147,13 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
   }
 
   function startMousing() {
+    activeGesture = 'mouse'
     control.gestureStart(nextSeq())
     input.focus({preventScroll: true})
   }
 
   function mouseDownListener(e: MouseEvent) {
-    if (e.which === SECONDARY_BUTTON) {
+    if (activeGesture || e.which === SECONDARY_BUTTON) {
       return
     }
     e.preventDefault()
@@ -207,11 +218,35 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
   }
 
   function stopTouching() {
+    activeGesture = null
     root.removeEventListener('touchmove', touchMoveListener)
     document.removeEventListener('touchend', touchEndListener)
     document.removeEventListener('touchleave', touchEndListener)
+    document.removeEventListener('touchcancel', touchCancelListener)
     deactivateFingers()
     control.gestureStop(nextSeq())
+  }
+
+  function cancelGesture() {
+    if (!activeGesture) {
+      return
+    }
+    // Release the current sequenced gesture when the local pointer is cancelled.
+    control.touchReset(nextSeq())
+    if (activeGesture === 'mouse') {
+      lastPossiblyBuggyMouseUpEvent = null
+      stopMousing()
+    }
+    else {
+      resetSlots()
+      stopTouching()
+    }
+  }
+
+  function touchCancelListener(e: TouchEvent) {
+    if (Array.from(e.changedTouches).some(touch => touch.identifier in slotted)) {
+      cancelGesture()
+    }
   }
 
   function touchEndListener(event: Event) {
@@ -231,13 +266,14 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
     if (foundAny) {
       control.touchCommit(nextSeq())
-      if (!e.touches.length) {
+      if (!Object.keys(slotted).length) {
         stopTouching()
       }
     }
   }
 
   function startTouching() {
+    activeGesture = 'touch'
     control.gestureStart(nextSeq())
   }
 
@@ -247,7 +283,11 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     calculateBounds()
 
     if (e.touches.length === e.changedTouches.length) {
+      cancelGesture()
       startTouching()
+    }
+    if (activeGesture !== 'touch') {
+      return
     }
 
     const currentTouches: Record<string, number> = Object.create(null)
@@ -256,11 +296,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     }
 
     if (Object.keys(slotted).some((id) => !(id in currentTouches))) {
-      Object.keys(slotted).forEach((id) => {
-        slots.push(slotted[id]!)
-        delete slotted[id]
-      })
-      slots.sort().reverse()
+      resetSlots()
       control.touchReset(nextSeq())
       deactivateFingers()
     }
@@ -284,6 +320,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     root.addEventListener('touchmove', touchMoveListener, {passive: false})
     document.addEventListener('touchend', touchEndListener)
     document.addEventListener('touchleave', touchEndListener)
+    document.addEventListener('touchcancel', touchCancelListener)
 
     control.touchCommit(nextSeq())
   }
@@ -291,19 +328,15 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
   root.addEventListener('touchstart', touchStartListener, {passive: false})
   root.addEventListener('mousedown', mouseDownListener)
   root.addEventListener('mouseup', mouseUpBugWorkaroundListener)
+  window.addEventListener('blur', cancelGesture)
 
   createSlots()
 
   return () => {
+    cancelGesture()
     root.removeEventListener('touchstart', touchStartListener)
     root.removeEventListener('mousedown', mouseDownListener)
     root.removeEventListener('mouseup', mouseUpBugWorkaroundListener)
-    root.removeEventListener('mousemove', mouseMoveListener)
-    root.removeEventListener('touchmove', touchMoveListener)
-    document.removeEventListener('mouseup', mouseUpListener)
-    document.removeEventListener('mouseleave', mouseUpListener)
-    document.removeEventListener('touchend', touchEndListener)
-    document.removeEventListener('touchleave', touchEndListener)
-    deactivateFingers()
+    window.removeEventListener('blur', cancelGesture)
   }
 }

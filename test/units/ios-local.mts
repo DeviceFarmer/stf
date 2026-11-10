@@ -35,9 +35,9 @@ describe('local iOS configuration', () => {
   })
 
   it('reserves distinct native ports until the children can be started', async() => {
-    const reserved = await reserveIosPorts(10)
+    const reserved = await reserveIosPorts(8)
     try {
-      assert.equal(new Set(reserved.ports).size, 10)
+      assert.equal(new Set(reserved.ports).size, 8)
       const contender = net.createServer()
       const error = await new Promise<NodeJS.ErrnoException>(resolve => {
         contender.once('error', resolve)
@@ -55,8 +55,9 @@ describe('local iOS configuration', () => {
     const config = parseIosConfig(input)
     const targets = new Set<string>()
     for (const [index, device] of config.devices.entries()) {
+      const firstPort = 30000 + index * 4
       const selected = nativeIosCommands(device, {
-        ports: Array.from({length: 5}, (_, i) => 30000 + index * 5 + i)
+        ports: Array.from({length: 4}, (_, i) => firstPort + i)
       , directory: '/private/' + iosDeviceId(device.udid), tokenFile: '/private/token-' + index
       , publicOrigin: config.publicOrigin, apiPort: 7106, storagePort: 7102
       , push: 'tcp://127.0.0.1:7116', sub: 'tcp://127.0.0.1:7114'
@@ -65,6 +66,10 @@ describe('local iOS configuration', () => {
       for (const command of [selected.tunnel, selected.runtime]) {
         assert.ok(command.includes('--udid=' + device.udid))
       }
+      assert.ok(selected.runtime.includes('--port=' + firstPort))
+      assert.ok(selected.runtime.includes('--wda-port=' + (firstPort + 1)))
+      assert.ok(selected.runtime.includes('--tunnel-port=' + (firstPort + 2)))
+      assert.ok(selected.provider.includes('--screen-port=' + (firstPort + 3)))
       assert.ok(selected.provider.includes('--serial=' + device.udid))
       assert.ok(selected.provider.includes('--connect-sub=tcp://127.0.0.1:7114'))
       assert.ok(selected.provider.includes('--screen-url=ws://localhost:7100/ios/' +

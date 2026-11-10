@@ -8,14 +8,18 @@ import wireutil from '../../lib/wire/util.js'
 import {IosBridge} from '../../lib/units/ios-provider/bridge.js'
 import {PrototypeClient, type IosDeviceState} from '../../lib/units/ios-provider/client.js'
 import type {IosDeviceStatus} from '../../lib/util/ios-device-status.js'
-import {MjpegDecoder} from '../../lib/units/ios-provider/mjpeg.js'
 import {authorizeScreen} from '../../lib/units/ios-provider/access.js'
+import {CoreDeviceScreenDecoder} from '../../lib/units/ios-provider/coredevice-screen.js'
 import {createScreenServer} from '../../lib/units/ios-provider/screen.js'
 import {allowIosPacket, createDevicePacketGuard} from '../../lib/units/websocket/ios-access.js'
 
 const serial = 'TEST-IPHONE'
 const owner = {email: 'owner@example.test', name: 'Owner', group: 'owner-group'}
 const origin = 'https://stf.example.test'
+const screenSession = 'screen-session'
+const hevcUnit = Buffer.from('00000000022601', 'hex')
+const hevcPacket = Buffer.concat([Buffer.from('00000007', 'hex'), hevcUnit])
+type TouchSample = [type: 'contact' | 'release', x: number, y: number]
 
 async function listen(server: http.Server) {
   server.listen(0, '127.0.0.1')
@@ -44,6 +48,7 @@ describe('Linux iOS integration', function() {
   async function fixture(marketName = 'iPhone 16 Plus', holdFirstText = false) {
     const state: IosDeviceState = {
       udid: serial, state: 'ready', generation: 1, instance: 'backend-instance'
+    , coreDevice: true, ios: {reason: 'ready', locked: false} as IosDeviceStatus
     , info: {ProductType: 'iPhone17,4', ProductVersion: '27.0.1'}
     }
     const requests: {path: string, body: any}[] = []
@@ -51,10 +56,6 @@ describe('Linux iOS integration', function() {
     let failKeepalive = false
     const errors: unknown[] = []
     const screens: http.ServerResponse[] = []
-    const frame = Buffer.concat([
-      Buffer.from('--frame\r\nContent-Type: image/jpeg\r\nContent-Length: 6\r\n\r\n')
-    , Buffer.from('ffd80102ffd9', 'hex'), Buffer.from('\r\n\r\n')
-    ])
     const sent: {channel: string, envelope: ReturnType<typeof wire.Envelope.decode>}[] = []
     const png = Buffer.alloc(24)
     Buffer.from('89504e470d0a1a0a', 'hex').copy(png)
@@ -69,10 +70,19 @@ describe('Linux iOS integration', function() {
         res.setHeader('Content-Type', 'image/png')
         res.end(png)
       }
-      else if (req.url === '/screen') {
-        res.setHeader('Content-Type', 'multipart/x-mixed-replace;boundary=frame')
+      else if (req.url === '/coredevice/screen') {
+        res.writeHead(200, {
+          'Content-Type': 'application/octet-stream'
+        , 'X-STF-CoreDevice-Session': screenSession
+        , 'X-STF-HEVC-Codec': 'hvc1.1.6.L120.B0'
+        , 'X-STF-HEVC-Description': 'AQID'
+        })
         screens.push(res)
-        res.write(Buffer.concat([frame, frame]))
+        res.write(Buffer.concat([hevcPacket, hevcPacket]))
+      }
+      else if (req.method === 'GET') {
+        requests.push({path: req.url!, body: null})
+        res.writeHead(404).end('{}')
       }
       else {
         const chunks: Buffer[] = []
@@ -131,11 +141,31 @@ describe('Linux iOS integration', function() {
       }
       return {gestureId: gestures.get(order)!, reservationId: bridge.owner?.reservationId || null}
     }
-    return {bridge, client, state, requests, sent, send, join, gesture, errors
+    const activateInput = (id = screenSession) => {
+      const disconnect = bridge.connectCoreDeviceInput(id, new AbortController().signal,
+        error => errors.push(error))
+      assert.ok(disconnect)
+      return disconnect
+    }
+    const expectTouches = async(samples: TouchSample[]) => {
+      const touches = () => requests.filter(request => request.path === '/coredevice/touch')
+      await until(() => touches().length >= samples.length)
+      assert.deepEqual(touches().map(request => request.body),
+        samples.map(([type, x, y]) => ({
+          type, x: Math.fround(x), y: Math.fround(y), sessionId: screenSession
+        })))
+    }
+    const screenServer = (apiUrl: string) => createScreenServer({
+      client, apiUrl, publicOrigin: origin, serial, owner: () => bridge.owner
+    , mode: () => bridge.screenMode()
+    , connectInput: (id, signal, fail) => bridge.connectCoreDeviceInput(id, signal, fail)
+    })
+    return {bridge, state, requests, sent, send, join, gesture, errors, activateInput
+      , expectTouches, screenServer, screens
       , failKeepalive: () => {
  failKeepalive = true
 }
-      , pushFrames: () => screens.forEach(res => res.write(Buffer.concat([frame, frame])))
+      , pushFrames: () => screens.forEach(res => res.write(hevcPacket))
       , disconnects: () => disconnects, cancelled: () => cancelled}
   }
 
@@ -160,6 +190,7 @@ describe('Linux iOS integration', function() {
 
   it('streams authorized automation without extending its lease', async function() {
     const f = await fixture()
+    await f.join(20000, 'automation')
     let usage: string | null = 'automation'
     let visible = true
     const api = http.createServer((req, res) => {
@@ -169,34 +200,47 @@ describe('Linux iOS integration', function() {
       else {
         assert.equal(req.url, '/api/v1/devices/' + serial)
         res.writeHead(visible ? 200 : 403)
-        res.end(JSON.stringify({success: visible, device: {serial, owner, usage}}))
+        res.end(JSON.stringify({success: visible, device: {serial, owner: f.bridge.owner, usage}}))
       }
     })
     servers.push(api)
     const apiUrl = await listen(api)
     const headers = {origin, cookie: 'session=signed'}
-    assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), true)
+    const authorized = () => authorizeScreen(
+      apiUrl, origin, serial, f.bridge.owner, headers, 'view'
+    )
+    assert.equal(await authorized(), true)
     usage = null
-    assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
+    assert.equal(await authorized(), false)
     usage = 'automation'
     visible = false
-    assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
+    assert.equal(await authorized(), false)
     visible = true
-    await f.join(20000, 'automation')
-    const screen = createScreenServer({client: f.client, apiUrl, publicOrigin: origin, serial
-      , owner: () => f.bridge.owner})
+    const screen = f.screenServer(apiUrl)
     const url = (await listen(screen.server)).replace('http:', 'ws:')
     const ws = new WebSocket(url, {headers})
     let frames = 0
-    ws.on('message', (_data, binary) => {
- if (binary) {
- frames++
-}
-})
+    const messages: string[] = []
+    ws.on('message', (data, binary) => {
+      if (binary) {
+        frames++
+      }
+      else {
+        messages.push(data.toString())
+      }
+    })
     try {
       await once(ws, 'open')
+      ws.send('hevc')
       ws.send('on')
       await until(() => frames >= 2)
+      ws.send('hevc ready')
+      ws.send('ping')
+      await until(() => messages.includes('pong'))
+      assert.ok(!messages.includes('hevc input ready'), 'Observers must not bind input')
+      const before = frames
+      f.pushFrames()
+      await until(() => frames > before)
       assert.equal(f.requests.length, 0)
       const now = Date.now
       const future = now() + 21000
@@ -236,14 +280,14 @@ describe('Linux iOS integration', function() {
           assert.equal(req.url, '/api/v1/devices/' + serial)
           deviceChecks++
           res.writeHead(allowed ? 200 : 403)
-          res.end(JSON.stringify({success: allowed, device: {serial, owner, usage: 'automation'}}))
+          res.end(JSON.stringify({success: allowed
+            , device: {serial, owner: reservationOwner, usage: 'automation'}}))
         }
       })
       servers.push(api)
       const apiUrl = await listen(api)
       const clock = sinon.useFakeTimers({toFake: ['setInterval', 'clearInterval']})
-      const screen = createScreenServer({client: f.client, apiUrl, publicOrigin: origin, serial
-        , owner: () => f.bridge.owner})
+      const screen = f.screenServer(apiUrl)
       const ws = new WebSocket((await listen(screen.server)).replace('http:', 'ws:'), {
         headers: {origin, cookie: 'session=signed'}
       })
@@ -255,6 +299,7 @@ describe('Linux iOS integration', function() {
       })
       try {
         await once(ws, 'open')
+        ws.send('hevc')
         ws.send('on')
         await until(() => frames >= 2)
         const closed = once(ws, 'close')
@@ -300,16 +345,11 @@ describe('Linux iOS integration', function() {
     assert.equal(identity.platform, 'iOS')
     assert.equal(identity.model, 'iPhone17,4')
     assert.equal(identity.display.width, 1290)
-    const gesture = f.gesture(1)
-    f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
-    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...gesture}))
-    f.send(new wire.GestureStopMessage({seq: 3, ...gesture}))
     f.send(new wire.PasteMessage('Hello iPhone'), true)
     f.send(new wire.KeyPressMessage('home'))
-    await until(() => f.requests.length === 3)
-    assert.deepEqual(f.requests.map(req => req.path), ['/tap', '/text', '/home'])
-    assert.equal(f.requests[1]!.body.text, 'Hello iPhone')
+    await until(() => f.requests.length === 2)
+    assert.deepEqual(f.requests.map(req => req.path), ['/text', '/home'])
+    assert.equal(f.requests[0]!.body.text, 'Hello iPhone')
     assert.ok(f.sent.some(item => item.channel === 'reply' &&
       item.envelope.type === wire.TransactionDoneMessage.$code &&
       wire.TransactionDoneMessage.decode(item.envelope.message).success))
@@ -381,117 +421,53 @@ describe('Linux iOS integration', function() {
   it('reorders an iOS gesture whose prefix and Stop arrive before Start', async function() {
     const f = await fixture()
     await f.join()
+    f.activateInput()
     const gesture = f.gesture(1)
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
     f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
     f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
     f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-    assert.equal(f.requests.length, 0)
+    await f.expectTouches([['contact', 0.3, 0.4]])
     f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
-    await until(() => f.requests.length === 1)
-    assert.equal(f.requests[0]!.path, '/tap')
-  })
-
-  it('preserves swipe arrival duration when Start arrives 1.4 seconds late', async function() {
-    const f = await fixture()
-    await f.join()
-    const clock = sinon.useFakeTimers({toFake: ['performance']})
-    try {
-      const gesture = f.gesture(1)
-      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
-      clock.tick(1400)
-      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...gesture}))
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
-      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
-      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-      await until(() => f.requests.length === 1)
-      assert.equal(f.requests[0]!.path, '/swipe')
-      assert.equal(f.requests[0]!.body.durationMs, 1400)
-    }
-    finally {
-      clock.restore()
-    }
+    await f.expectTouches([['contact', 0.3, 0.4], ['release', 0.3, 0.4]])
   })
 
   for (const lateStart of [false, true]) {
     it(`recovers a missing Move with ${lateStart ? 'late' : 'early'} Start`, async function() {
       const f = await fixture()
       await f.join()
-      const clock = sinon.useFakeTimers({toFake: ['performance']})
-      try {
-        const gesture = f.gesture(1)
-        if (!lateStart) {
-          f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-        }
-        f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
-        clock.tick(1400)
-        // Move 2 is lost; four later packets make the gap safe to skip.
-        f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.3, y: 0.2, ...gesture}))
-        f.send(new wire.TouchCommitMessage({seq: 4, ...gesture}))
-        f.send(new wire.TouchUpMessage({seq: 5, contact: 0, ...gesture}))
-        f.send(new wire.TouchCommitMessage({seq: 6, ...gesture}))
-        f.send(new wire.GestureStopMessage({seq: 7, ...gesture}))
-        if (lateStart) {
-          f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-        }
-        await until(() => f.requests.length === 1)
-        assert.equal(f.requests[0]!.path, '/swipe')
-        assert.equal(f.requests[0]!.body.durationMs, 1400)
-        assert.equal(f.requests[0]!.body.to.y, Math.fround(0.2))
-        const next = f.gesture(2)
-        f.send(new wire.GestureStartMessage({seq: 0, ...next}))
-        f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
-        f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...next}))
-        f.send(new wire.GestureStopMessage({seq: 3, ...next}))
-        await until(() => f.requests.length === 2)
-        assert.equal(f.requests[1]!.path, '/tap')
+      f.activateInput()
+      const gesture = f.gesture(1)
+      if (!lateStart) {
+        f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       }
-      finally {
-        clock.restore()
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
+      // Move 2 is lost; four later packets make the gap safe to skip.
+      f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.3, y: 0.2, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 4, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 5, contact: 0, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 6, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 7, ...gesture}))
+      if (lateStart) {
+        f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       }
+      await f.expectTouches([['contact', 0.3, 0.8], ['contact', 0.3, 0.2]
+        , ['release', 0.3, 0.2]])
+      const next = f.gesture(2)
+      f.send(new wire.GestureStartMessage({seq: 0, ...next}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
+      f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...next}))
+      f.send(new wire.GestureStopMessage({seq: 3, ...next}))
+      await f.expectTouches([['contact', 0.3, 0.8], ['contact', 0.3, 0.2]
+        , ['release', 0.3, 0.2], ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
     })
   }
-
-  it('does not add command queue delay to the swipe duration', async function() {
-    const f = await fixture()
-    await f.join()
-    let release: () => void = () => {}
-    const gate = new Promise<void>(resolve => {
-      release = resolve
-    })
-    const device = f.client.device.bind(f.client)
-    const load = sinon.stub(f.client, 'device').callsFake(async() => {
-      await gate
-      return device()
-    })
-    const clock = sinon.useFakeTimers({toFake: ['performance']})
-    try {
-      f.send(new wire.KeyPressMessage('home'))
-      await until(() => load.called)
-      const gesture = f.gesture(1)
-      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
-      clock.tick(300)
-      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...gesture}))
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
-      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
-      clock.tick(1100)
-      release()
-      await until(() => f.requests.length === 2)
-      assert.deepEqual(f.requests.map(request => request.path), ['/home', '/swipe'])
-      assert.equal(f.requests[1]!.body.durationMs, 300)
-    }
-    finally {
-      release()
-      load.restore()
-      clock.restore()
-    }
-  })
 
   for (const taps of [2, 3]) {
     it(`keeps all ${taps} taps when their prefix arrives before Start`, async function() {
       const f = await fixture()
       await f.join()
+      f.activateInput()
       const gesture = f.gesture(1)
       f.send(new wire.GestureStopMessage({seq: taps * 2 + 1, ...gesture}))
       for (let tap = taps - 1; tap >= 0; tap--) {
@@ -501,99 +477,18 @@ describe('Linux iOS integration', function() {
         }))
       }
       f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-      await until(() => f.requests.length === taps)
-      assert.deepEqual(f.requests.map(request => request.path), Array(taps).fill('/tap'))
-      assert.deepEqual(f.requests.map(request => request.body.x),
-        Array.from({length: taps}, (_, tap) => Math.fround(0.3 + tap * 0.1)))
+      await f.expectTouches(Array.from({length: taps}, (_, tap): TouchSample[] => [
+        ['contact', 0.3 + tap * 0.1, 0.4], ['release', 0.3 + tap * 0.1, 0.4]
+      ]).flat())
     })
   }
-
-  it('cancels an ambiguous reordered swipe and accepts the next gesture', async function() {
-    const f = await fixture()
-    await f.join()
-    const clock = sinon.useFakeTimers({toFake: ['performance']})
-    try {
-      const ambiguous = f.gesture(1)
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...ambiguous}))
-      clock.tick(1400)
-      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...ambiguous}))
-      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...ambiguous}))
-      f.send(new wire.GestureStopMessage({seq: 4, ...ambiguous}))
-      f.send(new wire.GestureStartMessage({seq: 0, ...ambiguous}))
-      const next = f.gesture(2)
-      f.send(new wire.GestureStartMessage({seq: 0, ...next}))
-      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
-      clock.tick(300)
-      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.7, y: 0.2, ...next}))
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...next}))
-      f.send(new wire.GestureStopMessage({seq: 4, ...next}))
-      await until(() => f.requests.length >= 1)
-      assert.equal(f.requests.length, 1)
-      assert.equal(f.requests[0]!.body.from.x, Math.fround(0.7))
-      assert.equal(f.requests[0]!.body.durationMs, 300)
-      assert.match(String(f.errors[0]), /duration.*unknown/i)
-    }
-    finally {
-      clock.restore()
-    }
-  })
-
-  for (const [elapsed, expected] of [[0, 50], [6000, 5000]] as const) {
-    it(`bounds a ${elapsed} ms swipe to ${expected} ms`, async function() {
-      const f = await fixture()
-      await f.join()
-      const clock = sinon.useFakeTimers({toFake: ['performance']})
-      try {
-        const gesture = f.gesture(1)
-        f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-        f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
-        clock.tick(elapsed)
-        f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.3, y: 0.2, ...gesture}))
-        f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
-        f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
-        await until(() => f.requests.length === 1)
-        assert.equal(f.requests[0]!.body.durationMs, expected)
-      }
-      finally {
-        clock.restore()
-      }
-    })
-  }
-
-  it('drops swipe timing from the previous owner', async function() {
-    const f = await fixture()
-    await f.join()
-    const clock = sinon.useFakeTimers({toFake: ['performance']})
-    try {
-      const old = f.gesture(1)
-      f.send(new wire.GestureStartMessage({seq: 0, ...old}))
-      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...old}))
-      clock.tick(3000)
-      f.bridge.leave('test')
-      await f.join()
-      f.send(new wire.GestureStartMessage({seq: 0, ...old}))
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...old}))
-      const gesture = f.gesture(2)
-      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...gesture}))
-      clock.tick(300)
-      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.7, y: 0.2, ...gesture}))
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
-      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
-      await until(() => f.requests.length === 1)
-      assert.equal(f.requests[0]!.path, '/swipe')
-      assert.equal(f.requests[0]!.body.durationMs, 300)
-      assert.equal(f.requests[0]!.body.from.x, Math.fround(0.7))
-    }
-    finally {
-      clock.restore()
-    }
-  })
 
   it('ignores a scoped reset and delayed Start from a previous gesture', async function() {
     const f = await fixture()
     await f.join()
-    const old = f.gesture(1); const current = f.gesture(2)
+    f.activateInput()
+    const old = f.gesture(1)
+    const current = f.gesture(2)
     f.send(new wire.GestureStartMessage({seq: 0, ...old}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
     f.send(new wire.GestureStartMessage({seq: 2, ...current}))
@@ -602,19 +497,19 @@ describe('Linux iOS integration', function() {
     f.send(new wire.GestureStartMessage({seq: 0, ...old}))
     f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...current}))
     f.send(new wire.GestureStopMessage({seq: 5, ...current}))
-    await until(() => f.requests.length === 1)
-    assert.equal(f.requests[0]!.path, '/tap')
-    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
-    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+    await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]
+      , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
 
   it('fences delayed gesture input across an ownership change', async function() {
     const f = await fixture()
     await f.join()
+    f.activateInput('previous-screen')
     const old = f.gesture(1)
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
     f.bridge.leave('test')
     await f.join()
+    f.activateInput()
     const current = f.gesture(2)
     f.send(new wire.GestureStartMessage({seq: 0, ...old}))
     f.send(new wire.GestureStartMessage({seq: 0, ...current}))
@@ -627,15 +522,33 @@ describe('Linux iOS integration', function() {
     }
     f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...current}))
     f.send(new wire.GestureStopMessage({seq: 3, ...current}))
-    await until(() => f.requests.length === 1)
-    assert.equal(f.requests[0]!.path, '/tap')
-    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
-    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+    await f.expectTouches([['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
+  })
+
+  it('drops buffered contacts from a closed CoreDevice screen', async function() {
+    const f = await fixture()
+    await f.join()
+    const disconnect = f.activateInput('previous-screen')
+    const old = f.gesture(1)
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
+    disconnect()
+    f.activateInput()
+    f.send(new wire.GestureStartMessage({seq: 0, ...old}))
+    f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.2, y: 0.7, ...old}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...old}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...old}))
+    const current = f.gesture(2)
+    f.send(new wire.GestureStartMessage({seq: 0, ...current}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...current}))
+    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 3, ...current}))
+    await f.expectTouches([['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
 
   it('cancels a gesture range before promoting its buffered taps', async function() {
     const f = await fixture()
     await f.join()
+    f.activateInput()
     const first = f.gesture(1)
     f.send(new wire.GestureStartMessage({seq: 0, ...first}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...first}))
@@ -657,47 +570,50 @@ describe('Linux iOS integration', function() {
       , cancel: true, cancelThrough: true}))
     f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...next}))
     f.send(new wire.GestureStopMessage({seq: 3, ...next}))
-    await until(() => f.requests.length >= 1)
-    assert.equal(f.requests.length, 1)
-    assert.equal(f.requests[0]!.path, '/tap')
-    assert.equal(f.requests[0]!.body.x, Math.fround(0.7))
-    assert.equal(f.requests[0]!.body.y, Math.fround(0.8))
+    await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]
+      , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
 
   for (const cancel of [true, false]) {
-    it(`cancels iOS touch with a ${cancel ? 'scoped' : 'sequenced'} reset`, async function() {
+    it(`releases touch with a ${cancel ? 'scoped' : 'sequenced'} reset`, async function() {
       const f = await fixture()
       await f.join()
+      f.activateInput()
       const gesture = f.gesture(1)
       f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...gesture}))
       f.send(new wire.TouchResetMessage({seq: 2, ...gesture, cancel}))
+      await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]])
       f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
       f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
       f.send(new wire.KeyPressMessage('home'))
-      await until(() => f.requests.length === 1)
-      assert.deepEqual(f.requests.map(item => item.path), ['/home'])
+      await until(() => f.requests.some(request => request.path === '/home'))
+      assert.equal(f.requests.length, 3)
     })
   }
 
   it('retains scoped cleanup after a sequenced reset within a gesture', async function() {
     const f = await fixture()
     await f.join()
+    f.activateInput()
     const gesture = f.gesture(1)
     f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...gesture}))
     f.send(new wire.TouchResetMessage({seq: 2, ...gesture, cancel: false}))
     f.send(new wire.TouchDownMessage({seq: 3, contact: 0, x: 0.7, y: 0.8, ...gesture}))
     f.send(new wire.TouchResetMessage({seq: 0, ...gesture, cancel: true}))
+    await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]
+      , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
     f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...gesture}))
     f.send(new wire.KeyPressMessage('home'))
-    await until(() => f.requests.length === 1)
-    assert.deepEqual(f.requests.map(item => item.path), ['/home'])
+    await until(() => f.requests.some(request => request.path === '/home'))
+    assert.equal(f.requests.length, 5)
   })
 
   it('refuses legacy touch without protected reservation and gesture identities', async function() {
     const f = await fixture()
     await f.join()
+    f.activateInput()
     f.send(new wire.GestureStartMessage(0))
     f.send(new wire.TouchDownMessage(1, 0, 0.3, 0.4))
     f.send(new wire.TouchUpMessage(2, 0))
@@ -724,24 +640,25 @@ describe('Linux iOS integration', function() {
     assert.ok(f.disconnects() > 0)
   })
 
-  it('does not turn a multi-finger gesture into an unintended tap', async function() {
+  it('releases the current contact when a second finger arrives', async function() {
     const f = await fixture()
     await f.join()
+    f.activateInput()
     const gesture = f.gesture(1)
     f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
     f.send(new wire.TouchDownMessage({seq: 2, contact: 1, x: 0.6, y: 0.4, ...gesture}))
-    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
-    f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
-    await new Promise(resolve => setTimeout(resolve, 30))
-    assert.equal(f.requests.length, 0)
+    await f.expectTouches([['contact', 0.3, 0.4], ['release', 0.3, 0.4]])
+    f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.5, y: 0.6, ...gesture}))
+    f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...gesture}))
+    f.send(new wire.GestureStopMessage({seq: 5, ...gesture}))
     const next = f.gesture(2)
-    f.send(new wire.GestureStartMessage({seq: 5, ...next}))
-    f.send(new wire.TouchDownMessage({seq: 6, contact: 0, x: 0.7, y: 0.8, ...next}))
-    f.send(new wire.TouchUpMessage({seq: 7, contact: 0, ...next}))
-    f.send(new wire.GestureStopMessage({seq: 8, ...next}))
-    await until(() => f.requests.length === 1)
-    assert.equal(f.requests[0]!.path, '/tap')
+    f.send(new wire.GestureStartMessage({seq: 6, ...next}))
+    f.send(new wire.TouchDownMessage({seq: 7, contact: 0, x: 0.7, y: 0.8, ...next}))
+    f.send(new wire.TouchUpMessage({seq: 8, contact: 0, ...next}))
+    f.send(new wire.GestureStopMessage({seq: 9, ...next}))
+    await f.expectTouches([['contact', 0.3, 0.4], ['release', 0.3, 0.4]
+      , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
 
   it('accepts IPA blobs only and binds job status and cancellation to ownership', async function() {
@@ -1013,87 +930,159 @@ describe('Linux iOS integration', function() {
     assert.deepEqual(delivered, ['start', 'down', 'up'])
   })
 
-  it('reassembles split MJPEG frames and rejects missing or oversized lengths', function() {
-    const decoder = new MjpegDecoder()
-    const part = Buffer.concat([
-      Buffer.from('--frame\r\nContent-Length: 6\r\n\r\n')
-    , Buffer.from('ffd80102ffd9', 'hex'), Buffer.from('\r\n\r\n')
-    ])
-    const frames: Buffer[] = []
-    const stream = Buffer.concat([part, part])
-    for (let i = 0; i < stream.length; i++) {
-      frames.push(...decoder.feed(stream.subarray(i, i + 1)))
-    }
-    assert.equal(frames.length, 2)
-    assert.deepEqual(frames[0], Buffer.from('ffd80102ffd9', 'hex'))
-    assert.equal(new MjpegDecoder().feed(Buffer.concat([part, part])).length, 2)
-    assert.throws(() => new MjpegDecoder().feed(Buffer.from('Content-Length: 99999999\r\n\r\n')))
-    assert.throws(() => new MjpegDecoder().feed(Buffer.from('Content-Type: image/jpeg\r\n\r\n')))
+  it('reassembles split HEVC access units and rejects invalid framing', function() {
+    const decoder = new CoreDeviceScreenDecoder()
+    const stream = Buffer.concat([hevcPacket, hevcPacket])
+    const units = [...stream].flatMap(byte => decoder.feed(Uint8Array.of(byte)))
+    assert.deepEqual(units, [hevcUnit, hevcUnit])
+    assert.throws(() => new CoreDeviceScreenDecoder().feed(Buffer.from('00000006', 'hex')))
+    assert.throws(() => new CoreDeviceScreenDecoder().feed(Buffer.from('ffffffff', 'hex')))
+    assert.throws(() => new CoreDeviceScreenDecoder().feed(Buffer.from('0000000703000000022601',
+      'hex')))
   })
 
-  it('authenticates the screen using STF ownership and streams the existing JPEG protocol',
-    async function() {
+  it('authenticates the screen and forwards live input after HEVC is ready', async function() {
+    const f = await fixture()
+    await f.join(20000)
+    const reservationOwner = f.bridge.owner!
+    let allowed = true
+    let viewer = owner.email
+    let reservationId = reservationOwner.reservationId
+    const api = http.createServer((req, res) => {
+      assert.equal(req.headers.cookie, 'session=signed')
+      if (req.url === '/api/v1/user') {
+        res.end(JSON.stringify({success: true, user: {email: viewer}}))
+        return
+      }
+      const path = viewer === owner.email ? '/api/v1/user/devices/' : '/api/v1/devices/'
+      assert.equal(req.url, path + serial)
+      res.writeHead(allowed ? 200 : 403)
+      res.end(JSON.stringify({success: allowed
+        , device: {serial, owner: {...owner, reservationId}}}))
+    })
+    servers.push(api)
+    const apiUrl = await listen(api)
+    const headers = {origin, cookie: 'session=signed'}
+    const authorized = () => authorizeScreen(apiUrl, origin, serial, reservationOwner, headers,
+      'control')
+    assert.equal(await authorized(), true)
+    assert.equal(await authorizeScreen(apiUrl, origin, serial, reservationOwner,
+      {...headers, origin: 'https://foreign.test'}, 'control'), false)
+    assert.equal(await authorizeScreen(apiUrl, origin, serial, null, headers, 'control'), false)
+    viewer = 'admin@example.test'
+    assert.equal(await authorized(), false)
+    viewer = owner.email
+    reservationId = 'stale-reservation'
+    assert.equal(await authorized(), false)
+    reservationId = reservationOwner.reservationId
+    const screen = f.screenServer(apiUrl)
+    const ws = new WebSocket((await listen(screen.server)).replace('http:', 'ws:'), {headers})
+    const messages: string[] = []
+    const frames: Buffer[] = []
+    ws.on('message', (data, binary) => {
+      if (binary) {
+        frames.push(data as Buffer)
+      }
+      else {
+        messages.push(data.toString())
+      }
+    })
+    try {
+      await once(ws, 'open')
+      ws.send('hevc')
+      ws.send('on')
+      await until(() => frames.length >= 2)
+      assert.ok(messages[0]!.startsWith('start '))
+      assert.deepEqual(JSON.parse(messages[1]!.slice('hevc '.length)),
+        {codec: 'hvc1.1.6.L120.B0', description: 'AQID'})
+      assert.deepEqual(frames[0], Buffer.concat([Buffer.of(2), hevcUnit.subarray(1)]))
+      assert.deepEqual(frames[1], hevcUnit)
+
+      const beforeReady = f.gesture(1)
+      f.send(new wire.GestureStartMessage({seq: 0, ...beforeReady}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...beforeReady}))
+      ws.send('hevc ready')
+      await until(() => messages.includes('hevc input ready'))
+      f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...beforeReady}))
+      f.send(new wire.GestureStopMessage({seq: 3, ...beforeReady}))
+      const gesture = f.gesture(2)
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.5, y: 0.8, ...gesture}))
+      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.5, y: 0.2, ...gesture}))
+      await f.expectTouches([['contact', 0.5, 0.8], ['contact', 0.5, 0.2]])
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+      await f.expectTouches([['contact', 0.5, 0.8], ['contact', 0.5, 0.2]
+        , ['release', 0.5, 0.2]])
+
+      ws.send('hevc keyframe')
+      await until(() => f.requests.some(request => request.path === '/coredevice/keyframe'))
+      assert.deepEqual(f.requests.at(-1)!.body, {sessionId: screenSession})
+
+      allowed = false
+      assert.equal(await authorized(), false)
+      const closed = once(ws, 'close')
+      const streamClosed = once(f.screens[0]!, 'close')
+      const now = Date.now
+      const future = now() + 21000
+      try {
+        Date.now = () => future
+        f.pushFrames()
+        await f.bridge.poll()
+        assert.equal(f.bridge.owner, null, 'Screen frames must not renew device ownership')
+      }
+      finally {
+        Date.now = now
+      }
+      ws.send('ping')
+      const [code] = await closed
+      assert.equal(code, 1008)
+      await streamClosed
+    }
+    finally {
+      ws.terminate()
+      screen.close()
+    }
+  })
+
+  for (const reason of ['the browser lacks HEVC', 'iOS lacks CoreDevice', 'the iPhone is locked']) {
+    it(`reports HEVC status without streaming when ${reason}`, async function() {
       const f = await fixture()
-      let allowed = true
-      let viewer = owner.email
+      await f.join()
+      if (reason === 'iOS lacks CoreDevice') {
+        f.state.coreDevice = false
+      }
+      else if (reason === 'the iPhone is locked') {
+        f.state.ios!.locked = true
+      }
+      await f.bridge.poll()
       const api = http.createServer((req, res) => {
-        assert.equal(req.headers.cookie, 'session=signed')
-        if (req.url === '/api/v1/user') {
-          res.end(JSON.stringify({success: true, user: {email: viewer}}))
-          return
-        }
-        const path = viewer === owner.email ? '/api/v1/user/devices/' : '/api/v1/devices/'
-        assert.equal(req.url, path + serial)
-        res.writeHead(allowed ? 200 : 403)
-        res.end(JSON.stringify({success: allowed, device: {serial, owner}}))
+        res.end(JSON.stringify(req.url === '/api/v1/user' ?
+          {success: true, user: owner} : {success: true, device: {serial, owner: f.bridge.owner}}))
       })
       servers.push(api)
-      const apiUrl = await listen(api)
-      const headers = {origin, cookie: 'session=signed'}
-      assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), true)
-      assert.equal(await authorizeScreen(apiUrl, origin, serial, owner,
-        {...headers, origin: 'https://foreign.test'}), false)
-      assert.equal(await authorizeScreen(apiUrl, origin, serial, null, headers), false)
-      viewer = 'admin@example.test'
-      assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
-      viewer = owner.email
-      await f.join(20000)
-      const screen = createScreenServer({
-        client: f.client, apiUrl, publicOrigin: origin, serial
-      , owner: () => f.bridge.owner
+      const screen = f.screenServer(await listen(api))
+      const ws = new WebSocket((await listen(screen.server)).replace('http:', 'ws:'), {
+        headers: {origin, cookie: 'session=signed'}
       })
-      const url = (await listen(screen.server)).replace('http:', 'ws:')
-      const ws = new WebSocket(url, {headers})
-      const messages: {data: Buffer, binary: boolean}[] = []
-      ws.on('message', (data, binary) => messages.push({data: data as Buffer, binary}))
+      const messages: string[] = []
+      ws.on('message', data => messages.push(data.toString()))
       try {
         await once(ws, 'open')
+        if (reason !== 'the browser lacks HEVC') {
+          ws.send('hevc')
+        }
         ws.send('on')
-        await until(() => messages.filter(message => message.binary).length >= 2)
-        assert.ok(messages[0]!.data.toString().startsWith('start '))
-        assert.deepEqual(messages.find(message => message.binary)!.data,
-          Buffer.from('ffd80102ffd9', 'hex'))
-        allowed = false
-        assert.equal(await authorizeScreen(apiUrl, origin, serial, owner, headers), false)
-        const now = Date.now
-        const future = now() + 21000
-        try {
-          Date.now = () => future
-          f.pushFrames()
-          await new Promise(resolve => setTimeout(resolve, 20))
-          await f.bridge.poll()
-          assert.equal(f.bridge.owner, null, 'Screen frames must not renew device ownership')
-        }
-        finally {
-          Date.now = now
-        }
-        const closed = once(ws, 'close')
-        ws.send('ping')
-        await closed
+        const status = reason === 'the iPhone is locked' ? 'hevc unavailable' : 'hevc unsupported'
+        await until(() => messages.includes(status))
+        assert.equal(f.screens.length, 0)
+        assert.equal(f.requests.length, 0)
+        assert.equal(ws.readyState, WebSocket.OPEN)
       }
       finally {
         ws.terminate()
         screen.close()
       }
     })
+  }
 })

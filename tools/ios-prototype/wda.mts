@@ -88,29 +88,21 @@ export class WdaClient {
       body, signal)
   }
 
-  async gesture(
-    from: {x: number, y: number}, to: {x: number, y: number} | null = null
-    , duration = 50, signal?: AbortSignal
-  ): Promise<void> {
-    const target = to || from
+  async tap(point: {x: number, y: number}, duration: number, signal?: AbortSignal): Promise<void> {
     const {value: size} = await this.call('GET', '/window/size', undefined, signal)
     if (!(size?.width > 0 && size?.height > 0)) {
       throw new Error('WDA did not return a valid window size')
     }
-    const position = (point: {x: number, y: number}) => ({
-      x: Math.round(point.x * (size.width - 1))
-    , y: Math.round(point.y * (size.height - 1))
-    })
+    const x = Math.round(point.x * (size.width - 1))
+    const y = Math.round(point.y * (size.height - 1))
     await this.call('POST', '/actions', {actions: [{
       type: 'pointer'
     , id: 'finger'
     , parameters: {pointerType: 'touch'}
     , actions: [
-        {type: 'pointerMove', duration: 0, origin: 'viewport', ...position(from)}
+        {type: 'pointerMove', duration: 0, origin: 'viewport', x, y}
       , {type: 'pointerDown', button: 0}
-      , ...(from === target ? [{type: 'pause', duration}] : [
-          {type: 'pointerMove', duration, origin: 'viewport', ...position(target)}
-        ])
+      , {type: 'pause', duration}
       , {type: 'pointerUp', button: 0}
       ]
     }]}, signal)

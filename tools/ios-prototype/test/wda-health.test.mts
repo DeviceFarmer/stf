@@ -138,7 +138,7 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
     udid: 'selected-phone', bundleId: 'test.wda.xctrunner'
   , xctest: 'WebDriverAgentRunner.xctest', goIos: 'ios', iproxy: 'iproxy'
   , imageMounter: 'go-ios', pymobiledevice3: 'pymobiledevice3'
-  , wdaPort: 18100, mjpegPort: 19100, tunnelPort: 28100, retryMs: 10, startupMs: 5000
+  , wdaPort: 18100, tunnelPort: 28100, retryMs: 10, startupMs: 5000
   }
   const dependencies: Partial<RuntimeDependencies> = {
     wda, log: () => {}, run: async() => ''

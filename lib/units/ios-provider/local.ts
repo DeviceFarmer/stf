@@ -74,7 +74,7 @@ export function nativeIosCommands(device: IosConfig['devices'][number], options:
   ios: string
   root: string
 }) {
-  const [api, wda, mjpeg, tunnel, screen] = options.ports
+  const [api, wda, tunnel, screen] = options.ports
   const helper = path.join(options.root, 'tools/ios-prototype/container.mts')
   const runtime = path.join(options.root, 'tools/ios-prototype/main.mts')
   const cli = path.join(options.root, 'lib/cli/index.js')
@@ -86,7 +86,7 @@ export function nativeIosCommands(device: IosConfig['devices'][number], options:
   , runtime: [options.node, runtime, '--udid=' + device.udid
     , '--wda-bundle-id=' + device.wdaBundleId, '--image-mounter=pymobiledevice3'
     , '--go-ios=' + options.ios, '--port=' + api, '--wda-port=' + wda
-    , '--mjpeg-port=' + mjpeg, '--tunnel-port=' + tunnel, '--token-file=' + options.tokenFile
+    , '--tunnel-port=' + tunnel, '--token-file=' + options.tokenFile
     , '--state-dir=' + path.join(options.directory, 'device')
     , '--install-dir=' + path.join(options.directory, 'installations')
     , '--storage-url=http://127.0.0.1:' + options.storagePort + '/']
@@ -131,7 +131,7 @@ export async function prepareLocalIos(options: LocalOptions) {
   }
   await fs.chmod(directory, 0o700)
   const proxyPort = Number(new URL(config.publicOrigin).port || 80)
-  const reservation = await reserveIosPorts(config.devices.length * 5
+  const reservation = await reserveIosPorts(config.devices.length * 4
     , [...options.excludedPorts, proxyPort])
   const root = path.resolve(import.meta.dirname, '../../..')
   const routes: Record<string, string> = {}
@@ -156,7 +156,7 @@ export async function prepareLocalIos(options: LocalOptions) {
       }
       await fs.chmod(tokenFile, 0o600)
       const selected = nativeIosCommands(device, {...options, directory: deviceDirectory
-        , ports: reservation.ports.slice(index * 5, index * 5 + 5), tokenFile
+        , ports: reservation.ports.slice(index * 4, index * 4 + 4), tokenFile
         , publicOrigin: config.publicOrigin, node: process.execPath, ios, root})
       routes['/ios/' + id + '/screen'] = selected.screenTarget
       for (const role of ['tunnel', 'runtime', 'provider'] as const) {
