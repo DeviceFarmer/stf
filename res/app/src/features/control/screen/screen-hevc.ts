@@ -1,6 +1,8 @@
 const MAX_DECODE_QUEUE = 6
+const MAX_DECODER_RECOVERIES = 2
 const FIRST_FRAME_TIMEOUT_MS = 6000
 const FRAME_TIMEOUT_MS = 15000
+const KEYFRAME_RETRY_MS = 1100
 
 export function supportsHevcScreen(): boolean {
   return typeof VideoDecoder === 'function' && typeof EncodedVideoChunk === 'function'
@@ -19,15 +21,25 @@ export function startHevcScreen(header: string, callbacks: {
   let submitted = 0
   let timestamp = 0
   let firstValidTimestamp = 0
+  let recoveryAttempts = 0
+  let lastRecovery = -Infinity
+  let keyframeRetry: ReturnType<typeof setTimeout> | undefined
   let watchdog = setTimeout(unavailable, FIRST_FRAME_TIMEOUT_MS)
+
+  function closeDecoder() {
+    const active = decoder
+    decoder = null
+    if (active && active.state !== 'closed') {
+      active.close()
+    }
+  }
 
   function close() {
     closed = true
     clearTimeout(watchdog)
+    clearTimeout(keyframeRetry)
     buffered = []
-    if (decoder && decoder.state !== 'closed') {
-      decoder.close()
-    }
+    closeDecoder()
   }
 
   function fail(reason: 'unsupported' | 'unavailable') {
@@ -58,6 +70,62 @@ export function startHevcScreen(header: string, callbacks: {
     }
   }
 
+  function configureDecoder(decoderConfig: VideoDecoderConfig) {
+    const active = new VideoDecoder({
+      output: frame => {
+        if (decoder === active) {
+          output(frame)
+        }
+        else {
+          frame.close()
+        }
+      }
+      , error: () => {
+        if (decoder === active) {
+          recoverDecoder(decoderConfig)
+        }
+      }
+    })
+    decoder = active
+    active.configure(decoderConfig)
+  }
+
+  function recoverDecoder(decoderConfig: VideoDecoderConfig) {
+    const now = performance.now()
+    if (now - lastRecovery >= FRAME_TIMEOUT_MS) {
+      recoveryAttempts = 0
+    }
+    if (recoveryAttempts >= MAX_DECODER_RECOVERIES) {
+      unavailable()
+      return
+    }
+
+    // A decode error closes the decoder. Start with a fresh keyframe and
+    // keep the stream and input session active while video resynchronizes.
+    recoveryAttempts += 1
+    lastRecovery = now
+    waitingForKey = true
+    submitted = 0
+    firstValidTimestamp = timestamp + 1
+    clearTimeout(watchdog)
+    watchdog = setTimeout(unavailable, FIRST_FRAME_TIMEOUT_MS)
+    try {
+      closeDecoder()
+      configureDecoder(decoderConfig)
+      callbacks.onKeyframe()
+      // The provider rate-limits keyframe requests to one per second.
+      clearTimeout(keyframeRetry)
+      keyframeRetry = setTimeout(() => {
+        if (waitingForKey) {
+          callbacks.onKeyframe()
+        }
+      }, KEYFRAME_RETRY_MS)
+    }
+    catch {
+      unavailable()
+    }
+  }
+
   function decode(frame: Uint8Array<ArrayBuffer>) {
     if (!decoder || !config || closed) {
       return
@@ -80,7 +148,10 @@ export function startHevcScreen(header: string, callbacks: {
           return
         }
       }
-      waitingForKey = false
+      if (waitingForKey) {
+        clearTimeout(keyframeRetry)
+        waitingForKey = false
+      }
       timestamp = Math.max(timestamp + 1, Math.round(performance.now() * 1000))
       decoder.decode(new EncodedVideoChunk({
         type: key ? 'key' : 'delta', timestamp, data: frame.subarray(1)
@@ -88,7 +159,7 @@ export function startHevcScreen(header: string, callbacks: {
       submitted += 1
     }
     catch {
-      unavailable()
+      recoverDecoder(config)
     }
   }
 
@@ -137,8 +208,7 @@ export function startHevcScreen(header: string, callbacks: {
       fail('unsupported')
       return
     }
-    decoder = new VideoDecoder({output, error: unavailable})
-    decoder.configure(config)
+    configureDecoder(config)
     const initial = buffered
     buffered = []
     if (initial.length) {

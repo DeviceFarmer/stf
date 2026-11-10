@@ -120,7 +120,8 @@ export function createScreenServer(options: {
           }
           const video = async(active: ScreenStream) => {
             const startup = new AbortController()
-            const deadline = setTimeout(() => startup.abort(), 15000)
+            // Runtime may wait 6s for the prior worker, 35s for the codec and 10s for video.
+            const deadline = setTimeout(() => startup.abort(), 55000)
             const signal = AbortSignal.any([startup.signal, active.controller.signal])
             const response = await options.client.request('/coredevice/screen', undefined, signal)
               .finally(() => clearTimeout(deadline))
@@ -208,7 +209,7 @@ export function createScreenServer(options: {
                 error => fail(active, error))
               if (release) {
                 active.releaseInput = release
-                ws.send('hevc input ready')
+                ws.send('hevc input ready ' + active.sessionId)
               }
               else {
                 fail(active, new Error('CoreDevice input is unavailable'))

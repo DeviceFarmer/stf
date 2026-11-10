@@ -10,6 +10,7 @@ export interface ScreenTouchOptions {
   scaler: ScalingCoordinator
   control: Control
   singleTouch: boolean
+  screenSessionId: string | null
 }
 
 const SEQ_CYCLE = 100
@@ -17,7 +18,7 @@ const MOUSE_PRESSURE = 0.5
 const SECONDARY_BUTTON = 3
 
 export function bindScreenTouch(options: ScreenTouchOptions): () => void {
-  const {root, input, fingers, screen, scaler, control, singleTouch} = options
+  const {root, input, fingers, screen, scaler, control, singleTouch, screenSessionId} = options
   const slots: number[] = []
   const slotted: Record<string, number> = Object.create(null)
   let seq = -1
@@ -148,10 +149,14 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     stopMousing()
   }
 
-  function startMousing() {
-    activeGesture = 'mouse'
-    control.gestureStart(nextSeq())
-    input.focus({preventScroll: true})
+  function startGesture(kind: 'mouse' | 'touch') {
+    activeGesture = kind
+    if (screenSessionId) {
+      control.gestureStart(nextSeq(), screenSessionId)
+    }
+    else {
+      control.gestureStart(nextSeq())
+    }
   }
 
   function mouseDownListener(e: MouseEvent) {
@@ -166,7 +171,8 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     fakePinch = e.altKey
 
     calculateBounds()
-    startMousing()
+    startGesture('mouse')
+    input.focus({preventScroll: true})
 
     const x = e.pageX - screen.bounds.x
     const y = e.pageY - screen.bounds.y
@@ -281,11 +287,6 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     }
   }
 
-  function startTouching() {
-    activeGesture = 'touch'
-    control.gestureStart(nextSeq())
-  }
-
   function touchStartListener(e: TouchEvent) {
     e.preventDefault()
     if (singleTouch && e.touches.length !== 1) {
@@ -299,7 +300,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
     if (e.touches.length === e.changedTouches.length) {
       cancelGesture()
-      startTouching()
+      startGesture('touch')
     }
     if (activeGesture !== 'touch') {
       return

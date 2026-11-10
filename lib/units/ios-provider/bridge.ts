@@ -27,6 +27,7 @@ export class IosBridge {
   readonly solo = wireutil.makePrivateChannel()
   owner: IosOwner | null = null
   private automated = false
+  private automationLease: string | undefined
   private state: IosDeviceState | null = null
   private identity: InstanceType<typeof wire.DeviceIdentityMessage> | null = null
   private registered = false
@@ -34,6 +35,7 @@ export class IosBridge {
   private activity = 0
   private timeout: number
   private queue = Promise.resolve()
+  private reservationQueue = Promise.resolve()
   private touch: {sessionId: string, position: Point, pendingSeq: number | null} | null = null
   private touchRejected = false
   private readonly gestures: TouchGesture
@@ -77,13 +79,14 @@ export class IosBridge {
             throw new Error('Device not ready')
           }
           await grouputil.match({serial: options.serial}, message.requirements)
-          this.join(message.owner, message.timeout, message.usage)
+          await this.changeReservation(() =>
+            this.join(message.owner, message.timeout, message.usage))
           return {owner: this.owner}
         })
       })
       .on(wire.AutoGroupMessage, (_channel, message) => {
         if (this.registered && !this.owner) {
-          this.join(message.owner)
+          this.changeReservation(() => this.join(message.owner)).catch(this.report)
         }
       })
       .on(wire.UngroupMessage, (channel, message) => {
@@ -92,13 +95,16 @@ export class IosBridge {
           if (message.reservationId && message.reservationId !== this.owner?.reservationId) {
             throw new Error('Device session changed')
           }
-          this.leave('ungroup_request')
+          await this.leave('ungroup_request')
         })
       })
       .on(wire.TouchDownMessage, (_channel, message) => {
-        const sessionId = this.nativeInput.active
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
         this.gestures.push(message.seq, () => {
-          if (!sessionId || sessionId !== this.nativeInput.active) {
+          if (!this.isActiveScreen(sessionId)) {
             return
           }
           if (message.contact !== 0 || this.touch) {
@@ -112,10 +118,13 @@ export class IosBridge {
         }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
       })
       .on(wire.TouchMoveMessage, (_channel, message) => {
-        const sessionId = this.nativeInput.active
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
         this.gestures.push(message.seq, () => {
           const touch = this.touch
-          if (sessionId && touch?.sessionId === sessionId &&
+          if (touch?.sessionId === sessionId &&
               message.contact === 0 && this.point(message)) {
             if (touch.pendingSeq === null) {
               touch.position = message
@@ -132,17 +141,25 @@ export class IosBridge {
         }, message.gestureId, message.reservationId, {type: 'move', contact: message.contact})
       })
       .on(wire.TouchUpMessage, (_channel, message) => {
-        const sessionId = this.nativeInput.active
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
         this.gestures.push(message.seq, () => {
-          if (sessionId && this.touch?.sessionId === sessionId && message.contact === 0) {
+          if (this.touch?.sessionId === sessionId && message.contact === 0) {
             this.resetTouch()
           }
         }, message.gestureId, message.reservationId, {type: 'up', contact: message.contact})
       })
       .on(wire.GestureStartMessage, (_channel, message) => {
-        this.gestures.start(message.seq, message.gestureId, message.reservationId)
+        if (this.isActiveScreen(message.screenSessionId)) {
+          this.gestures.start(message.seq, message.gestureId, message.reservationId)
+        }
       })
       .on(wire.TouchResetMessage, (_channel, message) => {
+        if (!this.isActiveScreen(message.screenSessionId)) {
+          return
+        }
         if (message.gestureId && message.cancel !== false) {
           this.gestures.clear(message.gestureId, message.reservationId,
             message.cancelThrough === true)
@@ -153,10 +170,13 @@ export class IosBridge {
         }
       })
       .on(wire.TouchCommitMessage, (_channel, message) => {
-        const sessionId = this.nativeInput.active
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
         this.gestures.push(message.seq, () => {
           const touch = this.touch
-          if (sessionId && touch?.sessionId === sessionId && touch.pendingSeq !== null) {
+          if (touch?.sessionId === sessionId && touch.pendingSeq !== null) {
             if (touch.pendingSeq === message.seq) {
               touch.pendingSeq = null
               this.nativeInput.send(sessionId, 'down', touch.position)
@@ -169,7 +189,9 @@ export class IosBridge {
         }, message.gestureId, message.reservationId, {type: 'commit'})
       })
       .on(wire.GestureStopMessage, (_channel, message) => {
-        this.gestures.stop(message.seq, message.gestureId, message.reservationId)
+        if (this.isActiveScreen(message.screenSessionId)) {
+          this.gestures.stop(message.seq, message.gestureId, message.reservationId)
+        }
       })
       .on(wire.TypeMessage, (_channel, message) => this.command('/text', {text: message.text}))
       .on(wire.PasteMessage, (channel, message) => {
@@ -256,6 +278,10 @@ export class IosBridge {
     return [point.x, point.y].every(value => Number.isFinite(value) && value >= 0 && value <= 1)
   }
 
+  private isActiveScreen(sessionId: string | null): sessionId is string {
+    return sessionId !== null && sessionId === this.nativeInput.active
+  }
+
   private installationCommand(channel: string, path: string, id?: string) {
     const epoch = this.epoch
     const lease = this.lease
@@ -306,10 +332,14 @@ export class IosBridge {
       return undefined
     }
     const active = AbortSignal.any([signal, this.ownerAbort.signal])
+    this.gestures.clear()
     const disconnect = this.nativeInput.connect(sessionId, active, fail)
     return () => {
+      const current = this.nativeInput.active
       disconnect()
-      this.resetTouch()
+      if (current === null || current === sessionId) {
+        this.gestures.clear()
+      }
     }
   }
 
@@ -373,14 +403,48 @@ export class IosBridge {
     )
   }
 
-  private join(owner: IosOwner, timeout?: number | null, usage?: string | null) {
+  private changeReservation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.reservationQueue.then(operation)
+    this.reservationQueue = result.then(() => {}, () => {})
+    return result
+  }
+
+  private async setAutomation(active: boolean, lease: string) {
+    const response = await this.client.request('/automation', {active, lease},
+      AbortSignal.timeout(35000))
+    await response.body?.cancel()
+    if (!active && this.automationLease === lease) {
+      this.automationLease = undefined
+    }
+  }
+
+  private async join(owner: IosOwner, timeout?: number | null, usage?: string | null) {
+    if (!this.registered) {
+      throw new Error('Device not ready')
+    }
     if (this.owner && this.owner.email !== owner.email) {
       throw new Error('Device already owned')
     }
     if (!this.owner) {
+      const epoch = this.epoch
+      if (this.automationLease) {
+        await this.setAutomation(false, this.automationLease)
+      }
+      const reservationId = randomUUID()
+      const automated = usage === 'automation'
+      if (automated) {
+        this.automationLease = reservationId
+        await this.setAutomation(true, reservationId)
+      }
+      if (!this.registered || this.epoch !== epoch) {
+        if (automated) {
+          await this.setAutomation(false, reservationId)
+        }
+        throw new Error('Device session changed')
+      }
       this.ownerAbort = new AbortController()
-      this.owner = {...owner, reservationId: randomUUID()}
-      this.automated = usage === 'automation'
+      this.owner = {...owner, reservationId}
+      this.automated = automated
       this.gestures.setOwner(this.owner.reservationId!)
       this.lease = randomUUID()
       this.epoch++
@@ -395,6 +459,7 @@ export class IosBridge {
   leave(reason: string) {
     this.ownerAbort.abort()
     const owner = this.owner
+    const automated = this.automated
     const id = this.installId
     const lease = this.lease
     this.installId = null
@@ -406,6 +471,12 @@ export class IosBridge {
     this.epoch++
     this.gestures.setOwner(null)
     this.disconnect()
+    if (owner && automated && reason !== 'device_absent') {
+      return this.changeReservation(async() => {
+        await this.setAutomation(false, owner.reservationId!).catch(this.report)
+        this.broadcast(new wire.LeaveGroupMessage(this.options.serial, owner, reason))
+      })
+    }
     if (owner) {
       this.broadcast(new wire.LeaveGroupMessage(this.options.serial, owner, reason))
     }
@@ -467,6 +538,15 @@ export class IosBridge {
         this.publishHealth(state)
         return
       }
+      const orphanedLease = state.automationLease || this.automationLease
+      if (orphanedLease && !this.owner) {
+        await this.changeReservation(async() => {
+          if (!this.owner) {
+            await this.setAutomation(false, orphanedLease)
+          }
+        })
+        return
+      }
       if (this.state?.generation !== state.generation || this.state?.instance !== state.instance) {
         this.absent()
       }
@@ -502,7 +582,7 @@ export class IosBridge {
       }
       this.publishHealth(state)
       if (this.owner && Date.now() - this.activity > this.timeout * 1000) {
-        this.leave('automatic_timeout')
+        await this.leave('automatic_timeout')
       }
       if (this.owner && this.installId) {
         const epoch = this.epoch

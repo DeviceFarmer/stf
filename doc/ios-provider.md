@@ -157,13 +157,18 @@ pauses live viewing for automation reservations because CoreDevice can keep the
 phone awake and reserve media resources used by Appium tests. STF uses WDA for
 screenshots and operations such as Home and text input.
 
-Appium uses the private WDA forward, including on older iOS versions. If Appium
-needs MJPEG for screen recording or streamed screenshots, launch the runtime with
-`--appium-mjpeg-port=19100`. When Appium attaches to the existing WDA with
-`webDriverAgentUrl`, configure its `mjpegServerPort` or `mjpegScreenshotUrl` for
-`http://127.0.0.1:19100/`. Appium must share the runtime's network namespace.
-Choose a free port distinct from the API, WDA and tunnel ports. STF's web screen
-uses CoreDevice regardless of this option.
+Reserve the iPhone through the STF API before starting an Appium session. STF
+waits for the manual CoreDevice session to close, then lets Appium use WDA
+without restarting it. From the runtime's network namespace, set
+`appium:webDriverAgentUrl` to `http://127.0.0.1:18100` and provide the device's
+`appium:udid` and `appium:platformVersion`. Quit the Appium session before
+releasing the reservation so STF can resume its own WDA health checks.
+This workflow also works on iOS versions that predate CoreDevice screen support.
+
+For Appium video only, start the runtime with `--appium-mjpeg-port=19100`.
+Set `appium:mjpegServerPort` to `19100` for Appium recording or
+`appium:mjpegScreenshotUrl` to `http://127.0.0.1:19100/` for streamed screenshots.
+Choose an unused loopback port distinct from the API, WDA and tunnel ports.
 
 Remove the old `--mjpeg-port` argument from custom runtime launches. The private
 prototype endpoints `/screen`, `/tap` and `/swipe` have been removed. Update the

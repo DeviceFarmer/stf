@@ -53,13 +53,14 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const screenRef = useRef<ScreenGeometry>({rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}})
   const [displayError, setDisplayError] = useState<DisplayError>(false)
   const [hasFrame, setHasFrame] = useState(false)
-  const [iosInputReady, setIosInputReady] = useState(false)
+  const [iosScreenSessionId, setIosScreenSessionId] = useState<string | null>(null)
   const [streamStatus, setStreamStatus] = useState<ScreenStreamStatus>(null)
 
   const readOnly = control.readOnly
   const singleTouch = device.platform === 'iOS'
   const touchEnabled = !readOnly && (!singleTouch ||
-    (showScreen && iosInputReady && device.using && !isAutomated(device) && device.ios?.locked !== true))
+    (showScreen && iosScreenSessionId !== null && device.using &&
+      !isAutomated(device) && device.ios?.locked !== true))
   const url = device.display?.url
   const displayWidth = device.display?.width || 0
   const displayHeight = device.display?.height || 0
@@ -93,7 +94,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , canControl: () => !readOnlyRef.current
       , onDisplayError: setDisplayError
       , onFirstFrame: () => setHasFrame(true)
-      , onInputReady: setIosInputReady
+      , onInputReady: setIosScreenSessionId
       , onStatusChange: setStreamStatus
     })
     streamRef.current = stream
@@ -142,8 +143,9 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , scaler
       , control
       , singleTouch
+      , screenSessionId: iosScreenSessionId
     })
-  }, [control, touchEnabled, scaler, singleTouch])
+  }, [control, touchEnabled, scaler, singleTouch, iosScreenSessionId])
 
   useEffect(() => {
     const input = inputRef.current

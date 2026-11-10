@@ -32,6 +32,11 @@ var adb = adbutil()
 
 var log = logger.createLogger('api:controllers:user')
 
+function reservationTimeout(device: DeviceDocument) {
+  // The iOS provider drains CoreDevice and hands WDA over before acknowledging.
+  return device.platform === 'iOS' ? 40000 : 5000
+}
+
 function getUser(req: ApiRequest, res: Response) {
   // delete req.user.groups.lock
   res.json({
@@ -149,7 +154,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
 
         var messageListener: MessageListener
 
-        // Timer will be called if no JoinGroupMessage is received till 5 seconds
+        // Stop waiting if the provider has not acknowledged the reservation.
         var responseTimer = setTimeout(function() {
           req.options.channelRouter.removeListener(wireutil.global, messageListener)
           lockutil.unlockDevice(lock)
@@ -157,7 +162,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               success: false
             , description: 'Device is not responding'
           })
-        }, 5000)
+        }, reservationTimeout(device))
 
         messageListener = wirerouter()
           .on(wire.JoinGroupMessage, function(channel, message) {
@@ -223,14 +228,14 @@ function deleteUserDeviceBySerial(req: ApiRequest, res: Response) {
     }
     var messageListener: MessageListener
 
-    // Timer will be called if no LeaveGroupMessage is received till 5 seconds
+    // Stop waiting if the provider has not acknowledged release.
     var responseTimer = setTimeout(function() {
       req.options.channelRouter.removeListener(wireutil.global, messageListener)
       return res.status(504).json({
           success: false
         , description: 'Device is not responding'
       })
-    }, 5000)
+    }, reservationTimeout(device))
 
     messageListener = wirerouter()
       .on(wire.LeaveGroupMessage, function(channel, message) {

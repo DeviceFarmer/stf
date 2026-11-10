@@ -54,6 +54,7 @@ describe('Linux iOS integration', function() {
     const requests: {path: string, body: any}[] = []
     let cancelled = false
     let failKeepalive = false
+    let automationGate: Promise<void> | undefined
     const errors: unknown[] = []
     const screens: http.ServerResponse[] = []
     const sent: {channel: string, envelope: ReturnType<typeof wire.Envelope.decode>}[] = []
@@ -103,7 +104,18 @@ describe('Linux iOS integration', function() {
           return
         }
         let response = {success: true} as object
-        if (req.url?.startsWith('/installations/')) {
+        if (req.url === '/automation') {
+          const {active, lease} = requests.at(-1)!.body
+          await automationGate
+          if (active) {
+            state.automationLease = lease
+          }
+          else if (state.automationLease === lease) {
+            delete state.automationLease
+          }
+          response = {active: Boolean(state.automationLease)}
+        }
+        else if (req.url?.startsWith('/installations/')) {
           response = {id: requests.at(-1)!.body.id || 'job', settled: false}
         }
         else if (req.url === '/unlock') {
@@ -126,20 +138,24 @@ describe('Linux iOS integration', function() {
       bridge.handle(channel, transaction ?
         wireutil.transaction('reply', message) : wireutil.envelope(message))
     }
-    const join = async(timeout = 900000, usage?: string) => {
-      await bridge.poll()
-      send(new wire.DeviceRegisteredMessage(serial), false, bridge.solo)
+    const requestGroup = (timeout: number, usage?: string) => {
       send(new wire.GroupMessage(owner, timeout, [
         new wire.DeviceRequirement('serial', serial, wire.RequirementType.EXACT)
       ], usage), true)
+    }
+    const join = async(timeout = 900000, usage?: string) => {
+      await bridge.poll()
+      send(new wire.DeviceRegisteredMessage(serial), false, bridge.solo)
+      requestGroup(timeout, usage)
       await until(() => bridge.owner !== null)
     }
     const gestures = new Map<number, string>()
-    const gesture = (order: number) => {
+    const gesture = (order: number, screenSessionId = screenSession) => {
       if (!gestures.has(order)) {
         gestures.set(order, '11111111-1111-4111-8111-111111111111:' + order + ':' + Date.now())
       }
-      return {gestureId: gestures.get(order)!, reservationId: bridge.owner?.reservationId || null}
+      return {gestureId: gestures.get(order)!, reservationId: bridge.owner?.reservationId || null
+        , screenSessionId}
     }
     const activateInput = (id = screenSession) => {
       const disconnect = bridge.connectCoreDeviceInput(id, new AbortController().signal,
@@ -160,8 +176,15 @@ describe('Linux iOS integration', function() {
     , mode: () => bridge.screenMode()
     , connectInput: (id, signal, fail) => bridge.connectCoreDeviceInput(id, signal, fail)
     })
-    return {bridge, state, requests, sent, send, join, gesture, errors, activateInput
+    return {bridge, state, requests, sent, send, join, requestGroup, gesture, errors, activateInput
       , expectTouches, screenServer, screens
+      , holdAutomation: () => {
+        let release = () => {}
+        automationGate = new Promise<void>(resolve => {
+          release = resolve
+        })
+        return release
+      }
       , failKeepalive: () => {
  failKeepalive = true
 }
@@ -182,10 +205,60 @@ describe('Linux iOS integration', function() {
     const response = wire.TransactionDoneMessage.decode(acknowledgement.envelope.message)
     assert.equal(response.success, true)
     assert.equal(JSON.parse(response.body!).owner.reservationId, reservation.owner.reservationId)
-    f.bridge.leave('ungroup_request')
+    await f.bridge.leave('ungroup_request')
     const left = f.sent.find(item => item.envelope.type === wire.LeaveGroupMessage.$code)
     assert.equal(wire.LeaveGroupMessage.decode(left!.envelope.message).owner.email, owner.email)
     assert.equal(f.bridge.owner, null)
+    const transitions = f.requests.filter(request => request.path === '/automation')
+    assert.deepEqual(transitions.map(request => request.body), [
+      {active: true, lease: reservation.owner.reservationId}
+    , {active: false, lease: reservation.owner.reservationId}
+    ])
+  })
+
+  it('waits for the runtime to acknowledge the automation handoff and release', async() => {
+    const f = await fixture()
+    await f.join()
+    await f.bridge.leave('ungroup_request')
+    f.sent.length = 0
+    const finishActivation = f.holdAutomation()
+    f.requestGroup(900000, 'automation')
+    await until(() => f.requests.some(request => request.path === '/automation'))
+    assert.equal(Boolean(f.bridge.owner), false)
+    assert.equal(f.sent.some(item => item.envelope.type === wire.JoinGroupMessage.$code), false)
+    finishActivation()
+    await until(() => f.bridge.owner !== null)
+    const lease = f.state.automationLease
+    assert.equal(lease, f.bridge.owner?.reservationId)
+
+    f.sent.length = 0
+    const finishRelease = f.holdAutomation()
+    const leaving = f.bridge.leave('ungroup_request')
+    f.requestGroup(900000)
+    await until(() => f.requests.some(request =>
+      request.path === '/automation' && !request.body.active))
+    assert.equal(f.sent.length, 0)
+    assert.equal(Boolean(f.bridge.owner), false)
+    finishRelease()
+    await leaving
+    await until(() => f.bridge.owner !== null)
+    assert.deepEqual(f.sent.slice(0, 2).map(item => item.envelope.type), [
+      wire.LeaveGroupMessage.$code, wire.JoinGroupMessage.$code
+    ])
+    assert.notEqual(f.bridge.owner?.reservationId, lease)
+    assert.equal(f.state.automationLease, undefined)
+  })
+
+  it('clears an orphaned Appium lease before registering a restarted provider', async() => {
+    const f = await fixture()
+    f.state.automationLease = '0ecb72bf-710f-491f-8155-2e75983a4347'
+    await f.bridge.poll()
+    assert.deepEqual(f.requests, [{path: '/automation', body: {
+      active: false, lease: '0ecb72bf-710f-491f-8155-2e75983a4347'
+    }}])
+    assert.equal(f.sent.length, 0)
+    await f.join()
+    assert.ok(f.bridge.owner)
   })
 
   for (const viewer of [owner.email, 'viewer@example.test']) {
@@ -226,9 +299,9 @@ describe('Linux iOS integration', function() {
         ws.send('hevc ready')
         ws.send('ping')
         await until(() => messages.includes('pong'))
-        assert.ok(!messages.includes('hevc input ready'))
+        assert.ok(!messages.some(message => message.startsWith('hevc input ready')))
         assert.equal(f.screens.length, 0)
-        assert.equal(f.requests.length, 0)
+        assert.ok(f.requests.every(request => request.path === '/automation'))
         const now = Date.now
         const future = now() + 21000
         try {
@@ -494,7 +567,7 @@ describe('Linux iOS integration', function() {
   it('fences delayed gesture input across an ownership change', async function() {
     const f = await fixture()
     await f.join()
-    f.activateInput('previous-screen')
+    f.activateInput()
     const old = f.gesture(1)
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
     f.send(new wire.TouchCommitMessage({seq: 2, ...old}))
@@ -509,7 +582,9 @@ describe('Linux iOS integration', function() {
     f.send(new wire.TouchResetMessage({seq: 0, ...old, cancel: true}))
     for (const reservationId of [old.reservationId, null]) {
       for (const cancel of [true, null]) {
-        f.send(new wire.TouchResetMessage({seq: 0, gestureId: null, reservationId, cancel}))
+        f.send(new wire.TouchResetMessage({
+          seq: 0, gestureId: null, reservationId, screenSessionId: screenSession, cancel
+        }))
       }
     }
     f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...current}))
@@ -521,7 +596,7 @@ describe('Linux iOS integration', function() {
     const f = await fixture()
     await f.join()
     const disconnect = f.activateInput('previous-screen')
-    const old = f.gesture(1)
+    const old = f.gesture(1, 'previous-screen')
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
     f.send(new wire.TouchCommitMessage({seq: 2, ...old}))
     disconnect()
@@ -537,6 +612,32 @@ describe('Linux iOS integration', function() {
     f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...current}))
     f.send(new wire.GestureStopMessage({seq: 4, ...current}))
     await f.expectTouches([['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
+  })
+
+  it('drops late packets and clears incomplete gestures on screen reconnect', async function() {
+    const f = await fixture()
+    await f.join()
+    const disconnect = f.activateInput('previous-screen')
+    const old = f.gesture(1, 'previous-screen')
+    f.send(new wire.GestureStartMessage({seq: 0, ...old}))
+    disconnect()
+    f.activateInput()
+    const delayed = f.gesture(2, 'previous-screen')
+    f.send(new wire.GestureStartMessage({seq: 0, ...delayed}))
+    for (const gesture of [old, delayed]) {
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+    }
+    const current = f.gesture(3)
+    f.send(new wire.GestureStartMessage({seq: 0, ...current}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...current}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...delayed}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...current}))
+    await f.expectTouches([['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
+    assert.deepEqual(f.errors, [])
   })
 
   it('cancels a gesture range before promoting its buffered taps', async function() {
@@ -610,7 +711,7 @@ describe('Linux iOS integration', function() {
     assert.equal(f.requests.length, 5)
   })
 
-  it('refuses legacy touch without protected reservation and gesture identities', async function() {
+  it('requires reservation, gesture and screen identities for touch', async function() {
     const f = await fixture()
     await f.join()
     f.activateInput()
@@ -618,6 +719,11 @@ describe('Linux iOS integration', function() {
     f.send(new wire.TouchDownMessage(1, 0, 0.3, 0.4))
     f.send(new wire.TouchCommitMessage(2))
     f.send(new wire.TouchUpMessage(3, 0))
+    const missingScreen = {...f.gesture(1), screenSessionId: null}
+    f.send(new wire.GestureStartMessage({seq: 0, ...missingScreen}))
+    f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...missingScreen}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...missingScreen}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...missingScreen}))
     f.send(new wire.KeyPressMessage('home'))
     await until(() => f.requests.length === 1)
     assert.deepEqual(f.requests.map(item => item.path), ['/home'])
@@ -1035,7 +1141,7 @@ describe('Linux iOS integration', function() {
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...beforeReady}))
       f.send(new wire.TouchCommitMessage({seq: 2, ...beforeReady}))
       ws.send('hevc ready')
-      await until(() => messages.includes('hevc input ready'))
+      await until(() => messages.includes('hevc input ready ' + screenSession))
       f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...beforeReady}))
       f.send(new wire.GestureStopMessage({seq: 4, ...beforeReady}))
       const gesture = f.gesture(2)

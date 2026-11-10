@@ -210,8 +210,9 @@ describe('screen availability notice', () => {
     down()
     expect(manual.touchDown).not.toHaveBeenCalled()
 
-    await act(async() => socket.message('hevc input ready'))
+    await act(async() => socket.message('hevc input ready screen-a'))
     down()
+    expect(manual.gestureStart).toHaveBeenCalledExactlyOnceWith(0, 'screen-a')
     expect(manual.touchDown).toHaveBeenCalledOnce()
     await act(async() => socket.message('hevc unavailable'))
     expect(manual.touchReset).toHaveBeenCalledOnce()

@@ -7,6 +7,7 @@ export interface IosDeviceState {
   generation: number
   instance?: string
   coreDevice?: boolean
+  automationLease?: string
   ios?: IosDeviceStatus
   info?: {ProductType?: string, ProductVersion?: string, DeviceName?: string}
 }

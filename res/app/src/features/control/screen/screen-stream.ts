@@ -2,6 +2,7 @@ import type {Device} from '@/core/devices/types'
 import {canViewDevice, isAutomated} from '@/core/devices/enhance'
 import {rotator} from './rotator'
 import {startHevcScreen, supportsHevcScreen} from './screen-hevc'
+import {createHevcCropDetector, type HevcCrop} from './screen-hevc-crop'
 
 export interface ScreenBounds {
   x: number
@@ -30,7 +31,7 @@ export interface ScreenStreamOptions {
   canControl: () => boolean
   onDisplayError: (error: DisplayError) => void
   onFirstFrame: () => void
-  onInputReady: (ready: boolean) => void
+  onInputReady: (sessionId: string | null) => void
   onStatusChange: (status: ScreenStreamStatus) => void
 }
 
@@ -79,7 +80,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   let hevcRequested = false
   let awaitingLockStatus = false
   let observedAutomation = false
-  let hevcInput: 'waiting' | 'available' | 'requested' = 'waiting'
+  let hevcInput: 'waiting' | 'available' | 'requested' | 'ready' = 'waiting'
   let hevc: ReturnType<typeof startHevcScreen> | null = null
 
   let adjustedBoundSize: BoundSize | null = null
@@ -211,8 +212,8 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   }
 
   function closeHevc() {
-    if (hevcInput === 'requested') {
-      options.onInputReady(false)
+    if (hevcInput === 'ready') {
+      options.onInputReady(null)
     }
     hevcInput = 'waiting'
     hevcRequested = false
@@ -305,7 +306,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       awaitingLockStatus = false
       setDisplayError(false)
     }
-    if (hevcInput === 'requested' && !canControlIPhone()) {
+    if ((hevcInput === 'requested' || hevcInput === 'ready') && !canControlIPhone()) {
       closeHevcConnection()
     }
     updateStatus()
@@ -409,9 +410,15 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     maybeFlipLetterbox()
   }
 
-  function drawImage(image: CanvasImageSource, width: number, height: number, scale = frontBackRatio) {
+  function drawImage(image: CanvasImageSource, width: number, height: number, scale = frontBackRatio,
+    crop?: HevcCrop | null) {
     updateImageArea(width, height, scale)
-    g.drawImage(image, 0, 0, width, height)
+    if (crop) {
+      g.drawImage(image, 0, 0, crop.width, crop.height, 0, 0, width, height)
+    }
+    else {
+      g.drawImage(image, 0, 0, width, height)
+    }
     transportLost = false
     if (displayError) {
       setDisplayError(false)
@@ -459,6 +466,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       return
     }
     frameGeneration += 1
+    const detectCrop = createHevcCropDetector(root.ownerDocument)
     const session = startHevcScreen(header, {
       onFrame: (frame) => {
         if (hevc !== session || ws !== socket || !shouldUpdateScreen()) {
@@ -473,7 +481,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
           return
         }
         // Keep the canvas aligned with touch coordinates as the encoder changes resolution.
-        drawImage(frame, width, height, 1)
+        drawImage(frame, width, height, 1, detectCrop(frame))
         awaitingLockStatus = false
         if (hevcInput === 'waiting') {
           hevcInput = 'available'
@@ -516,9 +524,13 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
           drawFrame(message.data, socket)
         }
       }
-      else if (message.data === 'hevc input ready') {
-        if (hevcInput === 'requested' && canControlIPhone() && shouldUpdateScreen()) {
-          options.onInputReady(true)
+      else if (typeof message.data === 'string' && message.data.startsWith('hevc input ready ')) {
+        const sessionId = message.data.slice('hevc input ready '.length)
+        if (hevcInput === 'requested' && sessionId.length > 0 && sessionId.length <= 128 &&
+          !/[^A-Za-z0-9-]/.test(sessionId) &&
+          canControlIPhone() && shouldUpdateScreen()) {
+          hevcInput = 'ready'
+          options.onInputReady(sessionId)
         }
       }
       else if (message.data === 'hevc automation') {

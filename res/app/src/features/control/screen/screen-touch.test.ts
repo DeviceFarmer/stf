@@ -13,6 +13,7 @@ function fixture(singleTouch = false) {
   , fingers: Array.from({length: 10}, () => document.createElement('span'))
   , screen: {rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}}
   , scaler: scalingCoordinator(1170, 2532), control: control as unknown as Control, singleTouch
+  , screenSessionId: null
   })
   return {root, control, unbind}
 }
