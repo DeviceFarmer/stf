@@ -20,6 +20,8 @@ export interface BridgeOptions {
 
 interface Point {x: number, y: number}
 
+const touchSequenceSize = 100
+
 export class IosBridge {
   readonly channel: string
   readonly solo = wireutil.makePrivateChannel()
@@ -32,8 +34,8 @@ export class IosBridge {
   private activity = 0
   private timeout: number
   private queue = Promise.resolve()
-  private touch: {sessionId: string, position: Point} | null = null
-  private multitouch = false
+  private touch: {sessionId: string, position: Point, pendingSeq: number | null} | null = null
+  private touchRejected = false
   private readonly gestures: TouchGesture
   private readonly nativeInput: CoreDeviceInput
   private lease = randomUUID()
@@ -100,22 +102,32 @@ export class IosBridge {
             return
           }
           if (message.contact !== 0 || this.touch) {
-            this.resetTouch()
-            this.multitouch = true
+            this.rejectTouch()
           }
-          else if (!this.multitouch && this.point(message)) {
-            this.touch = {sessionId, position: message}
-            this.nativeInput.send(sessionId, 'down', message)
+          else if (!this.touchRejected && this.point(message)) {
+            // A batch may include a second contact before its first Commit.
+            this.touch = {sessionId, position: message
+              , pendingSeq: (message.seq + 1) % touchSequenceSize}
           }
         }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
       })
       .on(wire.TouchMoveMessage, (_channel, message) => {
         const sessionId = this.nativeInput.active
         this.gestures.push(message.seq, () => {
-          if (sessionId && this.touch?.sessionId === sessionId &&
+          const touch = this.touch
+          if (sessionId && touch?.sessionId === sessionId &&
               message.contact === 0 && this.point(message)) {
-            this.touch.position = message
-            this.nativeInput.send(sessionId, 'move', message)
+            if (touch.pendingSeq === null) {
+              touch.position = message
+              this.nativeInput.send(sessionId, 'move', message)
+            }
+            else if (touch.pendingSeq === message.seq) {
+              touch.position = message
+              touch.pendingSeq = (message.seq + 1) % touchSequenceSize
+            }
+            else {
+              this.rejectTouch()
+            }
           }
         }, message.gestureId, message.reservationId, {type: 'move', contact: message.contact})
       })
@@ -141,8 +153,20 @@ export class IosBridge {
         }
       })
       .on(wire.TouchCommitMessage, (_channel, message) => {
-        this.gestures.push(message.seq, () => {}, message.gestureId, message.reservationId,
-          {type: 'commit'})
+        const sessionId = this.nativeInput.active
+        this.gestures.push(message.seq, () => {
+          const touch = this.touch
+          if (sessionId && touch?.sessionId === sessionId && touch.pendingSeq !== null) {
+            if (touch.pendingSeq === message.seq) {
+              touch.pendingSeq = null
+              this.nativeInput.send(sessionId, 'down', touch.position)
+            }
+            else {
+              // A recovered gap in the first batch may have hidden another contact.
+              this.rejectTouch()
+            }
+          }
+        }, message.gestureId, message.reservationId, {type: 'commit'})
       })
       .on(wire.GestureStopMessage, (_channel, message) => {
         this.gestures.stop(message.seq, message.gestureId, message.reservationId)
@@ -247,14 +271,23 @@ export class IosBridge {
   }
 
   private resetTouch() {
-    if (this.touch) {
-      this.nativeInput.send(this.touch.sessionId, 'up', this.touch.position)
-    }
+    const touch = this.touch
     this.touch = null
-    this.multitouch = false
+    this.touchRejected = false
+    if (touch && touch.pendingSeq === null) {
+      this.nativeInput.send(touch.sessionId, 'up', touch.position)
+    }
   }
 
-  screenMode(): 'control' | 'view' | 'unsupported' | 'unavailable' {
+  private rejectTouch() {
+    this.resetTouch()
+    this.touchRejected = true
+  }
+
+  screenMode(): 'control' | 'automation' | 'unsupported' | 'unavailable' {
+    if (this.automated) {
+      return 'automation'
+    }
     const device = this.lastObservation
     if (!device?.coreDevice) {
       return 'unsupported'
@@ -263,7 +296,7 @@ export class IosBridge {
         device.ios?.locked !== false) {
       return 'unavailable'
     }
-    return this.automated ? 'view' : 'control'
+    return 'control'
   }
 
   connectCoreDeviceInput(

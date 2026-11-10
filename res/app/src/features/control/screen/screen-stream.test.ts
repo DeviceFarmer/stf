@@ -76,7 +76,7 @@ const hevcHeader = 'hevc ' + JSON.stringify({codec: 'hvc1.1.6.L123.B0', descript
 const accessUnit = (kind: number) => Uint8Array.of(kind, 0, 0, 0, 2, 0x26, 0x01).buffer
 const jpegFrame = () => Uint8Array.of(0xff, 0xd8, 0xff, 0xd9).buffer
 
-function fixture(platform = 'iOS', canDecodeHevc = true) {
+function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Device> = {}) {
   if (platform === 'iOS' && canDecodeHevc) {
     enableHevc()
   }
@@ -93,7 +93,7 @@ function fixture(platform = 'iOS', canDecodeHevc = true) {
   const context = {clearRect: vi.fn(), scale: vi.fn(), drawImage: vi.fn()}
   canvas.getContext = vi.fn(() => context) as unknown as typeof canvas.getContext
   const device = {platform, using: true, present: true, ready: true, status: 3
-    , display: {width: 1170, height: 2532}} as Device
+    , display: {width: 1170, height: 2532}, ...overrides} as Device
   const shown = vi.fn(() => true)
   const canControl = vi.fn(() => true)
   const onStatusChange = vi.fn()
@@ -187,25 +187,24 @@ describe('screen stream availability', () => {
     stream.stop()
   })
 
-  it('does not clear the offline notice merely because device metadata recovers while the socket stays open', async() => {
+  it('waits for a frame from a replacement socket when device metadata recovers', async() => {
     const {device, stream, onStatusChange} = fixture()
     Socket.instances[0]!.open()
     device.ready = false
     stream.checkEnabled()
     expect(onStatusChange).toHaveBeenLastCalledWith('offline')
+    expect(Socket.instances[0]!.readyState).toBe(3)
     device.ready = true
     stream.checkEnabled()
     expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
-    await showHevcFrame(Socket.instances[0]!)
+    Socket.instances[1]!.open()
+    await showHevcFrame(Socket.instances[1]!)
     expect(onStatusChange).toHaveBeenLastCalledWith(null)
     stream.stop()
   })
 
-  it('suppresses a connection notice while intentionally hidden or after automation ends', () => {
+  it('suppresses a connection notice while intentionally hidden or after release', () => {
     const {device, stream, shown, hidden, onStatusChange} = fixture()
-    device.using = false
-    device.owner = {email: 'runner@example.test'}
-    device.usage = 'automation'
     Socket.instances[0]!.open()
     Socket.instances[0]!.close()
     expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
@@ -221,7 +220,7 @@ describe('screen stream availability', () => {
     shown.mockReturnValue(true)
     stream.checkEnabled()
     expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
-    device.owner = null
+    device.using = false
     stream.checkEnabled()
     expect(onStatusChange).toHaveBeenLastCalledWith(null)
     device.present = false
@@ -286,11 +285,15 @@ describe('screen stream availability', () => {
 
 describe('iPhone CoreDevice video', () => {
   it('negotiates on the existing socket and acknowledges only the first displayed video frame', async() => {
+    vi.stubGlobal('isSecureContext', true)
     const {stream, context, decode, onInputReady} = fixture()
     const socket = Socket.instances[0]!
     socket.open()
     expect(socket.sent.slice(-2)).toEqual(['hevc', 'on'])
     expect(socket.binaryType).toBe('arraybuffer')
+    socket.message(jpegFrame())
+    socket.message(new Blob([jpegFrame()]))
+    expect(context.drawImage).not.toHaveBeenCalled()
 
     socket.message(hevcHeader)
     socket.message(accessUnit(2))
@@ -317,22 +320,21 @@ describe('iPhone CoreDevice video', () => {
     expect(onInputReady).toHaveBeenLastCalledWith(false)
   })
 
-  it('shows HEVC to an automation viewer without enabling input or rendering legacy JPEG', async() => {
-    const {stream, device, context, decode, onInputReady} = fixture()
-    device.owner = {email: 'runner@example.test'}
-    device.usage = 'automation'
-    const socket = Socket.instances[0]!
-    socket.open()
-    expect(socket.sent.slice(-2)).toEqual(['hevc', 'on'])
-    socket.message(jpegFrame())
-    socket.message(new Blob([jpegFrame()]))
-    expect(decode).not.toHaveBeenCalled()
-    expect(context.drawImage).not.toHaveBeenCalled()
-    await showHevcFrame(socket)
-    expect(context.drawImage).toHaveBeenCalledOnce()
-    expect(socket.sent).not.toContain('hevc ready')
-    socket.message('hevc input ready')
-    expect(onInputReady).not.toHaveBeenCalled()
+  it('does not start CoreDevice during automation and resumes only for a manual reservation', () => {
+    const {device, stream, onDisplayError} = fixture('iOS', true, {
+      using: false, usage: 'automation', owner: {email: 'runner@example.test'}
+    })
+    expect(Socket.instances).toHaveLength(0)
+    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-automation')
+    device.owner = null
+    stream.checkEnabled()
+    expect(Socket.instances).toHaveLength(0)
+    expect(onDisplayError).toHaveBeenLastCalledWith(false)
+    device.using = true
+    device.usage = null
+    stream.checkEnabled()
+    Socket.instances[0]!.open()
+    expect(Socket.instances[0]!.sent).toEqual(['hevc', 'on'])
     stream.stop()
   })
 
@@ -355,17 +357,73 @@ describe('iPhone CoreDevice video', () => {
     canControl.mockReturnValue(false)
     stream.checkEnabled()
     expect(onInputReady).toHaveBeenLastCalledWith(false)
-    expect(socket.sent.slice(-3)).toEqual(['off', 'hevc', 'on'])
+    expect(socket.sent.at(-1)).toBe('off')
+    expect(socket.readyState).toBe(3)
+    const replacement = Socket.instances[1]!
+    replacement.open()
+    await showHevcFrame(replacement)
+    expect(replacement.sent).not.toContain('hevc ready')
+    stream.stop()
+  })
+
+  it.each([true, false])('ignores an old socket after hiding and showing the screen (close: %s)', async(ackClose) => {
+    const {stream, shown, context, onDisplayError, onInputReady} = fixture()
+    const previous = Socket.instances[0]!
+    previous.open()
+    const queuedMessage = previous.onmessage!
+    previous.close = () => {
+      previous.readyState = 2
+    }
+    shown.mockReturnValue(false)
+    stream.checkEnabled()
+    shown.mockReturnValue(true)
+    stream.checkEnabled()
+    expect(previous.sent.at(-1)).toBe('off')
+    expect(Socket.instances).toHaveLength(1)
+    if (ackClose) {
+      previous.readyState = 3
+      previous.onclose?.()
+      await vi.advanceTimersByTimeAsync(0)
+    }
+    else {
+      await vi.advanceTimersByTimeAsync(1000)
+    }
+    const replacement = Socket.instances[1]!
+    replacement.open()
+
+    for (const data of [hevcHeader, accessUnit(0), 'hevc input ready', 'hevc unavailable']) {
+      queuedMessage(new MessageEvent('message', {data}))
+    }
+    await vi.advanceTimersByTimeAsync(0)
+    expect(Decoder.instances).toHaveLength(0)
+    expect(context.drawImage).not.toHaveBeenCalled()
+    expect(onDisplayError).not.toHaveBeenCalled()
+    expect(onInputReady).not.toHaveBeenCalled()
+    expect(replacement.sent).toEqual(['hevc', 'on'])
+
+    await showHevcFrame(replacement)
+    queuedMessage(new MessageEvent('message', {data: 'hevc input ready'}))
+    expect(onInputReady).not.toHaveBeenCalled()
+    replacement.message('hevc input ready')
+    expect(context.drawImage).toHaveBeenCalledOnce()
+    expect(replacement.sent).toEqual(['hevc', 'on', 'hevc ready'])
+    expect(onInputReady).toHaveBeenLastCalledWith(true)
     stream.stop()
   })
 
   it('shows a browser capability error without requesting a stream when WebCodecs is missing', () => {
     vi.stubGlobal('VideoDecoder', undefined)
     const {stream, onDisplayError} = fixture('iOS', false)
-    const socket = Socket.instances[0]!
-    socket.open()
     expect(onDisplayError).toHaveBeenLastCalledWith('hevc-unsupported')
-    expect(socket.sent).toEqual([])
+    expect(Socket.instances).toHaveLength(0)
+    stream.stop()
+  })
+
+  it('identifies an insecure browser origin even if WebCodecs is exposed', () => {
+    vi.stubGlobal('isSecureContext', false)
+    const {stream, onDisplayError} = fixture()
+    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-insecure')
+    expect(Socket.instances).toHaveLength(0)
     stream.stop()
   })
 
@@ -396,13 +454,16 @@ describe('iPhone CoreDevice video', () => {
     expect(socket.sent.at(-1)).toBe('off')
     stream.retry()
     expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
-    expect(socket.sent.slice(-2)).toEqual(['hevc', 'on'])
-    await showHevcFrame(socket)
+    const replacement = Socket.instances[1]!
+    replacement.open()
+    expect(replacement.sent).toEqual(['hevc', 'on'])
+    await showHevcFrame(replacement)
     expect(onStatusChange).toHaveBeenLastCalledWith(null)
-    socket.message('hevc unsupported')
+    replacement.message('hevc unsupported')
     expect(onDisplayError).toHaveBeenLastCalledWith('coredevice-unsupported')
     stream.retry()
-    expect(socket.sent.at(-1)).toBe('off')
+    expect(replacement.sent.at(-1)).toBe('off')
+    expect(Socket.instances).toHaveLength(2)
     stream.stop()
   })
 
@@ -422,11 +483,15 @@ describe('iPhone CoreDevice video', () => {
     if (!errorFirst) {
       socket.message('hevc unavailable')
     }
-    expect(socket.sent.slice(-2)).toEqual(['hevc', 'on'])
-    socket.message('hevc unavailable')
+    const replacement = Socket.instances[1]!
+    replacement.open()
+    expect(replacement.sent).toEqual(['hevc', 'on'])
+    replacement.message('hevc unavailable')
     stream.checkEnabled()
     expect(onDisplayError).toHaveBeenLastCalledWith('hevc-unavailable')
-    expect(socket.sent).toEqual(['hevc', 'on', 'off', 'hevc', 'on', 'off'])
+    expect(socket.sent).toEqual(['hevc', 'on', 'off'])
+    expect(replacement.sent).toEqual(['hevc', 'on', 'off'])
+    expect(Socket.instances).toHaveLength(2)
     stream.stop()
   })
 
@@ -481,22 +546,17 @@ describe('iPhone screen recovery', () => {
     stream.stop()
   })
 
-  it('streams a non-owner automation view and reconnects without claiming the device', async() => {
-    const {device, stream} = fixture()
-    device.using = false
-    device.owner = {email: 'runner@example.test'}
-    device.usage = 'automation'
-    Socket.instances[0]!.open()
-    expect(Socket.instances[0]!.sent).toContain('on')
-    Socket.instances[0]!.close()
-    await vi.advanceTimersByTimeAsync(500)
-    expect(Socket.instances).toHaveLength(2)
-    Socket.instances[1]!.open()
-    expect(Socket.instances[1]!.sent).toContain('on')
-    device.owner = null
-    Socket.instances[1]!.close()
+  it('shows the server automation guard when ownership metadata has not arrived yet', async() => {
+    const {stream, onDisplayError, onInputReady} = fixture()
+    const socket = Socket.instances[0]!
+    socket.open()
+    socket.message('hevc automation')
+    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-automation')
+    expect(socket.readyState).toBe(3)
+    stream.retry()
     await vi.advanceTimersByTimeAsync(10000)
-    expect(Socket.instances).toHaveLength(2)
+    expect(Socket.instances).toHaveLength(1)
+    expect(onInputReady).not.toHaveBeenCalled()
     stream.stop()
   })
 

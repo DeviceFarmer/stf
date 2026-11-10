@@ -472,6 +472,23 @@ describe('iOS prototype lifecycle', () => {
       call.path === '/session/owned-session'))
   })
 
+  it('adds the opt-in Appium MJPEG forward only on loopback', async() => {
+    const f = await fixture()
+    const d = dependencies(f)
+    const runtime = new IosRuntime({...options, appiumMjpegPort: 19100}, d.deps)
+    cleanups.push(() => runtime.stop())
+    runtime.start()
+    await until(() => runtime.state === 'ready')
+    assert.deepEqual(d.spawned[0]!.args, [
+      '-u', options.udid, '-l', '-s', '127.0.0.1', '18100:8100', '19100:9100'
+    ])
+    const origin = await listen(createServer(runtime, token))
+    const response = await fetch(origin + '/screen', {
+      headers: {Authorization: 'Bearer ' + token}
+    })
+    assert.equal(response.status, 404)
+  })
+
   it('retries a missing phone without starting WDA on another connected device', async() => {
     const f = await fixture()
     const d = dependencies(f)
@@ -499,6 +516,62 @@ describe('iOS prototype lifecycle', () => {
     await until(() => runtime.state === 'ready' && runtime.telemetry.status.locked === false)
     assert.ok(d.spawned.slice(0, 2).every(child => child.stopped))
     assert.equal(d.spawned.length, 4)
+  })
+
+  it('recovers WDA and sends reboot while the stopped video worker is still exiting', async() => {
+    const f = await fixture()
+    const d = dependencies(f, '27.0.1')
+    const power: string[][] = []
+    let finishPower!: () => void, closeWorker!: () => void
+    const powerComplete = new Promise<void>(resolve => {
+      finishPower = resolve
+    })
+    d.deps.power = async(_binary, args) => {
+      power.push(args)
+      await powerComplete
+    }
+    const runtime = new IosRuntime(options, d.deps)
+    const closed = new Promise<void>(resolve => {
+      closeWorker = resolve
+    })
+    const media = new AbortController()
+    cleanups.push(async() => {
+      closeWorker()
+      finishPower()
+      await runtime.stop()
+    })
+    runtime.start()
+    await until(() => runtime.state === 'ready' && runtime.telemetry.status.locked === false)
+    Reflect.set(runtime, 'coreDeviceSession', {
+      closed, signal: media.signal, stop: () => {
+        media.abort()
+        return closed
+      }
+    })
+    const generation = runtime.generation
+    d.spawned[1]!.failure = new Error('USB disconnected')
+    await until(() => runtime.generation > generation && runtime.state === 'ready' &&
+      runtime.telemetry.status.locked === false)
+    assert.equal(media.signal.aborted, true)
+    assert.ok(d.spawned.slice(0, 2).every(child => child.stopped))
+
+    const open = new AbortController()
+    const pending = runtime.openCoreDevice(open.signal)
+    open.abort()
+    await assert.rejects(pending, {name: 'AbortError'})
+
+    const reboot = runtime.power('reboot')
+    await until(() => power.length === 1)
+    assert.deepEqual(power, [[
+      '--udid=' + options.udid, '--tunnel-info-port=' + options.tunnelPort, 'reboot'
+    ]])
+    closeWorker()
+    Reflect.set(runtime, 'coreDeviceSession', null)
+    await assert.rejects(runtime.openCoreDevice(new AbortController().signal), {
+      status: 503, message: 'IOS_COREDEVICE_NOT_READY'
+    })
+    finishPower()
+    assert.deepEqual(await reboot, {accepted: true})
   })
 
   it('does not start a runner when the selected device has no tunnel', async() => {
@@ -661,6 +734,21 @@ describe('iOS prototype executable boundary', () => {
     })
     assert.match(output, /127.0.0.1/)
     assert.match(output, /--udid/)
+    assert.match(output, /--appium-mjpeg-port/)
+  })
+
+  it('rejects invalid or conflicting Appium MJPEG ports before starting', async() => {
+    for (const value of ['7400', '18100', '28100', '1023', '65536', '9100.5']) {
+      const error = await new Promise<Error | null>(resolve => {
+        execFile(process.execPath, [path.resolve(import.meta.dirname, '../main.mts')
+          , '--udid', options.udid, '--wda-bundle-id', options.bundleId
+          , '--go-ios=/nonexistent/ios'
+          , '--appium-mjpeg-port', value], {
+          env: {...process.env, STF_IOS_PROTOTYPE_TOKEN: token}, timeout: 5000
+        }, resolve)
+      })
+      assert.match(error?.message || '', /ports must be different|Ports must be integers/)
+    }
   })
 
   it('reports missing tools with a failing doctor exit code', async() => {

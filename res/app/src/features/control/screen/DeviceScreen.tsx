@@ -35,9 +35,11 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const displayErrorMessages = {
     secure: t('The current view is marked secure and cannot be viewed remotely.')
     , 'hevc-unsupported': t('This browser cannot decode the iPhone screen.')
+    , 'hevc-insecure': t('The iPhone screen requires HTTPS or localhost.')
     , 'coredevice-unsupported': t('The iPhone screen requires iOS 27 or later and a compatible connection.')
     , 'hevc-unavailable': t('The iPhone screen could not be opened.')
     , 'hevc-locked': t('The iPhone is still locked. Unlock it on the device.')
+    , 'hevc-automation': t('The iPhone screen is unavailable during automation.')
   }
   const rootRef = useRef<HTMLDivElement>(null)
   const positionerRef = useRef<HTMLDivElement>(null)
@@ -55,7 +57,8 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const [streamStatus, setStreamStatus] = useState<ScreenStreamStatus>(null)
 
   const readOnly = control.readOnly
-  const touchEnabled = !readOnly && (device.platform !== 'iOS' ||
+  const singleTouch = device.platform === 'iOS'
+  const touchEnabled = !readOnly && (!singleTouch ||
     (showScreen && iosInputReady && device.using && !isAutomated(device) && device.ios?.locked !== true))
   const url = device.display?.url
   const displayWidth = device.display?.width || 0
@@ -138,8 +141,9 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , screen: screenRef.current
       , scaler
       , control
+      , singleTouch
     })
-  }, [control, touchEnabled, scaler])
+  }, [control, touchEnabled, scaler, singleTouch])
 
   useEffect(() => {
     const input = inputRef.current

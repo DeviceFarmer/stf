@@ -77,6 +77,7 @@ The runtime and its read-only `--doctor` mode accept these additional options:
 | Option | Default |
 | --- | --- |
 | `--port`, `--wda-port`, `--tunnel-port` | `7400`, `18100`, `28100` |
+| `--appium-mjpeg-port` | Unset. Optional loopback MJPEG port for Appium only |
 | `--go-ios`, `--iproxy` | `ios`, `iproxy` |
 | `--image-mounter` | `go-ios`; use `pymobiledevice3` for iOS 27 |
 | `--pymobiledevice3` | `pymobiledevice3`, or an absolute virtual-environment executable path |
@@ -146,21 +147,27 @@ example. UDID and WDA bundle ID must match the selected physical phone.
 ## Interactive screen
 
 The live iPhone screen requires iOS 27 or later, a go-ios kernel tunnel with
-Remote Service Discovery (RSD), and a browser that supports HEVC decoding through
-WebCodecs. STF opens CoreDevice when a viewer starts the screen. It forwards
-single-finger contacts while the user is still dragging. The current manual
-reservation owner can send touch input. Authorized viewers can watch an
-automation reservation with input disabled.
+Remote Service Discovery (RSD), and HEVC decoding through WebCodecs in a secure
+browser context. Use HTTPS for shared deployments or the loopback origin from the
+[local quick start](../docker/ios/README.md#configure-one-or-several-iphones).
 
-CoreDevice opens one screen session per phone. Close the active viewer before
-opening another. A viewer can compete with apps using the phone's camera or
-microphone, so run tests that need them with the STF live screen closed.
-Appium continues to use the private WDA forward, including on older iOS versions.
-STF still uses WDA for screenshots and operations such as Home and text input.
+CoreDevice opens one screen session per phone during manual reservations. The
+current reservation owner can send single-finger contacts while dragging. STF
+pauses live viewing for automation reservations because CoreDevice can keep the
+phone awake and reserve media resources used by Appium tests. STF uses WDA for
+screenshots and operations such as Home and text input.
 
-Remove `--mjpeg-port` from custom runtime launches. The private prototype
-endpoints `/screen`, `/tap` and `/swipe` have been removed. Update the STF app,
-iOS provider and runtime together to use the new screen protocol.
+Appium uses the private WDA forward, including on older iOS versions. If Appium
+needs MJPEG for screen recording or streamed screenshots, launch the runtime with
+`--appium-mjpeg-port=19100`. When Appium attaches to the existing WDA with
+`webDriverAgentUrl`, configure its `mjpegServerPort` or `mjpegScreenshotUrl` for
+`http://127.0.0.1:19100/`. Appium must share the runtime's network namespace.
+Choose a free port distinct from the API, WDA and tunnel ports. STF's web screen
+uses CoreDevice regardless of this option.
+
+Remove the old `--mjpeg-port` argument from custom runtime launches. The private
+prototype endpoints `/screen`, `/tap` and `/swipe` have been removed. Update the
+STF app, iOS provider and runtime together to use the new screen protocol.
 
 See the [response-time measurements](ios-screen-benchmark.md) for the comparison
 with the previous screen path and the results from two physical iPhones.

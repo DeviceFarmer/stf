@@ -135,6 +135,11 @@ Register the OAuth client callback as `https://stf.example.com/auth/oauth/callba
 
 Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](../../doc/ios-provider.md).
 
+Set `ios.devices[].appiumMjpegPort` only if an Appium sidecar in the same pod
+needs WDA's MJPEG stream for recording or streamed screenshots. For example,
+`19100` exposes `http://127.0.0.1:19100/` within that pod. The iOS Service and
+browser proxy carry the CoreDevice screen connection.
+
 ## Database migration and upgrades
 
 The chart renders `stf migrate` as an ordinary Job whose name depends on the relevant image/configuration. Core units wait for that exact Job to complete. Their init container has read access only to that named Job; the application container does not receive a Kubernetes token. The chart uses this barrier for both Helm and Argo CD rendering, without lifecycle hooks.

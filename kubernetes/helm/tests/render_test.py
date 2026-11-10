@@ -187,12 +187,15 @@ class ChartTest(unittest.TestCase):
         phones = [iphone(), iphone('iphone-b', '00008100-0000000000000002')]
         phones[0]['persistence'] = {'existingClaim': 'previous-iphone-state'}
         phones[0]['extraContainers'] = [{'name': 'optional-adapter', 'image': 'example.invalid/adapter:test'}]
+        phones[0]['appiumMjpegPort'] = 19100
         items = render({'ios': {'image': IOS_IMAGE, 'devices': phones}})
         for p in phones:
             pod = obj(items, 'Deployment', 'stf-ios-' + p['name'])['spec']['template']['spec']
             cs = {c['name']: c for c in pod['containers']}
             self.assertTrue(cs['tunnel']['securityContext']['privileged'])
             self.assertFalse(cs['prototype']['securityContext']['allowPrivilegeEscalation'])
+            mjpeg_args = [arg for arg in cs['prototype']['args'] if arg.startswith('--appium-mjpeg-port=')]
+            self.assertEqual(mjpeg_args, ['--appium-mjpeg-port=19100'] if p is phones[0] else [])
             health = json.dumps(cs['prototype']['readinessProbe'])
             self.assertIn('/health', health)
             self.assertNotIn('state', health)
@@ -202,6 +205,8 @@ class ChartTest(unittest.TestCase):
         self.assertFalse(any(x['kind'] == 'PersistentVolumeClaim' and x['metadata']['name'] == 'stf-ios-iphone-a' for x in items))
         render({'ios': {'devices': [iphone()]}}, failure='ios.image')
         render({'ios': {'image': IOS_IMAGE, 'devices': [iphone(), iphone('b')]}}, failure='UDIDs must be unique')
+        render({'ios': {'image': IOS_IMAGE, 'devices': [dict(iphone(), appiumMjpegPort=17440)]}},
+               failure='appiumMjpegPort conflicts')
 
     def test_ingress_uses_public_origin_and_only_the_proxy(self):
         items = render({'publicOrigin': 'https://farm.example.com', 'proxy': {'ingress': {'enabled': True, 'className': 'custom'}}})

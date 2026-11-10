@@ -3,7 +3,7 @@ import type {Control} from '@/core/control'
 import {scalingCoordinator} from '@/core/scaling'
 import {bindScreenTouch} from './screen-touch'
 
-function fixture() {
+function fixture(singleTouch = false) {
   const root = document.createElement('div')
   Object.defineProperties(root, {offsetWidth: {value: 400}, offsetHeight: {value: 700}})
   const control = {gestureStart: vi.fn(), gestureStop: vi.fn(), touchDown: vi.fn(), touchUp: vi.fn()
@@ -12,7 +12,7 @@ function fixture() {
     root, input: document.createElement('input')
   , fingers: Array.from({length: 10}, () => document.createElement('span'))
   , screen: {rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}}
-  , scaler: scalingCoordinator(1170, 2532), control: control as unknown as Control
+  , scaler: scalingCoordinator(1170, 2532), control: control as unknown as Control, singleTouch
   })
   return {root, control, unbind}
 }
@@ -38,6 +38,39 @@ it('cancels a held touch without sending a tap and permits the next gesture', ()
     expect(control.gestureStart.mock.calls).toEqual([[0], [5]])
     expect(control.touchUp).toHaveBeenCalledExactlyOnceWith(8, 0)
     expect(control.gestureStop.mock.calls).toEqual([[4], [10]])
+  }
+  finally {
+    unbind()
+  }
+})
+
+it.each([true, false])('starts Alt-click only if pinch is supported (singleTouch: %s)', (singleTouch) => {
+  const {root, control, unbind} = fixture(singleTouch)
+  try {
+    root.dispatchEvent(new MouseEvent('mousedown', {altKey: true, clientX: 100, clientY: 100, cancelable: true}))
+    document.dispatchEvent(new MouseEvent('mouseup'))
+    expect(control.touchDown.mock.calls.map(([, slot]) => slot)).toEqual(singleTouch ? [] : [0, 1])
+    expect(control.touchUp.mock.calls.map(([, slot]) => slot)).toEqual(singleTouch ? [] : [0, 1])
+  }
+  finally {
+    unbind()
+  }
+})
+
+it('ignores simultaneous iPhone contacts and accepts the next single-finger gesture', () => {
+  const {root, control, unbind} = fixture(true)
+  try {
+    const touches = [1, 2].map(identifier => ({identifier, pageX: 100, pageY: 100}) as Touch)
+    root.dispatchEvent(new TouchEvent('touchstart', {touches, changedTouches: touches, cancelable: true}))
+    document.dispatchEvent(new TouchEvent('touchend', {changedTouches: touches, cancelable: true}))
+    expect(control.gestureStart).not.toHaveBeenCalled()
+    expect(control.touchDown).not.toHaveBeenCalled()
+    expect(control.touchUp).not.toHaveBeenCalled()
+
+    root.dispatchEvent(touchEvent('touchstart', 3, true))
+    document.dispatchEvent(touchEvent('touchend', 3, false))
+    expect(control.touchDown).toHaveBeenCalledOnce()
+    expect(control.touchUp).toHaveBeenCalledOnce()
   }
   finally {
     unbind()

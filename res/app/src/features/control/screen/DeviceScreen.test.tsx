@@ -75,7 +75,7 @@ describe('screen availability notice', () => {
       matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn()
     })
     Socket.instances = []
-    device = {platform: 'iOS', using: false, usage: 'automation', owner: {email: 'runner@example.test'}
+    device = {platform: 'iOS', using: true, usage: null, owner: {email: 'owner@example.test'}
       , present: true, ready: true, status: 3
       , battery: {health: 'good', level: 80, scale: 100, source: 'usb', status: 'charging'
         , temp: 25, voltage: 4000}
@@ -135,12 +135,21 @@ describe('screen availability notice', () => {
     expect(host.querySelector('[role="status"]')).toBeNull()
     await render()
     expect(host.querySelector('[role="status"]')?.textContent).toBe('Device offline')
-    device = {...device, owner: null, usage: null}
+    device = {...device, using: false, owner: null}
     await render()
     expect(host.querySelector('[role="status"]')).toBeNull()
   })
 
-  it('lets an iPhone automation viewer retry a temporary video failure without enabling input', async() => {
+  it('describes why live video is unavailable during iPhone automation', async() => {
+    device = {...device, using: false, usage: 'automation'}
+    await render()
+    const alert = host.querySelector('[role="alert"]')
+    expect(alert?.textContent).toContain('The iPhone screen is unavailable during automation.')
+    expect(alert?.querySelector('button')).toBeNull()
+    expect(Socket.instances).toHaveLength(0)
+  })
+
+  it('lets a manual reservation viewer retry with a new socket without enabling input', async() => {
     await render()
     const socket = Socket.instances[0]!
     await act(async() => {
@@ -152,22 +161,25 @@ describe('screen availability notice', () => {
     const retry = alert?.querySelector('button')
     expect(retry?.disabled).toBe(false)
     await act(async() => retry?.click())
-    expect(socket.sent.slice(-2)).toEqual(['hevc', 'on'])
+    expect(socket.readyState).toBe(3)
+    const replacement = Socket.instances[1]!
+    await act(async() => replacement.open())
+    expect(replacement.sent).toEqual(['hevc', 'on'])
     expect(host.querySelector('[role="alert"]')).toBeNull()
-    await act(async() => socket.frame('iOS'))
-    expect(socket.sent).not.toContain('hevc ready')
+    await act(async() => replacement.frame('iOS'))
+    expect(replacement.sent).not.toContain('hevc ready')
   })
 
   it('waits for a physical unlock before resuming CoreDevice video', async() => {
     device = {...device, ios: {locked: true} as NonNullable<Device['ios']>}
     await render()
-    const socket = Socket.instances[0]!
-    await act(async() => socket.open())
-    expect(socket.sent).toEqual([])
+    expect(Socket.instances).toHaveLength(0)
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Unlock it on the device.')
 
     device = {...device, ios: {...device.ios!, locked: false}}
     await render()
+    const socket = Socket.instances[0]!
+    await act(async() => socket.open())
     expect(host.querySelector('[role="alert"]')).toBeNull()
     expect(socket.sent.slice(-2)).toEqual(['hevc', 'on'])
     await act(async() => socket.frame('iOS'))

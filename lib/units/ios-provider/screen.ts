@@ -6,7 +6,6 @@ import {CoreDeviceScreenDecoder} from './coredevice-screen.js'
 
 interface ScreenStream {
   controller: AbortController
-  mode: 'control' | 'view'
   sessionId?: string
   releaseInput?: () => void
   lastKeyframeRequest: number
@@ -20,7 +19,7 @@ export function createScreenServer(options: {
   publicOrigin: string
   serial: string
   owner: () => IosOwner | null
-  mode: () => ScreenStream['mode'] | 'unsupported' | 'unavailable'
+  mode: () => 'control' | 'automation' | 'unsupported' | 'unavailable'
   connectInput: (
     sessionId: string, signal: AbortSignal, fail: (error: unknown) => void
   ) => (() => void) | undefined
@@ -78,6 +77,10 @@ export function createScreenServer(options: {
               return
             }
             const mode = options.mode()
+            if (mode === 'automation') {
+              ws.send('hevc automation')
+              return
+            }
             if (!acceptsHevc || mode === 'unsupported') {
               ws.send('hevc unsupported')
               return
@@ -87,12 +90,12 @@ export function createScreenServer(options: {
               return
             }
             const active: ScreenStream = {
-              controller: new AbortController(), mode, lastKeyframeRequest: -Infinity
+              controller: new AbortController(), lastKeyframeRequest: -Infinity
             }
             stream = active
             try {
               const allowed = await authorizeScreen(
-                options.apiUrl, options.publicOrigin, options.serial, owner, req.headers, mode
+                options.apiUrl, options.publicOrigin, options.serial, owner, req.headers, 'control'
               )
               if (!receiving(active)) {
                 return
@@ -167,7 +170,8 @@ export function createScreenServer(options: {
             alive = false
             ws.ping()
             authorizeScreen(
-              options.apiUrl, options.publicOrigin, options.serial, owner, req.headers, stream?.mode
+              options.apiUrl, options.publicOrigin, options.serial, owner, req.headers,
+              stream ? 'control' : 'status'
             ).then(allowedNow => {
               if (!allowedNow || !authorized()) {
                 ws.close(1008, 'Device access ended')
@@ -198,8 +202,7 @@ export function createScreenServer(options: {
             else if (message === 'on') {
               start()
             }
-            else if (message === 'hevc ready' && stream?.mode === 'control' &&
-                stream.sessionId && !stream.releaseInput) {
+            else if (message === 'hevc ready' && stream?.sessionId && !stream.releaseInput) {
               const active = stream
               const release = options.connectInput(active.sessionId!, active.controller.signal,
                 error => fail(active, error))

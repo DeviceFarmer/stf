@@ -9,6 +9,7 @@ export interface ScreenTouchOptions {
   screen: ScreenGeometry
   scaler: ScalingCoordinator
   control: Control
+  singleTouch: boolean
 }
 
 const SEQ_CYCLE = 100
@@ -16,7 +17,7 @@ const MOUSE_PRESSURE = 0.5
 const SECONDARY_BUTTON = 3
 
 export function bindScreenTouch(options: ScreenTouchOptions): () => void {
-  const {root, input, fingers, screen, scaler, control} = options
+  const {root, input, fingers, screen, scaler, control, singleTouch} = options
   const slots: number[] = []
   const slotted: Record<string, number> = Object.create(null)
   let seq = -1
@@ -80,10 +81,11 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
     }
     e.preventDefault()
 
-    const addGhostFinger = !fakePinch && e.altKey
-    const deleteGhostFinger = fakePinch && !e.altKey
+    const pinch = !singleTouch && e.altKey
+    const addGhostFinger = !fakePinch && pinch
+    const deleteGhostFinger = fakePinch && !pinch
 
-    fakePinch = e.altKey
+    fakePinch = pinch
 
     const x = e.pageX - screen.bounds.x
     const y = e.pageY - screen.bounds.y
@@ -157,6 +159,9 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
       return
     }
     e.preventDefault()
+    if (singleTouch && e.altKey) {
+      return
+    }
 
     fakePinch = e.altKey
 
@@ -200,6 +205,10 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
   function touchMoveListener(e: TouchEvent) {
     e.preventDefault()
+    if (singleTouch && e.touches.length > 1) {
+      cancelGesture()
+      return
+    }
 
     for (const touch of Array.from(e.changedTouches)) {
       const slot = slotted[touch.identifier]
@@ -279,6 +288,12 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
   function touchStartListener(e: TouchEvent) {
     e.preventDefault()
+    if (singleTouch && e.touches.length !== 1) {
+      if (activeGesture === 'touch') {
+        cancelGesture()
+      }
+      return
+    }
 
     calculateBounds()
 

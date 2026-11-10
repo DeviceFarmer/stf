@@ -13,7 +13,7 @@ export async function authorizeScreen(
 , serial: string
 , owner: IosOwner | null
 , headers: IncomingHttpHeaders
-, mode?: 'control' | 'view'
+, mode: 'status' | 'control' = 'status'
 ): Promise<boolean> {
   if (!owner || (headers.origin !== publicOrigin &&
       !(headers.origin === undefined && headers.authorization?.startsWith('Bearer ')))) {
@@ -42,7 +42,7 @@ export async function authorizeScreen(
       return false
     }
     const isOwner = viewer.user.email === owner.email
-    if ((mode === 'control' && !isOwner) || (mode && !owner.reservationId)) {
+    if (mode === 'control' && (!isOwner || !owner.reservationId)) {
       return false
     }
     const url = new URL((isOwner ? '/api/v1/user/devices/' : '/api/v1/devices/') +
@@ -70,7 +70,7 @@ export async function authorizeScreen(
       body.device.owner?.email === owner.email &&
       (!owner.reservationId || body.device.owner.reservationId === owner.reservationId) &&
       (isOwner || automated) &&
-      (mode !== 'control' || !automated) && (mode !== 'view' || automated)
+      (mode !== 'control' || !automated)
   }
   catch {
     return false

@@ -188,78 +188,64 @@ describe('Linux iOS integration', function() {
     assert.equal(f.bridge.owner, null)
   })
 
-  it('streams authorized automation without extending its lease', async function() {
-    const f = await fixture()
-    await f.join(20000, 'automation')
-    let usage: string | null = 'automation'
-    let visible = true
-    const api = http.createServer((req, res) => {
-      if (req.url === '/api/v1/user') {
-        res.end(JSON.stringify({success: true, user: {email: 'viewer@example.test'}}))
-      }
-      else {
-        assert.equal(req.url, '/api/v1/devices/' + serial)
-        res.writeHead(visible ? 200 : 403)
-        res.end(JSON.stringify({success: visible, device: {serial, owner: f.bridge.owner, usage}}))
-      }
-    })
-    servers.push(api)
-    const apiUrl = await listen(api)
-    const headers = {origin, cookie: 'session=signed'}
-    const authorized = () => authorizeScreen(
-      apiUrl, origin, serial, f.bridge.owner, headers, 'view'
-    )
-    assert.equal(await authorized(), true)
-    usage = null
-    assert.equal(await authorized(), false)
-    usage = 'automation'
-    visible = false
-    assert.equal(await authorized(), false)
-    visible = true
-    const screen = f.screenServer(apiUrl)
-    const url = (await listen(screen.server)).replace('http:', 'ws:')
-    const ws = new WebSocket(url, {headers})
-    let frames = 0
-    const messages: string[] = []
-    ws.on('message', (data, binary) => {
-      if (binary) {
-        frames++
-      }
-      else {
-        messages.push(data.toString())
-      }
-    })
-    try {
-      await once(ws, 'open')
-      ws.send('hevc')
-      ws.send('on')
-      await until(() => frames >= 2)
-      ws.send('hevc ready')
-      ws.send('ping')
-      await until(() => messages.includes('pong'))
-      assert.ok(!messages.includes('hevc input ready'), 'Observers must not bind input')
-      const before = frames
-      f.pushFrames()
-      await until(() => frames > before)
-      assert.equal(f.requests.length, 0)
-      const now = Date.now
-      const future = now() + 21000
+  for (const viewer of [owner.email, 'viewer@example.test']) {
+    const role = viewer === owner.email ? 'owner' : 'group viewer'
+    it(`blocks CoreDevice for the automation ${role} without extending the lease`, async() => {
+      const f = await fixture()
+      await f.join(20000, 'automation')
+      const api = http.createServer((req, res) => {
+        if (req.url === '/api/v1/user') {
+          res.end(JSON.stringify({success: true, user: {email: viewer}}))
+        }
+        else {
+          const path = role === 'owner' ? '/api/v1/user/devices/' : '/api/v1/devices/'
+          assert.equal(req.url, path + serial)
+          res.end(JSON.stringify({success: true
+            , device: {serial, owner: f.bridge.owner, usage: 'automation'}}))
+        }
+      })
+      servers.push(api)
+      const apiUrl = await listen(api)
+      const headers = {origin, cookie: 'session=signed'}
+      assert.equal(await authorizeScreen(apiUrl, origin, serial, f.bridge.owner, headers), true)
+      assert.equal(await authorizeScreen(apiUrl, origin, serial, f.bridge.owner, headers,
+        'control'), false)
+      assert.equal(f.bridge.screenMode(), 'automation')
+      assert.equal(f.bridge.connectCoreDeviceInput(screenSession, new AbortController().signal,
+        error => f.errors.push(error)), undefined)
+      const screen = f.screenServer(apiUrl)
+      const url = (await listen(screen.server)).replace('http:', 'ws:')
+      const ws = new WebSocket(url, {headers})
+      const messages: string[] = []
+      ws.on('message', data => messages.push(data.toString()))
       try {
-        Date.now = () => future
-        f.pushFrames()
-        await new Promise(resolve => setTimeout(resolve, 20))
-        await f.bridge.poll()
-        assert.equal(f.bridge.owner, null, 'Observers must not renew automation ownership')
+        await once(ws, 'open')
+        ws.send('hevc')
+        ws.send('on')
+        await until(() => messages.includes('hevc automation'))
+        ws.send('hevc ready')
+        ws.send('ping')
+        await until(() => messages.includes('pong'))
+        assert.ok(!messages.includes('hevc input ready'))
+        assert.equal(f.screens.length, 0)
+        assert.equal(f.requests.length, 0)
+        const now = Date.now
+        const future = now() + 21000
+        try {
+          Date.now = () => future
+          await f.bridge.poll()
+          assert.equal(f.bridge.owner, null, 'Screen sockets must not renew automation ownership')
+        }
+        finally {
+          Date.now = now
+        }
       }
       finally {
-        Date.now = now
+        ws.terminate()
+        screen.close()
       }
-    }
-    finally {
-      ws.terminate()
-      screen.close()
-    }
-  })
+    })
+  }
 
   for (const revoked of ['group visibility', 'viewer token']) {
     it(`rechecks ${revoked} while the automation owner is unchanged`, async function() {
@@ -291,27 +277,24 @@ describe('Linux iOS integration', function() {
       const ws = new WebSocket((await listen(screen.server)).replace('http:', 'ws:'), {
         headers: {origin, cookie: 'session=signed'}
       })
-      let frames = 0
-      ws.on('message', (_data, binary) => {
-        if (binary) {
-          frames++
-        }
-      })
+      const messages: string[] = []
+      ws.on('message', data => messages.push(data.toString()))
       try {
         await once(ws, 'open')
         ws.send('hevc')
         ws.send('on')
-        await until(() => frames >= 2)
+        await until(() => messages.includes('hevc automation'))
+        assert.equal(f.screens.length, 0)
         const closed = once(ws, 'close')
         allowed = false
         clock.tick(5000)
         const [code] = await closed
         assert.equal(code, 1008)
-        assert.ok(identityChecks >= 2, 'The same-owner stream must recheck viewer credentials')
+        assert.ok(identityChecks >= 2, 'The screen socket must recheck viewer credentials')
         assert.equal(f.bridge.owner, reservationOwner,
           'Revocation must not release the reservation')
         if (revoked === 'group visibility') {
-          assert.ok(deviceChecks >= 2, 'The same-owner stream must recheck group visibility')
+          assert.ok(deviceChecks >= 2, 'The screen socket must recheck group visibility')
         }
       }
       finally {
@@ -428,7 +411,8 @@ describe('Linux iOS integration', function() {
     f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
     f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
     f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
-    await f.expectTouches([['contact', 0.3, 0.4]])
+    await f.bridge.poll()
+    await f.expectTouches([])
     f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
     await f.expectTouches([['contact', 0.3, 0.4], ['release', 0.3, 0.4]])
   })
@@ -443,12 +427,13 @@ describe('Linux iOS integration', function() {
         f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       }
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.8, ...gesture}))
-      // Move 2 is lost; four later packets make the gap safe to skip.
-      f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.3, y: 0.2, ...gesture}))
-      f.send(new wire.TouchCommitMessage({seq: 4, ...gesture}))
-      f.send(new wire.TouchUpMessage({seq: 5, contact: 0, ...gesture}))
-      f.send(new wire.TouchCommitMessage({seq: 6, ...gesture}))
-      f.send(new wire.GestureStopMessage({seq: 7, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
+      // Move 3 is lost; four later packets make the gap safe to skip.
+      f.send(new wire.TouchMoveMessage({seq: 4, contact: 0, x: 0.3, y: 0.2, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 5, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 6, contact: 0, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 7, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 8, ...gesture}))
       if (lateStart) {
         f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       }
@@ -457,8 +442,9 @@ describe('Linux iOS integration', function() {
       const next = f.gesture(2)
       f.send(new wire.GestureStartMessage({seq: 0, ...next}))
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
-      f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...next}))
-      f.send(new wire.GestureStopMessage({seq: 3, ...next}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...next}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...next}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...next}))
       await f.expectTouches([['contact', 0.3, 0.8], ['contact', 0.3, 0.2]
         , ['release', 0.3, 0.2], ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
     })
@@ -470,11 +456,12 @@ describe('Linux iOS integration', function() {
       await f.join()
       f.activateInput()
       const gesture = f.gesture(1)
-      f.send(new wire.GestureStopMessage({seq: taps * 2 + 1, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: taps * 3 + 1, ...gesture}))
       for (let tap = taps - 1; tap >= 0; tap--) {
-        f.send(new wire.TouchUpMessage({seq: tap * 2 + 2, contact: 0, ...gesture}))
+        f.send(new wire.TouchUpMessage({seq: tap * 3 + 3, contact: 0, ...gesture}))
+        f.send(new wire.TouchCommitMessage({seq: tap * 3 + 2, ...gesture}))
         f.send(new wire.TouchDownMessage({
-          seq: tap * 2 + 1, contact: 0, x: 0.3 + tap * 0.1, y: 0.4, ...gesture
+          seq: tap * 3 + 1, contact: 0, x: 0.3 + tap * 0.1, y: 0.4, ...gesture
         }))
       }
       f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
@@ -492,12 +479,14 @@ describe('Linux iOS integration', function() {
     const current = f.gesture(2)
     f.send(new wire.GestureStartMessage({seq: 0, ...old}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
-    f.send(new wire.GestureStartMessage({seq: 2, ...current}))
-    f.send(new wire.TouchDownMessage({seq: 3, contact: 0, x: 0.7, y: 0.8, ...current}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...old}))
+    f.send(new wire.GestureStartMessage({seq: 3, ...current}))
+    f.send(new wire.TouchDownMessage({seq: 4, contact: 0, x: 0.7, y: 0.8, ...current}))
+    f.send(new wire.TouchCommitMessage({seq: 5, ...current}))
     f.send(new wire.TouchResetMessage({seq: 0, ...old, cancel: true}))
     f.send(new wire.GestureStartMessage({seq: 0, ...old}))
-    f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...current}))
-    f.send(new wire.GestureStopMessage({seq: 5, ...current}))
+    f.send(new wire.TouchUpMessage({seq: 6, contact: 0, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 7, ...current}))
     await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]
       , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
@@ -508,6 +497,7 @@ describe('Linux iOS integration', function() {
     f.activateInput('previous-screen')
     const old = f.gesture(1)
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...old}))
     f.bridge.leave('test')
     await f.join()
     f.activateInput()
@@ -515,14 +505,15 @@ describe('Linux iOS integration', function() {
     f.send(new wire.GestureStartMessage({seq: 0, ...old}))
     f.send(new wire.GestureStartMessage({seq: 0, ...current}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...current}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...current}))
     f.send(new wire.TouchResetMessage({seq: 0, ...old, cancel: true}))
     for (const reservationId of [old.reservationId, null]) {
       for (const cancel of [true, null]) {
         f.send(new wire.TouchResetMessage({seq: 0, gestureId: null, reservationId, cancel}))
       }
     }
-    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...current}))
-    f.send(new wire.GestureStopMessage({seq: 3, ...current}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...current}))
     await f.expectTouches([['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
 
@@ -532,17 +523,19 @@ describe('Linux iOS integration', function() {
     const disconnect = f.activateInput('previous-screen')
     const old = f.gesture(1)
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...old}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...old}))
     disconnect()
     f.activateInput()
     f.send(new wire.GestureStartMessage({seq: 0, ...old}))
-    f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.2, y: 0.7, ...old}))
-    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...old}))
-    f.send(new wire.GestureStopMessage({seq: 4, ...old}))
+    f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.2, y: 0.7, ...old}))
+    f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...old}))
+    f.send(new wire.GestureStopMessage({seq: 5, ...old}))
     const current = f.gesture(2)
     f.send(new wire.GestureStartMessage({seq: 0, ...current}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...current}))
-    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...current}))
-    f.send(new wire.GestureStopMessage({seq: 3, ...current}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...current}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...current}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...current}))
     await f.expectTouches([['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
 
@@ -553,24 +546,27 @@ describe('Linux iOS integration', function() {
     const first = f.gesture(1)
     f.send(new wire.GestureStartMessage({seq: 0, ...first}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...first}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...first}))
     for (const order of [2, 3]) {
       const gesture = f.gesture(order)
       f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.4, y: 0.5, ...gesture}))
-      f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...gesture}))
-      f.send(new wire.GestureStopMessage({seq: 3, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
     }
     f.send(new wire.TouchResetMessage({seq: 0, ...f.gesture(3), cancel: true, cancelThrough: true}))
-    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...first}))
-    f.send(new wire.GestureStopMessage({seq: 3, ...first}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...first}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...first}))
     const next = f.gesture(4)
     f.send(new wire.GestureStartMessage({seq: 0, ...next}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.7, y: 0.8, ...next}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...next}))
     f.send(new wire.TouchResetMessage({seq: 0, ...f.gesture(3), cancel: true, cancelThrough: true}))
     f.send(new wire.TouchResetMessage({seq: 0, ...next, reservationId: 'another-reservation'
       , cancel: true, cancelThrough: true}))
-    f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...next}))
-    f.send(new wire.GestureStopMessage({seq: 3, ...next}))
+    f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...next}))
+    f.send(new wire.GestureStopMessage({seq: 4, ...next}))
     await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]
       , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
   })
@@ -583,10 +579,11 @@ describe('Linux iOS integration', function() {
       const gesture = f.gesture(1)
       f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...gesture}))
-      f.send(new wire.TouchResetMessage({seq: 2, ...gesture, cancel}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
+      f.send(new wire.TouchResetMessage({seq: 3, ...gesture, cancel}))
       await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]])
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
-      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 5, ...gesture}))
       f.send(new wire.KeyPressMessage('home'))
       await until(() => f.requests.some(request => request.path === '/home'))
       assert.equal(f.requests.length, 3)
@@ -600,12 +597,14 @@ describe('Linux iOS integration', function() {
     const gesture = f.gesture(1)
     f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...gesture}))
-    f.send(new wire.TouchResetMessage({seq: 2, ...gesture, cancel: false}))
-    f.send(new wire.TouchDownMessage({seq: 3, contact: 0, x: 0.7, y: 0.8, ...gesture}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
+    f.send(new wire.TouchResetMessage({seq: 3, ...gesture, cancel: false}))
+    f.send(new wire.TouchDownMessage({seq: 4, contact: 0, x: 0.7, y: 0.8, ...gesture}))
+    f.send(new wire.TouchCommitMessage({seq: 5, ...gesture}))
     f.send(new wire.TouchResetMessage({seq: 0, ...gesture, cancel: true}))
     await f.expectTouches([['contact', 0.2, 0.3], ['release', 0.2, 0.3]
       , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
-    f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...gesture}))
+    f.send(new wire.TouchUpMessage({seq: 6, contact: 0, ...gesture}))
     f.send(new wire.KeyPressMessage('home'))
     await until(() => f.requests.some(request => request.path === '/home'))
     assert.equal(f.requests.length, 5)
@@ -617,7 +616,8 @@ describe('Linux iOS integration', function() {
     f.activateInput()
     f.send(new wire.GestureStartMessage(0))
     f.send(new wire.TouchDownMessage(1, 0, 0.3, 0.4))
-    f.send(new wire.TouchUpMessage(2, 0))
+    f.send(new wire.TouchCommitMessage(2))
+    f.send(new wire.TouchUpMessage(3, 0))
     f.send(new wire.KeyPressMessage('home'))
     await until(() => f.requests.length === 1)
     assert.deepEqual(f.requests.map(item => item.path), ['/home'])
@@ -641,26 +641,53 @@ describe('Linux iOS integration', function() {
     assert.ok(f.disconnects() > 0)
   })
 
-  it('releases the current contact when a second finger arrives', async function() {
+  it('releases a committed contact when a second finger arrives', async function() {
     const f = await fixture()
     await f.join()
     f.activateInput()
     const gesture = f.gesture(1)
     f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
     f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
-    f.send(new wire.TouchDownMessage({seq: 2, contact: 1, x: 0.6, y: 0.4, ...gesture}))
+    f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
+    await f.expectTouches([['contact', 0.3, 0.4]])
+    f.send(new wire.TouchDownMessage({seq: 3, contact: 1, x: 0.6, y: 0.4, ...gesture}))
+    f.send(new wire.TouchCommitMessage({seq: 4, ...gesture}))
     await f.expectTouches([['contact', 0.3, 0.4], ['release', 0.3, 0.4]])
-    f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.5, y: 0.6, ...gesture}))
-    f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...gesture}))
-    f.send(new wire.GestureStopMessage({seq: 5, ...gesture}))
-    const next = f.gesture(2)
-    f.send(new wire.GestureStartMessage({seq: 6, ...next}))
-    f.send(new wire.TouchDownMessage({seq: 7, contact: 0, x: 0.7, y: 0.8, ...next}))
-    f.send(new wire.TouchUpMessage({seq: 8, contact: 0, ...next}))
-    f.send(new wire.GestureStopMessage({seq: 9, ...next}))
-    await f.expectTouches([['contact', 0.3, 0.4], ['release', 0.3, 0.4]
-      , ['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
+    f.send(new wire.TouchMoveMessage({seq: 5, contact: 0, x: 0.5, y: 0.6, ...gesture}))
+    f.send(new wire.TouchUpMessage({seq: 6, contact: 0, ...gesture}))
+    f.send(new wire.GestureStopMessage({seq: 7, ...gesture}))
+    f.send(new wire.KeyPressMessage('home'))
+    await until(() => f.requests.some(request => request.path === '/home'))
+    assert.equal(f.requests.length, 3)
   })
+
+  for (const missing of [false, true]) {
+    it(`discards the initial two-finger batch if the second contact is ${
+      missing ? 'lost' : 'reordered'}`, async function() {
+      const f = await fixture()
+      await f.join()
+      f.activateInput()
+      const gesture = f.gesture(1)
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 3, ...gesture}))
+      if (!missing) {
+        f.send(new wire.TouchDownMessage({seq: 2, contact: 1, x: 0.6, y: 0.4, ...gesture}))
+      }
+      f.send(new wire.TouchMoveMessage({seq: 4, contact: 0, x: 0.5, y: 0.6, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 5, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 6, contact: 0, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 7, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 8, ...gesture}))
+      const next = f.gesture(2)
+      f.send(new wire.GestureStartMessage({seq: 9, ...next}))
+      f.send(new wire.TouchDownMessage({seq: 10, contact: 0, x: 0.7, y: 0.8, ...next}))
+      f.send(new wire.TouchCommitMessage({seq: 11, ...next}))
+      f.send(new wire.TouchUpMessage({seq: 12, contact: 0, ...next}))
+      f.send(new wire.GestureStopMessage({seq: 13, ...next}))
+      await f.expectTouches([['contact', 0.7, 0.8], ['release', 0.7, 0.8]])
+    })
+  }
 
   it('accepts IPA blobs only and binds job status and cancellation to ownership', async function() {
     const f = await fixture()
@@ -949,6 +976,7 @@ describe('Linux iOS integration', function() {
     let allowed = true
     let viewer = owner.email
     let reservationId = reservationOwner.reservationId
+    let usage: string | null = null
     const api = http.createServer((req, res) => {
       assert.equal(req.headers.cookie, 'session=signed')
       if (req.url === '/api/v1/user') {
@@ -959,7 +987,7 @@ describe('Linux iOS integration', function() {
       assert.equal(req.url, path + serial)
       res.writeHead(allowed ? 200 : 403)
       res.end(JSON.stringify({success: allowed
-        , device: {serial, owner: {...owner, reservationId}}}))
+        , device: {serial, owner: {...owner, reservationId}, usage}}))
     })
     servers.push(api)
     const apiUrl = await listen(api)
@@ -976,6 +1004,9 @@ describe('Linux iOS integration', function() {
     reservationId = 'stale-reservation'
     assert.equal(await authorized(), false)
     reservationId = reservationOwner.reservationId
+    usage = 'automation'
+    assert.equal(await authorized(), false)
+    usage = null
     const screen = f.screenServer(apiUrl)
     const ws = new WebSocket((await listen(screen.server)).replace('http:', 'ws:'), {headers})
     const messages: string[] = []
@@ -1002,17 +1033,19 @@ describe('Linux iOS integration', function() {
       const beforeReady = f.gesture(1)
       f.send(new wire.GestureStartMessage({seq: 0, ...beforeReady}))
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.2, y: 0.3, ...beforeReady}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...beforeReady}))
       ws.send('hevc ready')
       await until(() => messages.includes('hevc input ready'))
-      f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...beforeReady}))
-      f.send(new wire.GestureStopMessage({seq: 3, ...beforeReady}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...beforeReady}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...beforeReady}))
       const gesture = f.gesture(2)
       f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
       f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.5, y: 0.8, ...gesture}))
-      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.5, y: 0.2, ...gesture}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...gesture}))
+      f.send(new wire.TouchMoveMessage({seq: 3, contact: 0, x: 0.5, y: 0.2, ...gesture}))
       await f.expectTouches([['contact', 0.5, 0.8], ['contact', 0.5, 0.2]])
-      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...gesture}))
-      f.send(new wire.GestureStopMessage({seq: 4, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 4, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 5, ...gesture}))
       await f.expectTouches([['contact', 0.5, 0.8], ['contact', 0.5, 0.2]
         , ['release', 0.5, 0.2]])
 

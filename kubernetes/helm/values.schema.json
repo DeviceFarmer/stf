@@ -178,6 +178,11 @@
                 "type": "string",
                 "pattern": "^[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)+$"
               },
+              "appiumMjpegPort": {
+                "type": "integer",
+                "minimum": 1024,
+                "maximum": 65535
+              },
               "tokenSecret": {
                 "type": "string",
                 "minLength": 1

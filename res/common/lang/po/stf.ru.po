@@ -2110,7 +2110,7 @@ msgid "The iPhone is locked. Open control and use Unlock screen."
 msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:27
-#: res/app/src/features/control/screen/DeviceScreen.tsx:40
+#: res/app/src/features/control/screen/DeviceScreen.tsx:41
 msgid "The iPhone is still locked. Unlock it on the device."
 msgstr "iPhone всё ещё заблокирован. Разблокируйте его на самом устройстве."
 
@@ -2122,11 +2122,19 @@ msgstr ""
 msgid "The iPhone provider is unavailable."
 msgstr ""
 
-#: res/app/src/features/control/screen/DeviceScreen.tsx:39
+#: res/app/src/features/control/screen/DeviceScreen.tsx:40
 msgid "The iPhone screen could not be opened."
 msgstr "Не удалось открыть экран iPhone."
 
+#: res/app/src/features/control/screen/DeviceScreen.tsx:42
+msgid "The iPhone screen is unavailable during automation."
+msgstr "Экран iPhone недоступен во время автоматизации."
+
 #: res/app/src/features/control/screen/DeviceScreen.tsx:38
+msgid "The iPhone screen requires HTTPS or localhost."
+msgstr "Для показа экрана iPhone нужен HTTPS или адрес localhost."
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:39
 msgid "The iPhone screen requires iOS 27 or later and a compatible connection."
 msgstr "Для показа экрана iPhone нужны iOS 27 или новее и совместимое подключение."
 

@@ -151,27 +151,16 @@ export class CoreDeviceSession {
     const now = performance.now()
     if (now - this.keyframeAt >= 500) {
       this.keyframeAt = now
-      await this.control('/pli', signal)
-    }
-  }
-
-  private async control(path: string, signal: AbortSignal) {
-    try {
       const active = AbortSignal.any([signal, this.signal, AbortSignal.timeout(1000)])
-      const result = await this.request(path, active)
+      const result = await this.request('/pli', active)
       await result.text()
       if (!result.ok) {
-        throw new Error('CoreDevice input was rejected')
+        throw new Error('CoreDevice keyframe request was rejected')
       }
-    }
-    catch (error) {
-      this.controller.abort()
-      throw error
     }
   }
 
-  stop(): Promise<void> {
+  stop(): void {
     this.controller.abort()
-    return this.closed
   }
 }
