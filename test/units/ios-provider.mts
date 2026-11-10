@@ -116,12 +116,12 @@ describe('Linux iOS integration', function() {
       bridge.handle(channel, transaction ?
         wireutil.transaction('reply', message) : wireutil.envelope(message))
     }
-    const join = async(timeout = 900000, usage?: string) => {
+    const join = async(timeout = 900000, usage?: string, leaseId?: string) => {
       await bridge.poll()
       send(new wire.DeviceRegisteredMessage(serial), false, bridge.solo)
       send(new wire.GroupMessage(owner, timeout, [
         new wire.DeviceRequirement('serial', serial, wire.RequirementType.EXACT)
-      ], usage), true)
+      ], usage, leaseId), true)
       await until(() => bridge.owner !== null)
     }
     const gestures = new Map<number, string>()
@@ -157,6 +157,97 @@ describe('Linux iOS integration', function() {
     assert.equal(wire.LeaveGroupMessage.decode(left!.envelope.message).owner.email, owner.email)
     assert.equal(f.bridge.owner, null)
   })
+
+  it('fences replacement automation by reservation and coordinator lease IDs', async function() {
+    const f = await fixture()
+    const transact = async(message: wireutil.Message) => {
+      const before = f.sent.length
+      f.send(message, true)
+      const reply = () => f.sent.slice(before).find(item => item.channel === 'reply' &&
+        item.envelope.type === wire.TransactionDoneMessage.$code)
+      await until(() => Boolean(reply()))
+      return wire.TransactionDoneMessage.decode(reply()!.envelope.message)
+    }
+    await f.join(900000, 'automation', 'lease-a')
+    const joined = wire.JoinGroupMessage.decode(f.sent.find(item =>
+      item.envelope.type === wire.JoinGroupMessage.$code)!.envelope.message)
+    const acquired = wire.TransactionDoneMessage.decode(f.sent.find(item =>
+      item.channel === 'reply' && item.envelope.type === wire.TransactionDoneMessage.$code)!
+      .envelope.message)
+    assert.equal(joined.usage, 'automation')
+    assert.equal(joined.leaseId, 'lease-a')
+    assert.ok(joined.owner.reservationId)
+    assert.equal(JSON.parse(acquired.body!).owner.reservationId, joined.owner.reservationId)
+    assert.equal(joined.owner.reservationId, f.bridge.owner?.reservationId)
+
+    assert.equal((await transact(new wire.AutomationLeaseMessage(
+      serial, owner, 'lease-a', 'release'))).success, true)
+    await f.join(900000, 'automation', 'lease-b')
+    const replacement = f.bridge.owner!
+    assert.notEqual(replacement.reservationId, joined.owner.reservationId)
+    const disconnects = f.disconnects()
+    for (const action of ['renew', 'release']) {
+      const reply = await transact(new wire.AutomationLeaseMessage(
+        serial, owner, 'lease-a', action, 900000))
+      assert.equal(reply.success, false)
+      assert.equal(f.bridge.owner, replacement)
+      assert.equal(f.disconnects(), disconnects)
+    }
+    const staleRelease = await transact(new wire.UngroupMessage([], joined.owner.reservationId))
+    assert.equal(staleRelease.success, false)
+    assert.equal(f.bridge.owner, replacement)
+    assert.equal(f.disconnects(), disconnects)
+    const renewal = await transact(new wire.AutomationLeaseMessage(
+      serial, owner, 'lease-b', 'renew', 900000))
+    assert.equal(renewal.success, true)
+    assert.ok(JSON.parse(renewal.body!).expiresAt > Date.now())
+    assert.equal((await transact(new wire.AutomationLeaseMessage(
+      serial, owner, 'lease-b', 'release'))).success, true)
+    assert.equal(f.bridge.owner, null)
+    assert.equal((await transact(new wire.AutomationLeaseMessage(
+      serial, owner, 'lease-b', 'renew', 900000))).success, false)
+  })
+
+  it('retains provider reservation identity across coordinator lease acknowledgements',
+    async function() {
+      const f = await fixture()
+      const replies = () => f.sent.filter(item =>
+        item.channel === 'reply' && item.envelope.type === wire.TransactionDoneMessage.$code)
+      await f.join(900000, 'automation', 'lease-first')
+      const first = f.bridge.owner!.reservationId
+      const joined = f.sent.find(item => item.envelope.type === wire.JoinGroupMessage.$code)!
+      const reservation = wire.JoinGroupMessage.decode(joined.envelope.message)
+      assert.equal(reservation.leaseId, 'lease-first')
+      assert.equal(reservation.owner.reservationId, first)
+      const acknowledged = wire.TransactionDoneMessage.decode(replies().at(-1)!.envelope.message)
+      assert.equal(JSON.parse(acknowledged.body!).owner.reservationId, first)
+
+      f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-first', 'release'), true)
+      await until(() => f.bridge.owner === null)
+      await f.join(900000, 'automation', 'lease-second')
+      const second = f.bridge.owner!.reservationId
+      assert.ok(first && second && second !== first)
+      const latestJoin = f.sent.filter(item =>
+        item.envelope.type === wire.JoinGroupMessage.$code).at(-1)!
+      assert.equal(wire.JoinGroupMessage.decode(latestJoin.envelope.message).usage, 'automation')
+      const gesture = f.gesture(1)
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.3, y: 0.4, ...gesture}))
+      f.send(new wire.GestureStartMessage({seq: 0, ...gesture}))
+      f.send(new wire.TouchUpMessage({seq: 2, contact: 0, ...gesture}))
+      f.send(new wire.GestureStopMessage({seq: 3, ...gesture}))
+      await until(() => f.requests.some(request => request.path === '/tap'))
+      const tap = f.requests.find(request => request.path === '/tap')!.body
+      assert.equal(tap.reservationId, second)
+      assert.equal(tap.gestureId, gesture.gestureId)
+      assert.ok(Math.abs(tap.x - 0.3) < 1e-6 && Math.abs(tap.y - 0.4) < 1e-6)
+      const replyCount = replies().length
+      f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-first', 'release'), true)
+      await until(() => replies().length === replyCount + 1)
+      assert.equal(wire.TransactionDoneMessage.decode(replies().at(-1)!.envelope.message).success,
+        false)
+      assert.equal(f.bridge.owner!.reservationId, second)
+      f.bridge.leave('test_complete')
+    })
 
   it('streams authorized automation without extending its lease', async function() {
     const f = await fixture()

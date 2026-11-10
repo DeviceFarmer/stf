@@ -43,6 +43,16 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
   log.info('Automatic owner restore is %s', options.autoRestoreOwner ? 'on' : 'off')
 
   // App side
+  const ownershipUpdates = new Map<string, Promise<void>>()
+  function persistOwnership(serial: string, update: () => Promise<unknown>, publish: () => void) {
+    const pending = (ownershipUpdates.get(serial) || Promise.resolve())
+      .catch(() => {})
+      .then(update)
+      .then(publish)
+    ownershipUpdates.set(serial, pending)
+    pending.catch(error => log.error('Failed to persist device ownership', error.stack))
+  }
+
   var appDealer = zmqutil.socket('dealer')
   Promise.map(options.endpoints.appDealer, function(endpoint) {
     return srv.resolve(endpoint).then(function(records) {
@@ -335,16 +345,15 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      dbapi.setDeviceOwner(message.serial, message.owner)
-      if (message.usage) {
-        dbapi.setDeviceUsage(message.serial, message.usage)
-      }
-      appDealer.send([channel, data])
+      persistOwnership(message.serial, () =>
+        dbapi.setDeviceOwner(message.serial, message.owner, message.leaseId)
+          .then(() => message.usage ? dbapi.setDeviceUsage(message.serial, message.usage) : null)
+      , () => appDealer.send([channel, data]))
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
-      dbapi.unsetDeviceOwner(message.serial)
-      dbapi.unsetDeviceUsage(message.serial)
-      appDealer.send([channel, data])
+      persistOwnership(message.serial, () => dbapi.unsetDeviceOwner(message.serial)
+        .then(() => dbapi.unsetDeviceUsage(message.serial))
+      , () => appDealer.send([channel, data]))
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {
       appDealer.send([channel, data])
@@ -364,7 +373,15 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      appDealer.send([channel, data])
+      const pending = ownershipUpdates.get(message.source)
+      if (pending) {
+        pending.then(() => appDealer.send([channel, data]))
+          .catch(() => appDealer.send([channel, wireutil.reply(message.source)
+            .fail('Ownership persistence failed')]))
+      }
+      else {
+        appDealer.send([channel, data])
+      }
     })
     .on(wire.DeviceLogcatEntryMessage, function(channel, message, data) {
       appDealer.send([channel, data])

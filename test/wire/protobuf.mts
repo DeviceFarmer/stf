@@ -727,12 +727,48 @@ describe('wire protobuf', function() {
     })
   })
 
+  describe('automation lease messages', function() {
+    it('should preserve the coordinator fence through capture and join', function() {
+      const owner = new wire.OwnerMessage('runner@example.test', 'Runner', 'runner-group')
+      const capture = wire.GroupMessage.decode(new wire.GroupMessage(
+        owner, 420000, [], 'automation', 'lease-test'
+      ).encodeNB())
+      expect(capture.leaseId).to.equal('lease-test')
+      expect(capture.timeout).to.equal(420000)
+      expect(capture.owner.email).to.equal(owner.email)
+      const join = wire.JoinGroupMessage.decode(new wire.JoinGroupMessage(
+        'test-device', owner, 'automation', capture.leaseId
+      ).encodeNB())
+      expect(join.leaseId).to.equal('lease-test')
+      expect(join.serial).to.equal('test-device')
+      expect(join.usage).to.equal('automation')
+    })
+
+    it('should round-trip lease operations without changing existing message codes', function() {
+      const owner = new wire.OwnerMessage('runner@example.test', 'Runner', 'runner-group')
+      for (const action of ['renew', 'release']) {
+        const original = new wire.AutomationLeaseMessage(
+          'test-device', owner, 'lease-test', action, 420000
+        )
+        const envelope = wire.Envelope.decode(wireutil.transaction('reply', original))
+        expect(envelope.type).to.equal(1300)
+        expect(wire.ReverseMessageType[envelope.type]).to.equal('AutomationLeaseMessage')
+        const decoded = wire.AutomationLeaseMessage.decode(envelope.message)
+        expect(decoded.serial).to.equal('test-device')
+        expect(decoded.owner.email).to.equal(owner.email)
+        expect(decoded.leaseId).to.equal('lease-test')
+        expect(decoded.action).to.equal(action)
+        expect(decoded.timeout).to.equal(420000)
+      }
+    })
+  })
+
   describe('enum values', function() {
-    it('should preserve legacy MessageType values and add iOS job messages', function() {
+    it('should preserve legacy MessageType values and add iOS and lease messages', function() {
       expect(wire.MessageType).to.eql({...pbjs5MessageType
         , IosInstallStatusMessage: 97, IosInstallCancelMessage: 98
         , IosShakeMessage: 99, IosUnlockMessage: 100
-        , IosLockMessage: 101, IosPowerMessage: 102})
+        , IosLockMessage: 101, IosPowerMessage: 102, AutomationLeaseMessage: 1300})
     })
 
     it('should keep the DeviceStatus values protobufjs 5 exposed', function() {

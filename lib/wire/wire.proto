@@ -17,6 +17,7 @@ enum MessageType {
   DeviceRegisteredMessage    = 8;
   DeviceStatusMessage        = 9;
   GroupMessage               = 10;
+  AutomationLeaseMessage     = 1300;
   InstallMessage             = 30;
   PhysicalIdentifyMessage    = 29;
   JoinGroupMessage           = 11;
@@ -486,6 +487,16 @@ message GroupMessage {
   optional uint32 timeout = 2;
   repeated DeviceRequirement requirements = 3;
   optional string usage = 4;
+  optional string leaseId = 5;
+  optional string automationRunner = 6;
+}
+
+message AutomationLeaseMessage {
+  required string serial = 1;
+  required OwnerMessage owner = 2;
+  required string leaseId = 3;
+  required string action = 4;
+  optional uint32 timeout = 5;
 }
 
 message AutoGroupMessage {
@@ -502,6 +513,8 @@ message JoinGroupMessage {
   required string serial = 1;
   required OwnerMessage owner = 2;
   optional string usage = 3;
+  optional string leaseId = 4;
+  optional string automationRunner = 5;
 }
 
 message JoinGroupByAdbFingerprintMessage {

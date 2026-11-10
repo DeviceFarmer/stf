@@ -397,6 +397,26 @@ describe.each(['Android', 'iOS'])('%s automation viewing session', (platform) =>
     expect(home().disabled).toBe(true)
     expect(state.invite).not.toHaveBeenCalled()
   })
+  it('directs administrators to the runner for leased automation without offering manual release', async() => {
+    state.user.privilege = 'admin'
+    state.device = phone({platform, automationLeaseId: 'coordinator-lease'})
+    await render('/control/phone?mode=watch')
+    expect(host.textContent).toContain('Stop this automation from its test runner.')
+    expect(host.textContent).not.toContain('Release reservation')
+    expect(home().disabled).toBe(true)
+    expect(state.release).not.toHaveBeenCalled()
+    state.device = phone({platform, automationLeaseId: null})
+    await render()
+    expect(host.textContent).not.toContain('Stop this automation from its test runner.')
+    expect(host.textContent).toContain('Release reservation')
+  })
+  it('does not show runner details to ordinary viewers of leased automation', async() => {
+    state.device = phone({platform, automationLeaseId: 'coordinator-lease'})
+    await render('/control/phone?mode=watch')
+    expect(host.textContent).not.toContain('Stop this automation from its test runner.')
+    expect(host.textContent).not.toContain('Release reservation')
+    expect(home().disabled).toBe(true)
+  })
   it('does not offer reservation release to ordinary viewers and reports API rejection', async() => {
     await render('/control/phone?mode=watch')
     expect(host.textContent).not.toContain('Release reservation')

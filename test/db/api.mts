@@ -66,10 +66,29 @@ describe('dbapi owner claim', function() {
   // The claim has to go when the device is taken, or a reboot that never happened could hand the
   // device back to an earlier user later. It rides the write that records the new owner.
   describe('setDeviceOwner', function() {
+    it('should persist the automation fence with its owner', function() {
+      dbapi.setDeviceOwner('serial', {email: 'runner@example.test'} as DeviceOwner, 'lease-a')
+      expect(lastUpdate.automationLeaseId).to.equal('lease-a')
+      expect(lastUpdate.owner).to.deep.equal({email: 'runner@example.test'})
+    })
+
+    it('should clear a previous fence for legacy or manual ownership', function() {
+      dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner)
+      expect(lastUpdate.automationLeaseId).to.equal(null)
+    })
+
     it('should drop any claim in the same write that records the owner', function() {
       dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner)
       expect(lastUpdate.owner).to.deep.equal({email: 'user@example.com'})
       expect(lastUpdate.restoreOwner).to.equal(null)
+    })
+  })
+
+  describe('unsetDeviceOwner', function() {
+    it('should clear the automation fence in the same write', function() {
+      dbapi.unsetDeviceOwner('serial')
+      expect(lastUpdate.owner).to.equal(null)
+      expect(lastUpdate.automationLeaseId).to.equal(null)
     })
   })
 

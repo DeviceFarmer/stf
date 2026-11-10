@@ -2,6 +2,7 @@ import wire from '../../wire/index.js'
 import wireutil from '../../wire/util.js'
 import wirerouter from '../../wire/router.js'
 import grouputil from '../../util/grouputil.js'
+import {AutomationLease} from '../../util/automation-lease.js'
 import {randomUUID} from 'node:crypto'
 import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
@@ -29,6 +30,8 @@ export class IosBridge {
   private epoch = 0
   private activity = 0
   private timeout: number
+  private readonly automationLease = new AutomationLease(() => this.leave('automatic_timeout'))
+  private automationLeaseId: string | null = null
   private queue = Promise.resolve()
   private touch: {from: Point, to: Point, started: number} | null = null
   private multitouch = false
@@ -71,8 +74,26 @@ export class IosBridge {
             throw new Error('Device not ready')
           }
           await grouputil.match({serial: options.serial}, message.requirements)
-          this.join(message.owner, message.timeout, message.usage)
+          this.join(message.owner, message.timeout, message.usage, message.leaseId)
           return {owner: this.owner}
+        })
+      })
+      .on(wire.AutomationLeaseMessage, (channel, message) => {
+        this.transaction(String(channel), async() => {
+          if (message.serial !== options.serial || !this.owner || !this.registered) {
+            throw new Error('Stale automation lease')
+          }
+          this.automationLease.assertCurrent(message.owner.email, message.leaseId)
+          if (message.action === 'renew') {
+            return {expiresAt: this.automationLease.renew(
+              message.owner.email, message.leaseId, message.timeout || 0
+            )}
+          }
+          if (message.action === 'release') {
+            this.leave('automation_release')
+            return null
+          }
+          throw new Error('Invalid automation lease action')
         })
       })
       .on(wire.AutoGroupMessage, (_channel, message) => {
@@ -316,11 +337,19 @@ export class IosBridge {
     )
   }
 
-  private join(owner: IosOwner, timeout?: number | null, usage?: string | null) {
-    if (this.owner && this.owner.email !== owner.email) {
+  private join(
+    owner: IosOwner, timeout?: number | null, usage?: string | null, leaseId?: string | null
+  ) {
+    if (this.owner && (this.owner.email !== owner.email || leaseId)) {
       throw new Error('Device already owned')
     }
     if (!this.owner) {
+      const automationLeaseId = usage === 'automation' ? leaseId || null : null
+      if (automationLeaseId) {
+        this.automationLease.start(owner.email, automationLeaseId,
+          timeout || this.options.groupTimeout * 1000)
+      }
+      this.automationLeaseId = automationLeaseId
       this.ownerAbort = new AbortController()
       this.owner = {...owner, reservationId: randomUUID()}
       this.gestures.setOwner(this.owner.reservationId!)
@@ -329,7 +358,7 @@ export class IosBridge {
       // GroupMessage/API timeouts are milliseconds; the CLI fallback is seconds.
       this.timeout = Math.min(3600, Math.max(10,
         timeout ? timeout / 1000 : this.options.groupTimeout))
-      this.broadcast(new wire.JoinGroupMessage(this.options.serial, this.owner, usage))
+      this.broadcast(new wire.JoinGroupMessage(this.options.serial, this.owner, usage, leaseId))
     }
     this.keepalive()
   }
@@ -343,6 +372,8 @@ export class IosBridge {
     if (id) {
       this.client.request('/installations/cancel', {id, lease}).catch(this.report)
     }
+    this.automationLease.clear()
+    this.automationLeaseId = null
     this.owner = null
     this.epoch++
     this.gestures.setOwner(null)
@@ -371,7 +402,7 @@ export class IosBridge {
       return
     }
     const setup = [wire.ProbeMessage.$code, wire.DeviceRegisteredMessage.$code
-      , wire.GroupMessage.$code, wire.AutoGroupMessage.$code]
+      , wire.GroupMessage.$code, wire.AutoGroupMessage.$code, wire.AutomationLeaseMessage.$code]
     if (!setup.includes(envelope.type) && (!this.owner || !this.registered)) {
       return
     }
@@ -442,7 +473,8 @@ export class IosBridge {
         this.broadcast(new wire.DeviceHeartbeatMessage(this.options.serial))
       }
       this.publishHealth(state)
-      if (this.owner && Date.now() - this.activity > this.timeout * 1000) {
+      if (this.owner && !this.automationLeaseId &&
+          Date.now() - this.activity > this.timeout * 1000) {
         this.leave('automatic_timeout')
       }
       if (this.owner && this.installId) {
