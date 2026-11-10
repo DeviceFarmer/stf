@@ -237,10 +237,11 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob dotglob
+          digest_pattern='^[0-9a-f]{64}$'
           sources=()
           for arch in amd64 arm64; do
             files=("$RUNNER_TEMP/digests/digest-$arch/"*)
-            if (( ${#files[@]} != 1 )) || [[ ! -f "${files[0]}" ]]; then
+            if (( ${#files[@]} != 1 )) || [[ ! -f "${files[0]}" || ! "${files[0]##*/}" =~ $digest_pattern ]]; then
               echo "Expected one verified digest file for linux/$arch" >&2
               exit 1
             fi
