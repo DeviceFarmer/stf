@@ -1128,3 +1128,36 @@ ExecStop=/usr/bin/docker stop -t 2 %p
 ```
 
 Start everything up and you should be good to go.
+
+## Embedding STF in an iframe (cookie options)
+
+By default STF sends its session cookie and its `XSRF-TOKEN` cookie exactly as it always has, without a `SameSite` attribute set by STF. A page on another origin that embeds STF in an `<iframe>` ([#710](https://github.com/DeviceFarmer/stf/issues/710)) will therefore not have those cookies sent along with cross-site requests, and login fails. Two options change this:
+
+| Option | Values | Environment variable |
+|--------|--------|----------------------|
+| `--cookie-same-site` | `lax`, `strict`, `none` | `COOKIE_SAME_SITE` or `STF_COOKIE_SAME_SITE` |
+| `--cookie-secure` / `--no-cookie-secure` | boolean | `COOKIE_SECURE` or `STF_COOKIE_SECURE` (`true`/`1`/`yes`, `false`/`0`/`no`) |
+
+Both are unset by default. Unset means the cookie attributes are unchanged from before the options existed. The options also read the per-command prefixed variables, for example `STF_APP_COOKIE_SAME_SITE` and `STF_AUTH_MOCK_COOKIE_SECURE`, which take precedence over the unprefixed ones. For a cross-site iframe use `--cookie-same-site none`; with that value the `XSRF-TOKEN` cookie is marked `Secure` automatically when the request arrives over HTTPS, and the session cookie is marked `Secure` by `cookie-session` under the same condition.
+
+Where the options apply:
+
+* `stf app` (the same options are read for the session cookie and the `XSRF-TOKEN` cookie).
+* `stf auth-mock` and `stf auth-ldap`.
+* `stf local` accepts the options and passes them on to the app unit and, when `--auth-type` is `mock` or `ldap`, to the auth unit.
+* `stf auth-oauth2`, `stf auth-openid` and `stf auth-saml2` do not accept these options, so their cookies are unchanged. Use them in a cross-site iframe only if their own cookie behaviour is acceptable to you.
+
+**HTTPS is required for `SameSite=None`.** Browsers discard `SameSite=None` cookies that are not `Secure`, so the iframe only works when STF is served over HTTPS. `--cookie-same-site none` together with `--no-cookie-secure` is rejected at startup. Setting `--cookie-secure` while a request reaches STF over plain HTTP makes the cookie library fail with `Cannot send secure cookie over unencrypted connection`.
+
+In the usual deployment TLS is terminated by a reverse proxy and the STF units themselves speak plain HTTP. The proxy must then send `X-Forwarded-Proto: https` (in nginx, `proxy_set_header X-Forwarded-Proto $scheme;`; the example configuration below does not include this line). STF reads the header through Express `trust proxy`, which `stf app` always enables. `stf auth-mock` and `stf auth-ldap` enable it only when `--cookie-same-site none` or `--cookie-secure`/`--no-cookie-secure` is set. With `none`, these units log a warning at startup reminding you of the HTTPS requirement.
+
+Example for `stf-app@.service` and `stf-auth@.service` behind a TLS proxy:
+
+```
+stf app --port 3000 \
+  --auth-url https://stf.example.org/auth/mock/ \
+  --websocket-url wss://stf.example.org/ \
+  --cookie-same-site none
+```
+
+STF itself sets no `X-Frame-Options` or `frame-ancestors` header; if your proxy adds one, it must allow the embedding origin.
