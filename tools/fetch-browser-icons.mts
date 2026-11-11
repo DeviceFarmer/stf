@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import zlib from 'node:zlib'
 import {fileURLToPath} from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -9,6 +10,8 @@ const OUTPUT_DIR = path.resolve(__dirname, '../res/common/browser-icons')
 interface IconSource {
   filename: string
   url: string
+  // When set, `url` is a ZIP archive and this is the path of the SVG inside it.
+  zipEntry?: string
   transform?: (raw: string) => string
 }
 
@@ -47,14 +50,8 @@ const SOURCES: IconSource[] = [
   }
 , {
     filename: 'duckduckgo.svg'
-  , url: 'https://upload.wikimedia.org/wikipedia/en/1/15/DuckDuckGo_logo_post-2023.svg'
-  , transform: (svg: string) => {
-      // Remove wordmark text path below the icon and constrain viewBox to the circular Dax icon
-      const withoutWordmark = svg.replace(/<path fill="#333" d="[^"]+"><\/path>/, '')
-      return withoutWordmark
-        .replace('viewBox="0 0 184 148"', 'viewBox="38.385 0 107.122 107.122"')
-        .replace(/height="[^"]+" width="[^"]+"/, 'width="100%" height="100%"')
-    }
+  , url: 'https://staticcdn.duckduckgo.com/press/DuckDuckGo-Brand-Logo.zip'
+  , zipEntry: 'DuckDuckGo-Brand-Logo 2/Logo Files/SVG/DuckDuckGo Logo- Dax Solo.svg'
   }
 , {
     filename: 'yandex.svg'
@@ -62,11 +59,52 @@ const SOURCES: IconSource[] = [
   }
 ]
 
+// Minimal ZIP reader (stored/deflate entries, no ZIP64) so that no extra
+// dependency or external `unzip` binary is needed.
+function readZipEntry(zip: Buffer, entryName: string): string {
+  const eocd = zip.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]))
+  if (eocd < 0) {
+    throw new Error('Not a ZIP archive: end of central directory not found')
+  }
+  const count = zip.readUInt16LE(eocd + 10)
+  let pos = zip.readUInt32LE(eocd + 16)
+
+  for (let i = 0; i < count; i++) {
+    if (zip.readUInt32LE(pos) !== 0x02014b50) {
+      throw new Error('Corrupt ZIP central directory')
+    }
+    const method = zip.readUInt16LE(pos + 10)
+    const compressedSize = zip.readUInt32LE(pos + 20)
+    const nameLength = zip.readUInt16LE(pos + 28)
+    const extraLength = zip.readUInt16LE(pos + 30)
+    const commentLength = zip.readUInt16LE(pos + 32)
+    const localOffset = zip.readUInt32LE(pos + 42)
+    const name = zip.toString('utf8', pos + 46, pos + 46 + nameLength)
+
+    if (name === entryName) {
+      const dataStart = localOffset + 30 +
+        zip.readUInt16LE(localOffset + 26) + zip.readUInt16LE(localOffset + 28)
+      const data = zip.subarray(dataStart, dataStart + compressedSize)
+      if (method === 0) {
+        return data.toString('utf8')
+      }
+      if (method === 8) {
+        return zlib.inflateRawSync(data).toString('utf8')
+      }
+      throw new Error(`Unsupported ZIP compression method ${method} for ${entryName}`)
+    }
+
+    pos += 46 + nameLength + extraLength + commentLength
+  }
+
+  throw new Error(`${entryName} not found in ZIP archive`)
+}
+
 async function fetchIcon(source: IconSource) {
   process.stdout.write(`Fetching ${source.filename} from ${source.url}... `)
   const response = await fetch(source.url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+      'User-Agent': 'stf-fetch-browser-icons (+https://github.com/DeviceFarmer/stf)'
     }
   , redirect: 'follow'
   })
@@ -75,7 +113,9 @@ async function fetchIcon(source: IconSource) {
     throw new Error(`Failed to fetch ${source.url}: HTTP ${response.status} ${response.statusText}`)
   }
 
-  let text = await response.text()
+  let text = source.zipEntry ?
+    readZipEntry(Buffer.from(await response.arrayBuffer()), source.zipEntry) :
+    await response.text()
   if (!text.includes('<svg')) {
     throw new Error(`Invalid response for ${source.filename}: does not contain <svg tag`)
   }

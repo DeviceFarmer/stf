@@ -145,4 +145,20 @@ describe('browsers', function() {
       expect(readme, `README mentions ${icon}.svg`).to.include(`\`${icon}.svg\``)
     }
   })
+
+  it('should list every URL fetched by tools/fetch-browser-icons.mts in the README', function() {
+    var toolPath = path.resolve(import.meta.dirname, '../../tools/fetch-browser-icons.mts')
+    var tool = fs.readFileSync(toolPath, 'utf8')
+    var readme = fs.readFileSync(
+      pathutil.resource('common/browser-icons/README.md'), 'utf8')
+
+    var urls = Array.from(tool.matchAll(/\burl: '([^']+)'/g), function(m) {
+      return m[1]!
+    })
+    expect(urls.length).to.equal(BUNDLED_BROWSER_ICONS.length)
+
+    for (var url of urls) {
+      expect(readme, `README lists ${url}`).to.include(url)
+    }
+  })
 })
