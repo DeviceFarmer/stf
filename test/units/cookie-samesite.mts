@@ -237,6 +237,31 @@ describe('Cookie SameSite and Secure configuration', function() {
       }).to.throw(/requires secure cookies/)
     })
 
+    it('should reject --cookie-same-site none with COOKIE_SECURE=false', function() {
+      for (var name of ['COOKIE_SECURE', 'STF_COOKIE_SECURE']) {
+        delete process.env.COOKIE_SECURE
+        delete process.env.STF_COOKIE_SECURE
+        process.env[name] = 'false'
+
+        expect(function() {
+          parseCli(appCli, [
+            'app', '--secret', 's3cret', '--auth-url', 'http://127.0.0.1:7120/'
+          , '--websocket-url', 'http://127.0.0.1:7110/'
+          , '--cookie-same-site', 'none'
+          ])
+        }, name).to.throw(/requires secure cookies/)
+
+        // An explicit flag still wins over the environment.
+        var explicit = parseCli(appCli, [
+          'app', '--secret', 's3cret', '--auth-url', 'http://127.0.0.1:7120/'
+        , '--websocket-url', 'http://127.0.0.1:7110/'
+        , '--cookie-same-site', 'none'
+        , '--cookie-secure'
+        ])
+        expect(explicit.cookieSecure, name).to.equal(true)
+      }
+    })
+
     it('should respect COOKIE_SAME_SITE and COOKIE_SECURE environment variables', function() {
       process.env.COOKIE_SAME_SITE = 'none'
       process.env.COOKIE_SECURE = 'true'
