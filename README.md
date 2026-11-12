@@ -164,7 +164,7 @@ docker build -t stf:local .
 docker run --rm stf:local
 ```
 
-The Dockerfile supports `linux/amd64` and `linux/arm64`. Build tools stay in separate stages. The runtime contains Node.js, production dependencies, GraphicsMagick and a headless Java runtime. STF runs as an unprivileged user with read-only access to the application files in `/app`. Dependency installation is cached independently of application sources. A root `package-lock.json` is included when present. The bundled AAB-to-APK tool requires amd64.
+The Dockerfile supports `linux/amd64` and `linux/arm64`. Build tools stay in separate stages. The runtime contains Node.js, production dependencies, GraphicsMagick and a headless Java runtime. STF runs as an unprivileged user with read-only access to the application files in `/app`. Dependency installation is cached independently of application sources. It runs `npm ci`, so the image gets the versions recorded in `package-lock.json`; a source tree without that file falls back to `npm install`. The bundled AAB-to-APK tool requires amd64.
 
 For custom health checks inside STF containers, replace `wget` with a Node.js probe like the one in [Docker Compose](docker-compose.yaml). Derived images that use `npm` or compile native modules should do so in a build stage and copy the resulting files into the runtime image. To refresh Ubuntu packages in a local build, pass `--no-cache-filter runtime-base` to `docker buildx build`.
 
@@ -183,8 +183,10 @@ After you've got all the [requirements](#requirements) installed, it's time to f
 First, fetch all NPM modules:
 
 ```bash
-npm install
+npm ci
 ```
+
+`npm ci` installs exactly the versions recorded in `package-lock.json`, as CI and the Docker image do. `npm install` works as well; it also updates `package-lock.json` when `package.json` asks for something the lockfile does not have.
 
 Then compile the TypeScript sources in `lib/`, which `bin/stf` runs from:
 
@@ -261,7 +263,7 @@ stf local --public-ip <your_internal_network_ip_here>
 
 ## Updating
 
-To update your development version, simply pull the repo and run `npm install` and `node build.mts compile` again. You may occasionally have to remove the whole `node_modules` folder to prevent NPM from complaining about version mismatches.
+To update your development version, simply pull the repo and run `npm ci` and `node build.mts compile` again. `npm ci` replaces `node_modules` with the versions in `package-lock.json`, so leftovers from an older checkout do not linger.
 
 ## FAQ
 

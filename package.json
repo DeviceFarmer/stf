@@ -30,7 +30,7 @@
     "ios:compose": "sh bin/stf-ios-compose",
     "test:ios-prototype": "node --test tools/ios-prototype/test/*.test.mts",
     "test": "node build.mts test && npm run test:unit",
-    "prepare": "not-in-install && node build.mts build || in-install",
+    "prepare": "node -e \"process.exit(process.env.npm_command === 'ci' ? 0 : 1)\" || (not-in-install && node build.mts build || in-install)",
     "prelocal": "node build.mts compile translate-compile",
     "local": "node lib/cli/index.js local",
     "lint": "node build.mts lint",

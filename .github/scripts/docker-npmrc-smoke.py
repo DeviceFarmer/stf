@@ -2,8 +2,10 @@
 """Check the production Dockerfile's optional npmrc secret using its node-base stage.
 
 The fixtures reuse the real USER, COPY and npm RUN instructions. Only the npm
-install/prune/pack commands become registry probes, so no registry or native
-compilation is needed. Every dependency-stage layer is scanned for fake secrets.
+ci/install/prune/pack commands become registry probes, so no registry or native
+compilation is needed. Half of the fixtures carry a lockfile, so both the npm ci
+and the npm install branch run. Every dependency-stage layer is scanned for fake
+secrets.
 """
 
 import argparse
@@ -29,6 +31,7 @@ const root = '/build/.npmrc-smoke'
 const expected = JSON.parse(fs.readFileSync(path.join(root, 'expected.json')))
 const secret = '/run/secrets/npmrc'
 const phase = process.argv[2]
+const command = process.argv[3]
 assert.equal(process.versions.node.split('.')[0], '22', 'Expected Node.js 22')
 assert.equal(process.getuid(), expected.uid, 'Unexpected npm user ID')
 assert.equal(process.getgid(), expected.uid, 'Unexpected npm group ID')
@@ -41,6 +44,10 @@ if (phase === 'after') {
   process.exit(0)
 }
 assert.equal(fs.existsSync(secret), expected.secret, 'Optional secret mount is incorrect')
+if (phase === 'install') {
+  assert.equal(command, expected.lockfile ? 'ci' : 'install',
+    'The lockfile decides between npm ci and npm install')
+}
 let registry = 'https://registry.npmjs.org/'
 if (expected.secret) {
   assert.equal(fs.statSync(secret).mode & 0o777, 0o444, 'Secret must be mode 0444')
@@ -119,8 +126,9 @@ def fixture_dockerfile(source, base, uid):
         'RUN if [ "$(id -u stf)" != "' + str(uid) + '" ]; then '
         'usermod -u ' + str(uid) + ' stf; groupmod -g ' + str(uid) + ' stf; fi',
     ]
-    for stage, phase in [('dependencies', 'install'),
-                         ('production-dependencies', 'prune'), ('build', 'pack')]:
+    for stage, phase, commands in [('dependencies', 'install', ('ci', 'install')),
+                                   ('production-dependencies', 'prune', ('prune',)),
+                                   ('build', 'pack', ('pack',))]:
         body = stages.get(stage)
         if body is None:
             raise ValueError('Missing Dockerfile stage: ' + stage)
@@ -133,24 +141,29 @@ def fixture_dockerfile(source, base, uid):
             body = body[start:]
         result.append('FROM ' + ('node-base' if stage == 'dependencies' else 'dependencies')
                       + ' AS ' + stage)
-        count = 0
+        found = []
+
+        def probe(match):
+            found.append(match[1])
+            return 'node /build/.npmrc-smoke/probe.cjs ' + phase + ' ' + match[1]
+
         for instruction in body:
             if re.match(r'RUN\s', instruction, re.I):
-                # Replace the command and its simple flags, preserving mounts,
+                # Replace each command and its simple flags, preserving mounts,
                 # conditional exports, redirection and the rest of the real RUN.
-                pattern = r'\bnpm\s+' + phase + r'\b(?:[ \t]+--[A-Za-z0-9_=-]+)*'
-                rewritten, replacements = re.subn(
-                    pattern, 'node /build/.npmrc-smoke/probe.cjs ' + phase, instruction)
+                pattern = (r'\bnpm\s+(' + '|'.join(commands)
+                           + r')\b(?:[ \t]+--[A-Za-z0-9_=-]+)*')
+                rewritten, replacements = re.subn(pattern, probe, instruction)
                 if replacements:
-                    count += replacements
                     if phase == 'install':
                         result.append('COPY --chown=stf:stf .npmrc-smoke /build/.npmrc-smoke')
                     result.append(rewritten)
                     result.append('RUN node /build/.npmrc-smoke/probe.cjs after ' + phase)
                     continue
             result.append(instruction)
-        if count != 1:
-            raise ValueError('Expected exactly one npm ' + phase + ' command')
+        if sorted(found) != sorted(commands):
+            raise ValueError('Expected exactly one of each npm command in ' + stage + ': '
+                             + ', '.join(commands))
     return '\n\n'.join(result) + '\n'
 
 
@@ -252,9 +265,12 @@ def main():
             for uid in (998, 999):
                 for with_secret in (False, True):
                     variant = str(uid) + ('-secret' if with_secret else '-default')
+                    # UID 999 takes the npm ci branch, UID 998 the npm install branch.
+                    lockfile = uid == 999
                     print('Checking npmrc: UID ' + str(uid) + ', '
                           + ('secret supplied' if with_secret else 'npm defaults'), flush=True)
-                    checks = {'uid': uid, 'secret': with_secret, 'phases': [], 'layers': 'pending'}
+                    checks = {'uid': uid, 'secret': with_secret, 'lockfile': lockfile,
+                              'phases': [], 'layers': 'pending'}
                     report['variants'].append(checks)
                     context = temporary / variant
                     context.mkdir()
@@ -263,10 +279,16 @@ def main():
                         'registry=https://' + context_marker.decode() + '.invalid/\n')
                     (context / 'package.json').write_text(
                         json.dumps({'name': 'npmrc-smoke', 'version': '0.0.0', 'private': True}))
+                    if lockfile:
+                        (context / 'package-lock.json').write_text(json.dumps({
+                            'name': 'npmrc-smoke', 'version': '0.0.0', 'lockfileVersion': 3,
+                            'requires': True,
+                            'packages': {'': {'name': 'npmrc-smoke', 'version': '0.0.0'}}}))
                     probe = context / '.npmrc-smoke'
                     probe.mkdir()
                     (probe / 'probe.cjs').write_text(PROBE)
                     (probe / 'expected.json').write_text(json.dumps({'uid': uid, 'secret': with_secret,
+                                                                           'lockfile': lockfile,
                                                                            'operation': uuid.uuid4().hex}))
                     dockerfile = temporary / (variant + '.Dockerfile')
                     dockerfile.write_text(fixture_dockerfile(source, base, uid))
@@ -304,7 +326,7 @@ def main():
             args.output.write_text(json.dumps(report, indent=2) + '\n')
     if cleanup_errors:
         raise RuntimeError('Fixture image cleanup failed')
-    print('npmrc smoke passed: install, prune and pack; UIDs 998/999; secret/default; no leaked layers')
+    print('npmrc smoke passed: ci/install, prune and pack; UIDs 998/999; secret/default; no leaked layers')
 
 
 if __name__ == '__main__':
