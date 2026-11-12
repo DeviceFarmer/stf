@@ -19,8 +19,8 @@ const {values} = parseArgs({options: {
 , pymobiledevice3: {type: 'string', default: 'pymobiledevice3'}
 , port: {type: 'string', default: '7400'}
 , 'wda-port': {type: 'string', default: '18100'}
-, 'mjpeg-port': {type: 'string', default: '19100'}
 , 'tunnel-port': {type: 'string', default: '28100'}
+, 'appium-mjpeg-port': {type: 'string'}
 , 'token-file': {type: 'string'}
 , 'storage-url': {type: 'string'}
 , 'install-dir': {type: 'string', default: path.join(os.homedir(), '.stf-ios-installations')}
@@ -38,11 +38,13 @@ const imageMounter: ImageMounter = requestedMounter
 if (values.help) {
   process.stdout.write('Usage: npm run ios:prototype -- --udid UDID --wda-bundle-id BUNDLE_ID ' +
     '--token-file /path/to/token\n' +
-    'Options: --port 7400 --wda-port 18100 --mjpeg-port 19100 --tunnel-port 28100\n' +
+    'Options: --port 7400 --wda-port 18100 --tunnel-port 28100\n' +
+    '         --appium-mjpeg-port PORT (optional private Appium video forward)\n' +
     '         --go-ios ios --iproxy iproxy --xctest-config WebDriverAgentRunner.xctest\n' +
     '         --image-mounter go-ios|pymobiledevice3 --pymobiledevice3 /path/to/pymobiledevice3\n' +
     '         --storage-url http://storage:3000 --install-dir /private/installations\n' +
     'Use pymobiledevice3 for iOS 27 developer images (requires a kernel go-ios tunnel).\n' +
+    'Interactive screen and touch require iOS 27+ and a kernel go-ios tunnel.\n' +
     'Check the Linux host without starting WDA: --doctor [--udid UDID]\n' +
     'Requires a signed, installed WDA and a running go-ios tunnel. Listens on 127.0.0.1.\n')
 }
@@ -75,17 +77,20 @@ async function main(): Promise<void> {
     }
     return parsed
   }
+  const appiumMjpegPort = values['appium-mjpeg-port']
   const ports = [
-    values.port, values['wda-port'], values['mjpeg-port'], values['tunnel-port']
+    values.port, values['wda-port'], values['tunnel-port']
+  , ...(typeof appiumMjpegPort === 'string' ? [appiumMjpegPort] : [])
   ].map(port)
   if (new Set(ports).size !== ports.length) {
-    throw new Error('API, WDA, MJPEG and tunnel ports must be different')
+    throw new Error('API, WDA, tunnel and optional Appium MJPEG ports must be different')
   }
   const runtime = new IosRuntime({
     udid: values.udid, bundleId: values['wda-bundle-id'], xctest: values['xctest-config']
   , goIos: values['go-ios'], iproxy: values.iproxy
   , imageMounter, pymobiledevice3: values.pymobiledevice3
-  , wdaPort: ports[1]!, mjpegPort: ports[2]!, tunnelPort: ports[3]!
+  , wdaPort: ports[1]!, tunnelPort: ports[2]!
+  , ...(ports[3] ? {appiumMjpegPort: ports[3]} : {})
   , retryMs: 5000, startupMs: 60000
   , stateDirectory: values['state-dir']
   })

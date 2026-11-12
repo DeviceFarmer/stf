@@ -543,6 +543,7 @@ message TouchDownMessage {
   optional float pressure = 5;
   optional string gestureId = 6;
   optional string reservationId = 7;
+  optional string screenSessionId = 8;
 }
 
 message TouchMoveMessage {
@@ -553,6 +554,7 @@ message TouchMoveMessage {
   optional float pressure = 5;
   optional string gestureId = 6;
   optional string reservationId = 7;
+  optional string screenSessionId = 8;
 }
 
 message TouchUpMessage {
@@ -560,12 +562,14 @@ message TouchUpMessage {
   required uint32 contact = 2;
   optional string gestureId = 3;
   optional string reservationId = 4;
+  optional string screenSessionId = 5;
 }
 
 message TouchCommitMessage {
   required uint32 seq = 1;
   optional string gestureId = 2;
   optional string reservationId = 3;
+  optional string screenSessionId = 4;
 }
 
 message TouchResetMessage {
@@ -574,18 +578,21 @@ message TouchResetMessage {
   optional bool cancel = 3;
   optional string reservationId = 4;
   optional bool cancelThrough = 5;
+  optional string screenSessionId = 6;
 }
 
 message GestureStartMessage {
   required uint32 seq = 1;
   optional string gestureId = 2;
   optional string reservationId = 3;
+  optional string screenSessionId = 4;
 }
 
 message GestureStopMessage {
   required uint32 seq = 1;
   optional string gestureId = 2;
   optional string reservationId = 3;
+  optional string screenSessionId = 4;
 }
 
 message TypeMessage {

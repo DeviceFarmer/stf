@@ -119,6 +119,7 @@ ios:
   # - name: iphone-a
   #   udid: YOUR_DEVICE_UDID
   #   wdaBundleId: com.example.WebDriverAgentRunner.xctrunner
+  #   appiumMjpegPort: 19100 # Optional loopback port for an Appium sidecar.
   #   tokenSecret: iphone-a-token
   #   service: {create: true}
   #   tokenKey: token

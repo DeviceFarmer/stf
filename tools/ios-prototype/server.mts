@@ -1,25 +1,19 @@
 import {timingSafeEqual} from 'node:crypto'
 import http from 'node:http'
-import {pipeline} from 'node:stream'
+import {pipeline, Readable} from 'node:stream'
 
-import type {IosRuntime} from './runtime.mts'
+import {AutomationError, type IosRuntime} from './runtime.mts'
 import {InstallError, type Installations} from './installations.mts'
+import {CoreDeviceError} from './coredevice.mts'
 
 class InputError extends Error {
 }
 
-function number(value: unknown, min: number, max: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
-    throw new InputError('Expected a number between ' + min + ' and ' + max)
+function coordinate(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+    throw new InputError('Expected a number between 0 and 1')
   }
   return value
-}
-
-function point(body: any): {x: number, y: number} {
-  if (!body || typeof body !== 'object') {
-    throw new InputError('Expected coordinates')
-  }
-  return {x: number(body.x, 0, 1), y: number(body.y, 0, 1)}
 }
 
 async function body(req: http.IncomingMessage): Promise<any> {
@@ -87,7 +81,19 @@ export function createServer(
         , instance: runtime.instance
         , ios: runtime.telemetry.status
         , error: runtime.lastError, info: runtime.info
+        , ...(runtime.coreDevice ? {coreDevice: true} : {})
+        , ...(runtime.automationLease ? {automationLease: runtime.automationLease} : {})
         })
+        return
+      }
+      if (route === 'POST /automation') {
+        const {active, lease} = await body(req)
+        if (typeof active !== 'boolean' || typeof lease !== 'string' ||
+            !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(lease)) {
+          throw new InputError('Expected an automation lease UUID and boolean active state')
+        }
+        await runtime.setAppiumMode(active, lease, abort.signal)
+        json(200, {active})
         return
       }
       if (req.method === 'POST' && installations) {
@@ -107,27 +113,21 @@ export function createServer(
         json(503, {error: 'device_not_ready', state: runtime.state})
         return
       }
-      if (route === 'GET /screen') {
-        const upstream = http.get('http://127.0.0.1:' + runtime.options.mjpegPort, stream => {
-          const contentType = stream.headers['content-type'] || ''
-          if (stream.statusCode !== 200 || !contentType.startsWith('multipart/x-mixed-replace')) {
-            stream.resume()
-            json(502, {error: 'invalid_mjpeg_response'})
-            return
-          }
-          res.writeHead(200, {'Content-Type': contentType})
-          pipeline(stream, res, () => null)
+      if (route === 'GET /coredevice/screen') {
+        const screen = await runtime.openCoreDevice(abort.signal)
+        if (abort.signal.aborted) {
+          await screen.body.cancel().catch(() => null)
+          return
+        }
+        res.writeHead(200, {
+          'Content-Type': 'application/octet-stream'
+        , 'X-STF-CoreDevice-Session': screen.sessionId
+        , 'X-STF-HEVC-Codec': screen.codec
+        , 'X-STF-HEVC-Description': screen.description
         })
-        upstream.setTimeout(15000, () => upstream.destroy(new Error('MJPEG timeout')))
-        upstream.on('error', () => {
-          if (!res.headersSent && !res.destroyed) {
-            json(502, {error: 'screen_unavailable'})
-          }
-          else {
-            res.destroy()
-          }
-        })
-        res.once('close', () => upstream.destroy())
+        const upstream = Readable.fromWeb(screen.body)
+        abort.signal.addEventListener('abort', () => upstream.destroy(), {once: true})
+        pipeline(upstream, res, () => abort.abort())
         return
       }
       if (route === 'GET /screenshot') {
@@ -154,6 +154,18 @@ export function createServer(
       }
       const input = await body(req)
       switch (req.url) {
+      case '/coredevice/touch': {
+        const type = input.type
+        if (type !== 'contact' && type !== 'release') {
+          throw new InputError('type must be contact or release')
+        }
+        const position = {x: coordinate(input.x), y: coordinate(input.y)}
+        await runtime.coreDeviceInput(input.sessionId).touch(type, position, abort.signal)
+        break
+      }
+      case '/coredevice/keyframe':
+        await runtime.coreDeviceInput(input.sessionId).keyframe(abort.signal)
+        break
       case '/lock':
         json(200, await runtime.lock(abort.signal))
         return
@@ -169,20 +181,6 @@ export function createServer(
       case '/shake':
         await runtime.shake(abort.signal)
         break
-      case '/tap': {
-        const position = point(input)
-        await runtime.execute((wda, signal) =>
-          wda.gesture(position, null, 50, signal), true, abort.signal)
-        break
-      }
-      case '/swipe': {
-        const from = point(input.from)
-        const to = point(input.to)
-        const duration = number(input.durationMs ?? 500, 50, 5000)
-        await runtime.execute((wda, signal) =>
-          wda.gesture(from, to, duration, signal), true, abort.signal)
-        break
-      }
       case '/text':
         if (typeof input.text !== 'string' || input.text.length > 4096) {
           throw new InputError('text must be a string of at most 4096 characters')
@@ -209,11 +207,19 @@ export function createServer(
       json(200, {success: true})
     }
     catch (error) {
+      if (res.destroyed) {
+        return
+      }
+      if (res.headersSent) {
+        res.destroy()
+        return
+      }
       let status = runtime.state === 'ready' ? 502 : 503
       if (error instanceof InputError) {
         status = 400
       }
-      if (error instanceof InstallError) {
+      if (error instanceof InstallError || error instanceof CoreDeviceError ||
+          error instanceof AutomationError) {
         status = error.status
       }
       json(status, {error: (error as Error).message})

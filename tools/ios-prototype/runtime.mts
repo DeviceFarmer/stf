@@ -7,6 +7,8 @@ import {runPowerCommand} from './power.mts'
 import {selectedTunnel, rsdEndpoint} from './tunnel.mts'
 import {Telemetry, diagnosticReason} from './telemetry.mts'
 import {AssistiveTouch} from './assistive-touch.mts'
+import {CoreDeviceError, CoreDeviceSession} from './coredevice.mts'
+import type {CoreDeviceScreen} from './coredevice.mts'
 import type {ImageMounter} from './tunnel.mts'
 
 export interface RuntimeOptions {
@@ -18,8 +20,8 @@ export interface RuntimeOptions {
   imageMounter: ImageMounter
   pymobiledevice3: string
   wdaPort: number
-  mjpegPort: number
   tunnelPort: number
+  appiumMjpegPort?: number
   retryMs: number
   startupMs: number
   stateDirectory?: string
@@ -39,6 +41,15 @@ export interface RuntimeDependencies {
   log: (message: string) => void
 }
 
+export class AutomationError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 export class IosRuntime {
   readonly instance = randomUUID()
   readonly wda: WdaClient
@@ -47,6 +58,7 @@ export class IosRuntime {
   lastError: string | null = null
   info: unknown = null
   generation = 0
+  automationLease: string | null = null
   readonly telemetry: Telemetry
   private lastTelemetry = 0
   private abort = new AbortController()
@@ -55,6 +67,10 @@ export class IosRuntime {
   private queue: Promise<unknown> = Promise.resolve()
   private dependencies: RuntimeDependencies
   private assistiveTouch: AssistiveTouch
+  private coreDeviceRsd: [string, string] | null = null
+  private coreDeviceSession: CoreDeviceSession | null = null
+  private changingPowerState = false
+  private healthProbe: AbortController | null = null
 
   constructor(options: RuntimeOptions, dependencies?: Partial<RuntimeDependencies>) {
     this.options = {...options}
@@ -100,6 +116,7 @@ export class IosRuntime {
   }
 
   private async prepare(): Promise<void> {
+    this.state = 'starting'
     const {json, run, start} = this.dependencies
     const o = this.options
     this.telemetry.phase('checking_usb')
@@ -134,8 +151,8 @@ export class IosRuntime {
     this.checkChildren()
     this.telemetry.phase('wda')
     this.children.push(start(o.iproxy, [
-      '-u', o.udid, '-l', '-s', '127.0.0.1'
-    , o.wdaPort + ':8100', o.mjpegPort + ':9100'
+      '-u', o.udid, '-l', '-s', '127.0.0.1', o.wdaPort + ':8100'
+    , ...(o.appiumMjpegPort ? [o.appiumMjpegPort + ':9100'] : [])
     ]))
     // Catch a failed bind before asking the device to start WDA.
     await this.sleep(300)
@@ -149,9 +166,22 @@ export class IosRuntime {
       try {
         await this.wda.request('GET', '/status')
         this.checkChildren()
-        this.telemetry.phase('session')
-        await this.wda.open()
-        this.checkChildren()
+        if (!this.automationLease) {
+          this.telemetry.phase('session')
+          await this.wda.open(this.abort.signal)
+          this.checkChildren()
+        }
+        const productVersion = (this.info as {ProductVersion?: string})?.ProductVersion
+        const version = Number.parseInt(productVersion || '', 10)
+        if (version >= 27) {
+          try {
+            this.coreDeviceRsd = rsdEndpoint(tunnel)
+          }
+          catch (error) {
+            this.dependencies.log('CoreDevice screen unavailable: ' + (error as Error).message)
+          }
+        }
+        this.state = 'ready'
         return
       }
       catch (error) {
@@ -165,29 +195,57 @@ export class IosRuntime {
 
   private async cleanup(): Promise<void> {
     this.generation += 1
+    this.coreDeviceRsd = null
+    this.telemetry.status.locked = null
+    // Keep the worker's slot until it exits without making WDA recovery wait for media cleanup.
+    this.coreDeviceSession?.stop()
     await this.queue.catch(() => null)
-    await this.wda.close().catch(() => null)
+    if (this.automationLease) {
+      this.wda.sessionId = null
+    }
+    else {
+      await this.wda.close().catch(() => null)
+    }
     await Promise.all(this.children.splice(0).map(child => child.stop()))
   }
 
   private async loop(): Promise<void> {
     await this.telemetry.load()
+    this.telemetry.status.locked = null
     while (!this.abort.signal.aborted) {
       try {
-        this.state = 'starting'
         this.telemetry.status.attempts++
         await this.prepare()
-        this.state = 'ready'
         this.lastError = null
         this.telemetry.phase('ready', 'ready')
         this.telemetry.status.lastReadyAt = new Date().toISOString()
         this.dependencies.log('iPhone ' + this.options.udid + ': ready')
         while (!this.abort.signal.aborted) {
           await this.sleep(this.options.retryMs)
+          if (this.state !== 'ready') {
+            break
+          }
           this.checkChildren()
-          // Probe our session, not just /status: WDA can outlive a lost XCTest session.
-          const locked = await this.wda.probeSession(this.abort.signal)
-          this.telemetry.status.locked = typeof locked.value === 'boolean' ? locked.value : null
+          if (!this.automationLease) {
+            const probe = new AbortController()
+            this.healthProbe = probe
+            try {
+              const locked = await this.probeLockState(
+                AbortSignal.any([this.abort.signal, probe.signal])
+              )
+              if (!probe.signal.aborted) {
+                this.telemetry.status.locked = locked
+              }
+            }
+            catch (error) {
+              if (!probe.signal.aborted) {
+                throw error
+              }
+            }
+            finally {
+              this.healthProbe = null
+            }
+          }
           const profile = this.telemetry.status.wda.profile
           let reason = 'wda_profile_unknown'
           if (profile === 'valid') {
@@ -196,7 +254,8 @@ export class IosRuntime {
           if (profile === 'expired' || profile === 'expiring') {
             reason = 'wda_profile_' + profile
           }
-          if (locked.value === true) {
+          if (this.telemetry.status.locked === true) {
+            this.coreDeviceSession?.stop()
             reason = 'locked'
           }
           this.telemetry.phase('ready', reason)
@@ -229,13 +288,162 @@ export class IosRuntime {
     this.telemetry.phase('stopped', 'provider_unavailable')
   }
 
+  private async probeLockState(signal: AbortSignal): Promise<boolean | null> {
+    // WDA can outlive a lost XCTest session.
+    const {value} = await this.wda.probeSession(signal)
+    return typeof value === 'boolean' ? value : null
+  }
+
+  setAppiumMode(active: boolean, lease: string, signal: AbortSignal): Promise<void> {
+    const request = AbortSignal.any([this.abort.signal, signal])
+    return this.enqueue(async() => {
+      request.throwIfAborted()
+      if (active) {
+        await this.beginAutomation(lease, request)
+      }
+      else if (this.automationLease === lease) {
+        try {
+          if (this.state === 'ready') {
+            await this.restoreWdaSession()
+          }
+        }
+        catch (error) {
+          this.state = 'waiting'
+          this.lastError = (error as Error).message
+          this.telemetry.phase('recovering', 'wda_unavailable')
+          this.dependencies.log('Could not restore STF WDA session: ' + this.lastError)
+        }
+        finally {
+          this.automationLease = null
+        }
+      }
+    })
+  }
+
+  private async beginAutomation(lease: string, signal: AbortSignal): Promise<void> {
+    if (this.state !== 'ready') {
+      throw new AutomationError('IOS_AUTOMATION_NOT_READY', 503)
+    }
+    this.checkChildren()
+    if (this.automationLease === lease) {
+      return
+    }
+    if (this.automationLease) {
+      throw new AutomationError('IOS_AUTOMATION_LEASE_CONFLICT', 409)
+    }
+    // Appium may use the existing session or replace it. Neither requires restarting WDA.
+    this.automationLease = lease
+    this.healthProbe?.abort()
+    try {
+      const worker = this.coreDeviceSession
+      if (worker) {
+        worker.stop()
+        const wait = new AbortController()
+        try {
+          const drained = await Promise.race([
+            worker.closed.then(() => true)
+          , delay(26000, false, {signal: AbortSignal.any([signal, wait.signal])})
+          ])
+          if (!drained) {
+            throw new CoreDeviceError('IOS_COREDEVICE_SCREEN_BUSY', 409)
+          }
+        }
+        finally {
+          wait.abort()
+        }
+      }
+      signal.throwIfAborted()
+      this.checkChildren()
+      if (this.state !== 'ready') {
+        throw new AutomationError('IOS_AUTOMATION_NOT_READY', 503)
+      }
+      this.telemetry.status.locked = null
+    }
+    catch (error) {
+      this.automationLease = null
+      throw error
+    }
+  }
+
+  private async restoreWdaSession(): Promise<void> {
+    const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(10000)])
+    if (this.wda.sessionId) {
+      try {
+        this.telemetry.status.locked = await this.probeLockState(signal)
+        return
+      }
+      catch (error) {
+        if (!(error instanceof WdaError) || error.code !== 'invalid session id') {
+          throw error
+        }
+      }
+    }
+    await this.wda.open(signal)
+    this.telemetry.status.locked = await this.probeLockState(signal)
+  }
+
   shake(signal: AbortSignal): Promise<void> {
     return this.execute((wda, active) => this.assistiveTouch.perform(wda, active), false,
       AbortSignal.any([signal, AbortSignal.timeout(45000)]))
   }
 
+  get coreDevice(): boolean {
+    return this.coreDeviceRsd !== null
+  }
+
+  async openCoreDevice(signal: AbortSignal): Promise<CoreDeviceScreen> {
+    signal.throwIfAborted()
+    const previous = this.coreDeviceSession
+    if (previous?.signal.aborted && !this.changingPowerState) {
+      const wait = new AbortController()
+      const waiting = AbortSignal.any([signal, this.abort.signal, wait.signal])
+      try {
+        await Promise.race([previous.closed, delay(6000, null, {signal: waiting})])
+      }
+      finally {
+        wait.abort()
+      }
+      signal.throwIfAborted()
+    }
+    if (!this.coreDeviceRsd) {
+      throw new CoreDeviceError('IOS_COREDEVICE_UNAVAILABLE', 404)
+    }
+    if (this.state !== 'ready' || this.changingPowerState || this.automationLease ||
+        this.telemetry.status.locked !== false) {
+      throw new CoreDeviceError('IOS_COREDEVICE_NOT_READY', 503)
+    }
+    if (this.coreDeviceSession) {
+      throw new CoreDeviceError('IOS_COREDEVICE_SCREEN_BUSY', 409)
+    }
+    const session = new CoreDeviceSession(this.options.pymobiledevice3, this.options.udid,
+      this.coreDeviceRsd, AbortSignal.any([signal, this.abort.signal]), this.dependencies.log)
+    this.coreDeviceSession = session
+    session.closed.then(() => {
+      if (this.coreDeviceSession === session) {
+        this.coreDeviceSession = null
+      }
+    })
+    try {
+      return await session.screen()
+    }
+    catch (error) {
+      session.stop()
+      this.dependencies.log('CoreDevice screen unavailable: ' + (error as Error).message)
+      throw new CoreDeviceError('IOS_COREDEVICE_SCREEN_UNAVAILABLE', 503)
+    }
+  }
+
+  coreDeviceInput(sessionId: unknown): CoreDeviceSession {
+    const session = this.coreDeviceSession
+    if (!session || session.signal.aborted || session.id !== sessionId ||
+        this.state !== 'ready' || this.telemetry.status.locked !== false) {
+      throw new CoreDeviceError('IOS_COREDEVICE_SESSION_ENDED', 409)
+    }
+    return session
+  }
+
   lock(signal: AbortSignal): Promise<{locked: boolean}> {
-    return this.execute(async(wda, active) => {
+    return this.changePowerState(async(wda, active) => {
       if ((await this.lockState(active)).locked) {
         return {locked: true}
       }
@@ -270,7 +478,7 @@ export class IosRuntime {
         await delay(200, undefined, {signal: active})
       }
       throw new Error('IOS_LOCK_FAILED')
-    }, true, AbortSignal.any([signal, AbortSignal.timeout(45000)]))
+    }, AbortSignal.any([signal, AbortSignal.timeout(45000)]))
   }
 
   private async lockState(signal: AbortSignal): Promise<{locked: boolean}> {
@@ -284,12 +492,31 @@ export class IosRuntime {
   }
 
   power(action: 'reboot' | 'shutdown', signal?: AbortSignal): Promise<{accepted: boolean}> {
-    return this.execute(async(_wda, active) => {
+    return this.changePowerState(async(_wda, active) => {
       await this.dependencies.power(this.options.goIos, this.args(action), active)
       this.state = 'waiting'
       this.generation++
       this.telemetry.phase('recovering', 'provider_unavailable')
       return {accepted: true}
+    }, signal)
+  }
+
+  private changePowerState<T>(
+    action: (wda: WdaClient, signal: AbortSignal) => Promise<T>, signal?: AbortSignal
+  ): Promise<T> {
+    return this.execute(async(wda, active) => {
+      if (this.automationLease) {
+        throw new AutomationError('IOS_AUTOMATION_LEASE_CONFLICT', 409)
+      }
+      this.changingPowerState = true
+      try {
+        this.coreDeviceSession?.stop()
+        active.throwIfAborted()
+        return await action(wda, active)
+      }
+      finally {
+        this.changingPowerState = false
+      }
     }, true, signal)
   }
 
@@ -303,7 +530,7 @@ export class IosRuntime {
         }
         catch (error) {
           // Protected locks may reject app activation or automatic dismissal.
-          // Keep the screen available for manual entry; transport errors fail.
+          // Report the resulting lock state; transport errors still fail.
           if (!(error instanceof WdaError) || error.code !== 'unknown error') {
             throw error
           }
@@ -319,7 +546,7 @@ export class IosRuntime {
   ): Promise<T> {
     const generation = this.generation
     const active = AbortSignal.any([this.abort.signal, ...(signal ? [signal] : [])])
-    const work = this.queue.then(async() => {
+    return this.enqueue(async() => {
       active.throwIfAborted()
       if (this.state !== 'ready' || (!allowLocked && this.telemetry.status.locked) ||
           generation !== this.generation) {
@@ -328,12 +555,16 @@ export class IosRuntime {
       this.checkChildren()
       return action(this.wda, active)
     })
+  }
+
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const work = this.queue.then(operation)
     this.queue = work.catch(() => null)
     return work
   }
 
   async stop(): Promise<void> {
     this.abort.abort()
-    await this.running
+    await Promise.all([this.running, this.coreDeviceSession?.closed])
   }
 }

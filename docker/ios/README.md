@@ -131,7 +131,7 @@ Edit `ios.local.json` (ignored by Git, Docker builds and npm packaging):
 
 ```json
 {
-  "publicOrigin": "http://192.168.1.50:7100",
+  "publicOrigin": "http://localhost:7100",
   "wdaBundleId": "com.example.WebDriverAgentRunner.xctrunner",
   "devices": [
     {"udid": "YOUR_FIRST_UDID"},
@@ -141,10 +141,17 @@ Edit `ios.local.json` (ignored by Git, Docker builds and npm packaging):
 ```
 
 Replace the example values; UDIDs are device identifiers, not the sample strings.
-Use `http://localhost:7100` only if the browser runs on the Linux machine itself.
-The exact browser origin, including port and hostname, must match `publicOrigin`.
-For this local quick start use HTTP; HTTPS/reverse-proxy integration is a separate
-deployment configuration. Mock authentication is the existing local STF default.
+CoreDevice uses WebCodecs, which requires a secure browser context. Keep the
+loopback origin for this quick start. If the browser runs on another machine,
+open an SSH tunnel from that machine to the Linux USB host.
+
+```sh
+ssh -N -L 7100:127.0.0.1:7100 user@linux-usb-host
+```
+
+Open `http://localhost:7100` in the browser. The exact browser origin, including
+port and hostname, must match `publicOrigin`. For shared access, deploy STF behind
+an HTTPS reverse proxy. The quick start uses the existing mock authentication.
 
 An optional device `name` overrides its STF display model label; normally the
 provider reads the model from the phone. Add `"android": true` at the top level
@@ -204,7 +211,7 @@ Only the tunnel is privileged. The init job has only the ownership capabilities
 needed to prepare its state volume. Runtime and provider run as UID 1000.
 
 All three processes for a phone share its network namespace. Different phones
-can use the same internal API/WDA/MJPEG/tunnel/screen ports without collisions.
+can use the same internal API, WDA, tunnel and screen ports without collisions.
 No raw WDA or device API ports are published. Nginx routes each same-origin
 `/ios/ios-<id>/screen` WebSocket to exactly one provider, preserving cookies,
 Origin and authorization; the provider enforces STF ownership.
@@ -239,8 +246,9 @@ services, runtime and providers run as the invoking user. A helper monitors its
 parent's lifetime pipe and stops its root tunnel when the local session exits.
 Internal TCP ports are selected automatically, and each child's restart uses
 the same selected ports for that session. Persistent per-phone data is stored
-under `~/.stf-ios-local` (`--ios-state-dir` overrides it). `publicOrigin` controls
-the local web host/port. As in Compose, `android` opts into the Android provider.
+under `~/.stf-ios-local` (`--ios-state-dir` overrides it). Use the same loopback
+origin and SSH tunnel instructions as for Compose. The `android` option enables
+the Android provider.
 
 ## Acceptance checklist for another host
 

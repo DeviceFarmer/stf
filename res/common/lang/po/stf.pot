@@ -962,6 +962,10 @@ msgstr ""
 msgid "Identifier"
 msgstr ""
 
+#: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:84
+msgid "If a passcode is required, unlock the iPhone on the device."
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:251
 msgid "IMEI"
 msgstr ""
@@ -2077,6 +2081,11 @@ msgstr ""
 msgid "The iPhone is locked. Open control and use Unlock screen."
 msgstr ""
 
+#: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:27
+#: res/app/src/features/control/screen/DeviceScreen.tsx:41
+msgid "The iPhone is still locked. Unlock it on the device."
+msgstr ""
+
 #: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:87
 msgid "The iPhone is unlocked."
 msgstr ""
@@ -2085,8 +2094,20 @@ msgstr ""
 msgid "The iPhone provider is unavailable."
 msgstr ""
 
-#: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:84
-msgid "The lock screen remains visible while the display is awake. If a passcode is required, enter it on the device screen in STF."
+#: res/app/src/features/control/screen/DeviceScreen.tsx:40
+msgid "The iPhone screen could not be opened."
+msgstr ""
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:42
+msgid "The iPhone screen is unavailable during automation."
+msgstr ""
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:38
+msgid "The iPhone screen requires HTTPS or localhost."
+msgstr ""
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:39
+msgid "The iPhone screen requires iOS 27 or later and a compatible connection."
 msgstr ""
 
 #: res/app/src/core/install.ts:180
@@ -2213,10 +2234,6 @@ msgstr ""
 msgid "The schedule can only be changed while the group is pending"
 msgstr ""
 
-#: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:27
-msgid "The screen is still locked. Swipe up and enter the passcode on the device screen."
-msgstr ""
-
 #: res/app/src/core/install.ts:196
 msgid "The system failed to install the package because its packaged native code did not match any of the ABIs supported by the system."
 msgstr ""
@@ -2263,6 +2280,10 @@ msgstr ""
 
 #: res/app/src/core/install.ts:261
 msgid "This app requires a newer iOS version."
+msgstr ""
+
+#: res/app/src/features/control/screen/DeviceScreen.tsx:37
+msgid "This browser cannot decode the iPhone screen."
 msgstr ""
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265

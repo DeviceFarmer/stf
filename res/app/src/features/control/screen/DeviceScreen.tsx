@@ -3,6 +3,7 @@ import {Button, Loader} from '@mantine/core'
 import {IconEyeOff, IconRefresh} from '@tabler/icons-react'
 import debounce from 'lodash/debounce'
 import type {Control} from '@/core/control'
+import {isAutomated} from '@/core/devices/enhance'
 import type {Device} from '@/core/devices/types'
 import {useTranslation} from '@/core/i18n'
 import {scalingCoordinator} from '@/core/scaling'
@@ -31,6 +32,15 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
     , offline: t('Device offline')
     , disconnected: t('Screen disconnected')
   }
+  const displayErrorMessages = {
+    secure: t('The current view is marked secure and cannot be viewed remotely.')
+    , 'hevc-unsupported': t('This browser cannot decode the iPhone screen.')
+    , 'hevc-insecure': t('The iPhone screen requires HTTPS or localhost.')
+    , 'coredevice-unsupported': t('The iPhone screen requires iOS 27 or later and a compatible connection.')
+    , 'hevc-unavailable': t('The iPhone screen could not be opened.')
+    , 'hevc-locked': t('The iPhone is still locked. Unlock it on the device.')
+    , 'hevc-automation': t('The iPhone screen is unavailable during automation.')
+  }
   const rootRef = useRef<HTMLDivElement>(null)
   const positionerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -39,12 +49,18 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const streamRef = useRef<ScreenStream | null>(null)
   const deviceRef = useRef(device)
   const showScreenRef = useRef(showScreen)
+  const readOnlyRef = useRef(control.readOnly)
   const screenRef = useRef<ScreenGeometry>({rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}})
   const [displayError, setDisplayError] = useState<DisplayError>(false)
   const [hasFrame, setHasFrame] = useState(false)
+  const [iosScreenSessionId, setIosScreenSessionId] = useState<string | null>(null)
   const [streamStatus, setStreamStatus] = useState<ScreenStreamStatus>(null)
 
   const readOnly = control.readOnly
+  const singleTouch = device.platform === 'iOS'
+  const touchEnabled = !readOnly && (!singleTouch ||
+    (showScreen && iosScreenSessionId !== null && device.using &&
+      !isAutomated(device) && device.ios?.locked !== true))
   const url = device.display?.url
   const displayWidth = device.display?.width || 0
   const displayHeight = device.display?.height || 0
@@ -56,6 +72,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   useLayoutEffect(() => {
     deviceRef.current = device
     showScreenRef.current = showScreen
+    readOnlyRef.current = readOnly
   })
 
   useEffect(() => {
@@ -74,8 +91,10 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , screen: screenRef.current
       , getDevice: () => deviceRef.current
       , isShown: () => showScreenRef.current
+      , canControl: () => !readOnlyRef.current
       , onDisplayError: setDisplayError
       , onFirstFrame: () => setHasFrame(true)
+      , onInputReady: setIosScreenSessionId
       , onStatusChange: setStreamStatus
     })
     streamRef.current = stream
@@ -101,17 +120,19 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       root.classList.remove('has-frame')
       setHasFrame(false)
       setStreamStatus(null)
+      setDisplayError(false)
     }
   }, [url])
 
   useEffect(() => {
     streamRef.current?.checkEnabled()
-  }, [device.using, device.usage, device.owner?.email, device.present, device.ready, device.status, showScreen, url])
+  }, [device.using, device.usage, device.owner?.email, device.present, device.ready, device.status
+    , device.ios?.locked, readOnly, showScreen, url])
 
   useEffect(() => {
     const root = rootRef.current
     const input = inputRef.current
-    if (control.readOnly || !root || !input) {
+    if (!touchEnabled || !root || !input) {
       return undefined
     }
     return bindScreenTouch({
@@ -121,8 +142,10 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , screen: screenRef.current
       , scaler
       , control
+      , singleTouch
+      , screenSessionId: iosScreenSessionId
     })
-  }, [control, readOnly, scaler])
+  }, [control, touchEnabled, scaler, singleTouch, iosScreenSessionId])
 
   useEffect(() => {
     const input = inputRef.current
@@ -134,6 +157,9 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   function retryLoadingScreen() {
     if (displayError === 'secure') {
       control.home()
+    }
+    else {
+      streamRef.current?.retry()
     }
   }
 
@@ -172,19 +198,17 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
           className={`finger finger-${index}`}
         />
       ))}
-      {displayError && (
-        <div className='screen-error'>
+      {showScreen && displayError && (
+        <div className='screen-error' role='alert'>
           <div className='screen-error-message'>
             <NothingToShow message={t('No device screen')} icon={<IconEyeOff size={30} />} />
-            {displayError === 'secure' && (
-              <div className='screen-error-alert'>
-                {t('The current view is marked secure and cannot be viewed remotely.')}
-              </div>
+            <div className='screen-error-alert'>{displayErrorMessages[displayError]}</div>
+            {(displayError === 'secure' || displayError === 'hevc-unavailable') && (
+              <Button disabled={displayError === 'secure' && readOnly} fullWidth leftSection={<IconRefresh size={16} />}
+                onClick={retryLoadingScreen}>
+                {t('Retry')}
+              </Button>
             )}
-            <Button disabled={control.readOnly} fullWidth leftSection={<IconRefresh size={16} />}
-              onClick={retryLoadingScreen}>
-              {t('Retry')}
-            </Button>
           </div>
         </div>
       )}

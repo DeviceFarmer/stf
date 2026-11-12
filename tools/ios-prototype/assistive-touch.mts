@@ -92,8 +92,8 @@ export class AssistiveTouch {
         throw new Error(errorPrefix + '_MENU_UNSUPPORTED')
       }
       // XCTest element.click does not reliably activate AssistiveTouch on physical iPhones.
-      await wda.gesture({x: (r.x + r.width / 2) / (size.width - 1)
-        , y: (r.y + r.height / 2) / (size.height - 1)}, null, 100, signal)
+      await wda.tap({x: (r.x + r.width / 2) / (size.width - 1)
+        , y: (r.y + r.height / 2) / (size.height - 1)}, 100, signal)
       await delay(600, null, {signal})
     }
     let success = false
