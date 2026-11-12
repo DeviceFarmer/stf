@@ -118,7 +118,14 @@ jobs:
             graphicsmagick yasm nasm git curl zip unzip wget
 
       - name: Install
-        run: npm install --omit=optional --loglevel http
+        run: |
+          set -euo pipefail
+          # Tags cut before package-lock.json was tracked have no lockfile.
+          if [ -f package-lock.json ]; then
+            npm ci --omit=optional --loglevel http
+          else
+            npm install --omit=optional --loglevel http
+          fi
 
       - name: Publish
         run: npm publish --access public

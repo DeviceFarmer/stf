@@ -13,7 +13,9 @@
 /rethinkdb_data/
 /temp/
 /tmp/
+# Only the root lockfile is tracked.
 package-lock.json
+!/package-lock.json
 yarn.lock
 /test-results/
 /lib/**/*.js

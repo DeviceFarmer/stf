@@ -21,7 +21,8 @@ concurrency:
 
 env:
   NPM_INSTALL_FLAGS: --no-audit --no-fund --loglevel=http
-  # Bump to invalidate the dependency cache without touching package.json.
+  # Bump to invalidate the dependency cache without touching package.json or
+  # package-lock.json.
   CACHE_EPOCH: v3
 
 jobs:
@@ -74,7 +75,9 @@ jobs:
         id: cachekey
         run: |
           flags="$(printf '%s' "$NPM_INSTALL_FLAGS" | sha256sum | cut -c1-12)"
-          echo "key=stf-deps-${CACHE_EPOCH}-${{ runner.os }}-${flags}-${{ hashFiles('package.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
+          # package.json stays in the key so that editing it without the lockfile
+          # misses the cache and npm ci reports the mismatch.
+          echo "key=stf-deps-${CACHE_EPOCH}-${{ runner.os }}-${flags}-${{ hashFiles('package.json', 'package-lock.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
           echo "playwright-key=playwright-${CACHE_EPOCH}-${{ runner.os }}-${flags}-${{ hashFiles('test/playwright/package.json', '.nvmrc') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore dependency cache
@@ -87,7 +90,7 @@ jobs:
 
       - name: Install npm dependencies
         if: steps.deps.outputs.cache-hit != 'true'
-        run: npm install $NPM_INSTALL_FLAGS
+        run: npm ci $NPM_INSTALL_FLAGS
 
       - name: Restore Playwright cache
         id: playwright

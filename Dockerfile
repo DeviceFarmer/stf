@@ -41,14 +41,20 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 WORKDIR /build
 RUN chown stf:stf /build
 USER stf
-# A root lockfile is optional. Keep npm install's existing prepare behavior;
-# npm pack builds the application after its sources have been copied.
+# Install the versions package-lock.json records. A tree without the lockfile
+# (an older checkout, or one that deleted it) still resolves package.json with
+# npm install. prepare skips the build under both; npm pack builds the
+# application after its sources have been copied.
 COPY --chown=stf:stf package*.json ./
 RUN --mount=type=secret,id=npmrc,mode=0444 \
     if [ -f /run/secrets/npmrc ]; then \
       export NPM_CONFIG_USERCONFIG=/run/secrets/npmrc; \
     fi; \
-    npm install --omit=optional --no-audit --no-fund
+    if [ -f package-lock.json ]; then \
+      npm ci --omit=optional --no-audit --no-fund; \
+    else \
+      npm install --omit=optional --no-audit --no-fund; \
+    fi
 
 FROM dependencies AS production-dependencies
 RUN --mount=type=secret,id=npmrc,mode=0444 \

@@ -87,6 +87,12 @@ jobs:
               process.exit(1)
             }
             fs.writeFileSync(file, next)
+            if (fs.existsSync("package-lock.json")) {
+              var lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"))
+              lock.version = process.argv[1]
+              lock.packages[""].version = process.argv[1]
+              fs.writeFileSync("package-lock.json", JSON.stringify(lock, null, 2) + "\n")
+            }
           ' "$VERSION"
           node .github/scripts/changelog.mts CHANGELOG.md "$VERSION" notes.md
           git diff --stat
@@ -99,7 +105,7 @@ jobs:
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json CHANGELOG.md
+          git add package.json package-lock.json CHANGELOG.md
           # Signed off because the pull request this branch becomes is subject to
           # the DCO check like any other.
           git commit -s -m "Bump version from $CURRENT to $VERSION"
