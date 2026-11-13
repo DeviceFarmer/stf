@@ -71,6 +71,20 @@ describe('manual device packet authorization', function() {
       }])
     })
 
+    it(`blocks ${platform} commands when a coordinator lease is present before usage updates`,
+      async function() {
+        const f = fixture(platform)
+        Object.assign(f.user, {privilege: 'admin'})
+        f.update({automationLeaseId: 'leased-device'})
+        for (const event of ['input.keyPress', 'device.lock', 'group.kick']) {
+          assert.equal((await f.dispatch(event, 'tx.fenced'))?.message, 'Device access denied')
+        }
+        f.update({automationLeaseId: null})
+        f.access.released(f.device().serial)
+        f.update({owner: null})
+        assert.equal(await f.dispatch('group.invite'), undefined)
+      })
+
     it(`bounds ${platform} input caching and reauthorizes other commands`, async function() {
       const clock = sinon.useFakeTimers()
       try {
@@ -208,6 +222,28 @@ describe('manual device packet authorization', function() {
       finally {
         clock.restore()
       }
+    })
+
+    it(`retains the ${platform} reservation after its database snapshot catches up`, async() => {
+      const f = fixture(platform)
+      const previous = f.device().owner
+      f.access.joined('PHONE', null, previous)
+      const replacement = {email: 'runner@example.test', reservationId: 'new-reservation'}
+      f.update({owner: replacement, usage: 'automation', automationLeaseId: 'new-lease'})
+      f.access.joined('PHONE', 'automation', replacement, 'new-lease')
+      assert.equal(f.access.snapshot(f.device()).ready, true)
+      const session = f.access.session(f.channel)
+      const checkpoint = f.access.checkpoint()
+
+      assert.equal(f.access.released('PHONE', previous), false)
+      assert.equal(f.access.session(f.channel), session)
+      assert.equal(f.access.checkpoint(), checkpoint)
+      assert.equal((await f.dispatch('group.kick'))?.message, 'Device access denied')
+      assert.equal(f.access.snapshot(f.device()).automationLeaseId, 'new-lease')
+
+      assert.equal(f.access.released('PHONE', replacement), true)
+      f.update({owner: null, usage: null, automationLeaseId: null})
+      assert.equal(await f.dispatch('group.invite'), undefined)
     })
 
     it(`rejects ${platform} revoked groups before persistence`, async function() {

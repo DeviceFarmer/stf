@@ -2,6 +2,7 @@ import wire from '../../wire/index.js'
 import wireutil from '../../wire/util.js'
 import wirerouter from '../../wire/router.js'
 import grouputil from '../../util/grouputil.js'
+import {AutomationLease} from '../../util/automation-lease.js'
 import {randomUUID} from 'node:crypto'
 import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
@@ -29,6 +30,12 @@ export class IosBridge {
   private epoch = 0
   private activity = 0
   private timeout: number
+  private readonly automationLease = new AutomationLease(() => {
+    this.leave('automatic_timeout').catch(this.report)
+  })
+  private automationLeaseId: string | null = null
+  private appiumHandoff: string | null = null
+  private reservationQueue = Promise.resolve()
   private queue = Promise.resolve()
   private touch: {from: Point, to: Point, started: number} | null = null
   private multitouch = false
@@ -66,27 +73,48 @@ export class IosBridge {
         }
       })
       .on(wire.GroupMessage, (channel, message) => {
-        this.transaction(String(channel), async() => {
-          if (!this.registered) {
-            throw new Error('Device not ready')
+        this.transaction(String(channel), () => this.changeReservation(async() => {
+          if (message.automationRunner === 'maestro') {
+            throw new Error('Unsupported automation runner on iOS')
           }
           await grouputil.match({serial: options.serial}, message.requirements)
-          this.join(message.owner, message.timeout, message.usage)
+          await this.join(message.owner, message.timeout, message.usage, message.leaseId)
           return {owner: this.owner}
+        }))
+      })
+      .on(wire.AutomationLeaseMessage, (channel, message) => {
+        this.transaction(String(channel), async() => {
+          if (message.serial !== options.serial || this.owner?.email !== message.owner.email ||
+              !this.registered || this.automationLeaseId !== message.leaseId) {
+            throw new Error('Stale automation lease')
+          }
+          if (message.action === 'renew') {
+            return {expiresAt: this.automationLease.renew(
+              message.owner.email, message.leaseId, message.timeout || 0
+            )}
+          }
+          if (message.action === 'release') {
+            await this.leave('automation_release')
+            return null
+          }
+          throw new Error('Invalid automation lease action')
         })
       })
       .on(wire.AutoGroupMessage, (_channel, message) => {
         if (this.registered && !this.owner) {
-          this.join(message.owner)
+          this.changeReservation(() => this.join(message.owner)).catch(this.report)
         }
       })
       .on(wire.UngroupMessage, (channel, message) => {
         this.transaction(String(channel), async() => {
           await grouputil.match({serial: options.serial}, message.requirements)
+          if (this.automationLeaseId) {
+            throw new Error('Device has a coordinator lease')
+          }
           if (message.reservationId && message.reservationId !== this.owner?.reservationId) {
             throw new Error('Device session changed')
           }
-          this.leave('ungroup_request')
+          await this.leave('ungroup_request')
         })
       })
       .on(wire.TouchDownMessage, (_channel, message) => {
@@ -316,25 +344,82 @@ export class IosBridge {
     )
   }
 
-  private join(owner: IosOwner, timeout?: number | null, usage?: string | null) {
-    if (this.owner && this.owner.email !== owner.email) {
+  private changeReservation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.reservationQueue.then(operation)
+    this.reservationQueue = result.then(() => {}, () => {})
+    return result
+  }
+
+  private async setAppiumMode(active: boolean, lease: string) {
+    const response = await this.client.request('/automation', {active, lease})
+    await response.body?.cancel()
+    if (!active && this.appiumHandoff === lease) {
+      this.appiumHandoff = null
+    }
+  }
+
+  private async join(
+    owner: IosOwner, timeout?: number | null, usage?: string | null, leaseId?: string | null
+  ) {
+    if (!this.registered) {
+      throw new Error('Device not ready')
+    }
+    if (this.owner && (this.owner.email !== owner.email || leaseId)) {
       throw new Error('Device already owned')
     }
     if (!this.owner) {
+      const epoch = this.epoch
+      if (this.appiumHandoff) {
+        await this.setAppiumMode(false, this.appiumHandoff)
+      }
+      const reservationId = randomUUID()
+      const automationLeaseId = usage === 'automation' ? leaseId || null : null
+      if (automationLeaseId) {
+        this.appiumHandoff = reservationId
+        await this.setAppiumMode(true, reservationId)
+      }
+      if (!this.registered || this.epoch !== epoch) {
+        if (automationLeaseId) {
+          await this.setAppiumMode(false, reservationId)
+        }
+        throw new Error('Device session changed')
+      }
+      if (automationLeaseId) {
+        this.automationLease.start(owner.email, automationLeaseId,
+          timeout || this.options.groupTimeout * 1000)
+      }
+      this.automationLeaseId = automationLeaseId
       this.ownerAbort = new AbortController()
-      this.owner = {...owner, reservationId: randomUUID()}
+      this.owner = {...owner, reservationId}
       this.gestures.setOwner(this.owner.reservationId!)
       this.lease = randomUUID()
       this.epoch++
       // GroupMessage/API timeouts are milliseconds; the CLI fallback is seconds.
       this.timeout = Math.min(3600, Math.max(10,
         timeout ? timeout / 1000 : this.options.groupTimeout))
-      this.broadcast(new wire.JoinGroupMessage(this.options.serial, this.owner, usage))
+      this.broadcast(new wire.JoinGroupMessage(this.options.serial, this.owner, usage, leaseId))
     }
     this.keepalive()
   }
 
-  leave(reason: string) {
+  async leave(reason: string): Promise<void> {
+    const owner = this.owner
+    if (reason !== 'device_absent' && owner?.reservationId && this.automationLeaseId) {
+      await this.changeReservation(async() => {
+        if (this.owner === owner) {
+          // Keep the reservation fenced until the runtime hands WDA back.
+          await this.setAppiumMode(false, owner.reservationId!)
+          if (this.owner === owner) {
+            this.leaveNow(reason)
+          }
+        }
+      })
+      return
+    }
+    this.leaveNow(reason)
+  }
+
+  private leaveNow(reason: string) {
     this.ownerAbort.abort()
     const owner = this.owner
     const id = this.installId
@@ -343,6 +428,8 @@ export class IosBridge {
     if (id) {
       this.client.request('/installations/cancel', {id, lease}).catch(this.report)
     }
+    this.automationLease.clear()
+    this.automationLeaseId = null
     this.owner = null
     this.epoch++
     this.gestures.setOwner(null)
@@ -371,7 +458,7 @@ export class IosBridge {
       return
     }
     const setup = [wire.ProbeMessage.$code, wire.DeviceRegisteredMessage.$code
-      , wire.GroupMessage.$code, wire.AutoGroupMessage.$code]
+      , wire.GroupMessage.$code, wire.AutoGroupMessage.$code, wire.AutomationLeaseMessage.$code]
     if (!setup.includes(envelope.type) && (!this.owner || !this.registered)) {
       return
     }
@@ -411,6 +498,15 @@ export class IosBridge {
       if (this.state?.generation !== state.generation || this.state?.instance !== state.instance) {
         this.absent()
       }
+      const orphanedHandoff = state.automationLease || this.appiumHandoff
+      if (orphanedHandoff && !this.owner) {
+        await this.changeReservation(async() => {
+          if (!this.owner) {
+            await this.setAppiumMode(false, orphanedHandoff)
+          }
+        })
+        return
+      }
       if (!this.identity) {
         const image = Buffer.from(await (await this.client.request('/screenshot')).arrayBuffer())
         if (image.length < 24 || image.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
@@ -442,8 +538,9 @@ export class IosBridge {
         this.broadcast(new wire.DeviceHeartbeatMessage(this.options.serial))
       }
       this.publishHealth(state)
-      if (this.owner && Date.now() - this.activity > this.timeout * 1000) {
-        this.leave('automatic_timeout')
+      if (this.owner && !this.automationLeaseId &&
+          Date.now() - this.activity > this.timeout * 1000) {
+        await this.leave('automatic_timeout')
       }
       if (this.owner && this.installId) {
         const epoch = this.epoch
@@ -486,7 +583,7 @@ export class IosBridge {
   }
 
   absent() {
-    this.leave('device_absent')
+    this.leaveNow('device_absent')
     if (this.identity) {
       this.broadcast(new wire.DeviceAbsentMessage(this.options.serial))
     }

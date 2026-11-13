@@ -2,7 +2,7 @@ import {timingSafeEqual} from 'node:crypto'
 import http from 'node:http'
 import {pipeline} from 'node:stream'
 
-import type {IosRuntime} from './runtime.mts'
+import {AutomationError, type IosRuntime} from './runtime.mts'
 import {InstallError, type Installations} from './installations.mts'
 
 class InputError extends Error {
@@ -87,7 +87,18 @@ export function createServer(
         , instance: runtime.instance
         , ios: runtime.telemetry.status
         , error: runtime.lastError, info: runtime.info
+        , ...(runtime.automationLease ? {automationLease: runtime.automationLease} : {})
         })
+        return
+      }
+      if (route === 'POST /automation') {
+        const {active, lease} = await body(req)
+        if (typeof active !== 'boolean' || typeof lease !== 'string' ||
+            !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(lease)) {
+          throw new InputError('Expected an automation lease UUID and boolean active state')
+        }
+        await runtime.setAppiumMode(active, lease, abort.signal)
+        json(200, {active})
         return
       }
       if (req.method === 'POST' && installations) {
@@ -209,11 +220,14 @@ export function createServer(
       json(200, {success: true})
     }
     catch (error) {
+      if (res.destroyed) {
+        return
+      }
       let status = runtime.state === 'ready' ? 502 : 503
       if (error instanceof InputError) {
         status = 400
       }
-      if (error instanceof InstallError) {
+      if (error instanceof InstallError || error instanceof AutomationError) {
         status = error.status
       }
       json(status, {error: (error as Error).message})

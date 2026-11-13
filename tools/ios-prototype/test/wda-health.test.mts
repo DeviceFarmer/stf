@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {randomUUID} from 'node:crypto'
 import http from 'node:http'
 import type {AddressInfo} from 'node:net'
 import {afterEach, describe, it} from 'node:test'
@@ -7,6 +8,7 @@ import {setTimeout as delay} from 'node:timers/promises'
 
 import {IosRuntime} from '../runtime.mts'
 import type {RuntimeDependencies, RuntimeOptions} from '../runtime.mts'
+import {createServer} from '../server.mts'
 import {WdaClient} from '../wda.mts'
 
 const cleanups: Array<() => Promise<unknown>> = []
@@ -51,6 +53,7 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
   const children: Array<{failure: Error | null, stopped: boolean, stop(): Promise<void>}> = []
   const healthSignals: AbortSignal[] = []
   let sessions = 0
+  let currentSession: string
   let locked = false
   let mode: 'ready' | 'blocked' | 'invalid' | 'hung' | 'slow-checks' = 'ready'
   let pendingHealth: AbortSignal | null = null
@@ -73,6 +76,13 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
       mode = 'ready'
       res.writeHead(404)
       res.end(JSON.stringify({value: {error: 'invalid session id', message: 'Session is gone'}}))
+      return
+    }
+    if (session && req.url !== '/session/' + currentSession) {
+      res.writeHead(404)
+      res.end(JSON.stringify({
+        value: {error: 'invalid session id', message: 'Session was replaced'}
+      }))
       return
     }
     if ((session || lock) && mode === 'hung') {
@@ -101,7 +111,8 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
     }
     let value: unknown = {ready: true}
     if (req.url === '/session' && req.method === 'POST') {
-      value = {sessionId: 'owned-' + ++sessions}
+      currentSession = 'owned-' + ++sessions
+      value = {sessionId: currentSession}
       if (retrySetup && sessions === 1) {
         children.at(-1)!.failure = new Error('Runner failed during setup')
       }
@@ -335,5 +346,83 @@ describe('WDA session health budget', () => {
     assert.equal(f.deleted(), true)
     assert.ok(f.children.every(child => child.stopped))
     assert.equal(f.sessions(), f.baseline.sessions)
+  })
+})
+
+describe('Appium WDA handoff', () => {
+  it('retains a borrowed WDA session and pauses STF commands and health checks', async(t) => {
+    const f = await fixture(t, {healthTimeout: 5000})
+    f.setMode('hung')
+    await until(() => f.healthStarted())
+    const lease = randomUUID()
+    const api = createServer(f.runtime, 'automation-test-token')
+    await new Promise<void>(resolve => api.listen(0, '127.0.0.1', resolve))
+    cleanups.push(() => new Promise<void>(resolve => {
+      api.close(() => resolve())
+      api.closeAllConnections()
+    }))
+    const origin = 'http://127.0.0.1:' + (api.address() as AddressInfo).port
+    const headers = {
+      Authorization: 'Bearer automation-test-token', 'Content-Type': 'application/json'
+    }
+    const change = (active: boolean, id: string = lease) => fetch(origin + '/automation', {
+      headers, method: 'POST', body: JSON.stringify({active, lease: id})
+    })
+    assert.equal((await fetch(origin + '/automation', {method: 'POST'})).status, 401)
+    assert.equal((await change(true, 'invalid')).status, 400)
+    assert.deepEqual(await (await change(true)).json(), {active: true})
+    assert.equal(f.healthSignal().aborted, true)
+    assert.equal((await change(true, randomUUID())).status, 409)
+    assert.equal((await change(false, randomUUID())).status, 200)
+    const device = await (await fetch(origin + '/device', {headers})).json() as {
+      automationLease?: string
+    }
+    assert.equal(device.automationLease, lease)
+    assert.equal(f.wda.sessionId, f.baseline.sessionId)
+    assert.equal((await fetch(f.origin + '/session/' + f.wda.sessionId + '/source')).status, 200)
+    assert.equal((await fetch(origin + '/screenshot', {headers})).status, 409)
+    assert.deepEqual(await (await change(false)).json(), {active: false})
+    assert.equal(f.runtime.automationLease, null)
+    assert.equal(f.wda.sessionId, f.baseline.sessionId)
+    assert.equal(f.sessions(), f.baseline.sessions)
+    assert.equal(f.deleted(), false)
+    assert.equal(f.runtime.generation, f.baseline.generation)
+    const source = await f.runtime.execute(wda => wda.call('GET', '/source'))
+    assert.equal(source.value, '<source/>')
+  })
+
+  it('reopens the STF session without restarting WDA if direct Appium replaced it', async(t) => {
+    const f = await fixture(t)
+    const lease = randomUUID()
+    const signal = new AbortController().signal
+    await f.runtime.setAppiumMode(true, lease, signal)
+    assert.equal((await fetch(f.origin + '/session', {method: 'POST'})).status, 200)
+    f.calls.length = 0
+    await delay(40)
+    assert.deepEqual(f.calls, [])
+    assert.ok(f.baseline.children.every(child => !child.stopped))
+    await f.runtime.setAppiumMode(false, lease, signal)
+    assert.equal(f.runtime.state, 'ready')
+    assert.equal(f.runtime.telemetry.status.locked, false)
+    assert.equal(f.sessions(), f.baseline.sessions + 2)
+    assert.equal(f.wda.sessionId, 'owned-' + f.sessions())
+    assert.equal(f.deleted(), false)
+    assert.equal(f.runtime.generation, f.baseline.generation)
+  })
+
+  it('recovers WDA if restoring the original session exceeds the handoff timeout', async(t) => {
+    const f = await fixture(t, {healthTimeout: 60000})
+    const lease = randomUUID()
+    const signal = new AbortController().signal
+    await f.runtime.setAppiumMode(true, lease, signal)
+    f.setMode('hung')
+    const release = f.runtime.setAppiumMode(false, lease, signal)
+    await until(() => f.healthStarted())
+    f.clock.advance(10001)
+    await release
+    assert.equal(f.runtime.automationLease, null)
+    assert.equal(f.runtime.state, 'waiting')
+    await until(() => f.runtime.state === 'ready' && f.sessions() === f.baseline.sessions + 1)
+    assert.ok(f.baseline.children.every(child => child.stopped))
   })
 })

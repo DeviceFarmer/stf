@@ -43,6 +43,30 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
   log.info('Automatic owner restore is %s', options.autoRestoreOwner ? 'on' : 'off')
 
   // App side
+  const ownershipWrites = new Map<string, Promise<void>>()
+  function persistOwnership(
+    serial: string, update: () => Promise<WriteResult>, publish: () => void
+  ) {
+    const pending: Promise<void> = (ownershipWrites.get(serial) ?? Promise.resolve())
+      .then(update)
+      .then(stats => {
+        if (stats.errors) {
+          throw new Error(String(stats.first_error))
+        }
+        if (stats.replaced) {
+          publish()
+        }
+      })
+      .catch(error => log.error('Failed to persist device ownership', error))
+      .finally(() => {
+        if (ownershipWrites.get(serial) === pending) {
+          ownershipWrites.delete(serial)
+        }
+      })
+    ownershipWrites.set(serial, pending)
+    return pending
+  }
+
   var appDealer = zmqutil.socket('dealer')
   Promise.map(options.endpoints.appDealer, function(endpoint) {
     return srv.resolve(endpoint).then(function(records) {
@@ -335,16 +359,14 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      dbapi.setDeviceOwner(message.serial, message.owner)
-      if (message.usage) {
-        dbapi.setDeviceUsage(message.serial, message.usage)
-      }
-      appDealer.send([channel, data])
+      return persistOwnership(message.serial, () =>
+        dbapi.setDeviceOwner(message.serial, message.owner, message.leaseId, message.usage)
+      , () => appDealer.send([channel, data]))
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
-      dbapi.unsetDeviceOwner(message.serial)
-      dbapi.unsetDeviceUsage(message.serial)
-      appDealer.send([channel, data])
+      return persistOwnership(message.serial, () =>
+        dbapi.unsetDeviceOwner(message.serial, message.owner)
+      , () => appDealer.send([channel, data]))
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {
       appDealer.send([channel, data])

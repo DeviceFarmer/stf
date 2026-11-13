@@ -43,5 +43,12 @@ describe('datautil', function() {
       datautil.normalize(free, user)
       expect(free.claimed).to.be.false
     })
+
+    it('should keep a managed release receipt internal', function() {
+      const released = device(null)
+      released.automationRelease = {email: 'runner@example.test', leaseId: 'lease-a'}
+      datautil.normalize(released, user)
+      expect(released).to.not.have.property('automationRelease')
+    })
   })
 })

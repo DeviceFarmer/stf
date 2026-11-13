@@ -49,7 +49,7 @@ type UserExpression = r.Expression<UserDocument>
 type InitialDeviceRow = Pick<
   DeviceDocument
 , 'present' | 'provider' | 'status' | 'statusTimeStamp' | 'ready' | 'reverseForwards'
-  | 'remoteConnect' | 'remoteConnectUrl' | 'usage' | 'logs_enabled'
+  | 'remoteConnect' | 'remoteConnectUrl' | 'usage' | 'automationLeaseId' | 'logs_enabled'
 > & {
   owner: null
   presenceChangedAt: r.Expression<r.Time>
@@ -173,14 +173,15 @@ interface DbApi {
   unsetDeviceConnectUrl(serial: string): Promise<r.WriteResult>
   saveDeviceStatus(serial: string, status: number, statusTimeStamp: number): Promise<r.WriteResult>
   setDeviceIosStatus(serial: string, status: IosDeviceStatus): Promise<r.WriteResult>
-  setDeviceOwner(serial: string, owner: DeviceOwner): Promise<r.WriteResult>
-  unsetDeviceOwner(serial: string): Promise<r.WriteResult>
+  setDeviceOwner(
+    serial: string, owner: DeviceOwner, automationLeaseId?: string | null, usage?: string | null
+  ): Promise<r.WriteResult>
+  unsetDeviceOwner(serial: string, owner: DeviceOwner): Promise<r.WriteResult>
+  hasDeviceAutomationRelease(serial: string, email: string, leaseId: string): Promise<boolean>
   reserveDeviceOwner(serial: string): Promise<r.WriteResult>
   clearDeviceRestoreOwner(serial: string): Promise<r.WriteResult>
   setDevicePresent(serial: string): Promise<r.WriteResult>
   setDeviceAbsent(serial: string): Promise<r.WriteResult>
-  setDeviceUsage(serial: string, usage: string): Promise<r.WriteResult>
-  unsetDeviceUsage(serial: string): Promise<r.WriteResult>
   setDeviceAirplaneMode(serial: string, enabled: boolean): Promise<r.WriteResult>
   setDeviceBattery(serial: string, battery: DeviceBattery): Promise<r.WriteResult>
   setDeviceBrowser(serial: string, browser: DeviceBrowser): Promise<r.WriteResult>
@@ -1547,6 +1548,12 @@ dbapi.saveDeviceLog = function(serial, entry) {
     }))
 }
 
+function keepManualRestoreClaim() {
+  return r.branch(r.row('automationLeaseId').default(null).eq(null)
+  , r.row('restoreOwner').default(null)
+  , null)
+}
+
 dbapi.saveDeviceInitialState = function(serial, device) {
   var data: InitialDeviceRow = {
     present: true
@@ -1561,9 +1568,12 @@ dbapi.saveDeviceInitialState = function(serial, device) {
   , remoteConnect: false
   , remoteConnectUrl: null
   , usage: null
+  , automationLeaseId: null
   , logs_enabled: false
   }
-  return db.run(r.table('devices').get(serial).update(data)).then<unknown>(function(stats) {
+  return db.run(r.table('devices').get(serial).update({
+    ...data, restoreOwner: keepManualRestoreClaim()
+  })).then<unknown>(function(stats) {
     if (stats.skipped) {
       return dbapi.getRootGroup().then(function(group) {
         data.serial = serial
@@ -1628,19 +1638,43 @@ dbapi.saveDeviceStatus = function(serial, status, statusTimeStamp) {
   }))
 }
 
-dbapi.setDeviceOwner = function(serial, owner) {
+dbapi.setDeviceOwner = function(serial, owner, automationLeaseId, usage) {
   return db.run(r.table('devices').get<DeviceDocument>(serial).update({
-    owner: owner
+    owner: {...owner, reservationId: owner.reservationId ?? null}
+  , automationLeaseId: automationLeaseId || null
+  , usage: usage || null
+  , usageChangedAt: r.now()
     // Taking a device supersedes any claim on it, so a reboot that never happened cannot hand it
     // back to an earlier user later
   , restoreOwner: null
   }))
 }
 
-dbapi.unsetDeviceOwner = function(serial) {
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update({
+dbapi.unsetDeviceOwner = function(serial, owner) {
+  const currentOwner = r.row('owner').default({})
+  const leaseId = r.row('automationLeaseId').default(null)
+  const reservation = owner.reservationId ?? null
+  const matching = currentOwner('email').default(null).eq(owner.email)
+    .and(currentOwner('reservationId').default(null).eq(reservation))
+  return db.run(r.table('devices').get<DeviceDocument>(serial).update(r.branch(
+    reservation ? matching : matching.and(leaseId.eq(null))
+  , {
     owner: null
-  }))
+  , automationLeaseId: null
+  , usage: null
+  , usageChangedAt: r.now()
+  , logs_enabled: false
+    // A provider reports LeaveGroup only after completing any runner cleanup.
+  , automationRelease: r.branch(leaseId.ne(null)
+    , {email: owner.email, leaseId}, r.row('automationRelease').default(null))
+  }
+  , {}
+  ), {durability: 'hard'}))
+}
+
+dbapi.hasDeviceAutomationRelease = function(serial, email, leaseId) {
+  return db.run(r.table('devices').getAll(serial)
+    .filter({automationRelease: {email, leaseId}}).isEmpty().not())
 }
 
 // Snapshots the current owner so it can be handed back if the device returns before expiresAt.
@@ -1651,14 +1685,18 @@ dbapi.reserveDeviceOwner = function(serial) {
 
   return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(device) {
     return r.branch(
-      device('owner').default(null).eq(null)
-    , {}
-    , {restoreOwner: {
-          email: device('owner')('email')
-        , usage: device('usage').default(null)
-        , expiresAt: expiresAt
+      device('automationLeaseId').default(null).ne(null)
+    , {restoreOwner: null}
+    , r.branch(
+        device('owner').default(null).eq(null)
+      , {}
+      , {restoreOwner: {
+            email: device('owner')('email')
+          , usage: device('usage').default(null)
+          , expiresAt: expiresAt
+          }
         }
-      }
+      )
     )
   }))
 }
@@ -1680,21 +1718,6 @@ dbapi.setDeviceAbsent = function(serial) {
   return db.run(r.table('devices').get<DeviceDocument>(serial).update({
     present: false
   , presenceChangedAt: r.now()
-  }))
-}
-
-dbapi.setDeviceUsage = function(serial, usage) {
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update({
-    usage: usage
-  , usageChangedAt: r.now()
-  }))
-}
-
-dbapi.unsetDeviceUsage = function(serial) {
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update({
-    usage: null
-  , usageChangedAt: r.now()
-  , logs_enabled: false
   }))
 }
 
@@ -1778,6 +1801,11 @@ dbapi.setDeviceReady = function(serial, channel) {
     channel: channel
   , ready: true
   , owner: null
+  , automationLeaseId: null
+  , usage: null
+  , usageChangedAt: r.now()
+  , logs_enabled: false
+  , restoreOwner: keepManualRestoreClaim()
   , reverseForwards: []
   }, {returnChanges: 'always'}))
 }

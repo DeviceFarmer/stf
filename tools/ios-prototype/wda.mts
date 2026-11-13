@@ -63,8 +63,10 @@ export class WdaClient {
     return this.requestWithSignal('GET', path + '/wda/locked', undefined, healthSignal())
   }
 
-  async open(): Promise<void> {
-    const response = await this.request('POST', '/session', {capabilities: {alwaysMatch: {}}})
+  async open(signal?: AbortSignal): Promise<void> {
+    const response = await this.request(
+      'POST', '/session', {capabilities: {alwaysMatch: {}}}, signal
+    )
     this.sessionId = response.sessionId || response.value?.sessionId
     if (typeof this.sessionId !== 'string' || !this.sessionId) {
       this.sessionId = null

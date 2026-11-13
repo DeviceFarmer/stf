@@ -8,6 +8,7 @@ import browserData from './browsers.js'
 import deviceutil from './deviceutil.js'
 import {findCatalogDevice} from './device-catalog.js'
 import {fallbackDeviceImage} from './device-image-paths.js'
+import type {DeviceDocument} from '../types/stf.js'
 import type {DeviceDisplayMessageFields} from '../types/wire.js'
 
 interface DisplayView extends Partial<DeviceDisplayMessageFields> {
@@ -36,6 +37,7 @@ interface DeviceView extends deviceutil.Claimable {
   browser?: BrowserView | null
   remoteConnect?: boolean
   remoteConnectUrl?: string | null
+  automationRelease?: DeviceDocument['automationRelease']
 }
 
 interface DataUtil {
@@ -183,6 +185,7 @@ datautil.normalize = function(device: DeviceView, user: deviceutil.Viewer) {
   // must not read as held here either: this is the only place the expiry is judged for readers.
   device.claimed = deviceutil.isClaimLive(device, Date.now())
   delete device.restoreOwner
+  delete device.automationRelease
 }
 
 namespace datautil {

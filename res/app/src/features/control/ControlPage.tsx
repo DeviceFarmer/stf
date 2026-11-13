@@ -496,7 +496,8 @@ function ControlSession() {
   }
 
   async function releaseReservation() {
-    if (!device || !isAutomated(device) || currentUser.privilege !== 'admin' || releasing) {
+    if (!device || !isAutomated(device) || device.automationLeaseId ||
+        currentUser.privilege !== 'admin' || releasing) {
       return
     }
     const target = {...device, owner: device.owner ? {...device.owner} : null}
@@ -546,11 +547,13 @@ function ControlSession() {
           {automated ? (
             <Group justify='space-between'>
               <Text size='sm'>{t('View only. Controls are disabled while the test is running.')}</Text>
-              {currentUser.privilege === 'admin' && (
+              {currentUser.privilege === 'admin' && (device.automationLeaseId ? (
+                <Text size='sm'>{t('Stop this automation from its test runner.')}</Text>
+              ) : (
                 <Button color='red' variant='light' loading={releasing} onClick={releaseReservation}>
                   {t('Release reservation')}
                 </Button>
-              )}
+              ))}
             </Group>
           ) : (
             <Group justify='space-between'>

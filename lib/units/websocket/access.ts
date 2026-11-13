@@ -5,6 +5,7 @@ export interface DeviceAccess {
   present?: boolean
   ready?: boolean
   usage?: string | null
+  automationLeaseId?: string | null
   group?: {id?: string | null}
   owner?: {email?: string, group?: string, reservationId?: string | null} | null
 }

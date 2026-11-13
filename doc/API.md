@@ -291,7 +291,9 @@ clientWithPromise.then(function(api) {
 #### DELETE /user/devices/{serial}
 
 Releases a device owned by the authenticated user. Close the test session before
-releasing its reservation, including in cleanup after a failed test.
+releasing its reservation, including in cleanup after a failed test. Release
+coordinator-managed devices through the coordinator so it can verify transport
+and session cleanup.
 
 ```bash
 DELETE /api/v1/user/devices/{serial}
@@ -317,6 +319,32 @@ clientWithPromise.then(function(api) {
   console.log(err)
 })
 ```
+
+#### Automation leases
+
+To fence an automation reservation, include a unique `leaseId` in
+`POST /api/v1/user/devices`. A Maestro client also sends
+`automationRunner: "maestro"` to request provider-side cleanup. The capture
+response echoes the supplied lease ID and, for Maestro, the runner.
+
+Use the same STF account and lease ID for the following requests. The provider
+rejects stale IDs, including older leases held by the same account.
+Each capture needs a new lease ID. Reusing an ID with a recorded release is
+rejected before reservation.
+
+| Method | STF API path | JSON body |
+| --- | --- | --- |
+| POST | `/api/v1/user/devices/{serial}/automation/renew` | `{"leaseId":"example-lease","timeout":180000}` |
+| POST | `/api/v1/user/devices/{serial}/automation/release` | `{"leaseId":"example-lease"}` |
+
+The renewal timeout is in milliseconds. Test clients using
+[the coordinator](coordinator.md) call its lease API and let it manage the STF
+reservation.
+
+A successful release waits for the matching provider cleanup and its durable
+database receipt. STF keeps the latest release receipt for each device. Repeating
+that exact release with the original account can return the receipt after the
+device has changed owners. It leaves the current reservation intact.
 
 #### POST /user/devices/{serial}/remoteConnect
 

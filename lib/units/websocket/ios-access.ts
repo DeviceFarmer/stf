@@ -68,7 +68,8 @@ export async function allowIosPacket(
   const device = await load(serial)
   if (!device || device.platform !== 'iOS' || device.channel !== channel ||
       !device.present || !device.ready || !device.group?.id ||
-      !user.groups.subscribed.includes(device.group.id) || device.usage === 'automation') {
+      !user.groups.subscribed.includes(device.group.id) || device.usage === 'automation' ||
+      device.automationLeaseId) {
     return false
   }
   return user.privilege === 'admin' || device.owner?.email === user.email ||
