@@ -9,6 +9,16 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
+  # With package-lock.json tracked, a release inside a declared range also gets
+  # a pull request, and every merge makes the other open ones conflict on the
+  # lockfile. Batch minor and patch bumps into one pull request; majors and
+  # security updates still arrive one per pull request.
+  groups:
+    npm-minor-and-patch:
+      applies-to: version-updates
+      update-types:
+      - minor
+      - patch
   ignore:
   - dependency-name: semver
     versions:
