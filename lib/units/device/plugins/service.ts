@@ -92,14 +92,16 @@ export default syrup.serial()
     }
 
     // Since Android 10 the service may not read the clipboard unless it has
-    // focus, while the agent, having the shell uid, still may. Released
-    // agents exit when they get a request type they do not handle, so we
-    // cannot ask the agent whether it supports this. The wire definition
-    // comes from the same package as the APK we install though, so if it
-    // defines the request, the agent on the device answers it.
+    // focus, while the agent, having the shell uid, still may. We cannot ask
+    // the agent whether it handles the request: one that does not know the
+    // type (STFService up to 2.5.9) stops reading from the connection for
+    // good, which would also silence every key event sent after it. The APK
+    // on the device always has the version of the package that the wire
+    // definition comes from though (see resources/service), so if the
+    // definition has the request type, the agent on the device answers it.
     var agentClipboardType = sdk.level >= 29 ?
-      (apk.wire.MessageType as {AGENT_GET_CLIPBOARD?: number}).AGENT_GET_CLIPBOARD :
-      undefined
+      (apk.wire.MessageType as {AGENT_GET_CLIPBOARD?: number}).AGENT_GET_CLIPBOARD ?? null :
+      null
 
     var service = {
       socket: null as LocalSocket | null
@@ -605,7 +607,7 @@ export default syrup.serial()
     }
 
     plugin.getClipboard = function() {
-      if (agentClipboardType === undefined) {
+      if (agentClipboardType === null) {
         return getClipboardFromService()
       }
       return runAgentRequest(
