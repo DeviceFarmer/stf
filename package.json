@@ -98,7 +98,6 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "split": "^1.0.0",
-    "swagger-router": "^0.7.4",
     "temp": "^0.9.4",
     "transliteration": "^2.2.0",
     "url-join": "6.0.0",
@@ -122,9 +121,20 @@
           "path-loader": {
             "superagent": "^10.2.1"
           }
-        }
+        },
+        "multer": "^2.5.0"
       }
     },
+    "@sailshq/request": {
+      "qs": "^6.16.1"
+    },
+    "gettext-extractor": {
+      "glob": "^14.0.2"
+    },
+    "mocha": {
+      "glob": "^14.0.2"
+    },
+    "minimatch@^10": "^11.0.1",
     "gm": {
       "cross-spawn": "^7.0.5"
     },
@@ -193,7 +203,6 @@
     "ldapjs": "^3.0.7",
     "memory-fs": "^0.5.0",
     "mocha": "^12.0.0",
-    "node-libs-browser": "^2.2.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0",
