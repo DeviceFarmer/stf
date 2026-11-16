@@ -128,13 +128,19 @@
     "@sailshq/request": {
       "qs": "^6.16.1"
     },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    },
+    "eslint": {
+      "minimatch": "^11.0.1"
+    },
     "gettext-extractor": {
       "glob": "^14.0.2"
     },
     "mocha": {
-      "glob": "^14.0.2"
+      "glob": "^14.0.2",
+      "minimatch": "^11.0.1"
     },
-    "minimatch@^10": "^11.0.1",
     "gm": {
       "cross-spawn": "^7.0.5"
     },
