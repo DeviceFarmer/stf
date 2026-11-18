@@ -289,12 +289,36 @@ export default syrup.serial()
         })
     }
 
+    // openAgent() bounds each of its steps on its own: stopAgent 15s, the
+    // unused socket check 10s, the shell 10s and the socket wait 10s, 45s in
+    // the worst case. The overall limit sits just above that sum so a slow
+    // but working relaunch is not cut short, while a stuck one still fails.
+    var agentRelaunchTimeout = 50000
+
     function prepareForAgentDeath(conn: LocalSocket) {
+      var writer = agent.writer
+      var dead = false
+
       function endListener() {
+        if (dead) {
+          return
+        }
+        dead = true
+        // Nothing may be written to the old connection any more: writing to a
+        // socket the agent closed emits an error, which would be fatal below.
+        if (writer) {
+          writer.unpipe(conn)
+          writer.end()
+        }
+        if (agent.socket === conn) {
+          agent.socket = null
+          agent.writer = null
+        }
+
         var startTime = Date.now()
         log.important('Agent connection ended, attempting to relaunch')
-        openService()
-          .timeout(5000)
+        openAgent()
+          .timeout(agentRelaunchTimeout)
           .then(function() {
             log.important('Agent relaunched in %dms', Date.now() - startTime)
           })
@@ -307,6 +331,11 @@ export default syrup.serial()
       conn.once('end', endListener)
 
       conn.on('error', function(err: Error) {
+        if (dead) {
+          // The connection has already been replaced (or is being replaced).
+          log.warn('Ended agent connection had an error', err.message)
+          return
+        }
         log.fatal('Agent connection had an error', err.stack)
         lifecycle.fatal()
       })
@@ -344,7 +373,12 @@ export default syrup.serial()
     }
 
     function runAgentCommand(type: number, cmd: ServiceRequest) {
-      agent.writer!.write(new apk.wire.Envelope(
+      if (!agent.writer) {
+        // The agent is being relaunched; there is nowhere to send this.
+        log.warn('Agent is not connected, dropping command of type %d', type)
+        return
+      }
+      agent.writer.write(new apk.wire.Envelope(
         null
         , type
         , cmd.encodeNB()
