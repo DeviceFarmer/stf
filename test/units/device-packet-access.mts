@@ -662,3 +662,36 @@ describe('authorization cache eviction boundaries', function() {
     assert.equal(lookups, 131)
   })
 })
+
+describe('join notifications ahead of persistence', function() {
+  // The processor forwards JoinGroupMessage before its owner write commits, and
+  // the device sends the join before its group.invite reply, so a client can
+  // act on tx.done while the database row still shows the device as free.
+  function joining(platform = 'Android') {
+    const f = fixture(platform, 5)
+    f.update({owner: null})
+    const owner = {email: f.user.email, reservationId: 'fresh'}
+    f.access.joined('PHONE', null, owner)
+    return {f, owner}
+  }
+
+  for (const platform of ['Android', 'iOS']) {
+    for (const event of ['clipboard.paste', 'input.keyPress']) {
+      it(`lets the joining ${platform} owner send ${event} once the join persists`
+        , async function() {
+        const clock = sinon.useFakeTimers()
+        try {
+          const {f, owner} = joining(platform)
+          const pending = f.dispatch(event, 'tx.join')
+          setTimeout(() => f.update({owner}), 30)
+          await clock.tickAsync(100)
+          assert.equal(await pending, undefined)
+          assert.deepEqual(f.cancelled, [])
+        }
+        finally {
+          clock.restore()
+        }
+      })
+    }
+  }
+})
