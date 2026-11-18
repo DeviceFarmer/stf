@@ -72,6 +72,13 @@ Appium and use TLS for remote access. Every CLI option also accepts an
 `STF_COORDINATOR_` environment variable. See `stf coordinator --help` for the
 full list.
 
+For Kubernetes, the [Helm chart](../kubernetes/helm/README.md#appium-coordinator)
+can deploy this process with an existing credentials Secret, a persistent claim
+and an external Grid. It is opt-in and renders one replica with `Recreate`.
+Use matching STF API, processor, provider and coordinator images. The chart's
+default STF 3.9.0 image predates the coordinator. Give each coordinator an exclusive device and system-port pool and its own
+state file. `Recreate` runs one replica at a time during a normal rollout.
+
 ## Credentials
 
 The STF token stays with the coordinator. For shared use, pass
@@ -176,3 +183,18 @@ free, its signing profile covers the coordinator's duration limit and Grid
 confirms the slot is available. Drains survive restart. The loader accepts v1
 state and writes v2, which older v1-only coordinators cannot load. If persistent
 state contains an unsupported runner, startup stops and preserves the state file.
+
+Pause submissions and finish/release active leases before a coordinated upgrade
+or credential rotation. Back up the state file and keep its PVC so the
+coordinator can recover and verify outstanding leases. Experimental state containing
+Maestro history is unsupported by this Appium-only coordinator, including
+resolved history. Preserve it and plan an explicit migration before switching
+images. Do not roll a v2 state file back to a v1-only runtime. A replacement
+coordinator recovers interrupted leases before becoming ready; `/healthz` remains
+live during that recovery and `/readyz` reports 503.
+
+The STF token, operator token, project policy and ADB pool configuration are
+loaded at startup. Restart the single coordinator after changing these files.
+When rotating credentials, retain the STF account identity until all leases
+captured by it have confirmed cleanup. The Helm deployment allows 120 seconds for shutdown and cleanup and preserves unfinished work in state
+for recovery after replacement.

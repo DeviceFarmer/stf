@@ -576,9 +576,251 @@
           "items": {
             "$ref": "#/definitions/networkPolicyPeer"
           }
+        },
+        "coordinatorFrom": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/networkPolicyPeer"
+          }
         }
       },
       "additionalProperties": false
+    },
+    "coordinator": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "existingSecret": {
+          "type": "string"
+        },
+        "projectTokensKey": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]*$"
+        },
+        "maxParallel": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "upstreamTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^(sha256:[a-f0-9]{64})?$"
+            },
+            "pullPolicy": {
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "maxProperties": 0
+            },
+            {
+              "required": [
+                "repository"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "tag"
+                  ]
+                },
+                {
+                  "required": [
+                    "digest"
+                  ],
+                  "properties": {
+                    "digest": {
+                      "minLength": 1
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "stfApiUrl": {
+          "type": "string",
+          "pattern": "^(|https?://[^/?#@\\s]+(?:/[^?#\\s]*)?)$"
+        },
+        "publicUrl": {
+          "type": "string",
+          "pattern": "^(|https?://[^/?#@\\s]+(?:/[^?#\\s]*)?)$"
+        },
+        "appiumGridUrl": {
+          "type": "string",
+          "pattern": "^(|https?://[^/?#@\\s]+(?:/[^?#\\s]*)?)$"
+        },
+        "adbPools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "provider",
+              "host",
+              "port",
+              "systemPorts"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string",
+                "minLength": 1
+              },
+              "host": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.-]+$"
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "systemPorts": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1024,
+                  "maximum": 65535
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "existingClaim": {
+              "type": "string"
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1
+            },
+            "storageClass": {
+              "type": "string"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "podAnnotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "className": {
+              "type": "string"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "tls": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "hosts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "secretName": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "resources": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "then": {
+            "required": [
+              "existingSecret",
+              "appiumGridUrl"
+            ],
+            "properties": {
+              "existingSecret": {
+                "minLength": 1
+              },
+              "appiumGridUrl": {
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "definitions": {

@@ -10,12 +10,13 @@
 - [Configuration](#configuration)
 - [Network isolation](#network-isolation)
 - [USB providers](#usb-providers)
+- [Appium coordinator](#appium-coordinator)
 - [Database migration and upgrades](#database-migration-and-upgrades)
 - [Verification](#verification)
 
 ## Destiny
 
-The Helm chart in [`kubernetes/helm`](.) deploys the STF server, a browser-facing proxy and an optional single-node RethinkDB. Android and Linux iOS USB providers are opt-in and can be assigned to separate nodes. The chart uses the existing STF commands and images; it does not install Argo CD, Appium Grid or a test scheduler.
+The Helm chart in [`kubernetes/helm`](.) deploys the STF server, a browser-facing proxy and an optional single-node RethinkDB. Android and Linux iOS USB providers and the Appium coordinator are opt-in. The chart uses the existing STF commands and images. Install Appium Grid and test clients separately if you need them.
 
 Run the [quickstart](#quickstart-a-new-installation) from the root of the STF repository to render and install an instance without USB providers.
 
@@ -26,8 +27,8 @@ kubernetes/helm/
 ├── Chart.yaml          # Declares chart metadata and the supported Kubernetes version.
 ├── values.yaml         # Sets default deployment options.
 ├── values.schema.json  # Validates supplied values.
-├── templates/          # Renders core services, networking, migrations and USB providers.
-├── examples/           # Provides sample values for local and USB deployments.
+├── templates/          # Renders services, migrations, USB providers and the coordinator.
+├── examples/           # Provides sample values for local, USB and coordinator deployments.
 └── tests/              # Checks rendered resources and the installation lifecycle.
 ```
 
@@ -39,6 +40,7 @@ kubernetes/helm/
 | Kubernetes | Schedules STF services and optional USB providers |
 | RethinkDB | Stores STF device and user state |
 | Nginx | Proxies browser HTTP and WebSocket traffic |
+| Appium Grid | Provides external WebDriver slots for the optional coordinator |
 | Kind | Provides an isolated cluster for the optional smoke test |
 
 ## Prerequisites
@@ -104,6 +106,7 @@ Keep installation values in an environment-specific file outside the STF checkou
 | `migration.enabled`, `migration.revision` | Migration gate and explicit rerun revision |
 | `bootstrap.adminName`, `bootstrap.adminEmail` | Optional explicit root-owner overrides; empty values preserve an existing owner |
 | `resourceNames`, `selectorOverrides` | Explicit names/selectors for a separately reviewed adoption plan |
+| `coordinator` | Optional persistent Appium lease coordinator, existing credentials and external Grid |
 
 The bundled database is a single StatefulSet, not a highly available database service. If `database.bundled: false`, set `database.external.host`, port and database name, and verify the database is reachable from the release namespace. Refer to [`values.yaml`](values.yaml) for the exact keys. A claim alone does not preserve in-progress upload metadata across a storage-process restart.
 
@@ -115,10 +118,11 @@ RethinkDB, the ZeroMQ triproxies, provider ports and USB ADB servers do not auth
 
 - `networkPolicy.proxyFrom` narrows who can reach the proxy, for example to the Ingress controller's namespace. Pods of the release are always allowed. Traffic arriving through a NodePort or LoadBalancer Service, or from a `hostNetwork` Ingress controller, comes from node addresses that a `namespaceSelector` does not match; add an `ipBlock` for them or leave `proxyFrom` empty.
 - `networkPolicy.remoteProvidersFrom` admits providers of another release to this release's `triproxy-dev` pub and pull ports only. Their storage/API requests also need HTTP access; include those sources in `proxyFrom` when restricting the proxy, or add a narrow policy for direct internal access.
+- `networkPolicy.coordinatorFrom` admits additional CI workers or gateway peers to the coordinator on TCP 8080 only. Empty keeps it reachable only from pods of this release. Add the Ingress controller's peers when enabling its Ingress; use node `ipBlock` peers where source addresses require them.
 - `proxy.extraScreenRoutes` pointing at iOS screen Services of another release need a policy in that release admitting this release's proxy on port 17440.
 - Network selectors use fixed release and component labels on pod templates, independently of `selectorOverrides`. Legacy Deployment and Service selectors stay unchanged. Overrides may omit these labels, but conflicting values are rejected while isolation is enabled.
 - Existing NetworkPolicies are additive: another policy can allow traffic this chart does not. Review them when adopting an existing installation. Externally managed databases and ADB servers need their own policies.
-- Additional services such as Appium or a coordinator need narrowly scoped policies for their required connections; do not grant them unrestricted access to the internal units.
+- An external Appium Grid and its nodes need their own policies. Permit the coordinator to reach Grid HTTP and permit Appium nodes to reach their configured ADB/WDA endpoints; do not expose those unauthenticated device endpoints to clients.
 
 ## USB providers
 
@@ -183,6 +187,60 @@ For an Appium sidecar that needs recording or streamed screenshots, set
 `http://127.0.0.1:19100/` within the pod. On earlier iOS releases, the WDA screen
 uses that internal port by default. On iOS 27 and later, the WDA stream is
 forwarded only when an Appium port is configured.
+
+## Appium coordinator
+
+The coordinator is disabled by default. Enable it with an STF image built from
+this checkout, and use matching API, processor and provider builds with
+[automation lease support](../../doc/API.md#automation-leases). The default
+`devicefarmer/stf:3.9.0` image predates this command. Use `coordinator.image` to override the coordinator image and set matching
+versions for the other units.
+
+Prepare an external Appium Grid with device slots as described in the
+[coordinator guide](../../doc/coordinator.md#start-the-coordinator). This chart
+does not create Appium nodes, WDA adapters or a Grid. Create an existing Secret
+in the release namespace with `stf-token` (an STF account access token) and
+`api-token` (a separate coordinator operator token). Both tokens need at least
+24 non-whitespace characters. For project isolation, add the project policy
+JSON under a key selected by `coordinator.projectTokensKey`. Keep token values
+and project policy out of Helm values and rendered manifests.
+
+Overlay the [coordinator example](examples/coordinator.yaml) on your farm
+values after replacing its image, URLs, Secret names, pool mapping and Ingress
+settings. `coordinator.stfApiUrl` defaults to this release's API, and
+`coordinator.publicUrl` defaults to its in-cluster Service. Set the latter to
+the base URL Appium clients can reach. The optional `coordinator.ingress` uses
+that URL's host and forwards requests from `/`. Use a separate hostname
+and configure TLS and `networkPolicy.coordinatorFrom` for your gateway.
+Without the Ingress, use the ClusterIP Service through a private gateway or
+local port-forward. Configure the client gateway for the selected Grid request
+timeout, and any proxy between the coordinator and STF API for releases of at
+least 95 seconds.
+
+Set `coordinator.adbPools` explicitly using the provider names from STF
+inventory, the ADB endpoints advertised by Grid and reserved Appium
+`systemPorts`. Use `[]` for iOS only. System ports must be disjoint for every
+consumer on the same ADB host, including other coordinators. External STF API,
+Grid, database and ADB/WDA policies remain the operator's responsibility.
+
+One replica and `Recreate` prevent overlap during a normal Deployment rollout.
+The coordinator always mounts persistent state: the chart creates a 1 Gi RWO
+claim with a `keep` annotation, or mounts `coordinator.persistence.existingClaim`
+without creating a claim. Do not run a second release or external coordinator
+against the same state, devices or system ports. Assign each coordinator
+an exclusive pool. `/healthz` checks process liveness while `/readyz` stays
+unready during lease recovery. A cleanup failure preserves quarantine rather
+than making an uncertain device available.
+
+Before upgrades or token rotation, pause submissions, finish/release active
+leases, check quarantine and back up the state. Preserve the PVC and its
+identity across upgrades, uninstalls and GitOps pruning. Token files, project
+policy and pool mappings are loaded at startup: after changing the existing
+Secret, restart the single coordinator in a controlled rollout (for example,
+increment a `coordinator.podAnnotations` revision). Pool changes trigger a
+rollout automatically. See [state compatibility and recovery](../../doc/coordinator.md#recovery-and-maintenance)
+before changing images or restoring a backup. The coordinator preserves
+unsupported runner history and stops at startup.
 
 ## Database migration and upgrades
 
