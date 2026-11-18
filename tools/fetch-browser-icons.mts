@@ -81,7 +81,11 @@ function androidColor(value: string): {color: string, opacity?: number} {
 // need. Anything else (groups, clip paths, gradients) fails instead of being dropped silently.
 // `notice` goes into the SVG as a comment, as Apache-2.0 asks of changed files.
 function vectorDrawableToSvg(xml: string, notice: string): string {
-  const body = xml.replace(/<\?xml[^>]*\?>/, '').replace(/<!--[\s\S]*?-->/g, '')
+  // A comment could hide tags from the matching below, and the drawables used here have none
+  if (xml.includes('<!--')) {
+    throw new Error('Unsupported VectorDrawable: contains an XML comment')
+  }
+  const body = xml.replace(/<\?xml[^>]*\?>/, '')
   const tags = Array.from(body.matchAll(/<([\w:]+)\b[^>]*>/g))
   const vector = tags[0]
   if (!vector || vector[1] !== 'vector') {
