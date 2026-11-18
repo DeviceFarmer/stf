@@ -11,7 +11,6 @@ import wireutil from '../../wire/util.js'
 import db from '../../db/index.js'
 import dbapi from '../../db/api.js'
 import lifecycle from '../../util/lifecycle.js'
-import promiseutil from '../../util/promiseutil.js'
 import deviceutil from '../../util/deviceutil.js'
 import srv from '../../util/srv.js'
 import zmqutil from '../../util/zmqutil.js'
@@ -154,11 +153,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       })
   }
 
-  let joinsInFlight: Promise<unknown> = Promise.resolve()
-
-  // Owner writes of one device run one after another, so a leave and the join that follows it
-  // (a kick, then someone taking the device) land in the order the device sent them
-  const queueOwnerWrite = promiseutil.keyedQueue()
+  let ownerWritesInFlight: Promise<unknown> = Promise.resolve()
 
   devDealer.on('message', wirerouter()
     .on(wire.UpdateAccessTokenMessage, function(channel, message, data) {
@@ -342,30 +337,27 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      // Forward only once the rows are written: the app side treats the join as news of a row it
+      // Forward only once the row is written: the app side treats the join as news of a row it
       // can then read, and the transaction reply that follows must not overtake it.
-      const writes = queueOwnerWrite(message.serial, function() {
-        return Promise.all([
-          dbapi.setDeviceOwner(message.serial, message.owner)
-        , message.usage ? dbapi.setDeviceUsage(message.serial, message.usage) : null
-        ])
-      })
+      const write = dbapi.setDeviceOwner(message.serial, message.owner, message.usage)
         .catch(function(err) {
           log.error('Unable to persist join of "%s"', message.serial, err.stack)
         })
-      joinsInFlight = Promise.all([joinsInFlight, writes])
-      writes.then(function() {
+      ownerWritesInFlight = Promise.all([ownerWritesInFlight, write])
+      write.then(function() {
         appDealer.send([channel, data])
       })
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
-      queueOwnerWrite(message.serial, function() {
-        return dbapi.releaseDeviceOwner(message.serial, message.owner.email)
-      })
+      // Same as a join: the app side may read the row as soon as it hears of the leave
+      const write = dbapi.releaseDeviceOwner(message.serial, message.owner)
         .catch(function(err) {
           log.error('Unable to persist leave of "%s"', message.serial, err.stack)
         })
-      appDealer.send([channel, data])
+      ownerWritesInFlight = Promise.all([ownerWritesInFlight, write])
+      write.then(function() {
+        appDealer.send([channel, data])
+      })
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {
       appDealer.send([channel, data])
@@ -385,8 +377,8 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      // Keeps a reply sent right after a join (group.invite) behind that join's forward.
-      joinsInFlight.then(function() {
+      // Keeps a reply sent right after a join or leave (group.invite, group.kick) behind its forward.
+      ownerWritesInFlight.then(function() {
         appDealer.send([channel, data])
       })
     })

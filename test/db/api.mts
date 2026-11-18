@@ -24,6 +24,62 @@ mockModule(new URL('../../lib/db/index.js', import.meta.url), {default: {
   }
 }})
 
+// Evaluates a built update function against a row, for the few terms a conditional update uses.
+// Anything else throws, so a query that grows past this fails the test instead of passing it.
+var NOW = {now: true}
+var VAR = 10
+var EQ = 17
+var BRANCH = 65
+var AND = 67
+var FUNC = 69
+var DEFAULT = 92
+var NOW_TERM = 103
+var BRACKET = 170
+class Missing extends Error {}
+
+function evalTerm(term: any, vars: Record<number, unknown>): any {
+  if (term === null || typeof term !== 'object') {
+    return term
+  }
+  if (!Array.isArray(term)) {
+    return Object.fromEntries(Object.entries(term).map(([k, v]) => [k, evalTerm(v, vars)]))
+  }
+  var [type, args] = term
+  switch (type) {
+  case VAR: return vars[args[0]]
+  case NOW_TERM: return NOW
+  case BRACKET: {
+    var target = evalTerm(args[0], vars)
+    if (target === null || typeof target !== 'object' || !(args[1] in target)) {
+      throw new Missing()
+    }
+    return target[args[1]]
+  }
+  case DEFAULT:
+    try {
+      var value = evalTerm(args[0], vars)
+      return value === null ? evalTerm(args[1], vars) : value
+    }
+    catch (err) {
+      if (err instanceof Missing) {
+        return evalTerm(args[1], vars)
+      }
+      throw err
+    }
+  case EQ: return evalTerm(args[0], vars) === evalTerm(args[1], vars)
+  case AND: return args.every((arg: any) => evalTerm(arg, vars) === true)
+  case BRANCH:
+    return evalTerm(args[0], vars) === true ? evalTerm(args[1], vars) : evalTerm(args[2], vars)
+  default: throw new Error(`Unsupported term ${type}`)
+  }
+}
+
+function evalUpdate(update: any, row: Record<string, unknown>) {
+  expect(update[0], 'update should be a function of the row').to.equal(FUNC)
+  var [[, [id]], body] = update[1]
+  return evalTerm(body, {[id]: row})
+}
+
 var dbapi: typeof DbApi =
   (await importFresh(new URL('../../lib/db/api.js', import.meta.url))).default
 
@@ -73,18 +129,43 @@ describe('dbapi owner claim', function() {
     })
   })
 
-  // A leave that lands after someone has taken the device again must not hand it back as free
+  // A leave that lands after someone has taken the device again must not hand it back as free.
+  // The update is a function of the row, so run it against rows instead of reading its shape.
   describe('releaseDeviceOwner', function() {
-    it('should clear the owner and usage only while the leaving user still owns the device',
+    var leaver = {email: 'leaver@example.com', reservationId: 'r1'} as DeviceOwner
+
+    function releaseFrom(owner: Record<string, unknown> | null | undefined, leaving = leaver) {
+      lastUpdate = null
+      dbapi.releaseDeviceOwner('serial', leaving)
+      return evalUpdate(lastUpdate, owner === undefined ? {} : {owner})
+    }
+
+    it('should clear the owner and usage when the leaving reservation still holds the device',
       function() {
-        dbapi.releaseDeviceOwner('serial', 'leaver@example.com')
-        var term = JSON.stringify(lastUpdate)
-        expect(term).to.include('"leaver@example.com"')
-        expect(term).to.include('"owner":null')
-        expect(term).to.include('"usage":null')
-        // A plain document would clear the row unconditionally
-        expect(lastUpdate).to.not.have.property('owner')
+        var change = releaseFrom({email: 'leaver@example.com', reservationId: 'r1'})
+        expect(change).to.include({owner: null, usage: null, logs_enabled: false})
+        expect(change).to.have.property('usageChangedAt', NOW)
       })
+
+    it('should leave the device alone once another user has taken it', function() {
+      expect(releaseFrom({email: 'taker@example.com', reservationId: 'r2'})).to.deep.equal({})
+    })
+
+    it('should leave the device alone once the same user has taken it again', function() {
+      expect(releaseFrom({email: 'leaver@example.com', reservationId: 'r2'})).to.deep.equal({})
+    })
+
+    it('should leave a free device alone', function() {
+      expect(releaseFrom(null)).to.deep.equal({})
+      expect(releaseFrom(undefined)).to.deep.equal({})
+    })
+
+    // Device workers from 3.9.0 and older send no reservationId, so neither side has one
+    it('should match on the email alone when there is no reservation', function() {
+      var oldLeaver = {email: 'leaver@example.com'} as DeviceOwner
+      expect(releaseFrom({email: 'leaver@example.com'}, oldLeaver)).to.have.property('owner', null)
+      expect(releaseFrom({email: 'taker@example.com'}, oldLeaver)).to.deep.equal({})
+    })
   })
 
   describe('setDeviceReady', function() {

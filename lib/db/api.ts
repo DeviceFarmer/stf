@@ -173,13 +173,12 @@ interface DbApi {
   unsetDeviceConnectUrl(serial: string): Promise<r.WriteResult>
   saveDeviceStatus(serial: string, status: number, statusTimeStamp: number): Promise<r.WriteResult>
   setDeviceIosStatus(serial: string, status: IosDeviceStatus): Promise<r.WriteResult>
-  setDeviceOwner(serial: string, owner: DeviceOwner): Promise<r.WriteResult>
-  releaseDeviceOwner(serial: string, email: string): Promise<r.WriteResult>
+  setDeviceOwner(serial: string, owner: DeviceOwner, usage?: string | null): Promise<r.WriteResult>
+  releaseDeviceOwner(serial: string, owner: DeviceOwner): Promise<r.WriteResult>
   reserveDeviceOwner(serial: string): Promise<r.WriteResult>
   clearDeviceRestoreOwner(serial: string): Promise<r.WriteResult>
   setDevicePresent(serial: string): Promise<r.WriteResult>
   setDeviceAbsent(serial: string): Promise<r.WriteResult>
-  setDeviceUsage(serial: string, usage: string): Promise<r.WriteResult>
   setDeviceAirplaneMode(serial: string, enabled: boolean): Promise<r.WriteResult>
   setDeviceBattery(serial: string, battery: DeviceBattery): Promise<r.WriteResult>
   setDeviceBrowser(serial: string, browser: DeviceBrowser): Promise<r.WriteResult>
@@ -1627,22 +1626,32 @@ dbapi.saveDeviceStatus = function(serial, status, statusTimeStamp) {
   }))
 }
 
-dbapi.setDeviceOwner = function(serial, owner) {
+// Owner and usage go in one write, so a late leave can never land between them and clear the
+// usage of the join that follows it
+dbapi.setDeviceOwner = function(serial, owner, usage) {
   return db.run(r.table('devices').get<DeviceDocument>(serial).update({
     owner: owner
     // Taking a device supersedes any claim on it, so a reboot that never happened cannot hand it
     // back to an earlier user later
   , restoreOwner: null
+  , ...(usage ? {usage: usage, usageChangedAt: r.now()} : {})
   }))
 }
 
-// Clears the owner and usage of a device that `email` has left. Only that owner's leave may clear
-// them: a leave that lands after someone has already taken the device again must not hand it back
-// as free while it is in use.
-dbapi.releaseDeviceOwner = function(serial, email) {
+// Clears the owner and usage of a device, but only while `owner` still holds it. Every join
+// stamps the owner with a fresh reservationId and the leave carries the same one back, so a leave
+// that lands late, after someone (even the same user) has taken the device again, matches nothing
+// and leaves the new owner alone. Processors are scaled out and a join and leave of one device may
+// be written by different ones, so the order the writes land in cannot be relied on.
+// A device worker from before reservationIds (3.9.0 and older) sends none, in which case neither
+// side has one and the match falls back to the email.
+dbapi.releaseDeviceOwner = function(serial, owner) {
+  var reservationId = owner.reservationId || ''
   return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(device) {
+    var current = device('owner').default(null)
     return r.branch(
-      device('owner').default(null)('email').default(null).eq(email)
+      current('email').default(null).eq(owner.email)
+        .and(current('reservationId').default('').eq(reservationId))
     , {owner: null, usage: null, usageChangedAt: r.now(), logs_enabled: false}
     , {}
     )
@@ -1686,13 +1695,6 @@ dbapi.setDeviceAbsent = function(serial) {
   return db.run(r.table('devices').get<DeviceDocument>(serial).update({
     present: false
   , presenceChangedAt: r.now()
-  }))
-}
-
-dbapi.setDeviceUsage = function(serial, usage) {
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update({
-    usage: usage
-  , usageChangedAt: r.now()
   }))
 }
 
