@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {mkdtemp, readFile, rm, writeFile} from 'node:fs/promises'
+import {mkdtemp, rm, writeFile} from 'node:fs/promises'
 import http from 'node:http'
 import type {AddressInfo} from 'node:net'
 import {tmpdir} from 'node:os'
@@ -10,12 +10,31 @@ import {CoreDeviceSession} from '../coredevice.mts'
 
 it('waits for the worker to dispatch input before accepting another touch', async() => {
   const dir = await mkdtemp(join(tmpdir(), 'stf-ios-worker-'))
+  let acceptDispatch!: (response: http.ServerResponse) => void
+  const dispatch = new Promise<http.ServerResponse>(resolve => {
+    acceptDispatch = resolve
+  })
+  const server = http.createServer((request, response) => {
+    switch (request.url) {
+    case '/codec':
+      response.end(JSON.stringify({codec: 'hev1.1.6.L120.B0', description: 'AAAB'}))
+      break
+    case '/stream.bin':
+      response.writeHead(200, {'Content-Type': 'application/octet-stream'}).end(Buffer.from([1]))
+      break
+    case '/dispatch':
+      acceptDispatch(response)
+      break
+    default:
+      response.writeHead(404).end()
+    }
+  })
   try {
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+    const port = (server.address() as AddressInfo).port
     await writeFile(join(dir, 'python3'), `#!/usr/bin/env node
 const {createInterface} = require('node:readline')
-const {writeFileSync} = require('node:fs')
-const {join} = require('node:path')
-const {setTimeout} = require('node:timers/promises')
+const {get} = require('node:http')
 const lines = createInterface({input: process.stdin})
 ;(async() => {
   let configured = false
@@ -23,12 +42,17 @@ const lines = createInterface({input: process.stdin})
     const input = JSON.parse(line)
     if (!configured) {
       configured = true
-      console.log('10000')
+      console.log(${port})
       continue
     }
     if (input.type === 'contact' && input.x === 32768 && input.y === 16384) {
-      await setTimeout(120)
-      writeFileSync(join(__dirname, 'dispatched'), 'contact')
+      await new Promise((resolve, reject) => {
+        get('http://127.0.0.1:${port}/dispatch', response => {
+          response.resume()
+          response.once('end', resolve)
+          response.once('error', reject)
+        }).once('error', reject)
+      })
       console.log('ok')
     }
     else {
@@ -37,24 +61,36 @@ const lines = createInterface({input: process.stdin})
   }
 })().catch(error => { console.error(error); process.exitCode = 1 })
 `, {mode: 0o700})
-    const signal = AbortSignal.timeout(5000)
+    const signal = AbortSignal.timeout(30000)
     const session = new CoreDeviceSession(join(dir, 'pymobiledevice3'),
       'test-device', ['::1', '1234'], signal, () => {})
     try {
+      const screen = await session.screen()
+      await screen.body.cancel()
       const point = {x: 0.5, y: 0.25}
       const contact = session.touch('contact', point, signal)
-      await assert.rejects(session.touch('release', point, signal), {status: 409})
+      const [acknowledge] = await Promise.race([
+        Promise.all([
+          dispatch
+        , assert.rejects(session.touch('release', point, signal), {status: 409})
+        ])
+      , contact.then(() => {
+          throw new Error('Touch acknowledged before dispatch')
+        })
+      ])
+      acknowledge.end()
       await contact
-      assert.equal(await readFile(join(dir, 'dispatched'), 'utf8'), 'contact')
       await assert.rejects(session.touch('release', point, signal), /CoreDevice input was rejected/)
       assert.equal(session.signal.aborted, true)
     }
     finally {
       session.stop()
+      server.closeAllConnections()
       await session.closed
     }
   }
   finally {
+    server.close()
     await rm(dir, {recursive: true, force: true})
   }
 })
