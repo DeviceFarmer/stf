@@ -13,6 +13,7 @@ import dbapi from '../../db/api.js'
 import lifecycle from '../../util/lifecycle.js'
 import deviceutil from '../../util/deviceutil.js'
 import srv from '../../util/srv.js'
+import simchange from '../../util/simchange.js'
 import zmqutil from '../../util/zmqutil.js'
 import type {DeviceDocument, UserIdentity} from '../../types/stf.js'
 import type {WriteResult} from 'rethinkdb'
@@ -24,6 +25,8 @@ var adb = adbutil()
 interface ProcessorOptions {
   name?: string
   autoRestoreOwner: boolean
+  simChangeWebhookUrl?: string
+  simChangeWebhookSecret?: string
   endpoints: {
     appDealer: string[]
     devDealer: string[]
@@ -33,6 +36,11 @@ interface ProcessorOptions {
 
 export default db.ensureConnectivity(function(options: ProcessorOptions) {
   var log = logger.createLogger('processor')
+
+  // Kept empty when the feature is not configured, so the identity handler
+  // below behaves exactly as it did without it.
+  var simChangeWebhookUrl = options.simChangeWebhookUrl || ''
+  var simChangeWebhookSecret = options.simChangeWebhookSecret || ''
 
   if (options.name) {
     logger.setGlobalIdentifier(options.name)
@@ -350,7 +358,41 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.DeviceIdentityMessage, function(channel, message, data) {
-      dbapi.saveDeviceIdentity(message.serial, message)
+      if (simChangeWebhookUrl) {
+        dbapi.loadDeviceBySerial(message.serial)
+          .then(function(device) {
+            var event = simchange.buildSimChangeEvent(device || null, message)
+            return dbapi.saveDeviceIdentity(message.serial, message)
+              .then(function() {
+                return event
+              })
+          })
+          .then(function(event) {
+            if (event) {
+              log.important(
+                'SIM card change ("%s") detected on device "%s"'
+              , event.change
+              , message.serial
+              )
+              return simchange.sendSimChangeEvent(
+                simChangeWebhookUrl
+              , simChangeWebhookSecret
+              , event
+              )
+            }
+            return null
+          })
+          .catch(function(err) {
+            log.error(
+              'Unable to process the SIM card change of device "%s"'
+            , message.serial
+            , err.stack
+            )
+          })
+      }
+      else {
+        dbapi.saveDeviceIdentity(message.serial, message)
+      }
       appDealer.send([channel, data])
     })
     .on(wire.DevicePropertiesMessage, function(channel, message, data) {
