@@ -99,6 +99,24 @@ export class DevicePacketAccess {
     return device
   }
 
+  /**
+   * Whether a denied command should be retried against the database instead of
+   * failing: the outstanding observation is a manual join by `email` that the
+   * row has not caught up with. This only buys time; it never authorizes, as an
+   * allow still needs a caught-up row. Releases, transfers to someone else and
+   * automation joins are not waited for, so they keep denying immediately.
+   * Read-only, unlike snapshot().
+   */
+  awaitingJoin(channel: string, email: string): boolean {
+    if (this.overflowed) {
+      return false
+    }
+    const observed = this.observations.get(this.source(channel))
+    return Boolean(observed?.owner?.email && observed.owner.email === email &&
+      observed.usage !== 'automation' && observed.present !== false &&
+      observed.ready !== false)
+  }
+
   invalidate(serial?: string) {
     // An unknown channel has no serial yet, so even a targeted notification
     // invalidates negative results and any in-flight miss.

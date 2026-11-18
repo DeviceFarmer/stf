@@ -285,6 +285,7 @@ export default function(options: WebsocketOptions) {
     , session: channel => deviceAccess.session(channel)
     , checkpoint: () => deviceAccess.checkpoint()
     , current: (channel, checkpoint) => deviceAccess.current(channel, checkpoint)
+    , awaitingJoin: (channel, email) => deviceAccess.awaitingJoin(channel, email)
     }, {resetGesture, onAuthorizedInput(packet, identity) {
       const data = packet[2]
       if (data && typeof data === 'object') {

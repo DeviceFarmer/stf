@@ -16,6 +16,7 @@ interface DevicePacketPolicy {
   session?: (channel: string) => number
   checkpoint?: () => number
   current?: (channel: string, checkpoint: number) => boolean
+  awaitingJoin?: (channel: string, email: string) => boolean
 }
 
 export interface AuthorizedInput {
@@ -29,6 +30,7 @@ interface PacketGuardOptions {
   maxTotalPendingPackets?: number
   maxChannels?: number
   inputCacheMs?: number
+  persistRetryMs?: number
   resetGesture?: (channel: string, identity?: AuthorizedInput) => void
   onAuthorizedInput?: (packet: readonly unknown[], identity: AuthorizedInput) => void
 }
@@ -94,6 +96,7 @@ export function createDevicePacketGuard(
   const maxTotalPending = options.maxTotalPendingPackets ?? 4096
   const maxChannels = options.maxChannels ?? 16
   const cacheMs = Math.min(1000, Math.max(0, options.inputCacheMs ?? 100))
+  const persistRetryMs = Math.max(1, options.persistRetryMs ?? 20)
   let pendingCount = 0
 
   function finish(entry: PendingPacket, reason?: string | null) {
@@ -241,6 +244,21 @@ export function createDevicePacketGuard(
         }
       }
       if (!current(validatedAt)) {
+        commandClass = undefined
+        continue
+      }
+      // The user's own join was announced but its row is not written yet (the
+      // processor forwards the join before the write commits). Re-read until
+      // it persists rather than deny; the decision still comes from the row,
+      // and the original deadline still bounds the wait.
+      if (reason === 'Device access denied' &&
+          devicePolicy?.awaitingJoin?.(channel, user.email) && Date.now() < entry.deadline) {
+        await new Promise(resolve => setTimeout(resolve,
+          Math.min(persistRetryMs, entry.deadline - Date.now())))
+        if (queue.failed) {
+          return
+        }
+        snapshots = new Map()
         commandClass = undefined
         continue
       }

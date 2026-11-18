@@ -36,6 +36,7 @@ function fixture(platform = 'Android', delay = 0, options = {}) {
     , session: channel => access.session(channel)
     , checkpoint: () => access.checkpoint()
     , current: (channel, checkpoint) => access.current(channel, checkpoint)
+    , awaitingJoin: (channel, email) => access.awaitingJoin(channel, email)
   }, {...options, resetGesture: () => resets++})
   const channel = device.channel!
   const dispatch = (event: string, response?: string) =>
@@ -693,5 +694,80 @@ describe('join notifications ahead of persistence', function() {
         }
       })
     }
+
+    it(`denies a ${platform} user kicked before the join persists`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = joining(platform)
+        const pending = f.dispatch('clipboard.paste', 'tx.kicked')
+        setTimeout(() => {
+          // The join commits, but the kick that followed it has not.
+          f.update({owner})
+          f.access.released('PHONE')
+        }, 10)
+        await clock.tickAsync(40)
+        assert.equal((await pending)?.message, 'Device access denied')
+        assert.equal(f.cancelled.length, 1)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`denies a ${platform} device transferred before the join persists`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = joining(platform)
+        const pending = f.dispatch('input.keyPress', 'tx.transferred')
+        setTimeout(() => {
+          f.access.joined('PHONE', null, {email: 'other@example.test', reservationId: 'other'})
+        }, 10)
+        await clock.tickAsync(40)
+        assert.equal((await pending)?.message, 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    for (const [label, row] of [['never persists', null]
+      , ['persists a different owner', {email: 'other@example.test', reservationId: 'other'}]
+    ] as const) {
+      it(`gives up at the deadline when a ${platform} join ${label}`, async function() {
+        const clock = sinon.useFakeTimers()
+        try {
+          const {f} = joining(platform)
+          let settled: Error | undefined | null = null
+          f.dispatch('clipboard.paste', 'tx.stale').then(error => {
+            settled = error
+          })
+          setTimeout(() => f.update({owner: row}), 30)
+          await clock.tickAsync(1900)
+          assert.equal(settled, null, 'Still waiting for persistence inside the deadline')
+          await clock.tickAsync(200)
+          assert.ok(settled! instanceof Error, 'An old row never becomes an allow')
+          assert.equal(f.cancelled.length, 1)
+          assert.ok(f.lookups() < 200, `Observed ${f.lookups()} database reads`)
+        }
+        finally {
+          clock.restore()
+        }
+      })
+    }
+
+    it(`does not wait for the user's own ${platform} automation join`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const f = fixture(platform, 5)
+        f.update({owner: null})
+        f.access.joined('PHONE', 'automation', {email: f.user.email, reservationId: 'auto'})
+        const pending = f.dispatch('clipboard.paste', 'tx.automation')
+        await clock.tickAsync(10)
+        assert.equal((await pending)?.message, 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
   }
 })
