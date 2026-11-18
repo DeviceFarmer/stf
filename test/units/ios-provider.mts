@@ -10,6 +10,7 @@ import {PrototypeClient, type IosDeviceState} from '../../lib/units/ios-provider
 import type {IosDeviceStatus} from '../../lib/util/ios-device-status.js'
 import {authorizeScreen} from '../../lib/units/ios-provider/access.js'
 import {CoreDeviceScreenDecoder} from '../../lib/units/ios-provider/coredevice-screen.js'
+import {MjpegDecoder} from '../../lib/units/ios-provider/mjpeg.js'
 import {createScreenServer} from '../../lib/units/ios-provider/screen.js'
 import {allowIosPacket, createDevicePacketGuard} from '../../lib/units/websocket/ios-access.js'
 
@@ -19,6 +20,10 @@ const origin = 'https://stf.example.test'
 const screenSession = 'screen-session'
 const hevcUnit = Buffer.from('00000000022601', 'hex')
 const hevcPacket = Buffer.concat([Buffer.from('00000007', 'hex'), hevcUnit])
+const jpegFrame = Buffer.from('ffd80102ffd9', 'hex')
+const jpegPart = Buffer.concat([
+  Buffer.from('--frame\r\nContent-Length: 6\r\n\r\n'), jpegFrame, Buffer.from('\r\n\r\n')
+])
 type TouchSample = [type: 'contact' | 'release', x: number, y: number]
 
 async function listen(server: http.Server) {
@@ -57,6 +62,7 @@ describe('Linux iOS integration', function() {
     let automationGate: Promise<void> | undefined
     const errors: unknown[] = []
     const screens: http.ServerResponse[] = []
+    const wdaScreens: http.ServerResponse[] = []
     const sent: {channel: string, envelope: ReturnType<typeof wire.Envelope.decode>}[] = []
     const png = Buffer.alloc(24)
     Buffer.from('89504e470d0a1a0a', 'hex').copy(png)
@@ -80,6 +86,11 @@ describe('Linux iOS integration', function() {
         })
         screens.push(res)
         res.write(Buffer.concat([hevcPacket, hevcPacket]))
+      }
+      else if (req.url === '/screen') {
+        res.writeHead(200, {'Content-Type': 'multipart/x-mixed-replace; boundary=frame'})
+        wdaScreens.push(res)
+        res.write(jpegPart)
       }
       else if (req.method === 'GET') {
         requests.push({path: req.url!, body: null})
@@ -150,7 +161,7 @@ describe('Linux iOS integration', function() {
       await until(() => bridge.owner !== null)
     }
     const gestures = new Map<number, string>()
-    const gesture = (order: number, screenSessionId = screenSession) => {
+    const gesture = (order: number, screenSessionId: string | null = screenSession) => {
       if (!gestures.has(order)) {
         gestures.set(order, '11111111-1111-4111-8111-111111111111:' + order + ':' + Date.now())
       }
@@ -177,7 +188,7 @@ describe('Linux iOS integration', function() {
     , connectInput: (id, signal, fail) => bridge.connectCoreDeviceInput(id, signal, fail)
     })
     return {bridge, state, requests, sent, send, join, requestGroup, gesture, errors, activateInput
-      , expectTouches, screenServer, screens
+      , expectTouches, screenServer, screens, wdaScreens
       , holdAutomation: () => {
         let release = () => {}
         automationGate = new Promise<void>(resolve => {
@@ -191,6 +202,74 @@ describe('Linux iOS integration', function() {
       , pushFrames: () => screens.forEach(res => res.write(hevcPacket))
       , disconnects: () => disconnects, cancelled: () => cancelled}
   }
+
+  it('reassembles split WDA frames and rejects missing or oversized lengths', () => {
+    const decoder = new MjpegDecoder()
+    const frames = [...Buffer.concat([jpegPart, jpegPart])]
+      .flatMap(byte => decoder.feed(Uint8Array.of(byte)))
+    assert.deepEqual(frames, [jpegFrame, jpegFrame])
+    assert.throws(() => new MjpegDecoder().feed(Buffer.from('Content-Length: 99999999\r\n\r\n')))
+    assert.throws(() => new MjpegDecoder().feed(Buffer.from('Content-Type: image/jpeg\r\n\r\n')))
+  })
+
+  it('uses WDA frames and completed gestures for a locked iPhone on iOS 26', async() => {
+    const f = await fixture()
+    f.state.info!.ProductVersion = '26.7.1'
+    f.state.coreDevice = false
+    f.state.ios!.locked = true
+    await f.join()
+    assert.equal(f.bridge.screenMode(), 'wda')
+    const api = http.createServer((req, res) => {
+      res.end(JSON.stringify(req.url === '/api/v1/user' ?
+        {success: true, user: owner} : {success: true, device: {serial, owner: f.bridge.owner}}))
+    })
+    servers.push(api)
+    const screen = f.screenServer(await listen(api))
+    const ws = new WebSocket((await listen(screen.server)).replace('http:', 'ws:'), {
+      headers: {origin, cookie: 'session=signed'}
+    })
+    const frames: Buffer[] = []
+    ws.on('message', (data, binary) => {
+      if (binary) {
+        frames.push(data as Buffer)
+      }
+    })
+    try {
+      await once(ws, 'open')
+      ws.send('on')
+      await until(() => frames.length === 1)
+      assert.deepEqual(frames, [jpegFrame])
+      const tap = f.gesture(1, null)
+      f.send(new wire.GestureStartMessage({seq: 0, ...tap}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.25, y: 0.75, ...tap}))
+      f.send(new wire.TouchCommitMessage({seq: 2, ...tap}))
+      assert.equal(f.requests.length, 0)
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...tap}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...tap}))
+
+      const swipe = f.gesture(2, null)
+      f.send(new wire.GestureStartMessage({seq: 0, ...swipe}))
+      f.send(new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.5, y: 0.75, ...swipe}))
+      f.send(new wire.TouchMoveMessage({seq: 2, contact: 0, x: 0.5, y: 0.25, ...swipe}))
+      f.send(new wire.TouchUpMessage({seq: 3, contact: 0, ...swipe}))
+      f.send(new wire.GestureStopMessage({seq: 4, ...swipe}))
+      await until(() => f.requests.length === 2)
+      assert.deepEqual(f.requests[0], {path: '/tap', body: {x: 0.25, y: 0.75}})
+      assert.equal(f.requests[1]!.path, '/swipe')
+      const {from, to, durationMs} = f.requests[1]!.body
+      assert.deepEqual({from, to}, {from: {x: 0.5, y: 0.75}, to: {x: 0.5, y: 0.25}})
+      assert.ok(durationMs >= 50 && durationMs <= 5000)
+
+      const closed = once(f.wdaScreens[0]!, 'close')
+      ws.send('off')
+      await closed
+      assert.equal(f.screens.length, 0)
+    }
+    finally {
+      ws.terminate()
+      screen.close()
+    }
+  })
 
   it('publishes iOS automation usage and releases its owner', async function() {
     const f = await fixture()

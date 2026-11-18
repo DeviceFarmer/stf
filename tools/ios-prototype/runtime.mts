@@ -1,6 +1,7 @@
 import {setTimeout as delay} from 'node:timers/promises'
 import {randomUUID} from 'node:crypto'
 
+import {iosMajorVersion, iosUsesWdaScreen} from '../../lib/util/ios-device-status.ts'
 import {ManagedProcess, runCommand, runJson} from './process.mts'
 import {WdaClient, WdaError} from './wda.mts'
 import {runPowerCommand} from './power.mts'
@@ -19,8 +20,10 @@ export interface RuntimeOptions {
   iproxy: string
   imageMounter: ImageMounter
   pymobiledevice3: string
+  apiPort?: number
   wdaPort: number
   tunnelPort: number
+  mjpegPort?: number
   appiumMjpegPort?: number
   retryMs: number
   startupMs: number
@@ -69,6 +72,7 @@ export class IosRuntime {
   private assistiveTouch: AssistiveTouch
   private coreDeviceRsd: [string, string] | null = null
   private coreDeviceSession: CoreDeviceSession | null = null
+  private wdaScreenController = new AbortController()
   private changingPowerState = false
   private healthProbe: AbortController | null = null
 
@@ -150,9 +154,13 @@ export class IosRuntime {
     }
     this.checkChildren()
     this.telemetry.phase('wda')
+    const videoPort = this.wdaScreen ? this.wdaMjpegPort : o.appiumMjpegPort
+    if (videoPort && [o.apiPort, o.wdaPort, o.tunnelPort].includes(videoPort)) {
+      throw new Error('The WDA MJPEG port conflicts with another runtime port')
+    }
     this.children.push(start(o.iproxy, [
       '-u', o.udid, '-l', '-s', '127.0.0.1', o.wdaPort + ':8100'
-    , ...(o.appiumMjpegPort ? [o.appiumMjpegPort + ':9100'] : [])
+    , ...(videoPort ? [videoPort + ':9100'] : [])
     ]))
     // Catch a failed bind before asking the device to start WDA.
     await this.sleep(300)
@@ -171,9 +179,8 @@ export class IosRuntime {
           await this.wda.open(this.abort.signal)
           this.checkChildren()
         }
-        const productVersion = (this.info as {ProductVersion?: string})?.ProductVersion
-        const version = Number.parseInt(productVersion || '', 10)
-        if (version >= 27) {
+        const version = iosMajorVersion((this.info as {ProductVersion?: unknown})?.ProductVersion)
+        if (version !== null && version >= 27) {
           try {
             this.coreDeviceRsd = rsdEndpoint(tunnel)
           }
@@ -197,6 +204,7 @@ export class IosRuntime {
     this.generation += 1
     this.coreDeviceRsd = null
     this.telemetry.status.locked = null
+    this.stopWdaScreen()
     // Keep the worker's slot until it exits without making WDA recovery wait for media cleanup.
     this.coreDeviceSession?.stop()
     await this.queue.catch(() => null)
@@ -334,6 +342,7 @@ export class IosRuntime {
     // Appium may use the existing session or replace it. Neither requires restarting WDA.
     this.automationLease = lease
     this.healthProbe?.abort()
+    this.stopWdaScreen()
     try {
       const worker = this.coreDeviceSession
       if (worker) {
@@ -389,6 +398,44 @@ export class IosRuntime {
 
   get coreDevice(): boolean {
     return this.coreDeviceRsd !== null
+  }
+
+  get wdaScreen(): boolean {
+    return iosUsesWdaScreen((this.info as {ProductVersion?: unknown})?.ProductVersion)
+  }
+
+  get wdaMjpegPort(): number {
+    return this.options.appiumMjpegPort ?? this.options.mjpegPort ?? 19100
+  }
+
+  wdaScreenSignal(signal: AbortSignal): AbortSignal {
+    this.checkWdaControl()
+    return AbortSignal.any([signal, this.abort.signal, this.wdaScreenController.signal])
+  }
+
+  wdaGesture(
+    from: {x: number, y: number}, to: {x: number, y: number} | null
+  , duration: number, signal: AbortSignal
+  ): Promise<void> {
+    return this.execute((wda, active) => {
+      this.checkWdaControl()
+      return wda.gesture(from, to, duration, active)
+    }, true, signal)
+  }
+
+  private checkWdaControl(): void {
+    if (this.automationLease) {
+      throw new AutomationError('IOS_AUTOMATION_LEASE_CONFLICT', 409)
+    }
+    if (!this.wdaScreen || this.state !== 'ready' || this.changingPowerState) {
+      throw new Error('WDA manual control is unavailable')
+    }
+    this.checkChildren()
+  }
+
+  private stopWdaScreen(): void {
+    this.wdaScreenController.abort()
+    this.wdaScreenController = new AbortController()
   }
 
   async openCoreDevice(signal: AbortSignal): Promise<CoreDeviceScreen> {
@@ -493,6 +540,7 @@ export class IosRuntime {
 
   power(action: 'reboot' | 'shutdown', signal?: AbortSignal): Promise<{accepted: boolean}> {
     return this.changePowerState(async(_wda, active) => {
+      this.stopWdaScreen()
       await this.dependencies.power(this.options.goIos, this.args(action), active)
       this.state = 'waiting'
       this.generation++

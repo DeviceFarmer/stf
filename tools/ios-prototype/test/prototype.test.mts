@@ -44,7 +44,7 @@ async function until(predicate: () => boolean): Promise<void> {
   }
 }
 
-async function fixture() {
+async function fixture(runtimeOptions: Partial<RuntimeOptions> = {}) {
   const calls: Array<{method: string, path: string, body: any}> = []
   let failure = false
   let locked = false
@@ -110,7 +110,7 @@ async function fixture() {
   // fetches and subsequent requests the same budget on QEMU as on a device.
   const wda = new WdaClient(origin)
   await wda.open()
-  const runtime = new IosRuntime(options, {wda, log: () => null})
+  const runtime = new IosRuntime({...options, ...runtimeOptions}, {wda, log: () => null})
   runtime.state = 'ready'
   const server = createServer(runtime, token)
   const api = await listen(server)
@@ -389,12 +389,85 @@ describe('iOS prototype HTTP and WDA integration', () => {
     assert.equal(runtime.state, 'ready')
   })
 
-  it('does not expose the retired manual screen and gesture routes', async() => {
+  it('does not expose the WDA screen and gesture routes on iOS 27 or unknown versions', async() => {
     const f = await fixture()
-    assert.equal((await f.request('/screen')).status, 404)
-    assert.equal((await f.request('/tap', {x: 0.5, y: 0.5})).status, 404)
-    assert.equal((await f.request('/swipe', {from: {x: 0, y: 1}, to: {x: 0, y: 0}})).status, 404)
+    for (const version of ['27.0', '27unknown', null]) {
+      f.runtime.info = {ProductVersion: version}
+      assert.equal((await f.request('/screen')).status, 404)
+      assert.equal((await f.request('/tap', {x: 0.5, y: 0.5})).status, 404)
+      assert.equal((await f.request('/swipe', {from: {x: 0, y: 1}, to: {x: 0, y: 0}})).status, 404)
+    }
     assert.equal(f.calls.length, 1)
+  })
+
+  it('performs WDA gestures on earlier iOS, including the lock screen', async() => {
+    const f = await fixture()
+    f.runtime.info = {ProductVersion: '26.7.1'}
+    f.protect()
+    const from = {x: 0.25, y: 1}
+    const to = {x: 1, y: 0}
+    assert.equal((await f.request('/tap', from)).status, 200)
+    assert.equal((await f.request('/swipe', {from, to, durationMs: 250})).status, 200)
+    assert.equal((await f.request('/swipe', {from, to, durationMs: 5001})).status, 400)
+    assert.equal((await f.request('/swipe', {from})).status, 400)
+    assert.deepEqual(f.calls.filter(call => call.path.endsWith('/actions'))
+      .map(call => call.body.actions[0].actions), [[
+      {type: 'pointerMove', duration: 0, origin: 'viewport', x: 98, y: 844}
+    , {type: 'pointerDown', button: 0}
+    , {type: 'pause', duration: 50}
+    , {type: 'pointerUp', button: 0}
+    ], [
+      {type: 'pointerMove', duration: 0, origin: 'viewport', x: 98, y: 844}
+    , {type: 'pointerDown', button: 0}
+    , {type: 'pointerMove', duration: 250, origin: 'viewport', x: 390, y: 0}
+    , {type: 'pointerUp', button: 0}
+    ]])
+  })
+
+  it('proxies only the authorized manual WDA stream and cancels it on Appium handoff', async() => {
+    let connected = 0
+    let disconnected = 0
+    const frame = Buffer.from('--wda\r\nContent-Length: 4\r\n\r\n\xff\xd8\xff\xd9', 'latin1')
+    const contentType = 'multipart/x-mixed-replace; boundary=wda'
+    const origin = await listen(http.createServer((_req, res) => {
+      connected++
+      res.once('close', () => disconnected++)
+      res.writeHead(200, {'Content-Type': contentType})
+      res.write(frame)
+    }))
+    const f = await fixture({appiumMjpegPort: Number(new URL(origin).port)})
+    f.runtime.info = {ProductVersion: '26.7.1'}
+    f.protect()
+    assert.equal((await fetch(f.api + '/screen')).status, 401)
+    assert.equal((await fetch(f.api + '/screen', {headers: {
+      Authorization: 'Bearer ' + token, Origin: 'https://example.com'
+    }})).status, 403)
+    const response = await f.request('/screen')
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('content-type'), contentType)
+    const reader = response.body!.getReader()
+    assert.deepEqual(Buffer.from((await reader.read()).value!), frame)
+    await reader.cancel()
+    await until(() => disconnected === 1)
+
+    const next = await f.request('/screen')
+    assert.equal(next.status, 200)
+    assert.equal((await f.request('/automation', {
+      active: true, lease: '00000000-0000-4000-8000-000000000001'
+    })).status, 200)
+    await until(() => disconnected === 2)
+    assert.equal((await f.request('/screen')).status, 409)
+    assert.equal((await f.request('/tap', {x: 0.25, y: 1})).status, 409)
+    assert.equal(connected, 2)
+    assert.equal(f.calls.some(call => call.path.endsWith('/actions')), false)
+
+    assert.equal((await f.request('/automation', {
+      active: false, lease: '00000000-0000-4000-8000-000000000001'
+    })).status, 200)
+    const resumed = await f.request('/screen')
+    assert.equal(resumed.status, 200)
+    await resumed.body!.cancel()
+    await until(() => disconnected === 3)
   })
 })
 
@@ -442,6 +515,7 @@ describe('iOS prototype lifecycle', () => {
     runtime.start()
     await until(() => runtime.state === 'ready' && runtime.telemetry.status.locked === false)
     assert.equal(runtime.coreDevice, true)
+    assert.equal(d.spawned[0]!.args.some(arg => arg.endsWith(':9100')), false)
     const api = await listen(createServer(runtime, token))
     const headers = {Authorization: 'Bearer ' + token, 'Content-Type': 'application/json'}
     const inventory = await (await fetch(api + '/device', {headers})).json() as {coreDevice?: true}
@@ -460,7 +534,7 @@ describe('iOS prototype lifecycle', () => {
     await until(() => runtime.state === 'ready')
     assert.equal(runtime.coreDevice, false)
     assert.deepEqual(d.spawned[0]!.args, [
-      '-u', options.udid, '-l', '-s', '127.0.0.1', '18100:8100'
+      '-u', options.udid, '-l', '-s', '127.0.0.1', '18100:8100', '19100:9100'
     ])
     assert.ok(d.commands.filter(args => args[0] !== 'list')
       .every(args => args.includes('--udid=' + options.udid)))
@@ -473,7 +547,7 @@ describe('iOS prototype lifecycle', () => {
 
   it('adds the opt-in Appium MJPEG forward only on loopback', async() => {
     const f = await fixture()
-    const d = dependencies(f)
+    const d = dependencies(f, '27.0.1')
     const runtime = new IosRuntime({...options, appiumMjpegPort: 19100}, d.deps)
     cleanups.push(() => runtime.stop())
     runtime.start()

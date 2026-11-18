@@ -7,6 +7,7 @@ import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
 import type {IosOwner} from './access.js'
 import {findCatalogDevice} from '../../util/device-catalog.js'
+import {iosMajorVersion} from '../../util/ios-device-status.js'
 import {CoreDeviceInput} from './coredevice-input.js'
 
 export interface BridgeOptions {
@@ -37,6 +38,7 @@ export class IosBridge {
   private queue = Promise.resolve()
   private reservationQueue = Promise.resolve()
   private touch: {sessionId: string, position: Point, pendingSeq: number | null} | null = null
+  private wdaTouch: {from: Point, to: Point, started: number} | null = null
   private touchRejected = false
   private readonly gestures: TouchGesture
   private readonly nativeInput: CoreDeviceInput
@@ -103,17 +105,24 @@ export class IosBridge {
         if (!this.isActiveScreen(sessionId)) {
           return
         }
+        const arrived = performance.now()
         this.gestures.push(message.seq, () => {
           if (!this.isActiveScreen(sessionId)) {
             return
           }
-          if (message.contact !== 0 || this.touch) {
+          if (message.contact !== 0 || this.touch || this.wdaTouch) {
             this.rejectTouch()
           }
           else if (!this.touchRejected && this.point(message)) {
-            // A batch may include a second contact before its first Commit.
-            this.touch = {sessionId, position: message
-              , pendingSeq: (message.seq + 1) % touchSequenceSize}
+            if (sessionId === null) {
+              const point = {x: message.x, y: message.y}
+              this.wdaTouch = {from: point, to: point, started: arrived}
+            }
+            else {
+              // A batch may include a second contact before its first Commit.
+              this.touch = {sessionId, position: message
+                , pendingSeq: (message.seq + 1) % touchSequenceSize}
+            }
           }
         }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
       })
@@ -123,6 +132,12 @@ export class IosBridge {
           return
         }
         this.gestures.push(message.seq, () => {
+          if (sessionId === null) {
+            if (this.wdaTouch && message.contact === 0 && this.point(message)) {
+              this.wdaTouch.to = {x: message.x, y: message.y}
+            }
+            return
+          }
           const touch = this.touch
           if (touch?.sessionId === sessionId &&
               message.contact === 0 && this.point(message)) {
@@ -145,8 +160,12 @@ export class IosBridge {
         if (!this.isActiveScreen(sessionId)) {
           return
         }
+        const arrived = performance.now()
         this.gestures.push(message.seq, () => {
-          if (this.touch?.sessionId === sessionId && message.contact === 0) {
+          if (sessionId === null && message.contact === 0) {
+            this.finishWdaTouch(arrived)
+          }
+          else if (this.touch?.sessionId === sessionId && message.contact === 0) {
             this.resetTouch()
           }
         }, message.gestureId, message.reservationId, {type: 'up', contact: message.contact})
@@ -278,8 +297,8 @@ export class IosBridge {
     return [point.x, point.y].every(value => Number.isFinite(value) && value >= 0 && value <= 1)
   }
 
-  private isActiveScreen(sessionId: string | null): sessionId is string {
-    return sessionId !== null && sessionId === this.nativeInput.active
+  private isActiveScreen(sessionId: string | null) {
+    return sessionId === null ? this.screenMode() === 'wda' : sessionId === this.nativeInput.active
   }
 
   private installationCommand(channel: string, path: string, id?: string) {
@@ -299,6 +318,7 @@ export class IosBridge {
   private resetTouch() {
     const touch = this.touch
     this.touch = null
+    this.wdaTouch = null
     this.touchRejected = false
     if (touch && touch.pendingSeq === null) {
       this.nativeInput.send(touch.sessionId, 'up', touch.position)
@@ -310,19 +330,43 @@ export class IosBridge {
     this.touchRejected = true
   }
 
-  screenMode(): 'control' | 'automation' | 'unsupported' | 'unavailable' {
+  private finishWdaTouch(arrived: number) {
+    const touch = this.wdaTouch
+    this.wdaTouch = null
+    if (!touch || this.touchRejected || this.screenMode() !== 'wda') {
+      return
+    }
+    const {from, to, started} = touch
+    const tap = Math.hypot(to.x - from.x, to.y - from.y) < 0.005
+    if (!tap && arrived < started) {
+      // Reordering cannot recover a hold time when Up arrived before Down.
+      this.report(new Error('Touch swipe duration is unknown; retry the gesture'))
+      return
+    }
+    this.enqueue(this.epoch, async signal => {
+      if (this.screenMode() === 'wda') {
+        const body = tap ? to : {from, to
+          , durationMs: Math.max(50, Math.min(5000, Math.round(arrived - started)))}
+        await this.ownedRequest(tap ? '/tap' : '/swipe', body, signal)
+      }
+    }, true).catch(this.report)
+  }
+
+  screenMode(): 'control' | 'wda' | 'automation' | 'unsupported' | 'unavailable' {
     if (this.automated) {
       return 'automation'
     }
     const device = this.lastObservation
-    if (!device?.coreDevice) {
+    const major = iosMajorVersion(device?.info?.ProductVersion)
+    if (!device || major === null || (major >= 27 && !device.coreDevice)) {
       return 'unsupported'
     }
+    const legacy = major < 27
     if (!this.owner || !this.registered || device.state !== 'ready' ||
-        device.ios?.locked !== false) {
+        (!legacy && device.ios?.locked !== false)) {
       return 'unavailable'
     }
-    return 'control'
+    return legacy ? 'wda' : 'control'
   }
 
   connectCoreDeviceInput(

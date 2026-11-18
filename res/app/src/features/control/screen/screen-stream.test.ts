@@ -82,7 +82,7 @@ const hevcInputReady = 'hevc input ready screen-session'
 const accessUnit = (kind: number) => Uint8Array.of(kind, 0, 0, 0, 2, 0x26, 0x01).buffer
 const jpegFrame = () => Uint8Array.of(0xff, 0xd8, 0xff, 0xd9).buffer
 
-function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Device> = {}) {
+function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Device> = {}, wdaScreen = false) {
   if (platform === 'iOS' && canDecodeHevc) {
     enableHevc()
   }
@@ -107,13 +107,16 @@ function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Devi
   const onDisplayError = vi.fn()
   const onFirstFrame = vi.fn()
   const onInputReady = vi.fn()
+  const onWdaInputReady = vi.fn()
   const stream = startScreenStream({url: 'wss://stf.test/screen', root
     , positioner: document.createElement('div'), canvas
     , screen: {rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}}
-    , getDevice: () => device, isShown: shown, canControl, onDisplayError, onFirstFrame, onInputReady, onStatusChange})
+    , wdaScreen
+    , getDevice: () => device, isShown: shown, canControl, onDisplayError, onFirstFrame
+    , onInputReady, onWdaInputReady, onStatusChange})
   return {
     device, stream, root, context, getProbeContext, decode, bitmap, hidden, shown, onStatusChange
-  , canControl, onDisplayError, onFirstFrame, onInputReady
+  , canControl, onDisplayError, onFirstFrame, onInputReady, onWdaInputReady
   }
 }
 
@@ -129,6 +132,64 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+describe('iPhone WDA video', () => {
+  it('draws JPEG video without WebCodecs, clears input on disconnect and waits for a replacement frame', async() => {
+    const {stream, context, decode, bitmap, onDisplayError, onInputReady, onWdaInputReady, onStatusChange} =
+      fixture('iOS', false, {ios: {locked: true} as NonNullable<Device['ios']>}, true)
+    const socket = Socket.instances[0]!
+    socket.open()
+    expect(socket.binaryType).toBe('blob')
+    expect(socket.sent).toEqual(['on'])
+    const jpeg = new Blob([jpegFrame()], {type: 'image/jpeg'})
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(decode).toHaveBeenCalledWith(jpeg)
+    expect(context.drawImage).toHaveBeenCalledOnce()
+    expect(onWdaInputReady).toHaveBeenCalledExactlyOnceWith(true)
+    expect(onDisplayError).not.toHaveBeenCalled()
+    expect(onInputReady).not.toHaveBeenCalled()
+
+    let finishDecode!: (image: typeof bitmap) => void
+    decode.mockReturnValueOnce(new Promise(resolve => {
+      finishDecode = resolve
+    }))
+    socket.message(jpeg)
+    socket.close()
+    finishDecode(bitmap)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(context.drawImage).toHaveBeenCalledOnce()
+    expect(onWdaInputReady).toHaveBeenLastCalledWith(false)
+    expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
+    const replacement = Socket.instances[1]!
+    replacement.open()
+    expect(replacement.sent).toEqual(['on'])
+    replacement.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(context.drawImage).toHaveBeenCalledTimes(2)
+    expect(onWdaInputReady).toHaveBeenLastCalledWith(true)
+    expect(onStatusChange).toHaveBeenLastCalledWith(null)
+    stream.stop()
+  })
+
+  it('stops manual video when automation takes the reservation', async() => {
+    const {stream, device, onDisplayError, onWdaInputReady} = fixture('iOS', false,
+      {owner: {email: 'owner@example.test'}}, true)
+    const socket = Socket.instances[0]!
+    socket.open()
+    socket.message(new Blob([jpegFrame()]))
+    await vi.advanceTimersByTimeAsync(0)
+    device.usage = 'automation'
+    stream.checkEnabled()
+    expect(socket.sent).toEqual(['on', 'off'])
+    expect(socket.readyState).toBe(3)
+    expect(onWdaInputReady).toHaveBeenLastCalledWith(false)
+    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-automation')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(Socket.instances).toHaveLength(1)
+    stream.stop()
+  })
 })
 
 describe('screen stream availability', () => {
@@ -657,19 +718,21 @@ describe('iPhone screen recovery', () => {
     stream.stop()
   })
 
-  it('shows the server automation guard when ownership metadata has not arrived yet', async() => {
-    const {stream, onDisplayError, onInputReady} = fixture()
-    const socket = Socket.instances[0]!
-    socket.open()
-    socket.message('hevc automation')
-    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-automation')
-    expect(socket.readyState).toBe(3)
-    stream.retry()
-    await vi.advanceTimersByTimeAsync(10000)
-    expect(Socket.instances).toHaveLength(1)
-    expect(onInputReady).not.toHaveBeenCalled()
-    stream.stop()
-  })
+  it.each([false, true])('shows the server automation guard before ownership metadata (WDA: %s)',
+    async(wdaScreen) => {
+      const {stream, onDisplayError, onInputReady, onWdaInputReady} = fixture('iOS', !wdaScreen, {}, wdaScreen)
+      const socket = Socket.instances[0]!
+      socket.open()
+      socket.message('hevc automation')
+      expect(onDisplayError).toHaveBeenLastCalledWith('hevc-automation')
+      expect(socket.readyState).toBe(3)
+      stream.retry()
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(Socket.instances).toHaveLength(1)
+      expect(onInputReady).not.toHaveBeenCalled()
+      expect(onWdaInputReady).not.toHaveBeenCalled()
+      stream.stop()
+    })
 
   it('stops retrying after release or unmount and preserves Android behaviour', async() => {
     const {device, stream} = fixture()

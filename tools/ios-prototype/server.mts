@@ -16,6 +16,13 @@ function coordinate(value: unknown): number {
   return value
 }
 
+function point(value: unknown): {x: number, y: number} {
+  if (!value || typeof value !== 'object' || !('x' in value) || !('y' in value)) {
+    throw new InputError('Expected coordinates')
+  }
+  return {x: coordinate(value.x), y: coordinate(value.y)}
+}
+
 async function body(req: http.IncomingMessage): Promise<any> {
   if (req.headers['content-type']?.split(';')[0] !== 'application/json') {
     throw new InputError('Content-Type must be application/json')
@@ -113,6 +120,34 @@ export function createServer(
         json(503, {error: 'device_not_ready', state: runtime.state})
         return
       }
+      if ((route === 'GET /screen' || route === 'POST /tap' || route === 'POST /swipe') &&
+          !runtime.wdaScreen) {
+        json(404, {error: 'not_found'})
+        return
+      }
+      if (route === 'GET /screen') {
+        const signal = runtime.wdaScreenSignal(abort.signal)
+        const upstream = http.get('http://127.0.0.1:' + runtime.wdaMjpegPort, {signal}, stream => {
+          const contentType = stream.headers['content-type'] || ''
+          if (stream.statusCode !== 200 || !contentType.startsWith('multipart/x-mixed-replace')) {
+            stream.destroy()
+            json(502, {error: 'invalid_mjpeg_response'})
+            return
+          }
+          res.writeHead(200, {'Content-Type': contentType})
+          pipeline(stream, res, () => abort.abort())
+        })
+        upstream.setTimeout(15000, () => upstream.destroy())
+        upstream.on('error', () => {
+          if (res.headersSent || signal.aborted) {
+            res.destroy()
+          }
+          else if (!res.destroyed) {
+            json(502, {error: 'screen_unavailable'})
+          }
+        })
+        return
+      }
       if (route === 'GET /coredevice/screen') {
         const screen = await runtime.openCoreDevice(abort.signal)
         if (abort.signal.aborted) {
@@ -154,6 +189,18 @@ export function createServer(
       }
       const input = await body(req)
       switch (req.url) {
+      case '/tap':
+        await runtime.wdaGesture(point(input), null, 50, abort.signal)
+        break
+      case '/swipe': {
+        const duration = input.durationMs ?? 500
+        if (typeof duration !== 'number' || !Number.isFinite(duration) ||
+            duration < 50 || duration > 5000) {
+          throw new InputError('Expected durationMs between 50 and 5000')
+        }
+        await runtime.wdaGesture(point(input.from), point(input.to), duration, abort.signal)
+        break
+      }
       case '/coredevice/touch': {
         const type = input.type
         if (type !== 'contact' && type !== 'release') {

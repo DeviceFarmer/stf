@@ -3,11 +3,12 @@ import {Button, Loader} from '@mantine/core'
 import {IconEyeOff, IconRefresh} from '@tabler/icons-react'
 import debounce from 'lodash/debounce'
 import type {Control} from '@/core/control'
-import {isAutomated} from '@/core/devices/enhance'
+import {canViewDevice, isAutomated} from '@/core/devices/enhance'
 import type {Device} from '@/core/devices/types'
 import {useTranslation} from '@/core/i18n'
 import {scalingCoordinator} from '@/core/scaling'
 import {NothingToShow} from '@/ui/NothingToShow'
+import {iosUsesWdaScreen} from '../../../../../../lib/util/ios-device-status'
 import {bindScreenKeyboard} from './screen-keyboard'
 import {startScreenStream, type DisplayError, type ScreenGeometry, type ScreenStream,
   type ScreenStreamStatus} from './screen-stream'
@@ -54,13 +55,15 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const [displayError, setDisplayError] = useState<DisplayError>(false)
   const [hasFrame, setHasFrame] = useState(false)
   const [iosScreenSessionId, setIosScreenSessionId] = useState<string | null>(null)
+  const [wdaInputReady, setWdaInputReady] = useState(false)
   const [streamStatus, setStreamStatus] = useState<ScreenStreamStatus>(null)
 
   const readOnly = control.readOnly
   const singleTouch = device.platform === 'iOS'
+  const wdaScreen = singleTouch && iosUsesWdaScreen(device.version)
+  const iosInputReady = wdaScreen ? wdaInputReady : iosScreenSessionId !== null && device.ios?.locked !== true
   const touchEnabled = !readOnly && (!singleTouch ||
-    (showScreen && iosScreenSessionId !== null && device.using &&
-      !isAutomated(device) && device.ios?.locked !== true))
+    (showScreen && iosInputReady && device.using && canViewDevice(device) && !isAutomated(device)))
   const url = device.display?.url
   const displayWidth = device.display?.width || 0
   const displayHeight = device.display?.height || 0
@@ -89,12 +92,14 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , positioner
       , canvas
       , screen: screenRef.current
+      , wdaScreen
       , getDevice: () => deviceRef.current
       , isShown: () => showScreenRef.current
       , canControl: () => !readOnlyRef.current
       , onDisplayError: setDisplayError
       , onFirstFrame: () => setHasFrame(true)
       , onInputReady: setIosScreenSessionId
+      , onWdaInputReady: setWdaInputReady
       , onStatusChange: setStreamStatus
     })
     streamRef.current = stream
@@ -122,7 +127,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       setStreamStatus(null)
       setDisplayError(false)
     }
-  }, [url])
+  }, [url, wdaScreen])
 
   useEffect(() => {
     streamRef.current?.checkEnabled()
@@ -143,9 +148,9 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , scaler
       , control
       , singleTouch
-      , screenSessionId: iosScreenSessionId
+      , screenSessionId: wdaScreen ? null : iosScreenSessionId
     })
-  }, [control, touchEnabled, scaler, singleTouch, iosScreenSessionId])
+  }, [control, touchEnabled, scaler, singleTouch, iosScreenSessionId, wdaScreen])
 
   useEffect(() => {
     const input = inputRef.current

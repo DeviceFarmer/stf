@@ -34,9 +34,9 @@ and the tunnel registry uses 28100. The public screen endpoint is
 the STF-authenticated WebSocket on 17440. Raw WDA and the prototype API are not
 public ingress endpoints. Each WDA recovery changes a generation; each API
 process has a new instance UUID. Commands from the previous session are dropped.
-Releasing ownership aborts
-forwarded control requests and prevents queued runtime actions from reaching WDA.
-Cancellation cannot undo an input or power command already accepted by iOS.
+Releasing ownership aborts forwarded control requests and prevents queued
+runtime actions from reaching the phone. Cancellation cannot undo an input or
+power command already accepted by iOS.
 
 ## Runtime dependencies
 
@@ -77,15 +77,18 @@ The runtime and its read-only `--doctor` mode accept these additional options:
 | Option | Default |
 | --- | --- |
 | `--port`, `--wda-port`, `--tunnel-port` | `7400`, `18100`, `28100` |
-| `--appium-mjpeg-port` | Unset. Optional loopback MJPEG port for Appium only |
+| `--mjpeg-port` | Internal WDA screen port on earlier iOS releases, `19100` by default |
+| `--appium-mjpeg-port` | Unset. Enables Appium video on iOS 27 and later and sets the shared WDA MJPEG port on earlier releases |
 | `--go-ios`, `--iproxy` | `ios`, `iproxy` |
 | `--image-mounter` | `go-ios`; use `pymobiledevice3` for iOS 27 |
 | `--pymobiledevice3` | `pymobiledevice3`, or an absolute virtual-environment executable path |
 | `--xctest-config` | `WebDriverAgentRunner.xctest` |
 | `--state-dir` | `~/.stf-ios` |
 
-All three host ports must be distinct and available. The signed WDA artifact must
-listen on device port `8100`. Stop any competing WDA/Appium controller first.
+The loopback ports used by the runtime must be distinct and available. The
+signed WDA artifact must listen on device port `8100` and serve MJPEG on
+device port `9100` when the stream is used. Stop any competing WDA/Appium
+controller first.
 Compose/native launchers choose ports and create private tokens automatically;
 for a manual deployment, first generate a token and start the kernel tunnel in
 a separate terminal:
@@ -146,16 +149,21 @@ example. UDID and WDA bundle ID must match the selected physical phone.
 
 ## Interactive screen
 
-The live iPhone screen requires iOS 27 or later, a go-ios kernel tunnel with
-Remote Service Discovery (RSD), and HEVC decoding through WebCodecs in a secure
-browser context. Use HTTPS for shared deployments or the loopback origin from the
-[local quick start](../docker/ios/README.md#configure-one-or-several-iphones).
+STF selects the live screen and gesture transport for each phone from its iOS
+version. A deployment can use both modes at the same time.
 
-CoreDevice opens one screen session per phone during manual reservations. The
-current reservation owner can send single-finger contacts while dragging. STF
-pauses live viewing for automation reservations because CoreDevice can keep the
-phone awake and reserve media resources used by Appium tests. STF uses WDA for
-screenshots and operations such as Home and text input.
+| iOS version | Live screen and gestures |
+| --- | --- |
+| iOS 27 and later | CoreDevice HEVC video and single-finger touch events as the owner drags |
+| Earlier supported releases, including iOS 26 | WDA MJPEG video, with taps and completed swipes sent through WDA |
+
+CoreDevice requires a go-ios kernel tunnel with Remote Service Discovery (RSD)
+and HEVC decoding through WebCodecs in a secure browser context. Use HTTPS for
+shared deployments or the loopback origin from the [local quick start](../docker/ios/README.md#configure-one-or-several-iphones).
+STF opens one CoreDevice screen session per phone during manual reservations.
+Both modes enforce STF ownership and pause live viewing for automation
+reservations. STF uses WDA for screenshots and operations such as Home and
+text input in both modes.
 
 Reserve the iPhone through the STF API before starting an Appium session. STF
 waits for the manual CoreDevice session to close, then lets Appium use WDA
@@ -165,14 +173,18 @@ without restarting it. From the runtime's network namespace, set
 releasing the reservation so STF can resume its own WDA health checks.
 This workflow also works on iOS versions that predate CoreDevice screen support.
 
-For Appium video only, start the runtime with `--appium-mjpeg-port=19100`.
-Set `appium:mjpegServerPort` to `19100` for Appium recording or
-`appium:mjpegScreenshotUrl` to `http://127.0.0.1:19100/` for streamed screenshots.
-Choose an unused loopback port distinct from the API, WDA and tunnel ports.
+On iOS 27 or later, start the runtime with `--appium-mjpeg-port=19100` to enable
+optional Appium video. On earlier releases, the runtime already forwards WDA
+MJPEG to internal loopback port `19100` for manual viewing unless an explicit
+port overrides it. Set `appium:mjpegServerPort` to the forwarded port for
+recording or `appium:mjpegScreenshotUrl` to its loopback URL for streamed
+screenshots. Choose a port distinct from the API, WDA and tunnel ports.
 
-Remove the old `--mjpeg-port` argument from custom runtime launches. The private
-prototype endpoints `/screen`, `/tap` and `/swipe` have been removed. Update the
-STF app, iOS provider and runtime together to use the new screen protocol.
+`--mjpeg-port` remains accepted for existing launches that override the WDA
+screen port on earlier iOS releases. If both options are set, use the same port.
+
+Update the STF app, iOS provider and runtime together so all three agree on
+the screen protocol for each phone.
 
 See the [response-time measurements](ios-screen-benchmark.md) for the comparison
 with the previous screen path and the results from two physical iPhones.
@@ -236,7 +248,7 @@ and a real iPhone; record that separately from fixture tests.
 
 ### Hardware coverage and limits
 
-The following integration trials used the previous WDA screen path. CoreDevice
+The following integration trials used the WDA screen path. CoreDevice
 hardware results are recorded separately in the response-time measurements.
 
 | Environment | Devices | Observed behavior |
@@ -259,7 +271,7 @@ Remaining limits and verification gaps:
   Android recovery across a shared USB failure.
 - A full shared-VM reboot and physical WDA expiry/renewal remain unverified.
   Power commands and passcode entry were not repeated in the local packaging trial.
-- The live screen supports portrait orientation and single-finger gestures. STF
+- The CoreDevice screen supports portrait orientation and single-finger gestures. STF
   does not install or manage Appium Grid.
 
 ## Health, signing and recovery

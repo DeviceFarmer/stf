@@ -3,8 +3,10 @@ import {WebSocketServer, WebSocket} from 'ws'
 import {authorizeScreen, type IosOwner} from './access.js'
 import type {PrototypeClient} from './client.js'
 import {CoreDeviceScreenDecoder} from './coredevice-screen.js'
+import {MjpegDecoder} from './mjpeg.js'
 
 interface ScreenStream {
+  mode: 'control' | 'wda'
   controller: AbortController
   sessionId?: string
   releaseInput?: () => void
@@ -19,7 +21,7 @@ export function createScreenServer(options: {
   publicOrigin: string
   serial: string
   owner: () => IosOwner | null
-  mode: () => 'control' | 'automation' | 'unsupported' | 'unavailable'
+  mode: () => 'control' | 'wda' | 'automation' | 'unsupported' | 'unavailable'
   connectInput: (
     sessionId: string, signal: AbortSignal, fail: (error: unknown) => void
   ) => (() => void) | undefined
@@ -60,7 +62,12 @@ export function createScreenServer(options: {
             if (receiving(active)) {
               stop()
               options.onError?.(error)
-              ws.send('hevc unavailable')
+              if (active.mode === 'wda') {
+                ws.close(1011, 'Screen unavailable')
+              }
+              else {
+                ws.send('hevc unavailable')
+              }
             }
           }
           const keyframe = (active: ScreenStream) => {
@@ -81,7 +88,11 @@ export function createScreenServer(options: {
               ws.send('hevc automation')
               return
             }
-            if (!acceptsHevc || mode === 'unsupported') {
+            if (!acceptsHevc && (mode === 'unsupported' || mode === 'unavailable')) {
+              ws.close(1011, 'Screen unavailable')
+              return
+            }
+            if (mode === 'unsupported' || (mode === 'control' && !acceptsHevc)) {
               ws.send('hevc unsupported')
               return
             }
@@ -90,7 +101,7 @@ export function createScreenServer(options: {
               return
             }
             const active: ScreenStream = {
-              controller: new AbortController(), lastKeyframeRequest: -Infinity
+              mode, controller: new AbortController(), lastKeyframeRequest: -Infinity
             }
             stream = active
             try {
@@ -104,9 +115,14 @@ export function createScreenServer(options: {
                 ws.close(1008, 'Device access ended')
                 return
               }
-              await video(active)
+              if (mode === 'wda') {
+                await jpeg(active)
+              }
+              else {
+                await video(active)
+              }
               if (receiving(active)) {
-                throw new Error('CoreDevice screen ended')
+                throw new Error('iOS screen stream ended')
               }
             }
             catch (error) {
@@ -115,6 +131,29 @@ export function createScreenServer(options: {
             finally {
               if (stream === active) {
                 stop()
+              }
+            }
+          }
+          const jpeg = async(active: ScreenStream) => {
+            const startup = new AbortController()
+            const deadline = setTimeout(() => startup.abort(), 15000)
+            const signal = AbortSignal.any([startup.signal, active.controller.signal])
+            const response = await options.client.request('/screen', undefined, signal)
+              .finally(() => clearTimeout(deadline))
+            if (!response.body || !receiving(active) ||
+                !response.headers.get('content-type')?.startsWith('multipart/x-mixed-replace')) {
+              await response.body?.cancel()
+              throw new Error('Invalid WDA screen stream')
+            }
+            const decoder = new MjpegDecoder()
+            for await (const chunk of response.body) {
+              if (!receiving(active)) {
+                break
+              }
+              for (const frame of decoder.feed(chunk)) {
+                if (ws.bufferedAmount < maxBufferedBytes) {
+                  ws.send(frame)
+                }
               }
             }
           }

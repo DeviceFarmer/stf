@@ -220,6 +220,42 @@ describe('screen availability notice', () => {
     expect(manual.touchDown).toHaveBeenCalledOnce()
   })
 
+  it('lets a manual user control a locked iOS 26 screen after a JPEG frame and switches on upgrade', async() => {
+    device = {...device, version: '26.0.1', ios: {locked: true} as NonNullable<Device['ios']>}
+    const manual = {readOnly: false, gestureStart: vi.fn(), gestureStop: vi.fn()
+      , touchDown: vi.fn(), touchCommit: vi.fn(), touchReset: vi.fn()}
+    const screenControl = manual as unknown as Control
+    await render(true, screenControl)
+    const socket = Socket.instances[0]!
+    await act(async() => socket.open())
+    expect(socket.sent).toEqual(['on'])
+    const screen = host.querySelector('.device-screen')!
+    const down = () => screen.dispatchEvent(new MouseEvent('mousedown', {
+      clientX: 100, clientY: 100, cancelable: true
+    }))
+    down()
+    expect(manual.touchDown).not.toHaveBeenCalled()
+
+    await act(async() => socket.message(new Blob(['jpeg'], {type: 'image/jpeg'})))
+    down()
+    expect(manual.gestureStart).toHaveBeenCalledExactlyOnceWith(0)
+    expect(manual.touchDown).toHaveBeenCalledOnce()
+
+    device = {...device, version: '27.0'}
+    await render(true, screenControl)
+    expect(socket.readyState).toBe(3)
+    expect(manual.touchReset).toHaveBeenCalledOnce()
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Unlock it on the device.')
+    down()
+    expect(manual.touchDown).toHaveBeenCalledOnce()
+
+    device = {...device, ios: {...device.ios!, locked: false}}
+    await render(true, screenControl)
+    const native = Socket.instances[1]!
+    await act(async() => native.open())
+    expect(native.sent).toEqual(['hevc', 'on'])
+  })
+
   it('skips screen checks for battery updates with the same owner and rechecks owner changes', async() => {
     await render()
     await act(async() => Socket.instances[0]!.open())

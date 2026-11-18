@@ -26,12 +26,14 @@ export interface ScreenStreamOptions {
   positioner: HTMLElement
   canvas: HTMLCanvasElement
   screen: ScreenGeometry
+  wdaScreen: boolean
   getDevice: () => Device
   isShown: () => boolean
   canControl: () => boolean
   onDisplayError: (error: DisplayError) => void
   onFirstFrame: () => void
   onInputReady: (sessionId: string | null) => void
+  onWdaInputReady: (ready: boolean) => void
   onStatusChange: (status: ScreenStreamStatus) => void
 }
 
@@ -67,7 +69,7 @@ function isSideways(rotation: number): boolean {
 }
 
 export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
-  const {root, positioner, canvas, screen, getDevice} = options
+  const {root, positioner, canvas, screen, wdaScreen, getDevice} = options
   const g = canvas.getContext('2d') as CanvasRenderingContext2D
   const devicePixelRatio = window.devicePixelRatio || 1
   const frontBackRatio = devicePixelRatio / vendorBackingStorePixelRatio(g)
@@ -82,6 +84,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   let observedAutomation = false
   let hevcInput: 'waiting' | 'available' | 'requested' | 'ready' = 'waiting'
   let hevc: ReturnType<typeof startHevcScreen> | null = null
+  let wdaInputReady = false
 
   let adjustedBoundSize: BoundSize | null = null
   let cachedEnabled = false
@@ -134,6 +137,10 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   }
 
   function clearFrame() {
+    if (wdaInputReady) {
+      wdaInputReady = false
+      options.onWdaInputReady(false)
+    }
     frameGeneration += 1
     g.clearRect(0, 0, canvas.width, canvas.height)
     root.classList.remove('has-frame')
@@ -188,7 +195,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function shouldUpdateScreen(): boolean {
     return shouldViewScreen() && isOpen() &&
-      (!isIPhone() || (!isLockedIPhone() && !isAutomated(getDevice())))
+      (!isIPhone() || (wdaScreen ? canControlIPhone() : !isLockedIPhone() && !isAutomated(getDevice())))
   }
 
   function isIPhone(): boolean {
@@ -234,7 +241,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
             socket.onclose = null
             finishHevcClose = null
             if (!stopped) {
-              queueMicrotask(checkHevcEnabled)
+              queueMicrotask(checkIosEnabled)
             }
           }
         }
@@ -252,13 +259,13 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     }
   }
 
-  function closeHevcConnection() {
+  function closeIosConnection() {
     const waitForClose = hevcRequested
     if (ws) {
-      if (hevcRequested && isOpen()) {
+      if ((hevcRequested || wdaScreen) && isOpen()) {
         ws.send('off')
       }
-      transportLost ||= hevc !== null
+      transportLost ||= hevc !== null || wdaInputReady
       clearFrame()
     }
     closeHevc()
@@ -266,12 +273,15 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     closeSocket(waitForClose)
   }
 
-  function hevcBlock(): DisplayError | undefined {
+  function iosBlock(): DisplayError | undefined {
     if (!shouldViewScreen()) {
       return false
     }
     if (isAutomated(getDevice())) {
       return 'hevc-automation'
+    }
+    if (wdaScreen) {
+      return canControlIPhone() ? undefined : false
     }
     if (isLockedIPhone()) {
       return 'hevc-locked'
@@ -285,15 +295,15 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     return undefined
   }
 
-  function checkHevcEnabled() {
+  function checkIosEnabled() {
     if (stopped) {
       return
     }
-    const block = hevcBlock()
+    const block = iosBlock()
     if (typeof block !== 'undefined') {
       observedAutomation = block === 'hevc-automation'
       awaitingLockStatus = false
-      closeHevcConnection()
+      closeIosConnection()
       setDisplayError(block)
       updateStatus()
       return
@@ -307,7 +317,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       setDisplayError(false)
     }
     if ((hevcInput === 'requested' || hevcInput === 'ready') && !canControlIPhone()) {
-      closeHevcConnection()
+      closeIosConnection()
     }
     updateStatus()
     if (!displayError && updateBounds() && !ws && !finishHevcClose && !retryTimer) {
@@ -318,7 +328,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function checkEnabled() {
     if (isIPhone()) {
-      checkHevcEnabled()
+      checkIosEnabled()
       return
     }
     const newEnabled = shouldUpdateScreen()
@@ -445,6 +455,11 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         newestDrawnFrame = frame
         try {
           drawImage(bitmap, bitmap.width, bitmap.height)
+          if (wdaScreen && !wdaInputReady) {
+            retryAttempt = 0
+            wdaInputReady = true
+            options.onWdaInputReady(true)
+          }
         }
         finally {
           bitmap.close()
@@ -453,11 +468,11 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       .catch(() => undefined)
   }
 
-  function failHevc(error: Exclude<DisplayError, false | 'secure'>) {
-    closeHevcConnection()
+  function failIosStream(error: Exclude<DisplayError, false | 'secure'>) {
+    closeIosConnection()
     setDisplayError(error)
     if (awaitingLockStatus && getDevice().ios?.locked === false) {
-      checkHevcEnabled()
+      checkIosEnabled()
     }
   }
 
@@ -477,7 +492,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         const width = display?.width || frame.displayWidth
         const height = display?.height || frame.displayHeight
         if ((width > height) !== (frame.displayWidth > frame.displayHeight)) {
-          failHevc('hevc-unavailable')
+          failIosStream('hevc-unavailable')
           return
         }
         // Keep the canvas aligned with touch coordinates as the encoder changes resolution.
@@ -495,7 +510,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       }
       , onError: reason => {
         if (hevc === session && ws === socket && shouldUpdateScreen()) {
-          failHevc(reason === 'unsupported' ? 'hevc-unsupported' : 'hevc-unavailable')
+          failIosStream(reason === 'unsupported' ? 'hevc-unsupported' : 'hevc-unavailable')
         }
       }
     })
@@ -504,7 +519,8 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function connect() {
     const socket = new WebSocket(options.url)
-    const native = isIPhone()
+    const iphone = isIPhone()
+    const native = iphone && !wdaScreen
     socket.binaryType = native ? 'arraybuffer' : 'blob'
     ws = socket
     socket.onmessage = (message: MessageEvent) => {
@@ -520,7 +536,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         }
       }
       else if (message.data instanceof Blob) {
-        if (!isIPhone() && shouldUpdateScreen()) {
+        if (!native && shouldUpdateScreen()) {
           drawFrame(message.data, socket)
         }
       }
@@ -534,14 +550,14 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         }
       }
       else if (message.data === 'hevc automation') {
-        if (hevcRequested) {
-          failHevc('hevc-automation')
+        if (hevcRequested || wdaScreen) {
+          failIosStream('hevc-automation')
         }
       }
       else if (message.data === 'hevc unsupported' || message.data === 'hevc unavailable') {
         if (hevcRequested && shouldUpdateScreen()) {
           const error = message.data === 'hevc unsupported' ? 'coredevice-unsupported' : 'hevc-unavailable'
-          failHevc(error)
+          failIosStream(error)
         }
       }
       else if (typeof message.data === 'string' && message.data.startsWith('hevc ')) {
@@ -560,14 +576,18 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       if (ws !== socket || stopped) {
         return
       }
-      retryAttempt = 0
-      if (native) {
-        checkHevcEnabled()
+      if (!wdaScreen) {
+        retryAttempt = 0
+      }
+      if (iphone) {
+        checkIosEnabled()
         if (ws === socket) {
-          // Native status, frames and input acknowledgement belong to this socket only.
-          awaitingLockStatus = getDevice().ios?.locked !== false
-          hevcRequested = true
-          socket.send('hevc')
+          if (native) {
+            // Native status, frames and input acknowledgement belong to this socket only.
+            awaitingLockStatus = getDevice().ios?.locked !== false
+            hevcRequested = true
+            socket.send('hevc')
+          }
           socket.send('on')
         }
         return
@@ -585,7 +605,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       transportLost = true
       clearFrame()
       updateStatus()
-      if (native) {
+      if (iphone) {
         scheduleRetry()
       }
     }
@@ -601,10 +621,10 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function scheduleRetry() {
     // A recovered iPhone may register before Kubernetes has restored its screen route.
-    if (!stopped && !ws && !retryTimer && !displayError && typeof hevcBlock() === 'undefined') {
+    if (!stopped && !ws && !retryTimer && !displayError && typeof iosBlock() === 'undefined') {
       retryTimer = setTimeout(() => {
         retryTimer = null
-        checkHevcEnabled()
+        checkIosEnabled()
       }, Math.min(5000, 500 * 2 ** Math.min(4, retryAttempt++)))
     }
   }
@@ -615,10 +635,10 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   }
 
   function retry() {
-    if (displayError === 'hevc-unavailable' && typeof hevcBlock() === 'undefined') {
+    if (displayError === 'hevc-unavailable' && typeof iosBlock() === 'undefined') {
       transportLost = true
       setDisplayError(false)
-      checkHevcEnabled()
+      checkIosEnabled()
     }
   }
 
@@ -633,7 +653,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   }
 
   if (isIPhone()) {
-    checkHevcEnabled()
+    checkIosEnabled()
   }
   else {
     connect()
