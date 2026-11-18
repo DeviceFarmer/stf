@@ -479,21 +479,44 @@ describe('manual device packet authorization', function() {
     })
   }
 
-  it('denies input to foreign or unowned Android devices', async function() {
-    const authorized: unknown[] = []
-    const f = fixture('Android', 0, {onAuthorizedInput: (...args: unknown[]) => {
-      authorized.push(args)
-    }})
-    f.update({owner: {email: 'someone@example.test', reservationId: 'victim'}})
-    for (const event of ['input.gestureStart', 'input.keyPress', 'input.type']) {
-      assert.equal((await f.dispatch(event))?.message, 'Device access denied')
-    }
-    f.update({owner: null})
-    f.access.released('PHONE')
-    assert.equal((await f.dispatch('input.gestureStart'))?.message, 'Device access denied')
-    assert.deepEqual(authorized, [])
-    assert.equal(await f.dispatch('group.invite', 'tx.free'), undefined)
-  })
+  // Commands a user who can only see the device must not send: the device obeys any of them.
+  const commands = ['shell.command', 'clipboard.paste', 'clipboard.copy', 'device.install'
+    , 'device.reboot', 'forward.create', 'connect.start', 'wifi.get', 'group.kick']
+
+  for (const platform of ['Android', 'iOS']) {
+    it(`denies input and commands to foreign or unowned ${platform} devices`, async function() {
+      const authorized: unknown[] = []
+      const f = fixture(platform, 0, {onAuthorizedInput: (...args: unknown[]) => {
+        authorized.push(args)
+      }})
+      f.update({owner: {email: 'someone@example.test', reservationId: 'victim'}})
+      for (const event of ['input.gestureStart', 'input.keyPress', 'input.type', ...commands]) {
+        assert.equal((await f.dispatch(event, 'tx.foreign'))?.message, 'Device access denied'
+          , event)
+      }
+      f.update({owner: null})
+      f.access.released('PHONE')
+      for (const event of ['input.gestureStart', ...commands]) {
+        assert.equal((await f.dispatch(event, 'tx.free'))?.message, 'Device access denied'
+          , event)
+      }
+      assert.deepEqual(authorized, [])
+      assert.equal(await f.dispatch('group.invite', 'tx.free'), undefined)
+    })
+
+    it(`lets the ${platform} owner and an admin send commands`, async function() {
+      const f = fixture(platform)
+      for (const event of commands) {
+        assert.equal(await f.dispatch(event, 'tx.owner'), undefined, event)
+      }
+      Object.assign(f.user, {privilege: 'admin'})
+      f.update({owner: {email: 'someone@example.test', reservationId: 'manual'}})
+      for (const event of commands) {
+        assert.equal(await f.dispatch(event, 'tx.admin'), undefined, event)
+      }
+      assert.deepEqual(f.cancelled, [])
+    })
+  }
 
   it('retains visibility and automation checks for stamped admin input', async function() {
     const authorized: {gestureId: string, reservationId: string}[] = []

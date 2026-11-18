@@ -193,7 +193,9 @@ export function createDevicePacketGuard(
                 !await allowIosPacket(event, channel, user, loadOnce)) {
               return 'Device access denied'
             }
-            if (input) {
+            // Seeing a device is enough to try to take it (the device refuses if someone
+            // holds it). Every other command, kick included, needs the owner or an admin.
+            if (input || (devicePolicy?.matches(event) && event !== 'group.invite')) {
               const serial = devicePolicy?.source(channel) ||
                 (channel.startsWith('ios:') ? channel.slice(4) : channel)
               const device = await loadOnce(serial)
