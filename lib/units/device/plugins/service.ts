@@ -290,11 +290,32 @@ export default syrup.serial()
     }
 
     function prepareForAgentDeath(conn: LocalSocket) {
+      var writer = agent.writer
+
+      function errorListener(err: Error) {
+        log.fatal('Agent connection had an error', err.stack)
+        lifecycle.fatal()
+      }
+
       function endListener() {
         var startTime = Date.now()
         log.important('Agent connection ended, attempting to relaunch')
+
+        // The old connection is gone for good. Detach it so that late write
+        // errors on the dead socket (e.g. a key event arriving while the
+        // relaunch is in progress) cannot take the whole worker down.
+        conn.removeListener('error', errorListener)
+        conn.on('error', function(err: Error) {
+          log.warn('Ignoring error on the ended agent connection', err.stack)
+        })
+        if (writer) {
+          writer.unpipe(conn)
+        }
+
+        // openAgent() allows up to 15s to stop the old agent plus 10s for each
+        // of the three later steps (45s), so leave some headroom above that.
         openAgent()
-          .timeout(30000)
+          .timeout(60000)
           .then(function() {
             log.important('Agent relaunched in %dms', Date.now() - startTime)
           })
@@ -305,11 +326,7 @@ export default syrup.serial()
       }
 
       conn.once('end', endListener)
-
-      conn.on('error', function(err: Error) {
-        log.fatal('Agent connection had an error', err.stack)
-        lifecycle.fatal()
-      })
+      conn.on('error', errorListener)
     }
 
     function openAgent() {
