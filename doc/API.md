@@ -247,6 +247,47 @@ clientWithPromise.then(function(api) {
 })
 ```
 
+#### GET /user/devices/{serial}
+
+Returns information about a specific device owned by the authenticated user.
+
+```bash
+GET /api/v1/user/devices/{serial}
+```
+
+Using cURL:
+
+```bash
+curl -H "Authorization: Bearer YOUR-TOKEN-HERE" https://stf.example.org/api/v1/user/devices/{serial}
+```
+
+Using Node.js:
+
+```js
+clientWithPromise.then(function(api) {
+  return api.user.getUserDeviceBySerial({serial: 'xxxx'})
+    .then(function(res) {
+      console.log(res.obj.device.serial)
+      // xxxx
+    })
+})
+.catch(function(err) {
+  console.log(err)
+})
+
+// OR
+clientWithPromise.then(function(api) {
+  return api.user.getUserDeviceBySerial({serial: 'xxxx', fields: 'serial,using,ready'})
+    .then(function(res) {
+      console.log(res.obj.device)
+      // { serial: 'xxxx', using: true, ready: true }
+    })
+})
+.catch(function(err) {
+  console.log(err)
+})
+```
+
 #### DELETE /user/devices/{serial}
 
 Releases a device owned by the authenticated user. Close the test session before
@@ -338,6 +379,35 @@ clientWithPromise.then(function(api) {
 .catch(function(err) {
   console.log(err)
   // {"success":false,"description":"Device is not owned by you or is not available"}
+})
+```
+
+#### GET /user/accessTokens
+
+Returns the titles of all valid access tokens for the authenticated user.
+
+```bash
+GET /api/v1/user/accessTokens
+```
+
+Using cURL:
+
+```bash
+curl -H "Authorization: Bearer YOUR-TOKEN-HERE" https://stf.example.org/api/v1/user/accessTokens
+```
+
+Using Node.js:
+
+```js
+clientWithPromise.then(function(api) {
+  return api.user.getUserAccessTokens()
+    .then(function(res) {
+      console.log(res.obj)
+      // { success: true, titles: [ 'token-1', 'token-2' ] }
+    })
+})
+.catch(function(err) {
+  console.log(err)
 })
 ```
 
