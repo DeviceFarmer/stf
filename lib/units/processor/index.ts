@@ -153,6 +153,8 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       })
   }
 
+  let joinsInFlight: Promise<unknown> = Promise.resolve()
+
   devDealer.on('message', wirerouter()
     .on(wire.UpdateAccessTokenMessage, function(channel, message, data) {
       appDealer.send([channel, data])
@@ -335,11 +337,19 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      dbapi.setDeviceOwner(message.serial, message.owner)
-      if (message.usage) {
-        dbapi.setDeviceUsage(message.serial, message.usage)
-      }
-      appDealer.send([channel, data])
+      // Forward only once the rows are written: the app side treats the join as news of a row it
+      // can then read, and the transaction reply that follows must not overtake it.
+      const writes = Promise.all([
+        dbapi.setDeviceOwner(message.serial, message.owner)
+      , message.usage ? dbapi.setDeviceUsage(message.serial, message.usage) : null
+      ])
+        .catch(function(err) {
+          log.error('Unable to persist join of "%s"', message.serial, err.stack)
+        })
+      joinsInFlight = Promise.all([joinsInFlight, writes])
+      writes.then(function() {
+        appDealer.send([channel, data])
+      })
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
       dbapi.unsetDeviceOwner(message.serial)
@@ -364,7 +374,10 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      appDealer.send([channel, data])
+      // Keeps a reply sent right after a join (group.invite) behind that join's forward.
+      joinsInFlight.then(function() {
+        appDealer.send([channel, data])
+      })
     })
     .on(wire.DeviceLogcatEntryMessage, function(channel, message, data) {
       appDealer.send([channel, data])
