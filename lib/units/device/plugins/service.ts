@@ -297,23 +297,21 @@ export default syrup.serial()
 
     function prepareForAgentDeath(conn: LocalSocket) {
       var writer = agent.writer
-      var dead = false
+      var ended = false
 
+      // 'end' is listened to with once(), so this runs at most once per
+      // connection, and agent.socket is still this connection when it does:
+      // openAgent() is the only thing that replaces it, and only runs below.
       function endListener() {
-        if (dead) {
-          return
-        }
-        dead = true
+        ended = true
         // Nothing may be written to the old connection any more: writing to a
         // socket the agent closed emits an error, which would be fatal below.
         if (writer) {
           writer.unpipe(conn)
           writer.end()
         }
-        if (agent.socket === conn) {
-          agent.socket = null
-          agent.writer = null
-        }
+        agent.socket = null
+        agent.writer = null
 
         var startTime = Date.now()
         log.important('Agent connection ended, attempting to relaunch')
@@ -331,7 +329,7 @@ export default syrup.serial()
       conn.once('end', endListener)
 
       conn.on('error', function(err: Error) {
-        if (dead) {
+        if (ended) {
           // The connection has already been replaced (or is being replaced).
           log.warn('Ended agent connection had an error', err.message)
           return
@@ -374,7 +372,9 @@ export default syrup.serial()
 
     function runAgentCommand(type: number, cmd: ServiceRequest) {
       if (!agent.writer) {
-        // The agent is being relaunched; there is nowhere to send this.
+        // The agent is being relaunched, usually for a second or two; there is
+        // nowhere to send this. The command is dropped, not queued, and the
+        // callers (pressKey, paste, ...) still report success to the client.
         log.warn('Agent is not connected, dropping command of type %d', type)
         return
       }

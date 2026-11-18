@@ -63,7 +63,15 @@ async function setup() {
   return {plugin, sockets, killed, shell}
 }
 
+// Only for asserting that something did NOT happen; use until() otherwise.
 const settle = () => new Promise(resolve => setTimeout(resolve, 20))
+
+async function until(condition: () => boolean) {
+  for (let i = 0; i < 200 && !condition(); i++) {
+    await new Promise(resolve => setImmediate(resolve))
+  }
+  expect(condition()).to.equal(true, 'Condition was not met in time')
+}
 
 describe('Device service plugin agent connection', function() {
   let fatal: sinon.SinonStub
@@ -86,7 +94,7 @@ describe('Device service plugin agent connection', function() {
     expect(serviceStarts).to.have.length(1)
 
     agents[0]!.emit('end')
-    await settle()
+    await until(() => agents.length === 2)
 
     expect(fatal.called).to.equal(false)
     expect(killed.callCount).to.equal(2, 'The stale agent is stopped before relaunching')
@@ -96,8 +104,7 @@ describe('Device service plugin agent connection', function() {
       .to.have.length(1, 'The service is not restarted')
 
     plugin.type('after relaunch')
-    await settle()
-    expect(agents[1]!.written.length).to.be.greaterThan(0)
+    await until(() => agents[1]!.written.length > 0)
   })
 
   it('drops commands while the agent is being relaunched', async function() {
@@ -120,11 +127,9 @@ describe('Device service plugin agent connection', function() {
     expect(fatal.called).to.equal(false)
 
     release()
-    await settle()
-    expect(agents).to.have.length(2)
+    await until(() => agents.length === 2)
     plugin.type('back')
-    await settle()
-    expect(agents[1]!.written.length).to.be.greaterThan(0)
+    await until(() => agents[1]!.written.length > 0)
   })
 
   it('relaunches only once for repeated end events', async function() {
@@ -132,8 +137,61 @@ describe('Device service plugin agent connection', function() {
     const agents = sockets['localabstract:stfagent']!
     agents[0]!.emit('end')
     agents[0]!.emit('end')
+    await until(() => agents.length === 2)
     await settle()
     expect(agents).to.have.length(2)
+  })
+
+  it('is fatal when the relaunch fails', async function() {
+    const {sockets} = await setup()
+    ;(devutil.killProcsByComm as sinon.SinonStub).callsFake(
+      () => Bluebird.reject(new Error('device offline')))
+
+    sockets['localabstract:stfagent']![0]!.emit('end')
+    await until(() => fatal.calledOnce)
+    expect(sockets['localabstract:stfagent']).to.have.length(1)
+  })
+
+  describe('with a stuck relaunch', function() {
+    let clock: sinon.SinonFakeTimers
+
+    afterEach(function() {
+      clock.restore()
+    })
+
+    it('is fatal once a relaunch step hangs past its own limit', async function() {
+      const {sockets} = await setup()
+      ;(devutil.killProcsByComm as sinon.SinonStub).callsFake(() => new Bluebird<void>(() => {}))
+      clock = sinon.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+
+      sockets['localabstract:stfagent']![0]!.emit('end')
+      await clock.tickAsync(14000)
+      expect(fatal.called).to.equal(false)
+      await clock.tickAsync(2000)
+      expect(fatal.calledOnce).to.equal(true)
+    })
+
+    it('does not cut short a slow relaunch that stays within every step limit', async function() {
+      const {sockets, shell} = await setup()
+      ;(devutil.killProcsByComm as sinon.SinonStub).callsFake(() => Bluebird.delay(14900))
+      shell.callsFake(() => Bluebird.delay(9900).then(endedStream))
+      ;(devutil.ensureUnusedLocalSocket as sinon.SinonStub).callsFake(
+        (_adb: unknown, _serial: string, sock: string) => Bluebird.delay(9900).return(sock))
+      const wait = devutil.waitForLocalSocket as sinon.SinonStub
+      wait.callsFake((_adb: unknown, _serial: string, sock: string) =>
+        Bluebird.delay(9900).then(() => {
+          const conn = fakeConn()
+          conn.sock = sock
+          sockets[sock]!.push(conn)
+          return conn as any
+        }))
+      clock = sinon.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+
+      sockets['localabstract:stfagent']![0]!.emit('end')
+      await clock.tickAsync(60000)
+      expect(fatal.called).to.equal(false)
+      expect(sockets['localabstract:stfagent']).to.have.length(2)
+    })
   })
 
   it('still treats an error on the live agent connection as fatal', async function() {
