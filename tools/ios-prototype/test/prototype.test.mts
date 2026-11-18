@@ -545,21 +545,36 @@ describe('iOS prototype lifecycle', () => {
       call.path === '/session/owned-session'))
   })
 
-  it('adds the opt-in Appium MJPEG forward only on loopback', async() => {
-    const f = await fixture()
-    const d = dependencies(f, '27.0.1')
-    const runtime = new IosRuntime({...options, appiumMjpegPort: 19100}, d.deps)
-    cleanups.push(() => runtime.stop())
-    runtime.start()
-    await until(() => runtime.state === 'ready')
-    assert.deepEqual(d.spawned[0]!.args, [
-      '-u', options.udid, '-l', '-s', '127.0.0.1', '18100:8100', '19100:9100'
-    ])
-    const origin = await listen(createServer(runtime, token))
-    const response = await fetch(origin + '/screen', {
-      headers: {Authorization: 'Bearer ' + token}
+  for (const option of ['appiumMjpegPort', 'mjpegPort'] as const) {
+    it(`adds the opt-in Appium MJPEG loopback forward on iOS 27 with ${option}`, async() => {
+      const f = await fixture()
+      const d = dependencies(f, '27.0.1')
+      const runtime = new IosRuntime({...options, [option]: 19200}, d.deps)
+      cleanups.push(() => runtime.stop())
+      runtime.start()
+      await until(() => runtime.state === 'ready')
+      assert.deepEqual(d.spawned[0]!.args, [
+        '-u', options.udid, '-l', '-s', '127.0.0.1', '18100:8100', '19200:9100'
+      ])
+      const origin = await listen(createServer(runtime, token))
+      const response = await fetch(origin + '/screen', {
+        headers: {Authorization: 'Bearer ' + token}
+      })
+      assert.equal(response.status, 404)
     })
-    assert.equal(response.status, 404)
+  }
+
+  it('uses a manual WDA MJPEG port override only on earlier iOS', async() => {
+    const f = await fixture()
+    for (const [version, expected] of [['26.7.1', ['19300:9100']], ['27.0.1', []]] as const) {
+      const d = dependencies(f, version)
+      const runtime = new IosRuntime({...options, wdaMjpegPort: 19300}, d.deps)
+      cleanups.push(() => runtime.stop())
+      runtime.start()
+      await until(() => runtime.state === 'ready')
+      assert.deepEqual(d.spawned[0]!.args.filter(arg => arg.endsWith(':9100')), [...expected])
+      await runtime.stop()
+    }
   })
 
   it('retries a missing phone without starting WDA on another connected device', async() => {
@@ -808,6 +823,8 @@ describe('iOS prototype executable boundary', () => {
     assert.match(output, /127.0.0.1/)
     assert.match(output, /--udid/)
     assert.match(output, /--appium-mjpeg-port/)
+    assert.match(output, /--mjpeg-port PORT \(alias for --appium-mjpeg-port\)/)
+    assert.match(output, /--wda-mjpeg-port/)
   })
 
   it('rejects invalid or conflicting Appium MJPEG ports before starting', async() => {

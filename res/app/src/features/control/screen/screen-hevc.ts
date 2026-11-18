@@ -90,6 +90,17 @@ export function startHevcScreen(header: string, callbacks: {
     active.configure(decoderConfig)
   }
 
+  function requestKeyframe() {
+    callbacks.onKeyframe()
+    // The provider may have rate-limited the first request.
+    clearTimeout(keyframeRetry)
+    keyframeRetry = setTimeout(() => {
+      if (waitingForKey) {
+        callbacks.onKeyframe()
+      }
+    }, KEYFRAME_RETRY_MS)
+  }
+
   function recoverDecoder(decoderConfig: VideoDecoderConfig) {
     const now = performance.now()
     if (now - lastRecovery >= FRAME_TIMEOUT_MS) {
@@ -112,14 +123,7 @@ export function startHevcScreen(header: string, callbacks: {
     try {
       closeDecoder()
       configureDecoder(decoderConfig)
-      callbacks.onKeyframe()
-      // The provider rate-limits keyframe requests to one per second.
-      clearTimeout(keyframeRetry)
-      keyframeRetry = setTimeout(() => {
-        if (waitingForKey) {
-          callbacks.onKeyframe()
-        }
-      }, KEYFRAME_RETRY_MS)
+      requestKeyframe()
     }
     catch {
       unavailable()
@@ -144,7 +148,7 @@ export function startHevcScreen(header: string, callbacks: {
         firstValidTimestamp = timestamp + 1
         if (!key) {
           waitingForKey = true
-          callbacks.onKeyframe()
+          requestKeyframe()
           return
         }
       }
@@ -215,7 +219,7 @@ export function startHevcScreen(header: string, callbacks: {
       initial.forEach(decode)
     }
     else {
-      callbacks.onKeyframe()
+      requestKeyframe()
     }
   }).catch(unavailable)
 

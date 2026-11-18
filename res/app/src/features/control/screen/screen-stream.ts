@@ -1,8 +1,8 @@
 import type {Device} from '@/core/devices/types'
 import {canViewDevice, isAutomated} from '@/core/devices/enhance'
+import {scalingCoordinator, type ScalingCoordinator} from '@/core/scaling'
 import {rotator} from './rotator'
 import {startHevcScreen, supportsHevcScreen} from './screen-hevc'
-import {createHevcCropDetector, type HevcCrop} from './screen-hevc-crop'
 
 export interface ScreenBounds {
   x: number
@@ -14,6 +14,7 @@ export interface ScreenBounds {
 export interface ScreenGeometry {
   rotation: number
   bounds: ScreenBounds
+  inputScaler?: ScalingCoordinator
 }
 
 export type DisplayError = false | 'secure' | 'hevc-unsupported' | 'coredevice-unsupported' |
@@ -48,6 +49,8 @@ interface BoundSize {
   w: number
   h: number
 }
+
+const MAX_HEVC_RETRIES = 3
 
 const streamOptions = {
   autoScaleForRetina: true
@@ -226,6 +229,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     hevcRequested = false
     hevc?.close()
     hevc = null
+    delete screen.inputScaler
   }
 
   function closeSocket(waitForClose = false) {
@@ -304,6 +308,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       observedAutomation = block === 'hevc-automation'
       awaitingLockStatus = false
       closeIosConnection()
+      retryAttempt = 0
       setDisplayError(block)
       updateStatus()
       return
@@ -312,9 +317,13 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       setDisplayError(false)
     }
     observedAutomation = false
-    if (displayError === 'hevc-unavailable' && awaitingLockStatus && getDevice().ios?.locked === false) {
+    if (!ws && awaitingLockStatus && getDevice().ios?.locked === false) {
       awaitingLockStatus = false
-      setDisplayError(false)
+      retryAttempt = 0
+      cancelRetry()
+      if (displayError === 'hevc-unavailable') {
+        setDisplayError(false)
+      }
     }
     if ((hevcInput === 'requested' || hevcInput === 'ready') && !canControlIPhone()) {
       closeIosConnection()
@@ -420,15 +429,9 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     maybeFlipLetterbox()
   }
 
-  function drawImage(image: CanvasImageSource, width: number, height: number, scale = frontBackRatio,
-    crop?: HevcCrop | null) {
+  function drawImage(image: CanvasImageSource, width: number, height: number, scale = frontBackRatio) {
     updateImageArea(width, height, scale)
-    if (crop) {
-      g.drawImage(image, 0, 0, crop.width, crop.height, 0, 0, width, height)
-    }
-    else {
-      g.drawImage(image, 0, 0, width, height)
-    }
+    g.drawImage(image, 0, 0, width, height)
     transportLost = false
     if (displayError) {
       setDisplayError(false)
@@ -470,9 +473,13 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function failIosStream(error: Exclude<DisplayError, false | 'secure'>) {
     closeIosConnection()
-    setDisplayError(error)
-    if (awaitingLockStatus && getDevice().ios?.locked === false) {
+    if (error === 'hevc-unavailable') {
+      transportLost = true
+      scheduleRetry()
       checkIosEnabled()
+    }
+    else {
+      setDisplayError(error)
     }
   }
 
@@ -481,22 +488,23 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       return
     }
     frameGeneration += 1
-    const detectCrop = createHevcCropDetector(root.ownerDocument)
     const session = startHevcScreen(header, {
       onFrame: (frame) => {
         if (hevc !== session || ws !== socket || !shouldUpdateScreen()) {
           return
         }
-        const device = getDevice()
-        const display = device.display
-        const width = display?.width || frame.displayWidth
-        const height = display?.height || frame.displayHeight
-        if ((width > height) !== (frame.displayWidth > frame.displayHeight)) {
+        const {displayWidth: width, displayHeight: height} = frame
+        if (width <= 0 || width >= height) {
           failIosStream('hevc-unavailable')
           return
         }
-        // Keep the canvas aligned with touch coordinates as the encoder changes resolution.
-        drawImage(frame, width, height, 1, detectCrop(frame))
+        // The registration screenshot can predate a rotation. Draw and scale
+        // input from the same complete, currently decoded portrait frame.
+        if (!screen.inputScaler || cachedImageWidth !== width || cachedImageHeight !== height) {
+          screen.inputScaler = scalingCoordinator(width, height)
+        }
+        drawImage(frame, width, height, 1)
+        retryAttempt = 0
         awaitingLockStatus = false
         if (hevcInput === 'waiting') {
           hevcInput = 'available'
@@ -528,7 +536,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         return
       }
       const display = getDevice().display
-      screen.rotation = display ? display.rotation : 0
+      screen.rotation = native ? 0 : (display?.rotation ?? 0)
 
       if (message.data instanceof ArrayBuffer) {
         if (hevc && shouldUpdateScreen()) {
@@ -576,9 +584,6 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       if (ws !== socket || stopped) {
         return
       }
-      if (!wdaScreen) {
-        retryAttempt = 0
-      }
       if (iphone) {
         checkIosEnabled()
         if (ws === socket) {
@@ -622,6 +627,10 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   function scheduleRetry() {
     // A recovered iPhone may register before Kubernetes has restored its screen route.
     if (!stopped && !ws && !retryTimer && !displayError && typeof iosBlock() === 'undefined') {
+      if (!wdaScreen && retryAttempt >= MAX_HEVC_RETRIES) {
+        setDisplayError('hevc-unavailable')
+        return
+      }
       retryTimer = setTimeout(() => {
         retryTimer = null
         checkIosEnabled()
@@ -636,6 +645,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function retry() {
     if (displayError === 'hevc-unavailable' && typeof iosBlock() === 'undefined') {
+      retryAttempt = 0
       transportLost = true
       setDisplayError(false)
       checkIosEnabled()

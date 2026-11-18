@@ -93,7 +93,7 @@ function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Devi
   const decode = vi.fn().mockResolvedValue(bitmap)
   vi.stubGlobal('createImageBitmap', decode)
   Socket.instances = []
-  const getProbeContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+  const getOtherCanvasContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
   const root = document.createElement('div')
   Object.defineProperties(root, {offsetWidth: {value: 400}, offsetHeight: {value: 700}})
   const canvas = document.createElement('canvas')
@@ -115,7 +115,7 @@ function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Devi
     , getDevice: () => device, isShown: shown, canControl, onDisplayError, onFirstFrame
     , onInputReady, onWdaInputReady, onStatusChange})
   return {
-    device, stream, root, context, getProbeContext, decode, bitmap, hidden, shown, onStatusChange
+    device, stream, root, context, getOtherCanvasContext, decode, bitmap, hidden, shown, onStatusChange
   , canControl, onDisplayError, onFirstFrame, onInputReady, onWdaInputReady
   }
 }
@@ -393,23 +393,10 @@ describe('iPhone CoreDevice video', () => {
     expect(onInputReady).toHaveBeenLastCalledWith(null)
   })
 
-  it('draws padded and full HEVC frames into the same touch area', async() => {
-    const {stream, context, getProbeContext} = fixture()
-    const probe = {drawImage: vi.fn(), getImageData: vi.fn()}
-    getProbeContext.mockReturnValue(probe as unknown as CanvasRenderingContext2D)
-    function pixels(width: number, height: number, collapsed: boolean) {
-      const data = new Uint8ClampedArray(width * height * 4).fill(128)
-      const right = collapsed ? Math.round(width * 720 / 1264) : width
-      const bottom = collapsed ? Math.round(height * 1280 / 2752) : height
-      for (let row = 0; row < bottom; row += 1) {
-        const offset = row * width * 4
-        data.fill(32, offset, offset + right * 4)
-      }
-      return {data}
-    }
-    probe.getImageData
-      .mockImplementationOnce((_x: number, _y: number, w: number, h: number) => pixels(w, h, true))
-      .mockImplementationOnce((_x: number, _y: number, w: number, h: number) => pixels(w, h, false))
+  it('draws complete portrait frames across resolution changes after landscape registration', async() => {
+    const {stream, context, getOtherCanvasContext, onInputReady} = fixture('iOS', true, {
+      display: {width: 2532, height: 1170, rotation: 90} as NonNullable<Device['display']>
+    })
     const socket = Socket.instances[0]!
     socket.open()
     socket.message(hevcHeader)
@@ -417,14 +404,37 @@ describe('iPhone CoreDevice video', () => {
     await vi.advanceTimersByTimeAsync(0)
     const decoder = Decoder.instances[0]!
     const frame = decoder.output(decoder.decode.mock.calls[0]![0].options.timestamp, 1264, 2752)
-    const draw = context.drawImage.mock.calls[0]!
-    expect(draw).toEqual([frame, 0, 0, expect.any(Number), expect.any(Number), 0, 0, 1170, 2532])
-    expect(Math.abs(draw[3] - 720)).toBeLessThan(15)
-    expect(Math.abs(draw[4] - 1280)).toBeLessThan(15)
+    expect(context.drawImage).toHaveBeenCalledExactlyOnceWith(frame, 0, 0, 1264, 2752)
+    expect(socket.sent).toContain('hevc ready')
+    socket.message(hevcInputReady)
+    expect(onInputReady).toHaveBeenLastCalledWith('screen-session')
 
     socket.message(accessUnit(1))
-    const full = decoder.output(decoder.decode.mock.calls[1]![0].options.timestamp, 1264, 2752)
-    expect(context.drawImage).toHaveBeenLastCalledWith(full, 0, 0, 1170, 2532)
+    const full = decoder.output(decoder.decode.mock.calls[1]![0].options.timestamp, 720, 1280)
+    expect(context.drawImage).toHaveBeenLastCalledWith(full, 0, 0, 720, 1280)
+    expect(getOtherCanvasContext).not.toHaveBeenCalled()
+    stream.stop()
+  })
+
+  it('closes on a landscape frame and reopens when it can draw a portrait frame', async() => {
+    const {stream, context, onInputReady} = fixture()
+    const socket = Socket.instances[0]!
+    socket.open()
+    await showHevcFrame(socket)
+    socket.message(hevcInputReady)
+    socket.message(accessUnit(1))
+    const decoder = Decoder.instances[0]!
+    decoder.output(decoder.decode.mock.calls[1]![0].options.timestamp, 2532, 1170)
+    expect(context.drawImage).toHaveBeenCalledOnce()
+    expect(onInputReady.mock.calls).toEqual([['screen-session'], [null]])
+    expect(socket.sent.at(-1)).toBe('off')
+    await vi.advanceTimersByTimeAsync(500)
+    const replacement = Socket.instances[1]!
+    replacement.open()
+    await showHevcFrame(replacement)
+    replacement.message(hevcInputReady)
+    expect(context.drawImage).toHaveBeenCalledTimes(2)
+    expect(onInputReady).toHaveBeenLastCalledWith('screen-session')
     stream.stop()
   })
 
@@ -558,10 +568,10 @@ describe('iPhone CoreDevice video', () => {
     const socket = Socket.instances[0]!
     socket.open()
     socket.message('hevc unavailable')
-    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-unavailable')
+    expect(onDisplayError).not.toHaveBeenCalled()
     expect(socket.sent.at(-1)).toBe('off')
-    stream.retry()
     expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
+    await vi.advanceTimersByTimeAsync(500)
     const replacement = Socket.instances[1]!
     replacement.open()
     expect(replacement.sent).toEqual(['hevc', 'on'])
@@ -570,13 +580,14 @@ describe('iPhone CoreDevice video', () => {
     replacement.message('hevc unsupported')
     expect(onDisplayError).toHaveBeenLastCalledWith('coredevice-unsupported')
     stream.retry()
+    await vi.advanceTimersByTimeAsync(10000)
     expect(replacement.sent.at(-1)).toBe('off')
     expect(Socket.instances).toHaveLength(2)
     stream.stop()
   })
 
   it.each([true, false])('retries on unlocked telemetry even if the error arrives first: %s', (errorFirst) => {
-    const {device, stream, onDisplayError} = fixture()
+    const {device, stream, onStatusChange} = fixture()
     device.ios = {locked: null} as NonNullable<Device['ios']>
     const socket = Socket.instances[0]!
     socket.open()
@@ -596,7 +607,7 @@ describe('iPhone CoreDevice video', () => {
     expect(replacement.sent).toEqual(['hevc', 'on'])
     replacement.message('hevc unavailable')
     stream.checkEnabled()
-    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-unavailable')
+    expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
     expect(socket.sent).toEqual(['hevc', 'on', 'off'])
     expect(replacement.sent).toEqual(['hevc', 'on', 'off'])
     expect(Socket.instances).toHaveLength(2)
@@ -620,6 +631,8 @@ describe('iPhone CoreDevice video', () => {
     const stale = decoder.output(decoder.decode.mock.calls[0]![0].options.timestamp)
     expect(stale.close).toHaveBeenCalledOnce()
     expect(context.drawImage).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(socket.sent.filter(message => message === 'hevc keyframe')).toHaveLength(2)
     socket.message(accessUnit(0))
     decoder.output(decoder.decode.mock.calls[6]![0].options.timestamp)
     expect(context.drawImage).toHaveBeenCalledOnce()
@@ -657,7 +670,7 @@ describe('iPhone CoreDevice video', () => {
   })
 
   it('requests one more recovery keyframe when the first request gets no response', async() => {
-    const {stream, onDisplayError} = fixture()
+    const {stream, onStatusChange} = fixture()
     const socket = Socket.instances[0]!
     socket.open()
     await showHevcFrame(socket)
@@ -667,12 +680,12 @@ describe('iPhone CoreDevice video', () => {
     expect(socket.sent.filter(message => message === 'hevc keyframe')).toHaveLength(2)
     await vi.advanceTimersByTimeAsync(4900)
     expect(socket.sent.filter(message => message === 'hevc keyframe')).toHaveLength(2)
-    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-unavailable')
+    expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
     stream.stop()
   })
 
   it('stops decoder recovery after repeated errors', async() => {
-    const {stream, onDisplayError, onInputReady} = fixture()
+    const {stream, onStatusChange, onInputReady} = fixture()
     const socket = Socket.instances[0]!
     socket.open()
     await showHevcFrame(socket)
@@ -685,19 +698,19 @@ describe('iPhone CoreDevice video', () => {
     expect(Decoder.instances).toHaveLength(3)
     expect(socket.sent.filter(message => message === 'hevc keyframe')).toHaveLength(2)
     expect(socket.sent.at(-1)).toBe('off')
-    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-unavailable')
+    expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
     expect(onInputReady).toHaveBeenLastCalledWith(null)
     stream.stop()
   })
 
   it('reports a stalled decoder when native video never produces a frame', async() => {
-    const {stream, onDisplayError} = fixture()
+    const {stream, onStatusChange} = fixture()
     const socket = Socket.instances[0]!
     socket.open()
     socket.message(hevcHeader)
     await vi.advanceTimersByTimeAsync(6000)
     expect(socket.sent.at(-1)).toBe('off')
-    expect(onDisplayError).toHaveBeenLastCalledWith('hevc-unavailable')
+    expect(onStatusChange).toHaveBeenLastCalledWith('reconnecting')
     expect(Decoder.instances[0]!.close).toHaveBeenCalledOnce()
     stream.stop()
   })
@@ -712,7 +725,7 @@ describe('iPhone screen recovery', () => {
     Socket.instances[1]!.open()
     expect(Socket.instances[1]!.sent).toContain('on')
     Socket.instances[1]!.close()
-    await vi.advanceTimersByTimeAsync(500)
+    await vi.advanceTimersByTimeAsync(1000)
     Socket.instances[2]!.open()
     expect(Socket.instances[2]!.sent).toContain('on')
     stream.stop()

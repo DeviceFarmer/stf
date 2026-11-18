@@ -25,6 +25,7 @@ export interface RuntimeOptions {
   tunnelPort: number
   mjpegPort?: number
   appiumMjpegPort?: number
+  wdaMjpegPort?: number
   retryMs: number
   startupMs: number
   stateDirectory?: string
@@ -154,7 +155,7 @@ export class IosRuntime {
     }
     this.checkChildren()
     this.telemetry.phase('wda')
-    const videoPort = this.wdaScreen ? this.wdaMjpegPort : o.appiumMjpegPort
+    const videoPort = this.wdaScreen ? this.wdaMjpegPort : (o.appiumMjpegPort ?? o.mjpegPort)
     if (videoPort && [o.apiPort, o.wdaPort, o.tunnelPort].includes(videoPort)) {
       throw new Error('The WDA MJPEG port conflicts with another runtime port')
     }
@@ -405,7 +406,8 @@ export class IosRuntime {
   }
 
   get wdaMjpegPort(): number {
-    return this.options.appiumMjpegPort ?? this.options.mjpegPort ?? 19100
+    const {appiumMjpegPort, mjpegPort, wdaMjpegPort} = this.options
+    return appiumMjpegPort ?? mjpegPort ?? wdaMjpegPort ?? 19100
   }
 
   wdaScreenSignal(signal: AbortSignal): AbortSignal {

@@ -77,8 +77,9 @@ The runtime and its read-only `--doctor` mode accept these additional options:
 | Option | Default |
 | --- | --- |
 | `--port`, `--wda-port`, `--tunnel-port` | `7400`, `18100`, `28100` |
-| `--mjpeg-port` | Internal WDA screen port on earlier iOS releases, `19100` by default |
+| `--wda-mjpeg-port` | Internal WDA screen port on earlier iOS releases, `19100` by default |
 | `--appium-mjpeg-port` | Unset. Enables Appium video on iOS 27 and later and sets the shared WDA MJPEG port on earlier releases |
+| `--mjpeg-port` | Alias for `--appium-mjpeg-port` |
 | `--go-ios`, `--iproxy` | `ios`, `iproxy` |
 | `--image-mounter` | `go-ios`; use `pymobiledevice3` for iOS 27 |
 | `--pymobiledevice3` | `pymobiledevice3`, or an absolute virtual-environment executable path |
@@ -180,8 +181,10 @@ port overrides it. Set `appium:mjpegServerPort` to the forwarded port for
 recording or `appium:mjpegScreenshotUrl` to its loopback URL for streamed
 screenshots. Choose a port distinct from the API, WDA and tunnel ports.
 
-`--mjpeg-port` remains accepted for existing launches that override the WDA
-screen port on earlier iOS releases. If both options are set, use the same port.
+Existing launch commands can use `--mjpeg-port` as an alias for
+`--appium-mjpeg-port`. Use `--wda-mjpeg-port` to customize the forward for
+manual WDA screens on earlier iOS releases. Explicit MJPEG options must agree
+on the port because the runtime opens a single loopback forward.
 
 Update the STF app, iOS provider and runtime together so all three agree on
 the screen protocol for each phone.
@@ -271,8 +274,10 @@ Remaining limits and verification gaps:
   Android recovery across a shared USB failure.
 - A full shared-VM reboot and physical WDA expiry/renewal remain unverified.
   Power commands and passcode entry were not repeated in the local packaging trial.
-- The CoreDevice screen supports portrait orientation and single-finger gestures. STF
-  does not install or manage Appium Grid.
+- The CoreDevice screen supports portrait orientation and single-finger gestures.
+  During rapid motion, the iPhone encoder can temporarily add gray padding inside
+  the frame. The next full-resolution frame restores the complete picture.
+- STF does not install or manage Appium Grid.
 
 ## Health, signing and recovery
 

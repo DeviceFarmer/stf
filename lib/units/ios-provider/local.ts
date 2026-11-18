@@ -88,7 +88,7 @@ export function nativeIosCommands(device: IosConfig['devices'][number], options:
   , runtime: [options.node, runtime, '--udid=' + device.udid
     , '--wda-bundle-id=' + device.wdaBundleId, '--image-mounter=pymobiledevice3'
     , '--go-ios=' + options.ios, '--port=' + api, '--wda-port=' + wda
-    , '--mjpeg-port=' + mjpeg
+    , '--wda-mjpeg-port=' + mjpeg
     , '--tunnel-port=' + tunnel, '--token-file=' + options.tokenFile
     , '--state-dir=' + path.join(options.directory, 'device')
     , '--install-dir=' + path.join(options.directory, 'installations')

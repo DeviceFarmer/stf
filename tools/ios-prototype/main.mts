@@ -21,6 +21,7 @@ const {values} = parseArgs({options: {
 , 'wda-port': {type: 'string', default: '18100'}
 , 'tunnel-port': {type: 'string', default: '28100'}
 , 'mjpeg-port': {type: 'string'}
+, 'wda-mjpeg-port': {type: 'string'}
 , 'appium-mjpeg-port': {type: 'string'}
 , 'token-file': {type: 'string'}
 , 'storage-url': {type: 'string'}
@@ -40,8 +41,9 @@ if (values.help) {
   process.stdout.write('Usage: npm run ios:prototype -- --udid UDID --wda-bundle-id BUNDLE_ID ' +
     '--token-file /path/to/token\n' +
     'Options: --port 7400 --wda-port 18100 --tunnel-port 28100\n' +
-    '         --mjpeg-port PORT (private WDA screen on iOS below 27, default 19100)\n' +
+    '         --wda-mjpeg-port PORT (private WDA screen on iOS below 27, default 19100)\n' +
     '         --appium-mjpeg-port PORT (optional private Appium video forward)\n' +
+    '         --mjpeg-port PORT (alias for --appium-mjpeg-port)\n' +
     '         --go-ios ios --iproxy iproxy --xctest-config WebDriverAgentRunner.xctest\n' +
     '         --image-mounter go-ios|pymobiledevice3 --pymobiledevice3 /path/to/pymobiledevice3\n' +
     '         --storage-url http://storage:3000 --install-dir /private/installations\n' +
@@ -79,18 +81,17 @@ async function main(): Promise<void> {
     }
     return parsed
   }
-  const mjpeg = values['mjpeg-port']
-  const appiumMjpeg = values['appium-mjpeg-port']
-  const mjpegPort = typeof mjpeg === 'string' ? port(mjpeg) : null
-  const appiumMjpegPort = typeof appiumMjpeg === 'string' ? port(appiumMjpeg) : null
-  if (mjpegPort && appiumMjpegPort && mjpegPort !== appiumMjpegPort) {
-    throw new Error('The WDA and Appium MJPEG options must use the same local port')
+  const optionalPort = (value?: string) => typeof value === 'string' ? port(value) : null
+  const mjpegPort = optionalPort(values['mjpeg-port'])
+  const appiumMjpegPort = optionalPort(values['appium-mjpeg-port'])
+  const wdaMjpegPort = optionalPort(values['wda-mjpeg-port'])
+  const videoPorts = new Set([mjpegPort, appiumMjpegPort, wdaMjpegPort]
+    .filter(value => value !== null))
+  if (videoPorts.size > 1) {
+    throw new Error('Explicit MJPEG options must use the same local port')
   }
   const ports = [port(values.port), port(values['wda-port']), port(values['tunnel-port'])]
-  const videoPort = appiumMjpegPort ?? mjpegPort
-  if (videoPort) {
-    ports.push(videoPort)
-  }
+  ports.push(...videoPorts)
   if (new Set(ports).size !== ports.length) {
     throw new Error('API, WDA, tunnel and MJPEG ports must be different')
   }
@@ -101,6 +102,7 @@ async function main(): Promise<void> {
   , apiPort: ports[0]!, wdaPort: ports[1]!, tunnelPort: ports[2]!
   , ...(mjpegPort ? {mjpegPort} : {})
   , ...(appiumMjpegPort ? {appiumMjpegPort} : {})
+  , ...(wdaMjpegPort ? {wdaMjpegPort} : {})
   , retryMs: 5000, startupMs: 60000
   , stateDirectory: values['state-dir']
   })

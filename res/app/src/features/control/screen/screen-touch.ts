@@ -73,7 +73,7 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
   }
 
   function scale(x: number, y: number) {
-    return scaler.coords(screen.bounds.w, screen.bounds.h, x, y, screen.rotation)
+    return (screen.inputScaler ?? scaler).coords(screen.bounds.w, screen.bounds.h, x, y, screen.rotation)
   }
 
   function mouseMoveListener(e: MouseEvent) {

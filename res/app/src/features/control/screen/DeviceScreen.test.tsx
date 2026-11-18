@@ -149,20 +149,30 @@ describe('screen availability notice', () => {
     expect(Socket.instances).toHaveLength(0)
   })
 
-  it('lets a manual reservation viewer retry with a new socket without enabling input', async() => {
+  it('lets a manual reservation viewer retry after automatic recovery is exhausted', async() => {
     await render()
-    const socket = Socket.instances[0]!
-    await act(async() => {
-      socket.open()
-      socket.message('hevc unavailable')
-    })
+    for (const [attempt, delay] of [500, 1000, 2000, 0].entries()) {
+      const socket = Socket.instances[attempt]!
+      await act(async() => {
+        socket.open()
+        socket.message('hevc unavailable')
+      })
+      expect(socket.readyState).toBe(3)
+      if (delay) {
+        expect(host.querySelector('[role="status"]')?.textContent).toBe('Reconnecting…')
+        await act(async() => vi.advanceTimersByTimeAsync(delay - 1))
+        expect(Socket.instances).toHaveLength(attempt + 1)
+        await act(async() => vi.advanceTimersByTimeAsync(1))
+      }
+    }
     const alert = host.querySelector('[role="alert"]')
     expect(alert?.textContent).toContain('The iPhone screen could not be opened.')
     const retry = alert?.querySelector('button')
     expect(retry?.disabled).toBe(false)
+    await act(async() => vi.advanceTimersByTimeAsync(10000))
+    expect(Socket.instances).toHaveLength(4)
     await act(async() => retry?.click())
-    expect(socket.readyState).toBe(3)
-    const replacement = Socket.instances[1]!
+    const replacement = Socket.instances[4]!
     await act(async() => replacement.open())
     expect(replacement.sent).toEqual(['hevc', 'on'])
     expect(host.querySelector('[role="alert"]')).toBeNull()
@@ -193,7 +203,8 @@ describe('screen availability notice', () => {
   })
 
   it('gates iPhone pointer input until the provider binds it and releases a held touch on failure', async() => {
-    device = {...device, using: true, usage: null}
+    device = {...device, using: true, usage: null
+      , display: {...device.display!, width: 200, height: 100, rotation: 90}}
     const manual = {readOnly: false, gestureStart: vi.fn(), gestureStop: vi.fn()
       , touchDown: vi.fn(), touchCommit: vi.fn(), touchReset: vi.fn()}
     await render(true, manual as unknown as Control)
@@ -213,7 +224,7 @@ describe('screen availability notice', () => {
     await act(async() => socket.message('hevc input ready screen-a'))
     down()
     expect(manual.gestureStart).toHaveBeenCalledExactlyOnceWith(0, 'screen-a')
-    expect(manual.touchDown).toHaveBeenCalledOnce()
+    expect(manual.touchDown).toHaveBeenCalledExactlyOnceWith(1, 0, 3 / 14, 1 / 7, 0.5)
     await act(async() => socket.message('hevc unavailable'))
     expect(manual.touchReset).toHaveBeenCalledOnce()
     down()
