@@ -16,11 +16,19 @@ export function isDeviceCommand(event: unknown): boolean {
 }
 
 /** Wire notifications take precedence while their database writes are pending. */
+// What the last lagging row said; empty strings mean the row had no channel or group.
+interface LaggingRow {
+  channel: string
+  group: string
+}
+
 export class DevicePacketAccess {
   private readonly channels = new Map<string, string>()
   private readonly changed = new Map<string, number>()
   private readonly sessions = new Map<string, number>()
   private readonly observations = new Map<string, Partial<DeviceAccess>>()
+  // Serials whose last snapshot lagged an observation that the row can still catch up with.
+  private readonly lagging = new Map<string, LaggingRow>()
   private readonly misses = new Map<string, {until: number, groups: string}>()
   private readonly resolving = new Map<string, Promise<DeviceAccess | null | undefined>>()
   private revision = 0
@@ -48,10 +56,12 @@ export class DevicePacketAccess {
     this.invalidate(serial)
     const previous = this.observations.get(serial)
     this.observations.delete(serial)
+    this.lagging.delete(serial)
     if (!previous && this.observations.size >= this.maxObservations) {
       // These are trusted wire observations, not request cache entries. Losing
       // one could authorize an old database row, so keep this socket read-only.
       this.overflowed = true
+      this.lagging.clear()
       this.invalidate()
       return
     }
@@ -89,11 +99,22 @@ export class DevicePacketAccess {
       return device[field as keyof DeviceAccess] === value
     })
     if (!caughtUp) {
+      // A row owned by someone else will not turn into the observed owner by waiting.
+      const rowOwner = device.owner?.email
+      if (!rowOwner || rowOwner === observed.owner?.email) {
+        this.lagging.set(device.serial, {
+          channel: device.channel ?? '', group: device.group?.id ?? ''
+        })
+      }
+      else {
+        this.lagging.delete(device.serial)
+      }
       // Never turn an old database row into an allow using a notification.
       // Wait for persistence; this also fences reads from before a transfer.
       return {...device, ready: false}
     }
     this.observations.delete(device.serial)
+    this.lagging.delete(device.serial)
     // Force concurrent snapshots from before persistence to be read again.
     this.invalidate(device.serial)
     return device
@@ -101,20 +122,24 @@ export class DevicePacketAccess {
 
   /**
    * Whether a denied command should be retried against the database instead of
-   * failing: the outstanding observation is a manual join by `email` that the
-   * row has not caught up with. This only buys time; it never authorizes, as an
-   * allow still needs a caught-up row. Releases, transfers to someone else and
-   * automation joins are not waited for, so they keep denying immediately.
-   * Read-only, unlike snapshot().
+   * failing: the outstanding observation is a manual join by `email`, and the
+   * last row read still lags it in a way persistence can fix. That means the row
+   * is free or already the same user's, and its channel and group are ones this
+   * user may use. A row owned by someone else, a revoked group or a channel
+   * mismatch deny immediately. This only buys time; it never authorizes, as an
+   * allow still needs a caught-up row. Read-only, unlike snapshot().
    */
-  awaitingJoin(channel: string, email: string): boolean {
+  awaitingJoin(channel: string, email: string, groups: string[] = []): boolean {
     if (this.overflowed) {
       return false
     }
-    const observed = this.observations.get(this.source(channel))
-    return Boolean(observed?.owner?.email && observed.owner.email === email &&
+    const serial = this.source(channel)
+    const observed = this.observations.get(serial)
+    const row = this.lagging.get(serial)
+    return Boolean(row && observed?.owner?.email && observed.owner.email === email &&
       observed.usage !== 'automation' && observed.present !== false &&
-      observed.ready !== false)
+      observed.ready !== false && row.channel === channel &&
+      row.group !== '' && groups.includes(row.group))
   }
 
   invalidate(serial?: string) {
