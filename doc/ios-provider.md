@@ -167,8 +167,9 @@ reservations. STF uses WDA for screenshots and operations such as Home and
 text input in both modes.
 
 Reserve the iPhone through the STF API before starting an Appium session. STF
-waits for the manual CoreDevice session to close, then lets Appium use WDA
-without restarting it. From the runtime's network namespace, set
+closes its manual CoreDevice stream and waits up to 20 seconds for the phone
+to expire that media session. Appium then uses WDA without restarting it. From
+the runtime's network namespace, set
 `appium:webDriverAgentUrl` to `http://127.0.0.1:18100` and provide the device's
 `appium:udid` and `appium:platformVersion`. Quit the Appium session before
 releasing the reservation so STF can resume its own WDA health checks.

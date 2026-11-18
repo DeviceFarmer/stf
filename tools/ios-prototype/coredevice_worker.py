@@ -9,15 +9,16 @@ import socket
 import sys
 import threading
 
+from pymobiledevice3.remote.core_device import screen_stream
 from pymobiledevice3.remote.core_device.display_service import DisplayService
-from pymobiledevice3.remote.core_device.screen_stream import ScreenStreamServer
 from pymobiledevice3.remote.remote_service_discovery import RemoteServiceDiscoveryService
 
 
 MAX_TOUCH_BYTES = 1024
+MEDIA_DRAIN_SECONDS = 20
 
 
-class ScreenServer(ScreenStreamServer):
+class ScreenServer(screen_stream.ScreenStreamServer):
     def __init__(self, rsd, reservation, password, stop):
         super().__init__(
             rsd, http_port=reservation.getsockname()[1], password=password, audio_default_on=False
@@ -28,6 +29,56 @@ class ScreenServer(ScreenStreamServer):
         self.touch_lock = asyncio.Lock()
         self.last_contact = None
         self.stopping = False
+
+    async def serve(self):
+        upstream_cleanup = False
+
+        class LocalDisplayService(DisplayService):
+            @classmethod
+            async def stop_all_streams(cls, rsd):
+                nonlocal upstream_cleanup
+                upstream_cleanup = True
+
+        # The pinned serve() hardcodes a device-wide stop after closing its
+        # local transports. Override only its dependency in this one-server
+        # process. The status API exposes UUID ownership but no scoped stop ID.
+        original_display_service = screen_stream.DisplayService
+        screen_stream.DisplayService = LocalDisplayService
+        try:
+            await super().serve()
+        finally:
+            screen_stream.DisplayService = original_display_service
+            if not upstream_cleanup:
+                # Startup can be cancelled before serve() installs its
+                # cleanup, including after starting its audio transport.
+                try:
+                    await asyncio.wait_for(asyncio.gather(
+                        self._stop_active_stream(), self._stop_audio_stream(),
+                    ), 3)
+                except Exception:
+                    logging.warning("Could not close local CoreDevice transports", exc_info=True)
+            try:
+                await asyncio.wait_for(
+                    self.wait_for_media_expiry(startup_interrupted=not upstream_cleanup),
+                    MEDIA_DRAIN_SECONDS,
+                )
+            except Exception:
+                logging.warning("Could not confirm expiry of owned CoreDevice media", exc_info=True)
+
+    async def wait_for_media_expiry(self, *, startup_interrupted):
+        # Let a dispatched start settle before accepting an initially empty
+        # result. Once local RTCP stops, the device expires these streams.
+        quiet_checks = 3 if startup_interrupted else 1
+        while True:
+            async with DisplayService(self._rsd) as display:
+                status = await asyncio.wait_for(display.get_media_stream_server_status(), 3)
+            if any(owns_session(self, session) for session in status.get("sessions", [])):
+                quiet_checks = 1
+            else:
+                quiet_checks -= 1
+                if quiet_checks == 0:
+                    return
+            await asyncio.sleep(1)
 
     async def _eager_stream_start(self):
         try:
@@ -119,13 +170,6 @@ async def serve(config, stop, commands):
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await task
-                # Upstream installs its media cleanup after startup. Closing
-                # while it was starting may leave a session on the phone.
-                async with DisplayService(rsd) as display:
-                    status = await asyncio.wait_for(display.get_media_stream_server_status(), 5)
-                sessions = status.get("sessions", [])
-                if sessions and all(owns_session(server, session) for session in sessions):
-                    await asyncio.wait_for(DisplayService.stop_all_streams(rsd), 5)
 
 
 def owns_session(server, session):
