@@ -9,6 +9,7 @@ import Promise from 'bluebird'
 import sinon from 'sinon'
 
 import phoneSyrup from '../../lib/units/device/plugins/util/phone.js'
+import type {RefreshablePhoneProperties} from '../../lib/types/device-plugins.js'
 
 type Properties = Record<string, string>
 
@@ -323,5 +324,79 @@ describe('device phone info', function() {
       })
 
       expect(run.properties).to.deep.equal({network: 'LTE'})
+    })
+})
+
+describe('device phone refresh', function() {
+  // Each service answer is consumed by one read; later calls to refresh()
+  // take the next one, so a swap can be simulated without a device.
+  function invokePhone(fromService: Properties[]) {
+    var adb = {
+      shell: sinon.stub().callsFake(function() {
+        return Promise.resolve(agentOutput(''))
+      })
+    }
+    var service = {
+      getProperties: sinon.stub().callsFake(function() {
+        return Promise.resolve(fromService.length ? fromService.shift()! : {})
+      })
+    }
+    var result = phoneSyrup.invoke(
+      {serial: 'test-device', phoneRetryDelay: 0}
+    , adb
+    , {path: '/data/app/stf.apk', main: 'jp.co.cyberagent.stf.Agent'}
+    , service
+    , {'gsm.sim.state': 'ABSENT'}
+    )
+    return result.then(function(properties) {
+      return {
+        properties: properties as RefreshablePhoneProperties
+      , service: service
+      }
+    })
+  }
+
+  it('should re-read the phone info on refresh', async function() {
+    var run = await invokePhone([
+      {imei: 'a', iccid: 'one'}
+    , {imei: 'a', iccid: 'two'}
+    ])
+
+    expect(run.properties.iccid).to.equal('one')
+    var fresh = await run.properties.refresh()
+    expect(fresh.iccid).to.equal('two')
+    expect(run.service.getProperties.callCount).to.equal(2)
+  })
+
+  it('should notice a SIM card disappearing on refresh', async function() {
+    var run = await invokePhone([
+      {imei: 'a', iccid: 'one'}
+    , {imei: 'a'}
+    ])
+
+    var fresh = await run.properties.refresh()
+    expect(fresh).to.deep.equal({imei: 'a'})
+  })
+
+  it('should keep refresh available on refreshed values', async function() {
+    var run = await invokePhone([
+      {imei: 'a', iccid: 'one'}
+    , {imei: 'a', iccid: 'two'}
+    , {imei: 'a', iccid: 'three'}
+    ])
+
+    var fresh = await run.properties.refresh()
+    var fresher = await (fresh as RefreshablePhoneProperties).refresh()
+    expect(fresher.iccid).to.equal('three')
+    expect(run.service.getProperties.callCount).to.equal(3)
+  })
+
+  it('should not leak refresh into copies of the properties',
+    async function() {
+      var run = await invokePhone([{imei: 'a', iccid: 'one'}])
+
+      var copy = Object.assign({}, run.properties)
+      expect(copy).to.deep.equal({imei: 'a', iccid: 'one'})
+      expect('refresh' in copy).to.equal(false)
     })
 })

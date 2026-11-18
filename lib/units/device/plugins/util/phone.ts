@@ -10,6 +10,7 @@ import type {
   Adb
 , DevicePluginOptions
 , PhoneProperties
+, RefreshablePhoneProperties
 , ServicePlugin
 , StfServiceResource
 } from '../../../../types/device-plugins.js'
@@ -153,5 +154,25 @@ export default syrup.serial()
       return queryAgent(maxRetries)
     }
 
-    return fetch().then(complete)
+    // Kept non-enumerable so that the value still copies and serializes as
+    // plain phone properties wherever it is consumed.
+    function attachRefresh(
+      properties: PhoneProperties
+    , method: () => Promise<PhoneProperties>
+    ): RefreshablePhoneProperties {
+      Object.defineProperty(properties, 'refresh', {
+        value: method
+      })
+      return properties as RefreshablePhoneProperties
+    }
+
+    function refresh(): Promise<PhoneProperties> {
+      return fetch().then(complete).then(function(properties) {
+        return attachRefresh(properties, refresh)
+      })
+    }
+
+    return fetch().then(complete).then(function(properties) {
+      return attachRefresh(properties, refresh)
+    })
   })
