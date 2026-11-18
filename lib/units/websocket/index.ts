@@ -285,6 +285,8 @@ export default function(options: WebsocketOptions) {
     , session: channel => deviceAccess.session(channel)
     , checkpoint: () => deviceAccess.checkpoint()
     , current: (channel, checkpoint) => deviceAccess.current(channel, checkpoint)
+    , awaitingJoin: (channel, email, groups) =>
+        deviceAccess.awaitingJoin(channel, email, groups)
     }, {resetGesture, onAuthorizedInput(packet, identity) {
       const data = packet[2]
       if (data && typeof data === 'object') {
@@ -891,6 +893,7 @@ export default function(options: WebsocketOptions) {
           ])
         })
         .on('device.identify', function(channel, responseChannel) {
+          joinChannel(responseChannel)
           push.send([
             channel
           , wireutil.transaction(

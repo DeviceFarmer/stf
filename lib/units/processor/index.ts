@@ -177,6 +177,8 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       })
   }
 
+  const joinsInFlight = new Set<Promise<void>>()
+
   devDealer.on('message', wirerouter()
     .on(wire.UpdateAccessTokenMessage, function(channel, message, data) {
       appDealer.send([channel, data])
@@ -359,9 +361,14 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      return persistOwnership(message.serial, () =>
+      // Wait for the atomic owner, lease and usage update before forwarding the join.
+      const write = persistOwnership(message.serial, () =>
         dbapi.setDeviceOwner(message.serial, message.owner, message.leaseId, message.usage)
       , () => appDealer.send([channel, data]))
+      joinsInFlight.add(write)
+      return write.then(() => {
+        joinsInFlight.delete(write)
+      })
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
       return persistOwnership(message.serial, () =>
@@ -386,7 +393,14 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      appDealer.send([channel, data])
+      // Keeps a reply sent right after a join (group.invite) behind that join's forward.
+      if (!joinsInFlight.size) {
+        appDealer.send([channel, data])
+        return
+      }
+      Promise.all(joinsInFlight).then(function() {
+        appDealer.send([channel, data])
+      })
     })
     .on(wire.DeviceLogcatEntryMessage, function(channel, message, data) {
       appDealer.send([channel, data])

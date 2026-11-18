@@ -976,7 +976,7 @@ msgstr "Идентификатор"
 
 #: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:84
 msgid "If a passcode is required, unlock the iPhone on the device."
-msgstr "Если нужен код-пароль, разблокируйте iPhone на самом устройстве."
+msgstr ""
 
 #: res/app/src/features/control/panes/info/InfoPane.tsx:251
 msgid "IMEI"
@@ -2112,7 +2112,7 @@ msgstr ""
 #: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:27
 #: res/app/src/features/control/screen/DeviceScreen.tsx:41
 msgid "The iPhone is still locked. Unlock it on the device."
-msgstr "iPhone всё ещё заблокирован. Разблокируйте его на самом устройстве."
+msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/ios-controls/IosControlsCard.tsx:87
 msgid "The iPhone is unlocked."
@@ -2124,19 +2124,20 @@ msgstr ""
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:40
 msgid "The iPhone screen could not be opened."
-msgstr "Не удалось открыть экран iPhone."
+msgstr ""
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:42
 msgid "The iPhone screen is unavailable during automation."
-msgstr "Экран iPhone недоступен во время автоматизации."
+msgstr ""
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:38
 msgid "The iPhone screen requires HTTPS or localhost."
-msgstr "Для показа экрана iPhone нужен HTTPS или адрес localhost."
+msgstr ""
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:39
-msgid "The iPhone screen requires iOS 27 or later and a compatible connection."
-msgstr "Для показа экрана iPhone нужны iOS 27 или новее и совместимое подключение."
+msgid ""
+"The iPhone screen requires iOS 27 or later and a compatible connection."
+msgstr ""
 
 #: res/app/src/core/install.ts:180
 msgid ""
@@ -2377,7 +2378,7 @@ msgstr ""
 
 #: res/app/src/features/control/screen/DeviceScreen.tsx:37
 msgid "This browser cannot decode the iPhone screen."
-msgstr "Этот браузер не может воспроизвести экран iPhone."
+msgstr ""
 
 #: res/app/src/features/control/panes/explorer/ExplorerPane.tsx:265
 msgid "This folder is empty"

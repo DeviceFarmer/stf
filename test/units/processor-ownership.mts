@@ -86,6 +86,23 @@ describe('processor ownership', function() {
     assert.deepEqual(processor.app.packets, [[wireutil.global, join]])
   })
 
+  it('forwards a transaction reply after the durable join on the same processor', async() => {
+    let persist = () => {}
+    setDeviceOwner.returns(new Promise(resolve => {
+      persist = () => resolve({errors: 0, replaced: 1})
+    }))
+    const processor = fixture()
+    const join = wireutil.envelope(new wire.JoinGroupMessage('phone', owner, 'automation', 'lease'))
+    const responded = processor.app.whenSent(reply)
+    processor.device.emit('message', wireutil.global, join)
+    processor.device.emit('message', 'join-reply', reply)
+    await nextTurn()
+    assert.deepEqual(processor.app.packets, [])
+    persist()
+    await responded
+    assert.deepEqual(processor.app.packets, [[wireutil.global, join], ['join-reply', reply]])
+  })
+
   it('keeps transaction replies independent of ownership writes on another processor', async() => {
     let persisted = () => {}
     unsetDeviceOwner.returns(new Promise(resolve => {
