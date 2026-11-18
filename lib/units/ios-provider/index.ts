@@ -25,6 +25,8 @@ export default async function(options: BridgeOptions & {
     client, apiUrl: options.apiUrl, publicOrigin: options.publicOrigin, serial: options.serial
   , owner: () => bridge.owner
   , onError: error => log.warn('iOS screen failed: %s', String(error))
+  , mode: () => bridge.screenMode()
+  , connectInput: (id, signal, fail) => bridge.connectCoreDeviceInput(id, signal, fail)
   })
   sub.subscribe(bridge.channel)
   sub.subscribe(bridge.solo)

@@ -501,6 +501,7 @@ var pbjs5Decodings: Sample[] = [
     , pressure: null
     , gestureId: null
     , reservationId: null
+    , screenSessionId: null
     }
   }
 , {
@@ -616,6 +617,7 @@ describe('wire protobuf', function() {
       , pressure: null
       , gestureId: null
       , reservationId: null
+      , screenSessionId: null
       })
     })
 
@@ -778,7 +780,7 @@ describe('wire protobuf', function() {
     })
 
     it('round-trips provider gesture identity without changing legacy message codes', function() {
-      const scope = {gestureId: 'source:1', reservationId: 'reservation'}
+      const scope = {gestureId: 'source:1', reservationId: 'reservation', screenSessionId: 'screen'}
       const messages = [
         new wire.GestureStartMessage({seq: 0, ...scope})
       , new wire.TouchDownMessage({seq: 1, contact: 0, x: 0.5, y: 0.5, ...scope})
@@ -795,6 +797,7 @@ describe('wire protobuf', function() {
         const decoded = types[index]!.decode(message.encodeNB())
         expect(decoded.gestureId).to.equal(scope.gestureId)
         expect(decoded.reservationId).to.equal(scope.reservationId)
+        expect(decoded.screenSessionId).to.equal(scope.screenSessionId)
       }
       expect(wire.TouchResetMessage.decode(messages[4]!.encodeNB()).cancel).to.equal(false)
     })
@@ -804,6 +807,7 @@ describe('wire protobuf', function() {
       expect(new wire.TouchResetMessage(2, 'old').encodeNB()).to.eql(legacy)
       expect(fields(wire.TouchResetMessage.decode(legacy))).to.eql({
         seq: 2, gestureId: 'old', cancel: null, reservationId: null, cancelThrough: null
+      , screenSessionId: null
       })
 
       const sequenced = Buffer.from('08021201671800220172', 'hex')
@@ -812,6 +816,7 @@ describe('wire protobuf', function() {
       }).encodeNB()).to.eql(sequenced)
       expect(fields(wire.TouchResetMessage.decode(sequenced))).to.eql({
         seq: 2, gestureId: 'g', cancel: false, reservationId: 'r', cancelThrough: null
+      , screenSessionId: null
       })
 
       const range = Buffer.from('080212016718012201722801', 'hex')
@@ -820,6 +825,7 @@ describe('wire protobuf', function() {
       }).encodeNB()).to.eql(range)
       expect(fields(wire.TouchResetMessage.decode(range))).to.eql({
         seq: 2, gestureId: 'g', cancel: true, reservationId: 'r', cancelThrough: true
+      , screenSessionId: null
       })
     })
 

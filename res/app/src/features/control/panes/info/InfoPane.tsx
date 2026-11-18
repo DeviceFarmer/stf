@@ -228,7 +228,8 @@ export default function InfoPane({device, control}: PaneProps) {
       , rows: [
         {label: gettext('Size'), value: displayInches ? `${Math.round(displayInches * 10) / 10}″` : '-'}
         , {label: gettext('Density'), value: density(display?.density)}
-        , {label: gettext('FPS'), value: rounded(display?.fps)}
+        , {label: gettext('FPS')
+          , value: device.platform === 'iOS' && display?.fps === 0 ? '-' : rounded(display?.fps)}
         , {label: gettext('Width'), value: withUnit(display?.width, ' px')}
         , {label: gettext('Height'), value: withUnit(display?.height, ' px')}
         , {label: gettext('ID'), value: plain(display?.id)}

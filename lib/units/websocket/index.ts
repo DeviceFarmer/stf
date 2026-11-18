@@ -886,6 +886,7 @@ export default function(options: WebsocketOptions) {
           ])
         })
         .on('device.identify', function(channel, responseChannel) {
+          joinChannel(responseChannel)
           push.send([
             channel
           , wireutil.transaction(
