@@ -19,6 +19,19 @@ export interface IosDeviceStatus {
   }
 }
 
+export function iosMajorVersion(version: unknown): number | null {
+  if (typeof version !== 'string' || !/^[1-9]\d*(?:\.\d+)*$/.test(version)) {
+    return null
+  }
+  const major = Number(version.split('.', 1)[0])
+  return Number.isSafeInteger(major) ? major : null
+}
+
+export function iosUsesWdaScreen(version: unknown): boolean {
+  const major = iosMajorVersion(version)
+  return major !== null && major < 27
+}
+
 // Use the existing property message without changing Android's wire fields.
 export function decodeIosDeviceStatus(input: unknown): IosDeviceStatus | null {
   try {

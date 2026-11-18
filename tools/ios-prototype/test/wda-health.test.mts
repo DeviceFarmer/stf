@@ -149,7 +149,7 @@ async function fixture(t: TestContext, {healthTimeout = 500, retrySetup = false}
     udid: 'selected-phone', bundleId: 'test.wda.xctrunner'
   , xctest: 'WebDriverAgentRunner.xctest', goIos: 'ios', iproxy: 'iproxy'
   , imageMounter: 'go-ios', pymobiledevice3: 'pymobiledevice3'
-  , wdaPort: 18100, mjpegPort: 19100, tunnelPort: 28100, retryMs: 10, startupMs: 5000
+  , wdaPort: 18100, tunnelPort: 28100, retryMs: 10, startupMs: 5000
   }
   const dependencies: Partial<RuntimeDependencies> = {
     wda, log: () => {}, run: async() => ''
@@ -350,7 +350,7 @@ describe('WDA session health budget', () => {
 })
 
 describe('Appium WDA handoff', () => {
-  it('retains a borrowed WDA session and pauses STF commands and health checks', async(t) => {
+  it('keeps the borrowed session and aborts an outstanding STF health check', async(t) => {
     const f = await fixture(t, {healthTimeout: 5000})
     f.setMode('hung')
     await until(() => f.healthStarted())
@@ -373,7 +373,7 @@ describe('Appium WDA handoff', () => {
     assert.deepEqual(await (await change(true)).json(), {active: true})
     assert.equal(f.healthSignal().aborted, true)
     assert.equal((await change(true, randomUUID())).status, 409)
-    assert.equal((await change(false, randomUUID())).status, 200)
+    assert.deepEqual(await (await change(false, randomUUID())).json(), {active: false})
     const device = await (await fetch(origin + '/device', {headers})).json() as {
       automationLease?: string
     }
@@ -391,38 +391,78 @@ describe('Appium WDA handoff', () => {
     assert.equal(source.value, '<source/>')
   })
 
-  it('reopens the STF session without restarting WDA if direct Appium replaced it', async(t) => {
-    const f = await fixture(t)
-    const lease = randomUUID()
-    const signal = new AbortController().signal
-    await f.runtime.setAppiumMode(true, lease, signal)
-    assert.equal((await fetch(f.origin + '/session', {method: 'POST'})).status, 200)
-    f.calls.length = 0
-    await delay(40)
-    assert.deepEqual(f.calls, [])
-    assert.ok(f.baseline.children.every(child => !child.stopped))
-    await f.runtime.setAppiumMode(false, lease, signal)
-    assert.equal(f.runtime.state, 'ready')
-    assert.equal(f.runtime.telemetry.status.locked, false)
-    assert.equal(f.sessions(), f.baseline.sessions + 2)
-    assert.equal(f.wda.sessionId, 'owned-' + f.sessions())
-    assert.equal(f.deleted(), false)
-    assert.equal(f.runtime.generation, f.baseline.generation)
-  })
+  it('preserves the WDA forwards when Appium replaces the session and restores STF on release',
+    async(t) => {
+      const f = await fixture(t)
+      const lease = randomUUID()
+      const signal = new AbortController().signal
+      await f.runtime.setAppiumMode(true, lease, signal)
+      assert.equal((await fetch(f.origin + '/session', {method: 'POST'})).status, 200)
+      f.calls.length = 0
+      await delay(40)
+      assert.deepEqual(f.calls, [])
+      assert.equal(f.runtime.generation, f.baseline.generation)
+      assert.ok(f.baseline.children.every(child => !child.stopped))
+      await f.runtime.setAppiumMode(false, lease, signal)
+      assert.equal(f.runtime.state, 'ready')
+      assert.equal(f.runtime.telemetry.status.locked, false)
+      assert.equal(f.sessions(), f.baseline.sessions + 2)
+      assert.equal(f.wda.sessionId, 'owned-' + f.sessions())
+      assert.equal(f.deleted(), false)
+      assert.equal(f.runtime.generation, f.baseline.generation)
+    })
 
-  it('recovers WDA if restoring the original session exceeds the handoff timeout', async(t) => {
-    const f = await fixture(t, {healthTimeout: 60000})
-    const lease = randomUUID()
-    const signal = new AbortController().signal
-    await f.runtime.setAppiumMode(true, lease, signal)
-    f.setMode('hung')
-    const release = f.runtime.setAppiumMode(false, lease, signal)
-    await until(() => f.healthStarted())
-    f.clock.advance(10001)
-    await release
-    assert.equal(f.runtime.automationLease, null)
-    assert.equal(f.runtime.state, 'waiting')
-    await until(() => f.runtime.state === 'ready' && f.sessions() === f.baseline.sessions + 1)
-    assert.ok(f.baseline.children.every(child => child.stopped))
-  })
+  it('falls back to WDA recovery if the session cannot be restored when Appium releases it',
+    async(t) => {
+      const f = await fixture(t, {healthTimeout: 60000})
+      const lease = randomUUID()
+      const signal = new AbortController().signal
+      await f.runtime.setAppiumMode(true, lease, signal)
+      f.setMode('hung')
+      const release = f.runtime.setAppiumMode(false, lease, signal)
+      await until(() => f.healthStarted())
+      f.clock.advance(10001)
+      await release
+      assert.equal(f.runtime.automationLease, null)
+      assert.equal(f.runtime.state, 'waiting')
+      await until(() => f.runtime.state === 'ready' && f.sessions() === f.baseline.sessions + 1)
+      assert.ok(f.baseline.children.every(child => child.stopped))
+    })
+
+  it('waits for CoreDevice cleanup before granting automation and cancels an abandoned handoff',
+    async(t) => {
+      const f = await fixture(t)
+      let finish!: () => void
+      const worker = new AbortController()
+      Reflect.set(f.runtime, 'coreDeviceSession', {
+        signal: worker.signal, stop: () => worker.abort()
+      , closed: new Promise<void>(resolve => {
+        finish = resolve
+      })
+      })
+      cleanups.push(async() => {
+        finish()
+        Reflect.set(f.runtime, 'coreDeviceSession', null)
+      })
+      const abandoned = new AbortController()
+      const first = f.runtime.setAppiumMode(true, randomUUID(), abandoned.signal)
+      const cancelled = assert.rejects(first, {name: 'AbortError'})
+      await until(() => worker.signal.aborted)
+      abandoned.abort()
+      await cancelled
+      assert.equal(f.runtime.automationLease, null)
+
+      const lease = randomUUID()
+      let active = false
+      const signal = new AbortController().signal
+      const handoff = f.runtime.setAppiumMode(true, lease, signal).then(() => {
+        active = true
+      })
+      await until(() => f.runtime.automationLease === lease)
+      assert.equal(active, false)
+      finish()
+      await handoff
+      assert.equal(active, true)
+      assert.equal(f.runtime.automationLease, lease)
+    })
 })

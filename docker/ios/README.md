@@ -1,9 +1,28 @@
 # Real iPhones on a local Linux host
 
+## Contents
+
+- [Destiny](#destiny)
+- [Project structure](#project-structure)
+- [Stack and tools](#stack-and-tools)
+- [Prepare the phone](#prepare-the-phone)
+- [Build and sign WebDriverAgent](#build-and-sign-webdriveragent)
+- [Prepare Linux](#prepare-linux)
+- [Configure one or several iPhones](#configure-one-or-several-iphones)
+- [Start with Docker Compose](#start-with-docker-compose)
+- [Processes and recovery](#processes-and-recovery)
+- [Native development with `stf local`](#native-development-with-stf-local)
+- [Acceptance checklist for another host](#acceptance-checklist-for-another-host)
+
+## Destiny
+
 This experimental provider runs physical iPhones in STF without a Mac runtime
 node or Kubernetes. A Mac with compatible Xcode is used to build/sign/install
 WebDriverAgent (WDA), including again when its provisioning profile expires.
 STF installs already signed IPA files; it does not sign or re-sign applications.
+
+Start by [preparing the phone](#prepare-the-phone) and connecting it to the Linux
+host over USB.
 
 The runtime was tested with iPhone 13 Pro/iOS 26.7.1 and iPhone 14 Plus and
 16 Plus/iOS 27.0.1 on Linux amd64. The local Compose and native launch paths were
@@ -12,6 +31,24 @@ installation and browser-protocol control. Compose was tested alongside a Galaxy
 A55/Android 16 and with two additional configured but absent iPhones. This does
 not establish simultaneous multi-iPhone hardware support in Compose; the earlier
 three-phone trial used Kubernetes. See the [verified behavior and limits](../../doc/ios-provider.md#hardware-coverage-and-limits).
+
+## Project structure
+
+```text
+docker/ios/
+├── Dockerfile           # Builds the Linux iOS runtime image.
+├── README.md            # Describes local Compose and native setup.
+└── devices.example.json # Supplies the device configuration shared by both launchers.
+```
+
+## Stack and tools
+
+| Tool | Purpose |
+| --- | --- |
+| Docker Compose | Runs STF and the iOS processes in local containers |
+| Node.js | Runs the iOS runtime and the local launcher |
+| go-ios and pymobiledevice3 | Handle iPhone tunnels, developer images and CoreDevice communication |
+| WebDriverAgent | Handles iOS automation and the live screen and gestures on earlier iOS releases |
 
 ## Prepare the phone
 
@@ -131,7 +168,7 @@ Edit `ios.local.json` (ignored by Git, Docker builds and npm packaging):
 
 ```json
 {
-  "publicOrigin": "http://192.168.1.50:7100",
+  "publicOrigin": "http://localhost:7100",
   "wdaBundleId": "com.example.WebDriverAgentRunner.xctrunner",
   "devices": [
     {"udid": "YOUR_FIRST_UDID"},
@@ -141,10 +178,19 @@ Edit `ios.local.json` (ignored by Git, Docker builds and npm packaging):
 ```
 
 Replace the example values; UDIDs are device identifiers, not the sample strings.
-Use `http://localhost:7100` only if the browser runs on the Linux machine itself.
-The exact browser origin, including port and hostname, must match `publicOrigin`.
-For this local quick start use HTTP; HTTPS/reverse-proxy integration is a separate
-deployment configuration. Mock authentication is the existing local STF default.
+Each phone selects its screen mode automatically. iOS 27 and later use
+CoreDevice HEVC video and live touch events. Earlier supported versions use WDA
+MJPEG video and WDA taps and swipes. The CoreDevice decoder uses WebCodecs in a
+secure browser context. Keep the loopback origin for this quick start. If the
+browser runs on another machine, open an SSH tunnel to the Linux USB host.
+
+```sh
+ssh -N -L 7100:127.0.0.1:7100 user@linux-usb-host
+```
+
+Open `http://localhost:7100` in the browser. The exact browser origin, including
+port and hostname, must match `publicOrigin`. For shared access, deploy STF behind
+an HTTPS reverse proxy. The quick start uses the existing mock authentication.
 
 An optional device `name` overrides its STF display model label; normally the
 provider reads the model from the phone. Add `"android": true` at the top level
@@ -204,7 +250,7 @@ Only the tunnel is privileged. The init job has only the ownership capabilities
 needed to prepare its state volume. Runtime and provider run as UID 1000.
 
 All three processes for a phone share its network namespace. Different phones
-can use the same internal API/WDA/MJPEG/tunnel/screen ports without collisions.
+can use the same internal API, WDA, tunnel and screen ports without collisions.
 No raw WDA or device API ports are published. Nginx routes each same-origin
 `/ios/ios-<id>/screen` WebSocket to exactly one provider, preserving cookies,
 Origin and authorization; the provider enforces STF ownership.
@@ -237,10 +283,12 @@ Use a private venv and put its `bin` directory on PATH for the local session.
 `sudo -v` authorizes only the tunnel helpers started via `sudo -n`; the web
 services, runtime and providers run as the invoking user. A helper monitors its
 parent's lifetime pipe and stops its root tunnel when the local session exits.
-Internal TCP ports are selected automatically, and each child's restart uses
-the same selected ports for that session. Persistent per-phone data is stored
-under `~/.stf-ios-local` (`--ios-state-dir` overrides it). `publicOrigin` controls
-the local web host/port. As in Compose, `android` opts into the Android provider.
+Internal TCP ports, including the WDA screen port for earlier iOS versions, are
+selected automatically per phone. Each child's restart uses the same selected
+ports for that session. Persistent per-phone data is stored
+under `~/.stf-ios-local` (`--ios-state-dir` overrides it). Use the same loopback
+origin and SSH tunnel instructions as for Compose. The `android` option enables
+the Android provider.
 
 ## Acceptance checklist for another host
 

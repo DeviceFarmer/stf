@@ -58,9 +58,12 @@ export function addCookieOptions<T>(yargs: Argv<T>): Argv<T & CookieCliOptions> 
     , type: 'boolean'
     })
     .check(function(argv: any) {
-      if (argv.cookieSameSite === 'none' && argv.cookieSecure === false) {
+      // Resolve the same way the units do, so that COOKIE_SECURE=false in the
+      // environment is caught as well as --no-cookie-secure.
+      if (argv.cookieSameSite === 'none' && resolveCookieSecure(argv.cookieSecure) === false) {
         throw new Error(
-          '--cookie-same-site none requires secure cookies; do not use --no-cookie-secure'
+          '--cookie-same-site none requires secure cookies; do not use --no-cookie-secure' +
+          ' or COOKIE_SECURE=false'
         )
       }
       return true

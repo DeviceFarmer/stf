@@ -8,6 +8,8 @@ import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
 import type {IosOwner} from './access.js'
 import {findCatalogDevice} from '../../util/device-catalog.js'
+import {iosMajorVersion} from '../../util/ios-device-status.js'
+import {CoreDeviceInput} from './coredevice-input.js'
 
 export interface BridgeOptions {
   serial: string
@@ -20,10 +22,13 @@ export interface BridgeOptions {
 
 interface Point {x: number, y: number}
 
+const touchSequenceSize = 100
+
 export class IosBridge {
   readonly channel: string
   readonly solo = wireutil.makePrivateChannel()
   owner: IosOwner | null = null
+  private automated = false
   private state: IosDeviceState | null = null
   private identity: InstanceType<typeof wire.DeviceIdentityMessage> | null = null
   private registered = false
@@ -37,9 +42,11 @@ export class IosBridge {
   private appiumHandoff: string | null = null
   private reservationQueue = Promise.resolve()
   private queue = Promise.resolve()
-  private touch: {from: Point, to: Point, started: number} | null = null
-  private multitouch = false
+  private touch: {sessionId: string, position: Point, pendingSeq: number | null} | null = null
+  private wdaTouch: {from: Point, to: Point, started: number} | null = null
+  private touchRejected = false
   private readonly gestures: TouchGesture
+  private readonly nativeInput: CoreDeviceInput
   private lease = randomUUID()
   private installId: string | null = null
   private lastObservation: IosDeviceState | null = null
@@ -54,6 +61,7 @@ export class IosBridge {
   , private readonly disconnect: () => void
   , private readonly report: (error: unknown) => void
   ) {
+    this.nativeInput = new CoreDeviceInput(client)
     this.gestures = new TouchGesture(() => this.resetTouch(), {
       report: error => this.report(error), onFinish: () => this.resetTouch()
     })
@@ -118,52 +126,84 @@ export class IosBridge {
         })
       })
       .on(wire.TouchDownMessage, (_channel, message) => {
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
         const arrived = performance.now()
         this.gestures.push(message.seq, () => {
-          if (message.contact !== 0 || this.touch) {
-            this.multitouch = true
-            this.touch = null
+          if (!this.isActiveScreen(sessionId)) {
+            return
           }
-          else if (!this.multitouch && this.point(message)) {
-            this.touch = {from: message, to: message, started: arrived}
+          if (message.contact !== 0 || this.touch || this.wdaTouch) {
+            this.rejectTouch()
+          }
+          else if (!this.touchRejected && this.point(message)) {
+            if (sessionId === null) {
+              const point = {x: message.x, y: message.y}
+              this.wdaTouch = {from: point, to: point, started: arrived}
+            }
+            else {
+              // A batch may include a second contact before its first Commit.
+              this.touch = {sessionId, position: message
+                , pendingSeq: (message.seq + 1) % touchSequenceSize}
+            }
           }
         }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
       })
       .on(wire.TouchMoveMessage, (_channel, message) => {
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
         this.gestures.push(message.seq, () => {
-          if (this.touch && message.contact === 0 && this.point(message)) {
-            this.touch.to = message
+          if (sessionId === null) {
+            if (this.wdaTouch && message.contact === 0 && this.point(message)) {
+              this.wdaTouch.to = {x: message.x, y: message.y}
+            }
+            return
+          }
+          const touch = this.touch
+          if (touch?.sessionId === sessionId &&
+              message.contact === 0 && this.point(message)) {
+            if (touch.pendingSeq === null) {
+              touch.position = message
+              this.nativeInput.send(sessionId, 'move', message)
+            }
+            else if (touch.pendingSeq === message.seq) {
+              touch.position = message
+              touch.pendingSeq = (message.seq + 1) % touchSequenceSize
+            }
+            else {
+              this.rejectTouch()
+            }
           }
         }, message.gestureId, message.reservationId, {type: 'move', contact: message.contact})
       })
       .on(wire.TouchUpMessage, (_channel, message) => {
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
         const arrived = performance.now()
         this.gestures.push(message.seq, () => {
-          const touch = this.touch
-          this.touch = null
-          if (touch && message.contact === 0 && !this.multitouch) {
-            const distance = Math.hypot(touch.to.x - touch.from.x, touch.to.y - touch.from.y)
-            if (distance < 0.005) {
-              this.command('/tap', touch.to)
-            }
-            else if (arrived < touch.started) {
-              // Up-before-Down arrival cannot recover the hold time. Dropping the
-              // swipe avoids turning an unknown duration into a fast fling.
-              this.report(new Error('Touch swipe duration is unknown; retry the gesture'))
-            }
-            else {
-              this.command('/swipe', {
-                from: touch.from, to: touch.to
-              , durationMs: Math.max(50, Math.min(5000, Math.round(arrived - touch.started)))
-              })
-            }
+          if (sessionId === null && message.contact === 0) {
+            this.finishWdaTouch(arrived)
+          }
+          else if (this.touch?.sessionId === sessionId && message.contact === 0) {
+            this.resetTouch()
           }
         }, message.gestureId, message.reservationId, {type: 'up', contact: message.contact})
       })
       .on(wire.GestureStartMessage, (_channel, message) => {
-        this.gestures.start(message.seq, message.gestureId, message.reservationId)
+        if (this.isActiveScreen(message.screenSessionId)) {
+          this.gestures.start(message.seq, message.gestureId, message.reservationId)
+        }
       })
       .on(wire.TouchResetMessage, (_channel, message) => {
+        if (!this.isActiveScreen(message.screenSessionId)) {
+          return
+        }
         if (message.gestureId && message.cancel !== false) {
           this.gestures.clear(message.gestureId, message.reservationId,
             message.cancelThrough === true)
@@ -174,11 +214,28 @@ export class IosBridge {
         }
       })
       .on(wire.TouchCommitMessage, (_channel, message) => {
-        this.gestures.push(message.seq, () => {}, message.gestureId, message.reservationId,
-          {type: 'commit'})
+        const sessionId = message.screenSessionId
+        if (!this.isActiveScreen(sessionId)) {
+          return
+        }
+        this.gestures.push(message.seq, () => {
+          const touch = this.touch
+          if (touch?.sessionId === sessionId && touch.pendingSeq !== null) {
+            if (touch.pendingSeq === message.seq) {
+              touch.pendingSeq = null
+              this.nativeInput.send(sessionId, 'down', touch.position)
+            }
+            else {
+              // A recovered gap in the first batch may have hidden another contact.
+              this.rejectTouch()
+            }
+          }
+        }, message.gestureId, message.reservationId, {type: 'commit'})
       })
       .on(wire.GestureStopMessage, (_channel, message) => {
-        this.gestures.stop(message.seq, message.gestureId, message.reservationId)
+        if (this.isActiveScreen(message.screenSessionId)) {
+          this.gestures.stop(message.seq, message.gestureId, message.reservationId)
+        }
       })
       .on(wire.TypeMessage, (_channel, message) => this.command('/text', {text: message.text}))
       .on(wire.PasteMessage, (channel, message) => {
@@ -265,6 +322,10 @@ export class IosBridge {
     return [point.x, point.y].every(value => Number.isFinite(value) && value >= 0 && value <= 1)
   }
 
+  private isActiveScreen(sessionId: string | null) {
+    return sessionId === null ? this.screenMode() === 'wda' : sessionId === this.nativeInput.active
+  }
+
   private installationCommand(channel: string, path: string, id?: string) {
     const epoch = this.epoch
     const lease = this.lease
@@ -280,8 +341,75 @@ export class IosBridge {
   }
 
   private resetTouch() {
+    const touch = this.touch
     this.touch = null
-    this.multitouch = false
+    this.wdaTouch = null
+    this.touchRejected = false
+    if (touch && touch.pendingSeq === null) {
+      this.nativeInput.send(touch.sessionId, 'up', touch.position)
+    }
+  }
+
+  private rejectTouch() {
+    this.resetTouch()
+    this.touchRejected = true
+  }
+
+  private finishWdaTouch(arrived: number) {
+    const touch = this.wdaTouch
+    this.wdaTouch = null
+    if (!touch || this.touchRejected || this.screenMode() !== 'wda') {
+      return
+    }
+    const {from, to, started} = touch
+    const tap = Math.hypot(to.x - from.x, to.y - from.y) < 0.005
+    if (!tap && arrived < started) {
+      // Reordering cannot recover a hold time when Up arrived before Down.
+      this.report(new Error('Touch swipe duration is unknown; retry the gesture'))
+      return
+    }
+    this.enqueue(this.epoch, async signal => {
+      if (this.screenMode() === 'wda') {
+        const body = tap ? to : {from, to
+          , durationMs: Math.max(50, Math.min(5000, Math.round(arrived - started)))}
+        await this.ownedRequest(tap ? '/tap' : '/swipe', body, signal)
+      }
+    }, true).catch(this.report)
+  }
+
+  screenMode(): 'control' | 'wda' | 'automation' | 'unsupported' | 'unavailable' {
+    if (this.automated) {
+      return 'automation'
+    }
+    const device = this.lastObservation
+    const major = iosMajorVersion(device?.info?.ProductVersion)
+    if (!device || major === null || (major >= 27 && !device.coreDevice)) {
+      return 'unsupported'
+    }
+    const legacy = major < 27
+    if (!this.owner || !this.registered || device.state !== 'ready' ||
+        (!legacy && device.ios?.locked !== false)) {
+      return 'unavailable'
+    }
+    return legacy ? 'wda' : 'control'
+  }
+
+  connectCoreDeviceInput(
+    sessionId: string, signal: AbortSignal, fail: (error: unknown) => void
+  ) {
+    if (this.screenMode() !== 'control' || signal.aborted || this.nativeInput.active) {
+      return undefined
+    }
+    const active = AbortSignal.any([signal, this.ownerAbort.signal])
+    this.gestures.clear()
+    const disconnect = this.nativeInput.connect(sessionId, active, fail)
+    return () => {
+      const current = this.nativeInput.active
+      disconnect()
+      if (current === null || current === sessionId) {
+        this.gestures.clear()
+      }
+    }
   }
 
   private key(key: string) {
@@ -296,7 +424,7 @@ export class IosBridge {
   private command(path: string, body: unknown, replyChannel?: string) {
     const operation = () => this.enqueue(this.epoch, async signal => {
       await this.ownedRequest(path, body, signal)
-    }, ['/tap', '/swipe', '/home', '/text'].includes(path))
+    }, path === '/home' || path === '/text')
     if (replyChannel) {
       this.transaction(replyChannel, operation)
     }
@@ -351,7 +479,8 @@ export class IosBridge {
   }
 
   private async setAppiumMode(active: boolean, lease: string) {
-    const response = await this.client.request('/automation', {active, lease})
+    const response = await this.client.request('/automation', {active, lease},
+      AbortSignal.timeout(35000))
     await response.body?.cancel()
     if (!active && this.appiumHandoff === lease) {
       this.appiumHandoff = null
@@ -373,13 +502,14 @@ export class IosBridge {
         await this.setAppiumMode(false, this.appiumHandoff)
       }
       const reservationId = randomUUID()
-      const automationLeaseId = usage === 'automation' ? leaseId || null : null
-      if (automationLeaseId) {
+      const automated = usage === 'automation'
+      const automationLeaseId = automated ? leaseId || null : null
+      if (automated) {
         this.appiumHandoff = reservationId
         await this.setAppiumMode(true, reservationId)
       }
       if (!this.registered || this.epoch !== epoch) {
-        if (automationLeaseId) {
+        if (automated) {
           await this.setAppiumMode(false, reservationId)
         }
         throw new Error('Device session changed')
@@ -391,6 +521,7 @@ export class IosBridge {
       this.automationLeaseId = automationLeaseId
       this.ownerAbort = new AbortController()
       this.owner = {...owner, reservationId}
+      this.automated = automated
       this.gestures.setOwner(this.owner.reservationId!)
       this.lease = randomUUID()
       this.epoch++
@@ -416,7 +547,7 @@ export class IosBridge {
       })
       return
     }
-    this.leaveNow(reason)
+    await this.leaveNow(reason)
   }
 
   private leaveNow(reason: string) {
@@ -431,9 +562,17 @@ export class IosBridge {
     this.automationLease.clear()
     this.automationLeaseId = null
     this.owner = null
+    this.automated = false
     this.epoch++
     this.gestures.setOwner(null)
     this.disconnect()
+    if (owner?.reservationId && this.appiumHandoff === owner.reservationId &&
+        reason !== 'device_absent') {
+      return this.changeReservation(async() => {
+        await this.setAppiumMode(false, owner.reservationId!).catch(this.report)
+        this.broadcast(new wire.LeaveGroupMessage(this.options.serial, owner, reason))
+      })
+    }
     if (owner) {
       this.broadcast(new wire.LeaveGroupMessage(this.options.serial, owner, reason))
     }
@@ -522,7 +661,7 @@ export class IosBridge {
         , marketName: this.options.marketName || catalog?.name || model
         , display: new wire.DeviceDisplayMessage({
             id: 0, width: image.readUInt32BE(16), height: image.readUInt32BE(20), rotation: 0
-          , xdpi: 0, ydpi: 0, fps: 10, density: 1, secure: true, url: this.options.screenUrl
+          , xdpi: 0, ydpi: 0, fps: 0, density: 1, secure: true, url: this.options.screenUrl
           })
         , phone: new wire.DevicePhoneMessage({})
         })
