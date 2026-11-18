@@ -293,8 +293,8 @@ export default syrup.serial()
       function endListener() {
         var startTime = Date.now()
         log.important('Agent connection ended, attempting to relaunch')
-        openService()
-          .timeout(5000)
+        openAgent()
+          .timeout(30000)
           .then(function() {
             log.important('Agent relaunched in %dms', Date.now() - startTime)
           })
