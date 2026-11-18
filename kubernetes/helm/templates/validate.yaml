@@ -35,6 +35,7 @@
 {{- if hasKey $udids $id }}{{ fail "iOS UDIDs must be unique" }}{{ end -}}
 {{- $_ := set $udids $id true -}}
 {{- if not .nodeSelector }}{{ fail "an iPhone requires nodeSelector for its USB host" }}{{ end -}}
+{{- if has (int .appiumMjpegPort) (list 7400 17440 18100 28100) }}{{ fail "appiumMjpegPort conflicts with an iOS pod port" }}{{ end -}}
 {{- end -}}
 {{- if .Values.ios.devices -}}
 {{- if or (not .Values.ios.image.repository) (and (not .Values.ios.image.tag) (not .Values.ios.image.digest)) }}{{ fail "ios.image requires a real repository and tag or digest; build docker/ios/Dockerfile" }}{{ end -}}

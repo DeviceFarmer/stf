@@ -29,14 +29,14 @@ or as the invoking Linux user in native mode. Socket watchdogs restart/remount
 stale socket mounts. Pairing, developer images, telemetry and job records are
 retained in private per-device state; tokens are private generated files.
 
-The prototype listens on loopback port 7400; WDA and MJPEG forwards use 18100
-and 19100, and the tunnel registry uses 28100. The public screen endpoint is
+The prototype listens on loopback port 7400, the WDA forward uses 18100,
+and the tunnel registry uses 28100. The public screen endpoint is
 the STF-authenticated WebSocket on 17440. Raw WDA and the prototype API are not
 public ingress endpoints. Each WDA recovery changes a generation; each API
 process has a new instance UUID. Commands from the previous session are dropped.
-Releasing ownership aborts
-forwarded control requests and prevents queued runtime actions from reaching WDA.
-Cancellation cannot undo an input or power command already accepted by iOS.
+Releasing ownership aborts forwarded control requests and prevents queued
+runtime actions from reaching the phone. Cancellation cannot undo an input or
+power command already accepted by iOS.
 
 ## Runtime dependencies
 
@@ -59,7 +59,8 @@ python3 -m venv ~/.local/share/stf-ios-venv
 ~/.local/share/stf-ios-venv/bin/python -m pip install 'pymobiledevice3==11.32.0'
 ```
 
-Put that venv's `bin` directory on PATH, or pass its executable path with
+Put that venv's `bin` directory first on PATH so `python3` and `pymobiledevice3`
+come from the same environment, or pass the executable inside the venv with
 `--pymobiledevice3`. The runtime reads the selected device's `address` and `rsdPort`
 from the existing go-ios kernel tunnel and passes `--rsd HOST PORT` to the mounter.
 It does not start a second Python tunnel. A go-ios userspace tunnel cannot serve
@@ -75,15 +76,20 @@ The runtime and its read-only `--doctor` mode accept these additional options:
 
 | Option | Default |
 | --- | --- |
-| `--port`, `--wda-port`, `--mjpeg-port`, `--tunnel-port` | `7400`, `18100`, `19100`, `28100` |
+| `--port`, `--wda-port`, `--tunnel-port` | `7400`, `18100`, `28100` |
+| `--wda-mjpeg-port` | Internal WDA screen port on earlier iOS releases, `19100` by default |
+| `--appium-mjpeg-port` | Unset. Enables Appium video on iOS 27 and later and sets the shared WDA MJPEG port on earlier releases |
+| `--mjpeg-port` | Alias for `--appium-mjpeg-port` |
 | `--go-ios`, `--iproxy` | `ios`, `iproxy` |
 | `--image-mounter` | `go-ios`; use `pymobiledevice3` for iOS 27 |
 | `--pymobiledevice3` | `pymobiledevice3`, or an absolute virtual-environment executable path |
 | `--xctest-config` | `WebDriverAgentRunner.xctest` |
 | `--state-dir` | `~/.stf-ios` |
 
-All four host ports must be distinct and available. The signed WDA artifact must
-use device ports `8100` and `9100`. Stop any competing WDA/Appium controller first.
+The loopback ports used by the runtime must be distinct and available. The
+signed WDA artifact must listen on device port `8100` and serve MJPEG on
+device port `9100` when the stream is used. Stop any competing WDA/Appium
+controller first.
 Compose/native launchers choose ports and create private tokens automatically;
 for a manual deployment, first generate a token and start the kernel tunnel in
 a separate terminal:
@@ -141,6 +147,51 @@ The bridge defaults are prototype URL `http://127.0.0.1:7400`, screen port
 to your deployment. Route the public screen URL through your reverse proxy to the bridge screen port, preserving
 cookies, Origin and WebSocket headers; see the local Nginx generator for an
 example. UDID and WDA bundle ID must match the selected physical phone.
+
+## Interactive screen
+
+STF selects the live screen and gesture transport for each phone from its iOS
+version. A deployment can use both modes at the same time.
+
+| iOS version | Live screen and gestures |
+| --- | --- |
+| iOS 27 and later | CoreDevice HEVC video and single-finger touch events as the owner drags |
+| Earlier supported releases, including iOS 26 | WDA MJPEG video, with taps and completed swipes sent through WDA |
+
+CoreDevice requires a go-ios kernel tunnel with Remote Service Discovery (RSD)
+and HEVC decoding through WebCodecs in a secure browser context. Use HTTPS for
+shared deployments or the loopback origin from the [local quick start](../docker/ios/README.md#configure-one-or-several-iphones).
+STF opens one CoreDevice screen session per phone during manual reservations.
+Both modes enforce STF ownership and pause live viewing for automation
+reservations. STF uses WDA for screenshots and operations such as Home and
+text input in both modes.
+
+Reserve the iPhone through the STF API before starting an Appium session. STF
+closes its manual CoreDevice stream and waits up to 20 seconds for the phone
+to expire that media session. Appium then uses WDA without restarting it. From
+the runtime's network namespace, set
+`appium:webDriverAgentUrl` to `http://127.0.0.1:18100` and provide the device's
+`appium:udid` and `appium:platformVersion`. Quit the Appium session before
+releasing the reservation so STF can resume its own WDA health checks.
+This workflow also works on iOS versions that predate CoreDevice screen support.
+
+On iOS 27 or later, start the runtime with `--appium-mjpeg-port=19100` to enable
+optional Appium video. On earlier releases, the runtime already forwards WDA
+MJPEG to internal loopback port `19100` for manual viewing unless an explicit
+port overrides it. Set `appium:mjpegServerPort` to the forwarded port for
+recording or `appium:mjpegScreenshotUrl` to its loopback URL for streamed
+screenshots. Choose a port distinct from the API, WDA and tunnel ports.
+
+Existing launch commands can use `--mjpeg-port` as an alias for
+`--appium-mjpeg-port`. Use `--wda-mjpeg-port` to customize the forward for
+manual WDA screens on earlier iOS releases. Explicit MJPEG options must agree
+on the port because the runtime opens a single loopback forward.
+
+Update the STF app, iOS provider and runtime together so all three agree on
+the screen protocol for each phone.
+
+See the [response-time measurements](ios-screen-benchmark.md) for the comparison
+with the previous screen path and the results from two physical iPhones.
 
 ## Installing an IPA
 
@@ -201,6 +252,9 @@ and a real iPhone; record that separately from fixture tests.
 
 ### Hardware coverage and limits
 
+The following integration trials used the WDA screen path. CoreDevice
+hardware results are recorded separately in the response-time measurements.
+
 | Environment | Devices | Observed behavior |
 | --- | --- | --- |
 | Linux amd64 USB worker, Kubernetes, Proxmox passthrough | iPhone 13 Pro / iOS 26.7.1; 14 Plus and 16 Plus / iOS 27.0.1 | Three simultaneous owners and streams; cross-owner access denied; isolated Home and WDA/USB recovery; 13 Pro reboot recovered after physical unlock; health/signing metadata persisted |
@@ -221,7 +275,10 @@ Remaining limits and verification gaps:
   Android recovery across a shared USB failure.
 - A full shared-VM reboot and physical WDA expiry/renewal remain unverified.
   Power commands and passcode entry were not repeated in the local packaging trial.
-- Landscape, multi-touch and Appium Grid integration are not supported by this version.
+- The CoreDevice screen supports portrait orientation and single-finger gestures.
+  During rapid motion, the iPhone encoder can temporarily add gray padding inside
+  the frame. The next full-resolution frame restores the complete picture.
+- STF does not install or manage Appium Grid.
 
 ## Health, signing and recovery
 
@@ -248,8 +305,9 @@ runtime/provider logs during onboarding.
 
 Diagnostics distinguish missing USB, trust/unlock, WDA missing or expired,
 tunnel, developer-image and WDA/session startup failures. Recovery retries
-automatically. A screen lock alone keeps the phone present, owned and streaming
-while WDA remains ready. The owner can use **Lock screen / Unlock screen**;
+automatically. A screen lock keeps the phone present and owned while WDA remains
+ready. The live screen is available after unlock. The owner can use
+**Lock screen / Unlock screen**;
 iOS 27 locks through a short fixed Power IOHID event; earlier versions use the
 standard English/Russian AssistiveTouch Lock Screen action and restore its
 settings. An asleep iOS 26 phone may need the system Home command before its
@@ -257,11 +315,9 @@ AssistiveTouch control is available. Unlock explicitly wakes the system UI
 before WDA's unlock command. Both UI buttons stay available because WDA's cached
 lock flag can lag a sleeping screen. Repeating Lock on a known locked device
 does not send another Power press. Automatic unlock supports a simple lock
-without a passcode. If it remains
-locked, swipe and enter the code directly on the streamed device screen. STF does
-not save a passcode. Screenshots, touch, Home and text input remain available
-while locked; shaking and app activation still require an unlocked screen.
-An asleep display may provide black frames; unlocking wakes it.
+without a passcode. If iOS requires a passcode, unlock the phone in person before
+starting the live screen. WDA Home, text and screenshots remain available through
+their existing commands. Shaking and app activation require an unlocked phone.
 
 **Restart iPhone** and **Power off iPhone** require an in-product confirmation
 and the current owner. They use go-ios diagnostics for the selected UDID, not a

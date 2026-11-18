@@ -13,10 +13,10 @@ export class MjpegDecoder {
           this.buffer = this.buffer.subarray(2)
         }
         const end = this.buffer.indexOf('\r\n\r\n')
+        if (end > 16384 || (end < 0 && this.buffer.length > 16384)) {
+          throw new Error('MJPEG headers exceed 16 KiB')
+        }
         if (end < 0) {
-          if (this.buffer.length > 16384) {
-            throw new Error('MJPEG headers exceed 16 KiB')
-          }
           break
         }
         const headers = this.buffer.subarray(0, end).toString('ascii')

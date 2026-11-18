@@ -24,7 +24,7 @@ export function IosControlsCard({control, device}: {control: Control, device: De
     try {
       const result = await (unlock ? control.unlock() : control.lock())
       if (unlock && result.body?.locked !== false) {
-        setError(gettext('The screen is still locked. Swipe up and enter the passcode on the device screen.'))
+        setError(gettext('The iPhone is still locked. Unlock it on the device.'))
       }
       else {
         setLockResult(result.body?.locked === true)
@@ -81,7 +81,7 @@ export function IosControlsCard({control, device}: {control: Control, device: De
         </Button>
       </Group>
       <Text size='xs' c='dimmed'>
-        {t('The lock screen remains visible while the display is awake. If a passcode is required, enter it on the device screen in STF.')}
+        {t('If a passcode is required, unlock the iPhone on the device.')}
       </Text>
       {lockResult !== null && <Text size='xs' c='dimmed'>
         {lockResult ? t('The iPhone is locked.') : t('The iPhone is unlocked.')}

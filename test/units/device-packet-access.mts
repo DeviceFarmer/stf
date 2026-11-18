@@ -532,6 +532,26 @@ describe('manual device packet authorization', function() {
     assert.equal(authorized.length, 1)
   })
 
+  for (const platform of ['iOS', 'Android']) {
+    it(`scopes ${platform} gesture packets consistently`, async function() {
+      const authorized: {screenSessionId?: string}[] = []
+      const f = fixture(platform, 0, {onAuthorizedInput: (_packet: unknown, scope: any) => {
+        authorized.push(scope)
+      }})
+      const dispatch = (event: string, screenSessionId: string) =>
+        new Promise<Error | undefined>(resolve =>
+          f.guard([event, f.channel, {screenSessionId}], resolve))
+      assert.ifError(await dispatch('input.gestureStart', 'screen-a'))
+      assert.ifError(await dispatch('input.touchDown', 'screen-b'))
+      assert.ifError(await dispatch('input.gestureStop', 'screen-b'))
+      assert.ifError(await dispatch('input.gestureStart', 'screen-b'))
+      assert.equal(authorized.length, 4)
+      const screenIds = authorized.map(scope => scope.screenSessionId).filter(Boolean)
+      assert.deepEqual(screenIds, platform === 'iOS' ?
+        ['screen-a', 'screen-a', 'screen-a', 'screen-b'] : [])
+    })
+  }
+
   it('validates serials and distinguishes controls from metadata', function() {
     for (const value of ['A', 'a'.repeat(128), '00008110-000625A02146201E', 'usb_serial.1'
       , 'host.docker.internal:15555', '[2001:db8::1]:5555']) {

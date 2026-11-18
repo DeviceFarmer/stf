@@ -21,6 +21,7 @@ interface DevicePacketPolicy {
 export interface AuthorizedInput {
   gestureId: string | null
   reservationId: string | null
+  screenSessionId?: string
 }
 
 interface PacketGuardOptions {
@@ -86,7 +87,7 @@ export function createDevicePacketGuard(
   const queues = new Map<string, PacketQueue>()
   const inputPermissions = new Map<string, {checkpoint: number, until: number
     , groups: string, identity: string, reservationId: string | null}>()
-  const gestures = new Map<string, {identity: string, id: string, reservationId: string | null}>()
+  const gestures = new Map<string, {identity: string, scope: AuthorizedInput}>()
   const gestureSource = randomUUID()
   let gestureCounter = 0
   const timeoutMs = options.lookupTimeoutMs ?? 2000
@@ -116,10 +117,7 @@ export function createDevicePacketGuard(
     queue.failed = true
     inputPermissions.delete(channel)
     // A scoped provider reset cannot affect a newer gesture or another owner.
-    const gesture = gestures.get(channel)
-    options.resetGesture?.(channel, gesture ? {
-      gestureId: gesture.id, reservationId: gesture.reservationId
-    } : undefined)
+    options.resetGesture?.(channel, gestures.get(channel)?.scope)
     gestures.delete(channel)
     for (const entry of queue.pending.splice(0)) {
       finish(entry, reason)
@@ -257,21 +255,25 @@ export function createDevicePacketGuard(
           failChannel(channel, queue, 'Device gesture counter exhausted; reconnect to continue')
           return
         }
-        gestures.set(channel, {identity
-          , id: gestureSource + ':' + ++gestureCounter + ':' + Date.now(), reservationId})
+        const {screenSessionId} = (entry.packet[2] || {}) as {screenSessionId?: unknown}
+        const scope: AuthorizedInput = {
+          gestureId: gestureSource + ':' + ++gestureCounter + ':' + Date.now(), reservationId
+        }
+        if (channel.startsWith('ios:') && typeof screenSessionId === 'string' &&
+            /^[a-z0-9-]{1,128}$/i.test(screenSessionId)) {
+          scope.screenSessionId = screenSessionId
+        }
+        gestures.set(channel, {identity, scope})
         if (gestures.size > 128) {
           const oldest = gestures.keys().next().value!
           const previous = gestures.get(oldest)!
-          options.resetGesture?.(oldest, {
-            gestureId: previous.id, reservationId: previous.reservationId
-          })
+          options.resetGesture?.(oldest, previous.scope)
           gestures.delete(oldest)
         }
       }
       if (input) {
-        options.onAuthorizedInput?.(entry.packet, {
-          gestureId: gestures.get(channel)?.id || null, reservationId
-        })
+        options.onAuthorizedInput?.(entry.packet,
+          gestures.get(channel)?.scope || {gestureId: null, reservationId})
       }
       if (event === 'input.gestureStop') {
         gestures.delete(channel)
