@@ -11,6 +11,7 @@ import wireutil from '../../wire/util.js'
 import db from '../../db/index.js'
 import dbapi from '../../db/api.js'
 import lifecycle from '../../util/lifecycle.js'
+import promiseutil from '../../util/promiseutil.js'
 import deviceutil from '../../util/deviceutil.js'
 import srv from '../../util/srv.js'
 import zmqutil from '../../util/zmqutil.js'
@@ -154,6 +155,10 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
   }
 
   let joinsInFlight: Promise<unknown> = Promise.resolve()
+
+  // Owner writes of one device run one after another, so a leave and the join that follows it
+  // (a kick, then someone taking the device) land in the order the device sent them
+  const queueOwnerWrite = promiseutil.keyedQueue()
 
   devDealer.on('message', wirerouter()
     .on(wire.UpdateAccessTokenMessage, function(channel, message, data) {
@@ -339,10 +344,12 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     .on(wire.JoinGroupMessage, function(channel, message, data) {
       // Forward only once the rows are written: the app side treats the join as news of a row it
       // can then read, and the transaction reply that follows must not overtake it.
-      const writes = Promise.all([
-        dbapi.setDeviceOwner(message.serial, message.owner)
-      , message.usage ? dbapi.setDeviceUsage(message.serial, message.usage) : null
-      ])
+      const writes = queueOwnerWrite(message.serial, function() {
+        return Promise.all([
+          dbapi.setDeviceOwner(message.serial, message.owner)
+        , message.usage ? dbapi.setDeviceUsage(message.serial, message.usage) : null
+        ])
+      })
         .catch(function(err) {
           log.error('Unable to persist join of "%s"', message.serial, err.stack)
         })
@@ -352,8 +359,12 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       })
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
-      dbapi.unsetDeviceOwner(message.serial)
-      dbapi.unsetDeviceUsage(message.serial)
+      queueOwnerWrite(message.serial, function() {
+        return dbapi.releaseDeviceOwner(message.serial, message.owner.email)
+      })
+        .catch(function(err) {
+          log.error('Unable to persist leave of "%s"', message.serial, err.stack)
+        })
       appDealer.send([channel, data])
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {

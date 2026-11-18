@@ -174,13 +174,12 @@ interface DbApi {
   saveDeviceStatus(serial: string, status: number, statusTimeStamp: number): Promise<r.WriteResult>
   setDeviceIosStatus(serial: string, status: IosDeviceStatus): Promise<r.WriteResult>
   setDeviceOwner(serial: string, owner: DeviceOwner): Promise<r.WriteResult>
-  unsetDeviceOwner(serial: string): Promise<r.WriteResult>
+  releaseDeviceOwner(serial: string, email: string): Promise<r.WriteResult>
   reserveDeviceOwner(serial: string): Promise<r.WriteResult>
   clearDeviceRestoreOwner(serial: string): Promise<r.WriteResult>
   setDevicePresent(serial: string): Promise<r.WriteResult>
   setDeviceAbsent(serial: string): Promise<r.WriteResult>
   setDeviceUsage(serial: string, usage: string): Promise<r.WriteResult>
-  unsetDeviceUsage(serial: string): Promise<r.WriteResult>
   setDeviceAirplaneMode(serial: string, enabled: boolean): Promise<r.WriteResult>
   setDeviceBattery(serial: string, battery: DeviceBattery): Promise<r.WriteResult>
   setDeviceBrowser(serial: string, browser: DeviceBrowser): Promise<r.WriteResult>
@@ -1637,9 +1636,16 @@ dbapi.setDeviceOwner = function(serial, owner) {
   }))
 }
 
-dbapi.unsetDeviceOwner = function(serial) {
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update({
-    owner: null
+// Clears the owner and usage of a device that `email` has left. Only that owner's leave may clear
+// them: a leave that lands after someone has already taken the device again must not hand it back
+// as free while it is in use.
+dbapi.releaseDeviceOwner = function(serial, email) {
+  return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(device) {
+    return r.branch(
+      device('owner').default(null)('email').default(null).eq(email)
+    , {owner: null, usage: null, usageChangedAt: r.now(), logs_enabled: false}
+    , {}
+    )
   }))
 }
 
@@ -1687,14 +1693,6 @@ dbapi.setDeviceUsage = function(serial, usage) {
   return db.run(r.table('devices').get<DeviceDocument>(serial).update({
     usage: usage
   , usageChangedAt: r.now()
-  }))
-}
-
-dbapi.unsetDeviceUsage = function(serial) {
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update({
-    usage: null
-  , usageChangedAt: r.now()
-  , logs_enabled: false
   }))
 }
 

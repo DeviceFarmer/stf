@@ -73,6 +73,20 @@ describe('dbapi owner claim', function() {
     })
   })
 
+  // A leave that lands after someone has taken the device again must not hand it back as free
+  describe('releaseDeviceOwner', function() {
+    it('should clear the owner and usage only while the leaving user still owns the device',
+      function() {
+        dbapi.releaseDeviceOwner('serial', 'leaver@example.com')
+        var term = JSON.stringify(lastUpdate)
+        expect(term).to.include('"leaver@example.com"')
+        expect(term).to.include('"owner":null')
+        expect(term).to.include('"usage":null')
+        // A plain document would clear the row unconditionally
+        expect(lastUpdate).to.not.have.property('owner')
+      })
+  })
+
   describe('setDeviceReady', function() {
     it('should set ready and hand the device back with no owner', function() {
       dbapi.setDeviceReady('serial', 'channel')
