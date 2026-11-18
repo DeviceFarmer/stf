@@ -82,9 +82,6 @@ export class IosBridge {
       })
       .on(wire.GroupMessage, (channel, message) => {
         this.transaction(String(channel), () => this.changeReservation(async() => {
-          if (message.automationRunner === 'maestro') {
-            throw new Error('Unsupported automation runner on iOS')
-          }
           await grouputil.match({serial: options.serial}, message.requirements)
           await this.join(message.owner, message.timeout, message.usage, message.leaseId)
           return {owner: this.owner}

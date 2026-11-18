@@ -74,6 +74,36 @@ describe('coordinator persistent state', () => {
     }
   })
 
+  it('retains Appium state and refuses unsupported request or lease runners', async() => {
+    const store = new FileStateStore(filename)
+    const state: CoordinatorState = {...empty(), requests: [{
+      id: 'request', key: 'key', fingerprint: 'fingerprint', state: 'allocated'
+    , input: {runner: 'appium', runId: 'run', platform: 'Android', queueTimeoutSeconds: 60
+        , maxDurationSeconds: 60}
+    , createdAt: 0, queueDeadlineAt: 60000, leaseId: 'lease'
+    }], leases: [{
+      id: 'lease', requestId: 'request', runId: 'run', runner: 'appium', state: 'active'
+    , createdAt: 0, expiresAt: 10000, deadlineAt: 60000
+    , device: {serial: 'ANDROID-A', platform: 'Android', model: 'Phone', version: '16'
+        , provider: 'provider', present: true, ready: true}
+    , capabilities: {'appium:udid': 'ANDROID-A'}
+    }]}
+    await store.save(state)
+    assert.deepEqual(await store.load(), state)
+
+    for (const runner of ['maestro', 'unsupported', null]) {
+      for (const record of ['request', 'lease']) {
+        const persisted = structuredClone(state)
+        const target = record === 'request' ? persisted.requests[0]!.input : persisted.leases[0]!
+        Object.assign(target, {runner})
+        const content = JSON.stringify(persisted)
+        await writeFile(filename, content, {mode: 0o600})
+        await assert.rejects(store.load(), {code: 'unsupported_state_runner', status: 503})
+        assert.equal(await readFile(filename, 'utf8'), content)
+      }
+    }
+  })
+
   it('persists drains and refuses malformed or duplicate maintenance instead of losing isolation',
     async() => {
     const store = new FileStateStore(filename)
@@ -165,37 +195,5 @@ describe('coordinator persistent state', () => {
       await assert.rejects(new FileStateStore(filename).load(),
         'Incomplete persistent state cannot justify safe device reissue')
     }
-  })
-})
-
-
-describe('coordinator Maestro recovery state', () => {
-  it('persists a Maestro lease without Appium capabilities and retains its cleanup baseline',
-    async() => {
-    const directory = await mkdtemp(path.join(os.tmpdir(), 'coordinator-maestro-state-'))
-    const filename = path.join(directory, 'state.json')
-    try {
-      const state: CoordinatorState = {version: 2, maintenance: [], requests: [{
-        id: 'request', key: 'key', fingerprint: 'fingerprint', state: 'allocated'
-      , input: {runner: 'maestro', platform: 'Android', runId: 'run'
-          , queueTimeoutSeconds: 60, maxDurationSeconds: 60}
-      , createdAt: 0, queueDeadlineAt: 60000, leaseId: 'lease'
-      }], leases: [{
-        id: 'lease', requestId: 'request', runId: 'run', runner: 'maestro', state: 'active'
-      , capabilities: {}, createdAt: 0, expiresAt: 10000, deadlineAt: 60000
-      , device: {serial: 'ANDROID-A', platform: 'Android', model: 'Phone', version: '16'
-          , provider: 'provider', present: true, ready: true}
-      , maestroBaseline: {packages: [], settings: {'system/accelerometer_rotation': '0'}}
-      }]}
-      const store = new FileStateStore(filename)
-      await store.save(state)
-      assert.deepEqual(await store.load(), state)
-      state.leases[0]!.runner = 'appium'
-      await store.save(state)
-      await assert.rejects(store.load(), /Invalid coordinator state/)
-    }
-    finally {
- await rm(directory, {recursive: true, force: true})
-}
   })
 })

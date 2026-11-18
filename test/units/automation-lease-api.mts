@@ -134,18 +134,6 @@ describe('Automation lease API', function() {
     assert.equal(device.automationLeaseId, 'lease-b')
   })
 
-  it('rejects Maestro on iOS before sending a reservation message', async function() {
-    Object.assign(device, {platform: 'iOS', owner: null, automationLeaseId: null, usage: null})
-    const f = fixture()
-    const req = f.req as unknown as ApiRequest<AddUserDeviceBody>
-    req.body = {serial: 'device', leaseId: 'lease-a', automationRunner: 'maestro'}
-    addUserDevice(req, f.res)
-    await flush()
-    assert.equal(f.status(), 400)
-    assert.equal(f.push.send.callCount, 0)
-    assert.equal(unlockDevice.callCount, 1)
-  })
-
   it('rejects recapturing a completed lease ID under the device lock', async function() {
     Object.assign(device, {platform: 'Android', owner: null, automationLeaseId: null, usage: null})
     receipt = 'lease-a'

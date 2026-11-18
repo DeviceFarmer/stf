@@ -1,9 +1,9 @@
 # STF coordinator
 
-`stf coordinator` schedules renewable device leases for external test clients. It
-reserves devices through STF, gives each lease a fenced Appium WebDriver or
-Android ADB connection, and verifies cleanup before making the device available
-again. Test code and reports stay with the client.
+`stf coordinator` schedules renewable iOS and Android device leases for external
+Appium clients. It reserves devices through STF, links each lease to a WebDriver
+session and verifies cleanup before making the device available again. Test code
+and reports stay with the client.
 
 ## Start the coordinator
 
@@ -19,8 +19,7 @@ advertise the device's `appium:udid` and `appium:platformVersion`. Configure the
 iOS Appium node's `appium:webDriverAgentUrl` to reach the existing WDA forward
 or an adapter for that WDA session. The [iOS runtime](ios-provider.md) pauses
 its WDA health probes during a coordinator lease and restores its session on
-release. For Maestro on physical Android, the coordinator connects to the
-provider's ADB service.
+release.
 
 Keep the token files, ADB pool configuration and persistent state outside the
 checkout. The example prepares an operator token for local testing.
@@ -49,10 +48,7 @@ same host.
 ]
 ```
 
-Use `[]` for an iOS-only setup. For a Maestro-only setup, leave
-`--appium-grid-url` unset and use an empty `systemPorts` array for each pool.
-If you remove Grid from an existing coordinator, first cancel queued Appium
-requests and finish cleaning up Appium leases while Grid is still reachable.
+Use `[]` for an iOS-only setup.
 
 ```sh
 stf coordinator \
@@ -86,9 +82,9 @@ original project token. Each project has its own idempotency keys, requests,
 leases and concurrency limit. The operator token can inspect all projects and
 run recovery. Keep it separate from project credentials.
 
-The API accepts a Bearer token or HTTP Basic authentication with username
-`coordinator` and the token as password. The WebDriver and ADB gateways use
-the same project authorization.
+The API and WebDriver gateway accept a Bearer token or HTTP Basic authentication
+with username `coordinator` and the token as password. Both enforce the project's
+access to each lease.
 
 ## Request and use a device
 
@@ -106,40 +102,33 @@ curl --fail --config "$COORDINATOR_DIR/curl.conf" \
   http://127.0.0.1:8080/api/v1/requests
 ```
 
-Use `runner: maestro` for Maestro. Appium is the default runner. Optional
-`serial`, `model` and `provider` fields filter matching devices. Requests
-remain queued without holding a device. Appium and Maestro schedule
-independently while sharing device and concurrency limits. Grid delays
-affect Appium scheduling. Poll the request for its `leaseId`, then fetch
-the lease and wait for `active`.
+The optional `runner` field accepts `appium`. Use `serial`, `model` and
+`provider` to filter devices. Requests remain queued without holding a device
+while STF or Grid has no matching slot. Poll the request for its `leaseId`,
+then fetch the lease and wait for `active`.
 
-- For Appium, create a W3C session at the returned `webdriverUrl` and use the
-  lease's `connection.capabilities`. The gateway binds one session to the lease
-  and rejects overrides of the device and its assigned ADB route. It accepts
-  `browserName`, `acceptInsecureCerts`, `pageLoadStrategy`, `timeouts`,
-  `unhandledPromptBehavior` and `strictFileInteractability` as W3C options.
-  Select an installed Android app with `appium:appPackage` and
-  `appium:appActivity`, or an installed iOS app with `appium:bundleId`.
-  Other accepted Appium options are
-  `appium:appWaitPackage`, `appium:appWaitActivity`, `appium:appWaitDuration`,
-  `appium:appWaitForLaunch`, `appium:autoGrantPermissions`,
-  `appium:disableWindowAnimation`, `appium:language`, `appium:locale` and
-  `appium:skipDeviceInitialization`. Host paths, app upload through session
-  capabilities, and emulator options are rejected.
-- For Maestro, forward each local ADB smart-socket connection over its own
-  authenticated binary WebSocket at `connection.path`. Use the returned
-  `connection.serial`. The gateway checks provider ownership independently of
-  the worker heartbeat and can reuse a proof for at most one second. It
-  exposes only that device and closes the streams on lease expiry or release.
+Create a W3C session at the returned `webdriverUrl` and use the lease's
+`connection.capabilities`. The gateway binds one session to the lease and
+rejects overrides of the device and its assigned ADB route. It accepts
+`browserName`, `acceptInsecureCerts`, `pageLoadStrategy`, `timeouts`,
+`unhandledPromptBehavior` and `strictFileInteractability` as W3C options.
+Select an installed Android app with `appium:appPackage` and
+`appium:appActivity`, or an installed iOS app with `appium:bundleId`.
+Other accepted Appium options are
+`appium:appWaitPackage`, `appium:appWaitActivity`, `appium:appWaitDuration`,
+`appium:appWaitForLaunch`, `appium:autoGrantPermissions`,
+`appium:disableWindowAnimation`, `appium:language`, `appium:locale` and
+`appium:skipDeviceInitialization`. Host paths, app upload through session
+capabilities, and emulator options are rejected.
 
 Renew on a separate timer at the returned `heartbeatIntervalSeconds`.
-WebDriver and ADB activity do not renew the lease. The default worker lease
+WebDriver activity does not renew the lease. The default worker lease
 lifetime is 180 seconds and the default absolute limit is six hours. The
 coordinator enforces both limits and rejects commands after expiry. For slow
 Grid operations, set `--upstream-timeout-seconds` and give the client a longer
 HTTP timeout.
 
-Close the Appium session or finish the Maestro run, then release the lease.
+Close the Appium session, then release the lease.
 A cleanup request returns HTTP 202. Poll the lease to see whether cleanup
 finished or the device entered quarantine.
 
@@ -163,14 +152,10 @@ reusing their devices. A lease remains quarantined if cleanup cannot be proved.
 Each project can retain up to 10,000 requests. The coordinator prunes resolved
 history after seven days from submission and keeps queued requests and requests
 whose leases still hold resources.
-Use the recovery endpoint with `{}` to retry ordinary cleanup. For Maestro,
-the provider verifies that the driver has stopped, removes packages added by the
-runner and restores tracked settings before acknowledging release. STF allows
+Use the recovery endpoint with `{}` to retry ordinary cleanup. STF allows
 90 seconds for a release and the coordinator's STF client allows at least
 95 seconds. STF records a durable receipt for the exact account and lease ID,
 so a retry can confirm that release without touching another reservation.
-If cleanup cannot be confirmed for an apparently free Maestro device, the
-coordinator keeps the lease quarantined.
 
 An unconfirmed Appium capture can reach the provider after a timeout. To
 reconcile that specific quarantine, pause submissions, finish active work
@@ -189,4 +174,5 @@ requested duration plus five minutes. To drain an iOS device, post its
 new allocations while current leases finish. Complete it once the device is
 free, its signing profile covers the coordinator's duration limit and Grid
 confirms the slot is available. Drains survive restart. The loader accepts v1
-state and writes v2, which older v1-only coordinators cannot load.
+state and writes v2, which older v1-only coordinators cannot load. If persistent
+state contains an unsupported runner, startup stops and preserves the state file.

@@ -155,11 +155,6 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   var timeout = req.hasOwnProperty('body') ? req.body.timeout ||
                                              null : req.swagger.params.timeout.value || null
   const leaseId = req.body?.leaseId || null
-  const automationRunner = req.body?.automationRunner ?? null
-  if (automationRunner !== null && (automationRunner !== 'maestro' || !leaseId)) {
-    apiutil.respond(res, 400, 'Invalid automation runner')
-    return
-  }
   if (leaseId && (typeof leaseId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(leaseId) ||
       (timeout !== null && (!Number.isInteger(timeout) || timeout <= 0 || timeout > 2147483647)))) {
     apiutil.respond(res, 400, 'Invalid automation lease ID')
@@ -181,11 +176,6 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
           })
           return
         }
-        if (automationRunner === 'maestro' && device.platform !== 'Android') {
-          lockutil.unlockDevice(lock)
-          apiutil.respond(res, 400, 'Maestro requires an Android device')
-          return
-        }
         if (leaseId && await dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)) {
           lockutil.unlockDevice(lock)
           apiutil.respond(res, 409, 'Automation lease ID was already released')
@@ -194,7 +184,6 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
 
         var messageListener: MessageListener
 
-        const captureTimeout = automationRunner === 'maestro' ? 15000 : reservationTimeout(device)
         // Stop waiting if the provider has not acknowledged the reservation.
         var responseTimer = setTimeout(function() {
           req.options.channelRouter.removeListener(wireutil.global, messageListener)
@@ -203,13 +192,12 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               success: false
             , description: 'Device is not responding'
           })
-        }, captureTimeout)
+        }, reservationTimeout(device))
 
         messageListener = wirerouter()
           .on(wire.JoinGroupMessage, function(channel, message) {
             if (message.serial === serial && message.owner.email === req.user.email &&
-                (message.leaseId || null) === leaseId &&
-                (message.automationRunner || null) === automationRunner) {
+                (message.leaseId || null) === leaseId) {
               clearTimeout(responseTimer)
               req.options.channelRouter.removeListener(wireutil.global, messageListener)
               lockutil.unlockDevice(lock)
@@ -220,7 +208,6 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               , owner: message.owner
               , deviceChannel: device.channel
               , ...(leaseId ? {leaseId} : {})
-              , ...(automationRunner ? {automationRunner} : {})
               })
             }
           })
@@ -247,7 +234,6 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
             })
             , usage
             , leaseId
-            , automationRunner
             )
           )
         ])

@@ -323,9 +323,7 @@ clientWithPromise.then(function(api) {
 #### Automation leases
 
 To fence an automation reservation, include a unique `leaseId` in
-`POST /api/v1/user/devices`. A Maestro client also sends
-`automationRunner: "maestro"` to request provider-side cleanup. The capture
-response echoes the supplied lease ID and, for Maestro, the runner.
+`POST /api/v1/user/devices`. The capture response echoes the supplied lease ID.
 
 Use the same STF account and lease ID for the following requests. The provider
 rejects stale IDs, including older leases held by the same account.

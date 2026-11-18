@@ -10,13 +10,9 @@ import wireutil from '../../../wire/util.js'
 import grouputil from '../../../util/grouputil.js'
 import lifecycle from '../../../util/lifecycle.js'
 import {AutomationLease} from '../../../util/automation-lease.js'
-import {inspectMaestroDevice, cleanupMaestroDevice} from '../../../util/maestro-device.js'
-import type {MaestroBaseline} from '../../../util/maestro-device.js'
-import type {Readable} from 'node:stream'
 import type {AutoGroupMessage, OwnerMessage} from '../../../types/wire.js'
 import type {
-  Adb
-, Channels
+  Channels
 , DeviceIdentity
 , DevicePluginOptions
 , GroupPlugin
@@ -32,7 +28,6 @@ import routerSyrup from '../support/router.js'
 import pushSyrup from '../support/push.js'
 import subSyrup from '../support/sub.js'
 import channelsSyrup from '../support/channels.js'
-import adbSyrup from '../support/adb.js'
 
 export default syrup.serial()
   .dependency(soloSyrup)
@@ -42,7 +37,6 @@ export default syrup.serial()
   .dependency(pushSyrup)
   .dependency(subSyrup)
   .dependency(channelsSyrup)
-  .dependency(adbSyrup)
   .define(function(
     options: DevicePluginOptions
   , solo: SoloPlugin
@@ -52,37 +46,14 @@ export default syrup.serial()
   , push: ZmqSocket
   , sub: ZmqSocket
   , channels: Channels
-  , adb: Adb
   ) {
     var log = logger.createLogger('device:plugins:group')
     var currentGroup: OwnerMessage | null = null
     let currentLeaseId: string | null = null
-    let maestroBaseline: MaestroBaseline | null = null
     let joining: Promise<OwnerMessage> | null = null
     let leaving: Promise<OwnerMessage> | null = null
     let stopping = false
 
-    function executeMaestro(command: string): globalThis.Promise<string> {
-      let stream: Readable | null = null
-      return adb.shell(options.serial,
-        command + '; status=$?; printf \'\n__STF_EXIT__%s\n\' "$status"')
-        .then(function(output) {
-          stream = output
-          return adb.util.readAll(output)
-        })
-        .timeout(30000)
-        .then(function(output) {
-          const text = output.toString('utf8').replace(/\r/g, '')
-          const match = /\n__STF_EXIT__(\d+)\n$/.exec(text)
-          if (!match || match[1] !== '0') {
-            throw new Error('Maestro native cleanup command failed')
-          }
-          return text.slice(0, match.index).trim()
-        })
-        .finally(function() {
-          stream?.destroy()
-        })
-    }
     var plugin = new events.EventEmitter() as GroupPlugin
     const automationLease = new AutomationLease(() => {
       plugin.leave('automatic_timeout').catch(log.error.bind(log))
@@ -97,7 +68,7 @@ export default syrup.serial()
     })
 
     plugin.join = function(
-      newGroup: OwnerMessage, timeout, usage, identifier, leaseId, automationRunner
+      newGroup: OwnerMessage, timeout, usage, identifier, leaseId
     ) {
       if (joining || leaving || stopping) {
         return Promise.reject(new grouputil.AlreadyGroupedError())
@@ -110,35 +81,26 @@ export default syrup.serial()
           return currentGroup!
         })
         .catch(grouputil.NoGroupError, function() {
-          return Promise.try(async function() {
-            if (automationRunner === 'maestro' && (usage !== 'automation' || !leaseId)) {
-              throw new Error('Maestro requires a fenced automation lease')
-            }
-            // Capture recovery data before publishing ownership or acknowledging the reservation.
-            const baseline = automationRunner === 'maestro' ?
-              await inspectMaestroDevice(executeMaestro) : null
-            if (stopping) {
-              throw new Error('Device worker is stopping')
-            }
-            const group = new wire.OwnerMessage({...newGroup, reservationId: randomUUID()})
-            if (usage === 'automation' && leaseId) {
-              automationLease.start(group.email, leaseId, timeout || options.groupTimeout)
-            }
-            currentGroup = group
-            currentLeaseId = usage === 'automation' ? leaseId || null : null
-            maestroBaseline = baseline
-            log.important('Now owned by "%s"', currentGroup.email)
-            log.info('Subscribing to group channel "%s"', currentGroup.group)
-            channels.register(currentGroup.group, {
-              timeout: leaseId ? Infinity : timeout || options.groupTimeout, alias: solo.channel
-            })
-            sub.subscribe(currentGroup.group)
-            push.send([wireutil.global, wireutil.envelope(new wire.JoinGroupMessage(
-              options.serial, currentGroup, usage, leaseId, automationRunner
-            ))])
-            plugin.emit('join', currentGroup, identifier)
-            return currentGroup
+          if (stopping) {
+            throw new Error('Device worker is stopping')
+          }
+          const group = new wire.OwnerMessage({...newGroup, reservationId: randomUUID()})
+          if (usage === 'automation' && leaseId) {
+            automationLease.start(group.email, leaseId, timeout || options.groupTimeout)
+          }
+          currentGroup = group
+          currentLeaseId = usage === 'automation' ? leaseId || null : null
+          log.important('Now owned by "%s"', currentGroup.email)
+          log.info('Subscribing to group channel "%s"', currentGroup.group)
+          channels.register(currentGroup.group, {
+            timeout: leaseId ? Infinity : timeout || options.groupTimeout, alias: solo.channel
           })
+          sub.subscribe(currentGroup.group)
+          push.send([wireutil.global, wireutil.envelope(new wire.JoinGroupMessage(
+            options.serial, currentGroup, usage, leaseId
+          ))])
+          plugin.emit('join', currentGroup, identifier)
+          return currentGroup
         })
       joining = operation
       return operation.finally(function() {
@@ -166,17 +128,12 @@ export default syrup.serial()
         return leaving
       }
       const operation = Promise.resolve(joining).reflect().then(() => plugin.get())
-        .then(async function(group) {
+        .then(function(group) {
           if (managedUngroup()) {
             throw new grouputil.RequirementMismatchError('leaseId')
           }
           if (reservationId && group.reservationId !== reservationId) {
             throw new grouputil.RequirementMismatchError('reservationId')
-          }
-          if (maestroBaseline) {
-            // A timeout or coordinator outage may end access, but cannot make a running driver free.
-            // Retain ownership and the lease ID after failure so the caller can retry cleanup.
-            await cleanupMaestroDevice(executeMaestro, maestroBaseline)
           }
           log.important('No longer owned by "%s" (reason: %s)', group.email, reason)
           log.info('Unsubscribing from group channel "%s"', group.group)
@@ -187,7 +144,6 @@ export default syrup.serial()
           ))])
           automationLease.clear()
           currentLeaseId = null
-          maestroBaseline = null
           currentGroup = null
           plugin.emit('leave', group)
           return group
@@ -223,7 +179,6 @@ export default syrup.serial()
           .then(function() {
             return plugin.join(
               message.owner, message.timeout, message.usage, undefined, message.leaseId
-              , message.automationRunner
             )
           })
           .then(function(owner) {

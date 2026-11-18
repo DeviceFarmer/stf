@@ -2621,9 +2621,6 @@ definitions:
           leaseId:
             description: Exact requested automation lease fence, when supplied
             type: string
-          automationRunner:
-            type: string
-            enum: [maestro]
   AddUserDevicePayload:
     description: payload object for adding device to user
     required:
@@ -2636,10 +2633,6 @@ definitions:
         description: Optional coordinator fence; renew and release require this exact ID
         type: string
         pattern: '^[A-Za-z0-9_-]{1,128}$'
-      automationRunner:
-        description: Requires leaseId and provider acknowledgment of native Maestro cleanup
-        type: string
-        enum: [maestro]
       timeout:
         description: Device timeout in ms. If device is kept idle for this period, it will be automatically disconnected. Default is provider group timeout
         type: integer

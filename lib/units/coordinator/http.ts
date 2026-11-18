@@ -1,9 +1,6 @@
-import type http from 'node:http'
 import express from 'express'
 import type {ErrorRequestHandler} from 'express'
-import {WebSocketServer, createWebSocketStream} from 'ws'
 import {CoordinatorAccess, type Principal} from './access.js'
-import {LeaseAdbBridge} from './adb-bridge.js'
 import {CoordinatorError} from './config.js'
 import {validMaintenanceId, validMaintenanceSerial} from './maintenance.js'
 import {Coordinator} from './engine.js'
@@ -18,8 +15,8 @@ function allocation(body: unknown, options: CoordinatorOptions): AllocationInput
     , 'maxDurationSeconds']
   if (Object.keys(value).some(key => !keys.includes(key)) ||
       (value.platform !== 'Android' && value.platform !== 'iOS') ||
-      (value.runner !== undefined && value.runner !== 'appium' && value.runner !== 'maestro')) {
-    throw new CoordinatorError(400, 'invalid_request', 'Unknown field or unsupported platform')
+      (value.runner !== undefined && value.runner !== 'appium')) {
+    throw new CoordinatorError(400, 'invalid_request', 'Unknown field, platform or runner')
   }
   for (const key of ['runId', 'serial', 'model', 'provider']) {
     if (value[key] !== undefined && (typeof value[key] !== 'string' ||
@@ -213,92 +210,4 @@ export function createCoordinatorApp(engine: Coordinator, credential: string | C
   }
   app.use(errors)
   return app
-}
-
-/** Every smart-socket connection is authenticated and pinned to one live project lease. */
-export function attachCoordinatorAdb(server: http.Server, engine: Coordinator,
-  access: CoordinatorAccess) {
-  const bridge = new LeaseAdbBridge()
-  const sockets = new WebSocketServer({noServer: true, maxPayload: 1024 * 1024
-    , perMessageDeflate: false})
-  const ownership = new Map<string, {validUntil: number, pending: Promise<void> | null}>()
-  engine.setAdbCloser(id => {
-    ownership.delete(id)
-    bridge.closeLease(id)
-  })
-  async function assertOwner(id: string, refresh = false) {
-    engine.assertAdbActive(id)
-    let check = ownership.get(id)
-    if (!check) {
-      check = {validUntil: 0, pending: null}
-      ownership.set(id, check)
-    }
-    if (!check.pending && (refresh || check.validUntil <= performance.now())) {
-      const validUntil = performance.now() + 1000
-      const entry = check
-      entry.pending = engine.authorizeAdb(id).then(() => {
-        entry.validUntil = validUntil
-      }).finally(() => {
-        entry.pending = null
-      })
-    }
-    await check.pending
-    engine.assertAdbActive(id)
-    if (check.validUntil <= performance.now()) {
-      throw new CoordinatorError(503, 'adb_ownership_unconfirmed',
-        'STF ownership check was too slow')
-    }
-  }
-  server.on('upgrade', async(req, socket, head) => {
-    try {
-      const match = /^\/api\/v1\/leases\/([A-Za-z0-9_-]{1,128})\/adb$/.exec(req.url || '')
-      const identity = access.authenticate(req.headers.authorization)
-      if (!identity) {
- throw new CoordinatorError(401, 'unauthorized', 'Authentication required')
-}
-      if (!match) {
- throw new CoordinatorError(404, 'not_found', 'Route not found')
-}
-      const id = match[1]!
-      access.assertProject(identity, engine.leaseProject(id), 'lease')
-      await assertOwner(id, true)
-      const target = engine.adbTarget(id)
-      sockets.handleUpgrade(req, socket, head, ws => {
-        ws.on('error', () => {})
-        ws.on('message', (_data, binary) => {
- if (!binary) {
- ws.close(1003, 'Binary data required')
-}
-})
-        const stream = createWebSocketStream(ws)
-        // ws streams disable autoDestroy. A closed WebSocket must release its duplex
-        // even when metadata reads leave the readable side paused at EOF.
-        ws.once('close', () => stream.destroy())
-        // A normal smart-socket EOF has an explicit close code. Destroy/revocation
-        // continues to terminate the WebSocket, so the worker stops its test.
-        stream._final = done => {
-          if (ws.readyState === ws.CLOSED) {
- done()
-}
-          else {
-            ws.once('close', () => done())
-            ws.close(1000)
-          }
-        }
-        bridge.accept(stream, target, fresh => assertOwner(id, fresh))
-      })
-    }
-    catch (error) {
-      const status = error instanceof CoordinatorError ? error.status : 500
-      socket.end(`HTTP/1.1 ${status} Rejected\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`)
-    }
-  })
-  return {close() {
-    bridge.close()
-    ownership.clear()
-    for (const ws of sockets.clients) {
- ws.terminate()
-}
-    sockets.close()
-  }}
 }

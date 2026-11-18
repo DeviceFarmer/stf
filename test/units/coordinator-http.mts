@@ -1,14 +1,11 @@
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import net from 'node:net'
 import {once} from 'node:events'
 import {createHash} from 'node:crypto'
-import WebSocket from 'ws'
 import {Coordinator} from '../../lib/units/coordinator/engine.js'
 import {HttpFarmBackend} from '../../lib/units/coordinator/backend.js'
-import {createCoordinatorApp, attachCoordinatorAdb} from '../../lib/units/coordinator/http.js'
+import {createCoordinatorApp} from '../../lib/units/coordinator/http.js'
 import {CoordinatorAccess} from '../../lib/units/coordinator/access.js'
-import {adbRequest, readAdbBytes} from '../../lib/units/coordinator/adb-bridge.js'
 import type {StateStore} from '../../lib/units/coordinator/state.js'
 import type {CoordinatorOptions, CoordinatorState, FarmDevice, GridSlot, GridStatus} from
   '../../lib/units/coordinator/types.js'
@@ -65,18 +62,14 @@ class MemoryStore implements StateStore {
 
 describe('coordinator HTTP and real upstream adapters', function() {
   const servers: http.Server[] = []
-  const bridges: {close(): void}[] = []
   afterEach(function() {
-    for (const bridge of bridges.splice(0)) {
- bridge.close()
-}
     for (const server of servers.splice(0)) {
       server.closeAllConnections()
       server.close()
     }
   })
 
-  async function fixture(start = true, projects = false, adb = {host: 'adb.test', port: 5037}) {
+  async function fixture(start = true, projects = false) {
     let time = Date.parse('2026-10-18T00:00:00Z')
     const store = new MemoryStore()
     const devices: FarmDevice[] = ['phone-a', 'phone-b'].map(serial => ({
@@ -132,8 +125,7 @@ describe('coordinator HTTP and real upstream adapters', function() {
         device.owner = {email: owner}
         device.usage = 'automation'
         device.automationLeaseId = body.leaseId
-        return reply(res, {success: true
-          , ...(body.automationRunner ? {automationRunner: body.automationRunner} : {})})
+        return reply(res, {success: true, leaseId: body.leaseId})
       }
       const operation =
         /^\/api\/v1\/user\/devices\/([^/]+)\/automation\/(renew|release)$/.exec(route)
@@ -204,9 +196,7 @@ describe('coordinator HTTP and real upstream adapters', function() {
       , maxDurationSeconds: 21600, maxParallel: 2, upstreamTimeoutSeconds: 1
     }
     const backend = new HttpFarmBackend(stfUrl, gridUrl, stfToken, 1000)
-    backend.maestroBaseline = async() => ({packages: [], settings: {}})
-    backend.maestroPrepare = async() => {}
-    const engine = new Coordinator(options, [{provider: 'android-pool', ...adb
+    const engine = new Coordinator(options, [{provider: 'android-pool', host: 'adb.test', port: 5037
       , systemPorts: [8200, 8201]}], backend, store, () => time)
     if (start) {
       await engine.start()
@@ -216,7 +206,6 @@ describe('coordinator HTTP and real upstream adapters', function() {
     , {id: 'b', tokenSha256: createHash('sha256').update(projectB).digest('hex'), maxParallel: 1}
     ] : [])
     const app = http.createServer(createCoordinatorApp(engine, access))
-    bridges.push(attachCoordinatorAdb(app, engine, access))
     servers.push(app)
     const url = await listen(app)
     options.publicUrl = url
@@ -415,14 +404,14 @@ describe('coordinator HTTP and real upstream adapters', function() {
     assert.equal(f.stfCalls.filter(item => item.method === 'POST').length, 0)
   })
 
-  it('does not persist allocation requests with array-valued platform or runner', async() => {
+  it('does not persist allocation requests with unsupported platforms or runners', async() => {
     const f = await fixture(true, true)
     const before = structuredClone(f.store.state)
     const body = {runId: 'run-a', platform: 'Android', runner: 'appium'}
     const key = {'Idempotency-Key': 'project-request'}
     const auth = 'Bearer ' + projectA
     for (const invalid of [{platform: ['Android']}, {platform: ['iOS']}
-      , {runner: ['appium']}, {runner: ['maestro']}]) {
+      , {runner: ['appium']}, {runner: 'maestro'}]) {
       const response = await f.call('/api/v1/requests', 'POST', {...body, ...invalid}, auth, key)
       assert.equal(response.status, 400, JSON.stringify(invalid))
       assert.equal(response.body.error.code, 'invalid_request')
@@ -812,138 +801,6 @@ describe('coordinator HTTP and real upstream adapters', function() {
     await f.engine.tick()
     assert.equal((await f.call('/api/v1/requests/' + queued.id, 'GET', undefined,
       'Bearer ' + projectA)).body.request.state, 'allocated')
-  })
-
-  it('authenticates, pins and revokes ADB WebSockets', async function() {
-    const f = await fixture(true, true)
-    const result = await f.call('/api/v1/requests', 'POST',
-      {runId: 'maestro', runner: 'maestro', platform: 'Android'},
-      'Bearer ' + projectA, {'Idempotency-Key': 'maestro'})
-    assert.equal(result.status, 202)
-    await f.engine.tick()
-    const request = (await f.call('/api/v1/requests/' + result.body.request.id, 'GET',
-      undefined, 'Bearer ' + projectA)).body.request
-    assert.equal(request.state, 'allocated')
-    const lease = (await f.call('/api/v1/leases/' + request.leaseId, 'GET', undefined,
-      'Bearer ' + projectA)).body.lease
-    const url = f.url.replace(/^http/, 'ws') + lease.connection.path
-    const denied = (token: string) => new Promise<number>((resolve, reject) => {
-      const ws = new WebSocket(url, {headers: {Authorization: 'Bearer ' + token}})
-      ws.on('error', () => {})
-      ws.on('open', () => {
- ws.terminate(); reject(new Error('Unauthorized upgrade succeeded'))
-})
-      ws.on('unexpected-response', (_req, res) => {
- res.resume(); resolve(res.statusCode!)
-})
-    })
-    assert.equal(await denied('invalid'), 401)
-    assert.equal(await denied(projectB), 404)
-    const ws = new WebSocket(url, {headers: {Authorization: 'Bearer ' + projectA}})
-    ws.on('error', () => {})
-    await once(ws, 'open')
-    const chunks: Buffer[] = []
-    ws.on('message', data => chunks.push(Buffer.from(data as Buffer)))
-    const closed = once(ws, 'close')
-    ws.send(adbRequest('host:devices'), {binary: true})
-    assert.equal((await closed)[0], 1000)
-    const devices = Buffer.concat(chunks).toString()
-    assert.match(devices, new RegExp(lease.device.serial + '\\tdevice'))
-    assert.doesNotMatch(devices,
-      new RegExp(lease.device.serial === 'phone-a' ? 'phone-b' : 'phone-a'))
-    const idle = new WebSocket(url, {headers: {Authorization: 'Bearer ' + projectA}})
-    idle.on('error', () => {})
-    await once(idle, 'open')
-    const revoked = once(idle, 'close')
-    await f.call('/api/v1/leases/' + lease.id, 'DELETE', undefined, 'Bearer ' + projectA)
-    assert.notEqual((await revoked)[0], 1000)
-  })
-
-  it('closes an open ADB service when STF loses its original ownership fence', async function() {
-    this.timeout(4500)
-    const closedUpstream = deferred()
-    const upstream: {socket?: net.Socket} = {}
-    const request = async(socket: net.Socket) => {
-      const length = parseInt((await readAdbBytes(socket, 4)).toString(), 16)
-      return (await readAdbBytes(socket, length)).toString()
-    }
-    const adb = net.createServer(socket => {
-      upstream.socket = socket
-      socket.on('error', () => {})
-      socket.once('close', closedUpstream.resolve)
-      const serve = async() => {
-        assert.equal(await request(socket), 'host:transport:phone-a')
-        socket.write('OKAY')
-        assert.equal(await request(socket), 'shell:echo ready')
-        socket.write('OKAY')
-        socket.on('data', chunk => socket.write(chunk))
-      }
-      serve().catch(error => socket.destroy(error as Error))
-    })
-    adb.listen(0, '127.0.0.1')
-    await once(adb, 'listening')
-    try {
-      const port = (adb.address() as net.AddressInfo).port
-      const f = await fixture(true, true, {host: '127.0.0.1', port})
-      const auth = 'Bearer ' + projectA
-      const submitted = await f.call('/api/v1/requests', 'POST',
-        {runId: 'ownership-changes', runner: 'maestro', platform: 'Android'}
-      , auth, {'Idempotency-Key': 'ownership-changes'})
-      assert.equal(submitted.status, 202)
-      await f.engine.tick()
-      const allocated = f.engine.requestView(submitted.body.request.id)
-      assert.ok(allocated.leaseId)
-      const lease = f.engine.leaseView(allocated.leaseId)
-      const ws = new WebSocket(f.url.replace(/^http/, 'ws') + lease.connection.path,
-        {headers: {Authorization: auth}})
-      ws.on('error', () => {})
-      await once(ws, 'open')
-      const exchange = async(bytes: Buffer) => {
-        const reply = once(ws, 'message')
-        ws.send(bytes, {binary: true})
-        return (await reply)[0].toString()
-      }
-      assert.equal(await exchange(adbRequest('host:transport:phone-a')), 'OKAY')
-      assert.equal(await exchange(adbRequest('shell:echo ready')), 'OKAY')
-      assert.equal(await exchange(Buffer.from('interactive-shell')), 'interactive-shell')
-
-      const revoked = once(ws, 'close')
-      const device = f.devices.find(candidate => candidate.serial === 'phone-a')!
-      device.owner = {email: 'other-owner@example.test'}
-      device.automationLeaseId = 'other-lease'
-      assert.notEqual((await revoked)[0], 1000)
-      await closedUpstream.promise
-      assert.equal(f.engine.leaseView(lease.id).state, 'cleaning')
-      assert.equal(device.automationLeaseId, 'other-lease')
-    }
-    finally {
-      upstream.socket?.destroy()
-      adb.close()
-    }
-  })
-
-  it('reclaims normal ADB EOF streams across repeated Dadb metadata connections', async function() {
-    const f = await fixture(true, true)
-    const result = await f.call('/api/v1/requests', 'POST',
-      {runId: 'maestro-many-connections', runner: 'maestro', platform: 'Android'},
-      'Bearer ' + projectA, {'Idempotency-Key': 'maestro-many-connections'})
-    assert.equal(result.status, 202)
-    await f.engine.tick()
-    const request = (await f.call('/api/v1/requests/' + result.body.request.id, 'GET',
-      undefined, 'Bearer ' + projectA)).body.request
-    const lease = f.engine.leaseView(request.leaseId)
-    const url = f.url.replace(/^http/, 'ws') + lease.connection.path
-    for (let count = 0; count < 100; count++) {
-      const ws = new WebSocket(url, {headers: {Authorization: 'Bearer ' + projectA}})
-      ws.on('error', () => {})
-      await once(ws, 'open')
-      const chunks: Buffer[] = []
-      ws.on('message', data => chunks.push(Buffer.from(data as Buffer)))
-      const closed = once(ws, 'close')
-      ws.send(adbRequest('host:devices'), {binary: true})
-      assert.equal((await closed)[0], 1000, 'Normal metadata request ' + count)
-      assert.ok(Buffer.concat(chunks).includes(Buffer.from(lease.device.serial)))
-    }
   })
 
   it('redacts storage and upstream errors from HTTP responses and status', async function() {

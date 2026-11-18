@@ -1,6 +1,3 @@
-import type {MaestroBaseline} from '../../util/maestro-device.js'
-export type {MaestroBaseline} from '../../util/maestro-device.js'
-
 export interface AdbPool {
   provider: string
   host: string
@@ -15,7 +12,7 @@ export interface CoordinatorOptions {
   stfApiUrl: string
   stfTokenFile: string
   apiTokenFile: string
-  appiumGridUrl?: string
+  appiumGridUrl: string
   stateFile: string
   adbPoolsFile: string
   projectTokensFile?: string
@@ -28,15 +25,13 @@ export interface CoordinatorOptions {
 }
 
 export type Platform = 'Android' | 'iOS'
-export type Runner = 'appium' | 'maestro'
-
 export type RequestState = 'queued' | 'allocated' | 'cancelled' | 'expired' | 'failed'
 export type LeaseState = 'allocating' | 'active' | 'cleaning' |
   'released' | 'expired' | 'quarantined'
 
 export interface AllocationInput {
   runId: string
-  runner?: Runner
+  runner?: 'appium'
   platform: Platform
   serial?: string
   model?: string
@@ -109,9 +104,7 @@ export interface Lease {
   projectId?: string
   requestId: string
   runId: string
-  runner?: Runner
-  maestroBaseline?: MaestroBaseline
-  maestroCleanupConfirmed?: boolean
+  runner?: 'appium'
   state: LeaseState
   device: FarmDevice
   capabilities: Record<string, unknown>
@@ -156,11 +149,8 @@ export interface FarmBackend {
   identity(): Promise<{email: string}>
   devices(): Promise<FarmDevice[]>
   grid(options?: {allowBusy?: boolean}): Promise<GridStatus>
-  capture(serial: string, leaseId: string, timeout: number, runner?: Runner): Promise<void>
+  capture(serial: string, leaseId: string, timeout: number): Promise<void>
   renew(serial: string, leaseId: string, timeout: number): Promise<void>
   release(serial: string, leaseId: string): Promise<void>
-  maestroBaseline?(device: FarmDevice): Promise<MaestroBaseline>
-  maestroPrepare?(device: FarmDevice): Promise<void>
-  maestroCleanup?(device: FarmDevice, baseline: MaestroBaseline): Promise<void>
   webdriver(method: string, path: string, body?: unknown): Promise<UpstreamResponse>
 }

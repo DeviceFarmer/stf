@@ -488,7 +488,7 @@ message GroupMessage {
   repeated DeviceRequirement requirements = 3;
   optional string usage = 4;
   optional string leaseId = 5;
-  optional string automationRunner = 6;
+  reserved 6;
 }
 
 message AutomationLeaseMessage {
@@ -514,7 +514,7 @@ message JoinGroupMessage {
   required OwnerMessage owner = 2;
   optional string usage = 3;
   optional string leaseId = 4;
-  optional string automationRunner = 5;
+  reserved 5;
 }
 
 message JoinGroupByAdbFingerprintMessage {

@@ -9,6 +9,7 @@ import {validateOptions} from '../../lib/units/coordinator/config.js'
 
 const required = [
   '--stf-api-url', 'http://stf.example.test/api/v1'
+, '--appium-grid-url', 'http://grid.example.test'
 , '--stf-token-file', '/secrets/stf-token'
 , '--api-token-file', '/secrets/api-token'
 , '--state-file', '/state/coordinator.json'
@@ -37,22 +38,19 @@ describe('coordinator CLI', () => {
     assert.equal(argv.upstreamTimeoutSeconds, 30)
     assert.equal(argv.stfTokenFile, '/secrets/stf-token')
     assert.equal(argv.apiTokenFile, '/secrets/api-token')
-    assert.equal(typeof argv.appiumGridUrl, 'undefined')
+    assert.equal(argv.appiumGridUrl, 'http://grid.example.test')
   })
 
-  it('allows Maestro-only Android pools alongside optional Appium Grid', async() => {
+  it('validates the configured Appium Grid URL and Android ADB pools', async() => {
     const directory = await mkdtemp(path.join(tmpdir(), 'stf-coordinator-options-'))
     try {
-      const pools = [{provider: 'android', host: 'adb', port: 5037, systemPorts: []}]
-      const {appiumGridUrl, projectTokensFile, ...argv} = parse(required)
-      assert.equal(appiumGridUrl, undefined)
+      const pools = [{provider: 'android', host: 'adb', port: 5037, systemPorts: [8200]}]
+      const {projectTokensFile, ...argv} = parse(required)
       assert.equal(projectTokensFile, undefined)
       const config = {...argv, stateFile: path.join(directory, 'state.json')
         , adbPoolsFile: path.join(directory, 'pools.json')}
       await writeFile(config.adbPoolsFile, JSON.stringify(pools))
       assert.deepEqual(await validateOptions(config), pools)
-      assert.deepEqual(await validateOptions({...config, appiumGridUrl: 'http://grid.example.test'}),
-        pools)
       await assert.rejects(validateOptions({...config, appiumGridUrl: ''}), /Invalid URL/)
     }
     finally {
@@ -82,6 +80,9 @@ describe('coordinator CLI', () => {
     const withoutState = required.filter(value =>
       !['--state-file', '/state/coordinator.json'].includes(value))
     assert.throws(() => parse(withoutState), /state-file/)
+    const withoutGrid = required.filter(value =>
+      !['--appium-grid-url', 'http://grid.example.test'].includes(value))
+    assert.throws(() => parse(withoutGrid), /appium-grid-url/)
     for (const flag of ['--api-token', '--stf-token']) {
       assert.throws(() => parse([...required, flag, 'not-supported']), /Unknown argument/)
     }
@@ -101,6 +102,7 @@ describe('coordinator CLI', () => {
     return Promise.resolve(output).then(help => {
       assert.match(help, /--state-file/)
       assert.match(help, /--api-token-file/)
+      assert.match(help, /--appium-grid-url/)
       assert.match(help, /STF_COORDINATOR_/)
       assert.match(help, /exactly one coordinator/)
     })

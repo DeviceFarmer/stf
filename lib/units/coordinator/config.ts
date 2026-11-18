@@ -39,9 +39,7 @@ export async function validateOptions(options: CoordinatorOptions): Promise<AdbP
   }
   endpoint(options.publicUrl)
   endpoint(options.stfApiUrl)
-  if (typeof options.appiumGridUrl !== 'undefined') {
-    endpoint(options.appiumGridUrl)
-  }
+  endpoint(options.appiumGridUrl)
   if (!path.isAbsolute(options.stateFile)) {
     throw new Error('stateFile must be an absolute path on persistent storage')
   }

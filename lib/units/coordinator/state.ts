@@ -1,6 +1,7 @@
 import {chmod, mkdir, open, readFile, rename, unlink} from 'node:fs/promises'
 import path from 'node:path'
 import {randomUUID} from 'node:crypto'
+import {CoordinatorError} from './config.js'
 import type {CoordinatorState} from './types.js'
 import {validMaintenanceId, validMaintenanceSerial} from './maintenance.js'
 
@@ -16,6 +17,16 @@ export class FileStateStore implements StateStore {
     try {
       const state = JSON.parse(await readFile(this.filename, 'utf8')) as
         Omit<CoordinatorState, 'version'> & {version: number}
+      const unsupportedRunner = (runner: unknown) =>
+        typeof runner !== 'undefined' && runner !== 'appium'
+      const requests = state?.requests
+      const leases = state?.leases
+      if (Array.isArray(requests) &&
+          requests.some(request => unsupportedRunner(request?.input?.runner)) ||
+          Array.isArray(leases) && leases.some(lease => unsupportedRunner(lease?.runner))) {
+        throw new CoordinatorError(503, 'unsupported_state_runner',
+          'Persistent state contains an unsupported runner; recovery information was preserved')
+      }
       const validTime = (value: unknown) => typeof value === 'number' &&
         Number.isSafeInteger(value) && value >= 0
       const requestStates = new Set(['queued', 'allocated', 'cancelled', 'expired', 'failed'])
@@ -39,19 +50,14 @@ export class FileStateStore implements StateStore {
           validTime(request.queueDeadlineAt) && request.input &&
           typeof request.input.runId === 'string' && request.input.runId &&
           ['Android', 'iOS'].includes(request.input.platform) &&
-          (request.input.runner === undefined ||
-            ['appium', 'maestro'].includes(request.input.runner)) &&
-          (request.input.runner !== 'maestro' || request.input.platform === 'Android') &&
           validTime(request.input.queueTimeoutSeconds) && request.input.queueTimeoutSeconds > 0 &&
           validTime(request.input.maxDurationSeconds) && request.input.maxDurationSeconds > 0) &&
         state.leases.every(lease => lease && typeof lease.id === 'string' && lease.id &&
           validProject(lease.projectId) &&
-          (lease.appiumNodeId === undefined || lease.runner !== 'maestro' &&
+          (lease.appiumNodeId === undefined ||
             typeof lease.appiumNodeId === 'string' && !!lease.appiumNodeId.trim() &&
             lease.appiumNodeId.length <= 256 &&
             typeof lease.sessionId === 'string' && !!lease.sessionId.trim()) &&
-          (lease.maestroCleanupConfirmed === undefined ||
-            typeof lease.maestroCleanupConfirmed === 'boolean') &&
           (lease.captureReconciliation === undefined ||
             lease.captureReconciliation !== null &&
             typeof lease.captureReconciliation === 'object' &&
@@ -69,22 +75,14 @@ export class FileStateStore implements StateStore {
             validProject(lease.captureReconciliation.projectId) &&
             ['released', 'expired'].includes(lease.state) &&
             lease.captureUncertain !== true && !lease.sessionId && !lease.creatingSession &&
-            !lease.commandInFlight && lease.runner !== 'maestro') &&
+            !lease.commandInFlight) &&
           typeof lease.requestId === 'string' && lease.requestId &&
           typeof lease.runId === 'string' && lease.runId && leaseStates.has(lease.state) &&
           validTime(lease.createdAt) && validTime(lease.expiresAt) && validTime(lease.deadlineAt) &&
           lease.device && typeof lease.device.serial === 'string' && lease.device.serial &&
           ['Android', 'iOS'].includes(lease.device.platform) && lease.capabilities &&
           typeof lease.capabilities === 'object' && !Array.isArray(lease.capabilities) &&
-          (lease.runner === 'maestro' ? lease.device.platform === 'Android' &&
-            (!lease.maestroBaseline || Array.isArray(lease.maestroBaseline.packages) &&
-              lease.maestroBaseline.packages.every(name => typeof name === 'string') &&
-              lease.maestroBaseline.settings &&
-              typeof lease.maestroBaseline.settings === 'object' &&
-              Object.values(lease.maestroBaseline.settings)
-                .every(value => typeof value === 'string')) :
-            (lease.runner === undefined || lease.runner === 'appium') &&
-              lease.capabilities['appium:udid'] === lease.device.serial))
+          lease.capabilities['appium:udid'] === lease.device.serial)
       if (!valid || new Set(state.requests.map(request => request.id)).size !==
           state.requests.length || new Set(state.requests.map(request =>
           (request.projectId || 'legacy') + '\0' + request.key)).size !==
