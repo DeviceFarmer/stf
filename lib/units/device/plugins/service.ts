@@ -58,7 +58,11 @@ class MessageResolver {
     }
 
     this.resolve = function(this: MessageResolver, id, value) {
-      var pending = this.resolvers[id]!
+      var pending = this.resolvers[id]
+      if (!pending) {
+        // A reply nobody waits for, such as a duplicate one.
+        return Promise.resolve(value)
+      }
       delete this.resolvers[id]
       pending.resolve(value)
       return pending.promise
@@ -584,15 +588,27 @@ export default syrup.serial()
         })
     }
 
+    // The reply was a success that carries no text, so there is nothing the
+    // service could add to it.
+    class ClipboardNotTextError extends Error {}
+
     function readClipboardResponse(data: Buffer) {
       var response = apk.wire.GetClipboardResponse.decode(data)
-      if (response.success) {
-        switch (response.type) {
-          case apk.wire.ClipboardType.TEXT:
-            return response.text
-        }
+      if (response.success && response.type === apk.wire.ClipboardType.TEXT) {
+        return response.text
       }
       throw new Error('Unable to get clipboard')
+    }
+
+    function readAgentClipboardResponse(data: Buffer) {
+      var response = apk.wire.GetClipboardResponse.decode(data)
+      if (!response.success) {
+        throw new Error('Agent reported a failure')
+      }
+      if (response.type !== apk.wire.ClipboardType.TEXT) {
+        throw new ClipboardNotTextError('Unable to get clipboard')
+      }
+      return response.text
     }
 
     function getClipboardFromService() {
@@ -617,10 +633,13 @@ export default syrup.serial()
           )
         )
         .timeout(5000)
-        .then(readClipboardResponse)
+        .then(readAgentClipboardResponse)
         .catch(function(err) {
+          if (err instanceof ClipboardNotTextError) {
+            throw err
+          }
           log.warn(
-            'Agent was unable to get clipboard, asking the service: %s'
+            'Could not get the clipboard from the agent, asking the service: %s'
           , err.message
           )
           return getClipboardFromService()

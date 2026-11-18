@@ -30,7 +30,7 @@ interface Wire {
   }
 }
 
-type Reply = {success: boolean, text?: string | null} | null
+type Reply = {success: boolean, text?: string | null, notText?: boolean} | null
 
 interface DeviceOptions {
   // Whether the wire definition, and so the APK it ships with, has the request
@@ -95,13 +95,13 @@ function deviceSocket(wire: Wire, respond: (envelope: Envelope) => Reply) {
       , envelope.type
       , new wire.GetClipboardResponse(
           reply.success
-        , reply.success ? wire.ClipboardType.TEXT! : null
+        , reply.success && !reply.notText ? wire.ClipboardType.TEXT! : null
         , 'text' in reply ? reply.text : null
         ).encode()
       ).encode())
     }
   })
-  return {conn: conn, requests: requests}
+  return {conn: conn, requests: requests, fromDevice: fromDevice}
 }
 
 async function connect(options: DeviceOptions) {
@@ -213,6 +213,39 @@ describe('device clipboard', function() {
     expect(await device.plugin.copy()).to.equal('from service')
     expect(device.agent.requests).to.have.length(1)
     expect(device.service.requests).to.have.length(1)
+  })
+
+  it('should not ask the service when the agent succeeds without text', async function() {
+    var device = await connect({
+      agentClipboard: true
+    , sdk: 34
+    , agent: {success: true, notText: true}
+    })
+
+    var error = await device.plugin.copy().then(function() {
+      return null
+    }, function(err: Error) {
+      return err
+    })
+    expect(error).to.have.property('message', 'Unable to get clipboard')
+    expect(device.agent.requests).to.have.length(1)
+    expect(device.service.requests).to.have.length(0)
+  })
+
+  it('should ignore a reply nobody waits for', async function() {
+    var device = await connect({agentClipboard: true, sdk: 34})
+    var stray = new device.wire.Envelope(
+      1
+    , device.wire.MessageType.GET_CLIPBOARD!
+    , new device.wire.GetClipboardResponse(false, null, null).encode()
+    ).encode()
+
+    device.agent.fromDevice.write(stray)
+    device.service.fromDevice.write(stray)
+    await new Promise(function(resolve) {
+      setImmediate(resolve)
+    })
+    expect(await device.plugin.copy()).to.equal('from agent')
   })
 
   it('should ask the service when the agent does not answer', async function() {
