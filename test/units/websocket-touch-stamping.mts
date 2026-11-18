@@ -73,6 +73,7 @@ function fixture() {
     server.restore()
   }
   const listeners = new Map<string, Listener>()
+  const emitted: unknown[][] = []
   let guard: (packet: readonly unknown[], next: (error?: Error) => void) => void
   const socket = {
     request: {user: {email: 'owner@example.test', name: 'Owner', group: 'private'
@@ -81,7 +82,9 @@ function fixture() {
     , use(callback: typeof guard) {
       guard = callback
     }
-    , emit() {}
+    , emit(...args: unknown[]) {
+      emitted.push(args)
+    }
     , on(event: string, callback: Listener) {
       listeners.set(event, callback)
       return socket
@@ -111,6 +114,10 @@ function fixture() {
     }
     , failLoad: () => {
       failLoad = true
+    }
+    , emitted
+    , publish(channel: string, envelope: Buffer) {
+      transports[1]!.emit('message', Buffer.from(channel), envelope)
     }
     , envelopes: (): ReturnType<typeof wire.Envelope.decode>[] =>
       transports[0]!.send.getCalls().map((call: {args: any[]}) =>
@@ -381,6 +388,26 @@ describe('server generated touch identity', function() {
       assert.equal(reset.gestureId, starts[1]!.gestureId)
       assert.equal(reset.reservationId, starts[1]!.reservationId)
       assert.equal(reset.cancel, true)
+    }
+    finally {
+      await f.close()
+    }
+  })
+})
+
+describe('two-way device commands', function() {
+  it('delivers the device reply to device.identify', async function() {
+    const f = fixture()
+    try {
+      await f.dispatch('device.identify', 'tx.identify' as unknown as object)
+      const sent = f.envelopes()
+      assert.equal(sent.length, 1)
+      assert.equal(sent[0]!.type, wire.PhysicalIdentifyMessage.$code)
+      f.publish('tx.identify', wireutil.reply('PHONE').okay())
+      const done = f.emitted.filter(args => args[0] === 'tx.done')
+      assert.equal(done.length, 1)
+      assert.equal(done[0]![1], 'tx.identify')
+      assert.equal((done[0]![2] as {success: boolean}).success, true)
     }
     finally {
       await f.close()
