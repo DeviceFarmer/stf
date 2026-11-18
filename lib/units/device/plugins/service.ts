@@ -58,7 +58,11 @@ class MessageResolver {
     }
 
     this.resolve = function(this: MessageResolver, id, value) {
-      var pending = this.resolvers[id]!
+      var pending = this.resolvers[id]
+      if (!pending) {
+        // A reply nobody waits for, such as a duplicate one.
+        return Promise.resolve(value)
+      }
       delete this.resolvers[id]
       pending.resolve(value)
       return pending.promise
@@ -87,8 +91,21 @@ export default syrup.serial()
     var agent = {
       socket: null as LocalSocket | null
     , writer: null as Transform | null
+    , reader: null as Transform | null
     , sock: 'localabstract:stfagent'
     }
+
+    // Since Android 10 the service may not read the clipboard unless it has
+    // focus, while the agent, having the shell uid, still may. We cannot ask
+    // the agent whether it handles the request: one that does not know the
+    // type (STFService up to 2.5.9) stops reading from the connection for
+    // good, which would also silence every key event sent after it. The APK
+    // on the device always has the version of the package that the wire
+    // definition comes from though (see resources/service), so if the
+    // definition has the request type, the agent on the device answers it.
+    var agentClipboardType = sdk.level >= 29 ?
+      (apk.wire.MessageType as {AGENT_GET_CLIPBOARD?: number}).AGENT_GET_CLIPBOARD ?? null :
+      null
 
     var service = {
       socket: null as LocalSocket | null
@@ -337,6 +354,8 @@ export default syrup.serial()
         })
         .then(function(conn) {
           agent.socket = conn
+          agent.reader = conn.pipe(new ms.DelimitedStream()) as Transform
+          agent.reader.on('data', handleEnvelope)
           agent.writer = new ms.DelimitingStream() as Transform
           agent.writer.pipe(conn)
           return prepareForAgentDeath(conn)
@@ -383,18 +402,27 @@ export default syrup.serial()
       return plugin.getClipboard()
     }
 
-    function runServiceCommand(type: number, cmd: ServiceRequest) {
+    function runRequest(writer: Transform, type: number, cmd: ServiceRequest) {
       var resolve_!: (value: Buffer) => void
       var promise = new Promise<Buffer>(function(resolve) {
         resolve_ = resolve
       })
       var id = Math.floor(Math.random() * 0xFFFFFF)
-      service.writer!.write(new apk.wire.Envelope(
+      writer.write(new apk.wire.Envelope(
         id
         , type
         , cmd.encodeNB()
       ).encodeNB())
       return messageResolver.await(id, {resolve: resolve_, promise: promise})
+    }
+
+    function runServiceCommand(type: number, cmd: ServiceRequest) {
+      return runRequest(service.writer!, type, cmd)
+    }
+
+    // Unlike runAgentCommand(), this is for the requests the agent answers.
+    function runAgentRequest(type: number, cmd: ServiceRequest) {
+      return runRequest(agent.writer!, type, cmd)
     }
 
     plugin.getDisplay = function(id) {
@@ -560,7 +588,30 @@ export default syrup.serial()
         })
     }
 
-    plugin.getClipboard = function() {
+    // The reply was a success that carries no text, so there is nothing the
+    // service could add to it.
+    class ClipboardNotTextError extends Error {}
+
+    function readClipboardResponse(data: Buffer) {
+      var response = apk.wire.GetClipboardResponse.decode(data)
+      if (response.success && response.type === apk.wire.ClipboardType.TEXT) {
+        return response.text
+      }
+      throw new Error('Unable to get clipboard')
+    }
+
+    function readAgentClipboardResponse(data: Buffer) {
+      var response = apk.wire.GetClipboardResponse.decode(data)
+      if (!response.success) {
+        throw new Error('Agent reported a failure')
+      }
+      if (response.type !== apk.wire.ClipboardType.TEXT) {
+        throw new ClipboardNotTextError('Unable to get clipboard')
+      }
+      return response.text
+    }
+
+    function getClipboardFromService() {
       return runServiceCommand(
           apk.wire.MessageType.GET_CLIPBOARD
         , new apk.wire.GetClipboardRequest(
@@ -568,15 +619,30 @@ export default syrup.serial()
           )
         )
         .timeout(10000)
-        .then(function(data) {
-          var response = apk.wire.GetClipboardResponse.decode(data)
-          if (response.success) {
-            switch (response.type) {
-              case apk.wire.ClipboardType.TEXT:
-                return response.text
-            }
+        .then(readClipboardResponse)
+    }
+
+    plugin.getClipboard = function() {
+      if (agentClipboardType === null) {
+        return getClipboardFromService()
+      }
+      return runAgentRequest(
+          agentClipboardType
+        , new apk.wire.GetClipboardRequest(
+            apk.wire.ClipboardType.TEXT
+          )
+        )
+        .timeout(5000)
+        .then(readAgentClipboardResponse)
+        .catch(function(err) {
+          if (err instanceof ClipboardNotTextError) {
+            throw err
           }
-          throw new Error('Unable to get clipboard')
+          log.warn(
+            'Could not get the clipboard from the agent, asking the service: %s'
+          , err.message
+          )
+          return getClipboardFromService()
         })
     }
 
