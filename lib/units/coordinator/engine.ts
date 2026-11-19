@@ -22,6 +22,29 @@ function matchesAdbRoute(capabilities: Record<string, unknown>, pool: AdbPool) {
     (typeof port === 'undefined' || port === pool.port)
 }
 
+/** Only an explicit W3C argument rejection proves that no session was created. */
+function rejectedSessionCreation(response: UpstreamResponse) {
+  if (response.status !== 400 || !/^application\/json(?:\s*;|$)/i.test(response.contentType)) {
+    return false
+  }
+  try {
+    const record = (value: unknown): value is Record<string, unknown> =>
+      value !== null && typeof value === 'object' && !Array.isArray(value)
+    const result: unknown = JSON.parse(response.body.toString())
+    if (!record(result) || !record(result.value)) {
+      return false
+    }
+    const value = result.value
+    return value.error === 'invalid argument' && typeof value.message === 'string' &&
+      (typeof value.stacktrace === 'undefined' || typeof value.stacktrace === 'string') &&
+      (typeof result.sessionId === 'undefined' || result.sessionId === null) &&
+      (typeof value.sessionId === 'undefined' || value.sessionId === null)
+  }
+  catch {
+    return false
+  }
+}
+
 export class Coordinator {
   private state: CoordinatorState = {version: 2, requests: [], leases: [], maintenance: []}
   private queue: Promise<unknown> = Promise.resolve()
@@ -491,23 +514,37 @@ export class Coordinator {
         lease.device.serial === maintenance.serial) ? 'draining' as const : 'ready' as const}
   }
 
-  startMaintenance(serial: string, operationId: string) {
-    return this.exclusive(async() => {
+  async startMaintenance(serial: string, operationId: string) {
+    const existing = () => {
+      const maintenance = this.state.maintenance.find(item => item.id === operationId ||
+        item.serial === serial)
+      if (!maintenance) {
+        return null
+      }
+      if (maintenance.id !== operationId || maintenance.serial !== serial) {
+        throw new CoordinatorError(409, 'maintenance_conflict',
+          'Device or operation already drained')
+      }
+      return this.maintenanceView(maintenance.id)
+    }
+    const current = await this.exclusive(async() => {
       this.assertReady()
       if (!validMaintenanceSerial(serial) || !validMaintenanceId(operationId)) {
         throw new CoordinatorError(400, 'invalid_maintenance',
           'Expected a serial and operation UUID')
       }
-      const existing = this.state.maintenance.find(item => item.id === operationId ||
-        item.serial === serial)
-      if (existing) {
-        if (existing.id !== operationId || existing.serial !== serial) {
-          throw new CoordinatorError(409, 'maintenance_conflict',
-            'Device or operation already drained')
-        }
-        return this.maintenanceView(existing.id)
+      return existing()
+    })
+    if (current) {
+      return current
+    }
+    const devices = await this.backend.devices()
+    return this.exclusive(async() => {
+      this.assertReady()
+      const concurrent = existing()
+      if (concurrent) {
+        return concurrent
       }
-      const devices = await this.backend.devices()
       const matching = devices.filter(device => device.serial === serial)
       if (matching.length !== 1) {
         throw new CoordinatorError(404, 'device_not_found', 'Device not found')
@@ -522,16 +559,25 @@ export class Coordinator {
     })
   }
 
-  finishMaintenance(id: string) {
-    return this.exclusive(async() => {
+  async finishMaintenance(id: string) {
+    const maintenance = await this.exclusive(async() => {
       this.assertReady()
-      const maintenance = this.maintenanceView(id)
-      if (maintenance.state !== 'ready') {
+      if (this.maintenanceView(id).state !== 'ready') {
         throw new CoordinatorError(409, 'device_busy', 'Device still has coordinator leases')
       }
-      // The drain stays in place throughout fresh external checks and durable removal.
-      // No WDA restart or STF ownership mutation is performed by this API.
-      const [devices, grid] = await Promise.all([this.backend.devices(), this.backend.grid()])
+      return this.state.maintenance.find(item => item.id === id)!
+    })
+    // Keep the durable drain while external checks run without delaying other leases.
+    const [devices, grid] = await Promise.all([this.backend.devices(), this.backend.grid()])
+    return this.exclusive(async() => {
+      this.assertReady()
+      if (!this.state.maintenance.includes(maintenance)) {
+        throw new CoordinatorError(409, 'maintenance_conflict',
+          'Maintenance operation changed during verification')
+      }
+      if (this.maintenanceView(id).state !== 'ready') {
+        throw new CoordinatorError(409, 'device_busy', 'Device still has coordinator leases')
+      }
       const matches = devices.filter(device => device.serial === maintenance.serial)
       const device = matches.length === 1 ? matches[0]! : null
       const free = device && device.platform === 'iOS' && device.present && device.ready &&
@@ -565,7 +611,7 @@ export class Coordinator {
       if (!idle) {
         throw new CoordinatorError(409, 'device_busy', 'Grid session cleanup is not confirmed')
       }
-      this.state.maintenance = this.state.maintenance.filter(item => item.id !== id)
+      this.state.maintenance = this.state.maintenance.filter(item => item !== maintenance)
       await this.save()
       return {id, serial: maintenance.serial, state: 'completed' as const}
     })
@@ -1101,8 +1147,10 @@ export class Coordinator {
         , sessionId: string | undefined
         , appiumNodeId: string | undefined
       let sessionClosed = false
+      let creationRejected = false
       try {
         response = await this.backend.webdriver(method, route, payload)
+        creationRejected = create && rejectedSessionCreation(response)
         if (closingSession && response.status >= 200 && response.status < 300) {
           await this.confirmAppiumSessionEnded(closingSession)
           sessionClosed = true
@@ -1141,17 +1189,22 @@ export class Coordinator {
       await this.exclusive(async() => {
         delete lease.commandInFlight
         if (create) {
-          if (!sessionId) {
+          if (creationRejected) {
+            delete lease.creatingSession
+          }
+          else if (!sessionId) {
             lease.state = 'quarantined'
             lease.error = 'uncertain_session_creation'
             await this.save()
             throw new CoordinatorError(502, 'upstream_unknown', 'Appium session is uncertain')
           }
-          lease.sessionId = sessionId
-          if (appiumNodeId) {
-            lease.appiumNodeId = appiumNodeId
+          else {
+            lease.sessionId = sessionId
+            if (appiumNodeId) {
+              lease.appiumNodeId = appiumNodeId
+            }
+            delete lease.creatingSession
           }
-          delete lease.creatingSession
         }
         else if (sessionClosed) {
           delete lease.sessionId

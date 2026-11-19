@@ -101,11 +101,14 @@ class FakeFarm implements FarmBackend {
   createErrorAfterSession = false
   malformedCreate = false
   createStatus = 200
+  createResponse: UpstreamResponse | null = null
   deleteStatus = 200
   retainDeletedSession = false
   sessionCounter = 0
   gridError = false
   gridCalls = 0
+  gridBarrier: ReturnType<typeof deferred> | null = null
+  gridEntered: ReturnType<typeof deferred> | null = null
 
   async identity() {
     return {email: owner}
@@ -124,6 +127,10 @@ class FakeFarm implements FarmBackend {
 
   async grid() {
     this.gridCalls++
+    this.gridEntered?.resolve()
+    if (this.gridBarrier) {
+      await this.gridBarrier.promise
+    }
     if (this.gridError) {
  throw new Error('Grid unavailable')
 }
@@ -178,6 +185,9 @@ class FakeFarm implements FarmBackend {
     if (method === 'POST' && route === '/session') {
       if (this.createError) {
         throw new Error('Network failed after upstream may have created a session')
+      }
+      if (this.createResponse) {
+        return this.createResponse
       }
       if (this.malformedCreate) {
         return {status: 200, contentType: 'application/json', body: Buffer.from('invalid-json')}
@@ -1067,6 +1077,111 @@ describe('coordinator session isolation and uncertain cleanup', () => {
     assert.equal(engine.leaseView(lease.id).state, 'quarantined')
   })
 
+  it('preserves an explicit invalid-argument response and permits session retry or release',
+    async() => {
+    const error = {error: 'invalid argument', message: 'The requested activity is invalid'}
+    const envelopes = [
+      {value: error}
+    , {value: {...error, stacktrace: 'Driver argument validation'}}
+    , {sessionId: null, value: {...error, sessionId: null}}
+    ]
+    for (const [index, envelope] of envelopes.entries()) {
+      const {engine, allocate, create, farm, store} = await fixture()
+      const lease = await allocate()
+      const rejected = {status: 400, contentType: 'application/json; charset=utf-8'
+        , body: Buffer.from(JSON.stringify(envelope))}
+      farm.createResponse = rejected
+      assert.deepEqual(await engine.webdriver(lease.id, 'POST', '/session', {
+        capabilities: {alwaysMatch: {}}
+      }), rejected)
+      assert.equal(engine.leaseView(lease.id).state, 'active')
+      assert.equal(store.state.leases[0]!.creatingSession, undefined)
+      assert.equal(store.state.leases[0]!.commandInFlight, undefined)
+      assert.equal(store.state.leases[0]!.sessionId, undefined)
+      assert.equal(farm.sessionCounter, 0)
+      if (index === 1) {
+        farm.createResponse = null
+        assert.ok(await create(lease.id))
+      }
+      await engine.release(lease.id)
+      await engine.tick()
+      assert.equal(engine.leaseView(lease.id).state, 'released')
+      assert.equal(farm.inventory[0]!.owner, null)
+    }
+  })
+
+  it('does not accept an invalid-argument rejection until clearing its markers is durable',
+    async() => {
+    const {engine, allocate, farm, store} = await fixture()
+    const lease = await allocate()
+    const upstream = farm.webdriver.bind(farm)
+    farm.createResponse = response(400, {error: 'invalid argument', message: 'Invalid activity'})
+    farm.webdriver = async(...args: Parameters<FakeFarm['webdriver']>) => {
+      const result = await upstream(...args)
+      store.failWrites = true
+      return result
+    }
+    await rejectCode(engine.webdriver(lease.id, 'POST', '/session', {
+      capabilities: {alwaysMatch: {}}
+    }), 'state_unavailable', 503)
+    assert.equal(engine.ready, false)
+    assert.equal(store.state.leases[0]!.creatingSession, true)
+    assert.equal(store.state.leases[0]!.commandInFlight, true)
+  })
+
+  it('keeps cancellation fenced when a definite create rejection arrives late', async() => {
+    const {engine, allocate, farm, store} = await fixture()
+    const lease = await allocate()
+    const entered = deferred(); const barrier = deferred()
+    farm.webdriver = async() => {
+      entered.resolve()
+      await barrier.promise
+      return response(400, {error: 'invalid argument', message: 'Invalid activity'})
+    }
+    const create = engine.webdriver(lease.id, 'POST', '/session', {
+      capabilities: {alwaysMatch: {}}
+    })
+    const rejected = rejectCode(create, 'lease_inactive', 409)
+    await entered.promise
+    await engine.release(lease.id)
+    barrier.resolve()
+    await rejected
+    assert.equal(store.state.leases[0]!.creatingSession, undefined)
+    assert.equal(store.state.leases[0]!.commandInFlight, undefined)
+    await engine.tick()
+    assert.equal(engine.leaseView(lease.id).state, 'released')
+  })
+
+  it('keeps malformed or ambiguous create failures fenced despite invalid-argument text',
+    async() => {
+    const invalid = {error: 'invalid argument', message: 'Invalid activity'}
+    const samples = [
+      {status: 400, value: {error: 'unknown error', message: 'Invalid activity'}}
+    , {status: 400, value: {error: 'invalid argument'}}
+    , {status: 400, value: {...invalid, stacktrace: null}}
+    , {status: 400, value: {...invalid, sessionId: 'possible-session'}}
+    , {status: 400, value: {...invalid, sessionId: 0}}
+    , {status: 400, value: invalid, sessionId: 'possible-session'}
+    , {status: 500, value: invalid}
+    ]
+    const failures = samples.map(({status, ...envelope}) => ({status
+      , contentType: 'application/json', body: Buffer.from(JSON.stringify(envelope))}))
+    failures.push({status: 400, contentType: 'application/json', body: Buffer.from('invalid-json')}
+      , {status: 400, contentType: 'text/html'
+        , body: Buffer.from(JSON.stringify({value: invalid}))})
+    for (const failure of failures) {
+      const {engine, allocate, farm, store} = await fixture()
+      const lease = await allocate()
+      farm.createResponse = failure
+      await rejectCode(engine.webdriver(lease.id, 'POST', '/session', {
+        capabilities: {alwaysMatch: {}}
+      }), 'upstream_unknown', 502)
+      assert.equal(engine.leaseView(lease.id).state, 'quarantined')
+      assert.equal(store.state.leases[0]!.creatingSession, true)
+      assert.equal(farm.inventory[0]!.automationLeaseId, lease.id)
+    }
+  })
+
   it('accounts for all pending leases sharing a remote ADB host across providers', async() => {
     const farm = new FakeFarm()
     farm.inventory = [phone('ANDROID-A'), phone('ANDROID-B', {provider: 'provider-two'})]
@@ -1165,6 +1280,124 @@ describe('coordinator WDA signing eligibility', () => {
 })
 
 describe('coordinator persistent iOS maintenance drain', () => {
+  for (const phase of ['start', 'finish']) {
+    it(`keeps other workers renewable during slow maintenance ${phase} checks`, async() => {
+      const farm = new FakeFarm(); const ios = iosFarm()
+      farm.inventory.push(...ios.inventory)
+      farm.slots.nodes.push(...ios.slots.nodes)
+      const {engine, allocate, advance, store, now} =
+        await fixture({upstreamTimeoutSeconds: 30}, farm)
+      const first = await allocate({serial: 'ANDROID-A'}, 'first-worker')
+      const second = await allocate({serial: 'ANDROID-B'}, 'second-worker')
+      if (phase === 'finish') {
+        await engine.startMaintenance('IPHONE-A', maintenanceId)
+      }
+      const barrier = deferred(); const entered = deferred()
+      if (phase === 'start') {
+        farm.inventoryBarrier = barrier
+        farm.inventoryEntered = entered
+      }
+      else {
+        farm.gridBarrier = barrier
+        farm.gridEntered = entered
+      }
+      const maintenance = phase === 'start' ?
+        engine.startMaintenance('IPHONE-A', maintenanceId) :
+        engine.finishMaintenance(maintenanceId)
+      await entered.promise
+      let renewed = false
+      advance(9000)
+      const heartbeat = Promise.all([engine.renew(first.id), engine.renew(second.id)])
+        .then(() => {
+          renewed = true
+        })
+      try {
+        await new Promise(resolve => setImmediate(resolve))
+        assert.equal(renewed, true, 'Maintenance IO cannot hold the heartbeat queue')
+        advance(9000)
+        assert.ok(Date.parse(engine.leaseView(first.id).expiresAt) > now())
+        assert.ok(Date.parse(engine.leaseView(second.id).expiresAt) > now())
+        if (phase === 'finish') {
+          assert.equal(store.state.maintenance[0]?.id, maintenanceId,
+            'The persisted drain must remain throughout external checks')
+        }
+      }
+      finally {
+        barrier.resolve()
+        await maintenance
+        await heartbeat
+      }
+    })
+  }
+
+  it('rechecks competing drains after a slow maintenance start read', async() => {
+    const {engine, farm, store} = await fixture({}, iosFarm())
+    const barrier = deferred()
+    farm.inventoryBarrier = barrier
+    farm.inventoryEntered = deferred()
+    const pending = engine.startMaintenance('IPHONE-A', maintenanceId)
+    await farm.inventoryEntered.promise
+    farm.inventoryBarrier = null
+    await engine.startMaintenance('IPHONE-A', otherMaintenanceId)
+    const rejected = rejectCode(pending, 'maintenance_conflict', 409)
+    barrier.resolve()
+    await rejected
+    assert.deepEqual(store.state.maintenance.map(item => item.id), [otherMaintenanceId])
+  })
+
+  it('does not remove a recreated drain when an older finish check completes', async() => {
+    const {engine, farm, store} = await fixture({}, iosFarm())
+    await engine.startMaintenance('IPHONE-A', maintenanceId)
+    const barrier = deferred()
+    farm.gridBarrier = barrier
+    farm.gridEntered = deferred()
+    const pending = engine.finishMaintenance(maintenanceId)
+    await farm.gridEntered.promise
+    farm.gridBarrier = null
+    await engine.finishMaintenance(maintenanceId)
+    await engine.startMaintenance('IPHONE-A', maintenanceId)
+    const rejected = rejectCode(pending, 'maintenance_conflict', 409)
+    barrier.resolve()
+    await rejected
+    assert.deepEqual(store.state.maintenance.map(item => item.id), [maintenanceId])
+  })
+
+  it('checks signing freshness again after slow maintenance finish reads', async() => {
+    const {engine, farm, store, advance} = await fixture({}, iosFarm())
+    await engine.startMaintenance('IPHONE-A', maintenanceId)
+    const barrier = deferred()
+    farm.gridBarrier = barrier
+    farm.gridEntered = deferred()
+    const pending = engine.finishMaintenance(maintenanceId)
+    await farm.gridEntered.promise
+    advance(3600001)
+    const rejected = rejectCode(pending, 'device_not_ready', 409)
+    barrier.resolve()
+    await rejected
+    assert.equal(store.state.maintenance.length, 1)
+  })
+
+  for (const phase of ['start', 'finish']) {
+    it(`does not write maintenance ${phase} after shutdown during external reads`, async() => {
+      const {engine, farm, store} = await fixture({}, iosFarm())
+      if (phase === 'finish') {
+        await engine.startMaintenance('IPHONE-A', maintenanceId)
+      }
+      const barrier = deferred()
+      farm.inventoryBarrier = barrier
+      farm.inventoryEntered = deferred()
+      const pending = phase === 'start' ?
+        engine.startMaintenance('IPHONE-A', maintenanceId) :
+        engine.finishMaintenance(maintenanceId)
+      await farm.inventoryEntered.promise
+      await engine.stop()
+      const rejected = rejectCode(pending, 'not_ready', 503)
+      barrier.resolve()
+      await rejected
+      assert.equal(store.state.maintenance.length, phase === 'start' ? 0 : 1)
+    })
+  }
+
   it('preserves a drain and its held lease across restart until verified completion',
     async() => {
     const f = await fixture({}, iosFarm())
