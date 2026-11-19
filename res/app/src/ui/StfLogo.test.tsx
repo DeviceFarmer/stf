@@ -24,7 +24,7 @@ describe('StfLogo', () => {
     vi.unstubAllGlobals()
   })
 
-  it('switches theme assets and offers animation only when reduced motion is off', async() => {
+  it('offers 1x and 2x assets for each theme with a static reduced-motion fallback', async() => {
     const render = async(theme: 'light' | 'dark') => {
       await act(async() => root.render(
         <MantineProvider forceColorScheme={theme}>
@@ -46,10 +46,11 @@ describe('StfLogo', () => {
         const animated = logo.querySelector('source')
 
         expect(still?.getAttribute('src')).toBe(src + '.png')
+        expect(still?.getAttribute('srcset')).toBe(`${src}.png 1x, ${src}@2x.png 2x`)
         expect(still?.width).toBe(size)
         expect(still?.height).toBe(size)
         expect(still?.alt).toBe(size === 28 ? '' : 'STF')
-        expect(animated?.getAttribute('srcset')).toBe(src + '.webp')
+        expect(animated?.getAttribute('srcset')).toBe(`${src}.webp 1x, ${src}@2x.webp 2x`)
         expect(animated?.getAttribute('type')).toBe('image/webp')
         expect(animated?.getAttribute('media')).toBe('(prefers-reduced-motion: no-preference)')
       })
