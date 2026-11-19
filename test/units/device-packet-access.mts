@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import sinon from 'sinon'
 import {createDevicePacketGuard} from '../../lib/units/websocket/ios-access.js'
-import {DevicePacketAccess, isDeviceCommand} from '../../lib/units/websocket/device-access.js'
+import {DevicePacketAccess, isDeviceCommand, requiresOwner}
+  from '../../lib/units/websocket/device-access.js'
 import {isValidSerial} from '../../lib/units/websocket/access.js'
 import type {DeviceAccess} from '../../lib/units/websocket/access.js'
 
@@ -30,6 +31,7 @@ function fixture(platform = 'Android', delay = 0, options = {}) {
   const user = {email: 'owner@example.test', groups: {subscribed: ['shared']}}
   const guard = createDevicePacketGuard(user, load, (...args) => cancelled.push(args), {
     matches: isDeviceCommand
+    , requiresOwner
     , allows: (channel, groups, lookup) => access.allows(channel, groups, lookup)
     , source: channel => access.source(channel)
     , snapshot: row => access.snapshot(row)
@@ -480,8 +482,10 @@ describe('manual device packet authorization', function() {
   }
 
   // Commands a user who can only see the device must not send: the device obeys any of them.
+  // Reads such as screenshots and logcat count too: they expose the owner's session.
   const commands = ['shell.command', 'clipboard.paste', 'clipboard.copy', 'device.install'
-    , 'device.reboot', 'forward.create', 'connect.start', 'wifi.get', 'group.kick']
+    , 'device.reboot', 'forward.create', 'connect.start', 'wifi.get', 'group.kick'
+    , 'logcat.start', 'screen.capture', 'display.rotate', 'store.open']
 
   for (const platform of ['Android', 'iOS']) {
     it(`denies input and commands to foreign or unowned ${platform} devices`, async function() {
@@ -514,7 +518,14 @@ describe('manual device packet authorization', function() {
       for (const event of commands) {
         assert.equal(await f.dispatch(event, 'tx.admin'), undefined, event)
       }
+      f.update({owner: null})
+      f.access.released('PHONE')
+      for (const event of commands) {
+        assert.equal(await f.dispatch(event, 'tx.admin-free'), undefined, event)
+      }
       assert.deepEqual(f.cancelled, [])
+      assert.equal((await f.dispatch('input.keyPress'))?.message, 'Device access denied'
+        , 'Admin input still needs a manual owner')
     })
   }
 
@@ -926,6 +937,8 @@ describe('join notifications ahead of persistence', function() {
 })
 
 describe('invite replies ahead of the join notification', function() {
+  const reply = (owner: unknown) => JSON.stringify({owner})
+
   // The reply to group.invite and the device's JoinGroupMessage can reach the
   // websocket through different processors, so the reply may arrive first.
   async function invited(platform: string, clock: ReturnType<typeof sinon.useFakeTimers>) {
@@ -941,14 +954,27 @@ describe('invite replies ahead of the join notification', function() {
       const clock = sinon.useFakeTimers()
       try {
         const {f, owner} = await invited(platform, clock)
-        assert.equal(f.access.awaitingInviteReply('tx.take'), true)
-        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, owner)
-        assert.equal(f.access.awaitingInviteReply('tx.take'), false)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
         const pending = f.dispatch('wifi.get', 'tx.read')
         setTimeout(() => f.update({owner}), 30)
         await clock.tickAsync(100)
         assert.equal(await pending, undefined)
         assert.deepEqual(f.cancelled, [])
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`keeps the ${platform} row usage when the owner invites again`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const f = fixture(platform, 5)
+        f.update({usage: 'debugging'})
+        f.access.invited('tx.again', f.channel)
+        // The device answers with the current owner and sends no join notification.
+        f.access.inviteReplied('tx.again', 'PHONE', f.user.email, true, reply(f.device().owner))
+        assert.equal(await tick(10, f.dispatch('wifi.get', 'tx.read'), clock), undefined)
       }
       finally {
         clock.restore()
@@ -974,7 +1000,7 @@ describe('invite replies ahead of the join notification', function() {
         const {f, owner} = await invited(platform, clock)
         f.access.released('PHONE')
         f.access.snapshot(f.device())
-        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, owner)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
         const pending = f.dispatch('wifi.get', 'tx.read')
         await clock.tickAsync(10)
         assert.equal((await pending)?.message, 'Device access denied')
@@ -990,17 +1016,18 @@ describe('invite replies ahead of the join notification', function() {
       const clock = sinon.useFakeTimers()
       try {
         const {f, owner} = await invited(platform, clock)
-        f.access.inviteReplied('tx.take', 'PHONE', f.user.email
-          , {email: 'someone@example.test', reservationId: 'theirs'})
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true
+          , reply({email: 'someone@example.test', reservationId: 'theirs'}))
         f.access.invited('tx.wrong', f.channel)
-        f.access.inviteReplied('tx.wrong', 'OTHER', f.user.email, owner)
-        f.access.inviteReplied('tx.never', 'PHONE', f.user.email, owner)
+        f.access.inviteReplied('tx.wrong', 'OTHER', f.user.email, true, reply(owner))
+        f.access.inviteReplied('tx.never', 'PHONE', f.user.email, true, reply(owner))
         f.access.invited('tx.failed', f.channel)
-        f.access.inviteReplied('tx.failed', 'PHONE', f.user.email, null)
-        assert.equal(f.access.awaitingInviteReply('tx.failed'), false)
+        f.access.inviteReplied('tx.failed', 'PHONE', f.user.email, false, reply(owner))
+        f.access.invited('tx.garbled', f.channel)
+        f.access.inviteReplied('tx.garbled', 'PHONE', f.user.email, true, '{not json')
         f.access.invited('tx.cleaned', f.channel)
         f.access.forgetInvite('tx.cleaned')
-        f.access.inviteReplied('tx.cleaned', 'PHONE', f.user.email, owner)
+        f.access.inviteReplied('tx.cleaned', 'PHONE', f.user.email, true, reply(owner))
         // None of them left an observation that would hold back a row.
         assert.equal(f.access.snapshot(f.device()).ready, true)
         assert.equal(f.access.snapshot({...f.device(), serial: 'OTHER'}).ready, true)

@@ -15,6 +15,11 @@ export function isDeviceCommand(event: unknown): boolean {
   return event !== 'device.note' && deviceCommands.has(family)
 }
 
+/** Seeing a device is enough to try to take it; other commands need its owner or an admin. */
+export function requiresOwner(event: unknown): boolean {
+  return isDeviceCommand(event) && event !== 'group.invite'
+}
+
 /** Wire notifications take precedence while their database writes are pending. */
 // What the last lagging row said; empty strings mean the row had no channel or group.
 interface LaggingRow {
@@ -63,10 +68,6 @@ export class DevicePacketAccess {
     }
   }
 
-  awaitingInviteReply(responseChannel: string): boolean {
-    return this.invites.has(responseChannel)
-  }
-
   forgetInvite(responseChannel: string) {
     this.invites.delete(responseChannel)
   }
@@ -75,20 +76,30 @@ export class DevicePacketAccess {
    * The device answers an invite after announcing the join, but the two can reach
    * this socket through different processors, so the reply may come first. Treat
    * a successful reply naming this user as the join, unless a join or leave for the
-   * device was seen since the invite went out, which is at least as new. Like any
+   * device was seen since the invite went out, which is at least as new. Only the
+   * owner is taken from it: a re-invite by the current owner gets a reply but no
+   * join notification, and its row keeps whatever usage it had. Like any
    * notification, this only makes the guard wait for the row; it never allows.
    */
   inviteReplied(responseChannel: string, serial: string, email: string
-  , owner: DeviceAccess['owner'] | undefined) {
-    // A failed or unreadable reply comes with no owner and only ends the wait for it.
+  , success: boolean, body: string | null | undefined) {
     const invite = this.invites.get(responseChannel)
     if (!invite) {
       return
     }
+    // Any reply ends the wait for it; a failed or unreadable one records nothing.
     this.invites.delete(responseChannel)
+    let owner: DeviceAccess['owner'] | undefined
+    try {
+      owner = success && body ? JSON.parse(body)?.owner : null
+    }
+    catch {
+      return
+    }
     if (owner?.email && owner.email === email && this.source(invite.channel) === serial &&
         this.session(invite.channel) === invite.session) {
-      this.joined(serial, null, owner)
+      this.sessions.set(serial, this.revision + 1)
+      this.update(serial, {owner})
     }
   }
 
