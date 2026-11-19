@@ -63,6 +63,10 @@ export class DevicePacketAccess {
     }
   }
 
+  awaitingInviteReply(responseChannel: string): boolean {
+    return this.invites.has(responseChannel)
+  }
+
   forgetInvite(responseChannel: string) {
     this.invites.delete(responseChannel)
   }
@@ -76,6 +80,7 @@ export class DevicePacketAccess {
    */
   inviteReplied(responseChannel: string, serial: string, email: string
   , owner: DeviceAccess['owner'] | undefined) {
+    // A failed or unreadable reply comes with no owner and only ends the wait for it.
     const invite = this.invites.get(responseChannel)
     if (!invite) {
       return

@@ -544,18 +544,15 @@ export default function(options: WebsocketOptions) {
         socket.emit('tx.progress', channel.toString(), message)
       })
       .on(wire.TransactionDoneMessage, function(channel, message) {
-        if (message.success && message.body) {
-          let owner
+        if (deviceAccess.awaitingInviteReply(channel.toString())) {
+          let owner = null
           try {
-            owner = JSON.parse(message.body)?.owner
+            owner = message.success && message.body ? JSON.parse(message.body)?.owner : null
           }
           catch {
-            owner = null
+            // Not a reply we can read; the join notification still decides
           }
           deviceAccess.inviteReplied(channel.toString(), message.source, user.email, owner)
-        }
-        else {
-          deviceAccess.forgetInvite(channel.toString())
         }
         socket.emit('tx.done', channel.toString(), message)
       })
