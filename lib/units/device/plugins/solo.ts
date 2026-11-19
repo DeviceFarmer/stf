@@ -23,7 +23,7 @@ import subSyrup from '../support/sub.js'
 import pushSyrup from '../support/push.js'
 import routerSyrup from '../support/router.js'
 import identitySyrup from './util/identity.js'
-import phoneSyrup from './util/phone.js'
+import phoneSyrup, {SUBSCRIBER_PROPERTIES} from './util/phone.js'
 import dataSyrup from './util/data.js'
 
 export default syrup.serial()
@@ -53,8 +53,6 @@ export default syrup.serial()
     }
 
     var channel = makeChannelId()
-
-    var SUBSCRIBER_PROPERTIES = ['imei', 'imsi', 'phoneNumber', 'iccid']
 
     function pushIdentity() {
       var cpu = data && data.cpu &&

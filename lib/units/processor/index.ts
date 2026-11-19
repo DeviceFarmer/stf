@@ -366,7 +366,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
           .then(function(stats) {
             var change = stats.changes && stats.changes[0] ?
               stats.changes[0] : null
-            if (!change) {
+            if (!change || !change.new_val) {
               return null
             }
             var event = simchange.buildSimChangeEvent(

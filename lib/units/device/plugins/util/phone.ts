@@ -19,7 +19,7 @@ import serviceResourceSyrup from '../../resources/service.js'
 import serviceSyrup from '../service.js'
 import propertiesSyrup from '../../support/properties.js'
 
-var SUBSCRIBER_PROPERTIES = ['imei', 'imsi', 'phoneNumber', 'iccid']
+export var SUBSCRIBER_PROPERTIES = ['imei', 'imsi', 'phoneNumber', 'iccid']
 var HANDSET_PROPERTIES = ['imei']
 var AGENT_RETRIES = 5
 var AGENT_RETRY_DELAY = 1000
@@ -97,6 +97,18 @@ export default syrup.serial()
       return hasConfirmedSim(simState)
     }
 
+    // Only a state confirming absence in every slot makes a missing ICCID a
+    // removal worth reporting; NOT_READY, UNKNOWN and friends just mean the
+    // card could not be read yet.
+    function confirmsNoSim(simState: string) {
+      if (!simState) {
+        return false
+      }
+      return simState.split(',').every(function(slot) {
+        return slot.trim() === 'ABSENT'
+      })
+    }
+
     function missingSubscriberInfo(properties: PhoneProperties, simState: string) {
       var wanted = hasUsableSim(simState) ? SUBSCRIBER_PROPERTIES : HANDSET_PROPERTIES
       return wanted.filter(function(name) {
@@ -119,10 +131,17 @@ export default syrup.serial()
         })
     }
 
-    function complete(properties: PhoneProperties, simState: string) {
-      var maxRetries = typeof options.phoneRetries === 'number' ?
-        options.phoneRetries :
-        AGENT_RETRIES
+    function complete(properties: PhoneProperties, simState: string, retries?: number) {
+      var maxRetries: number
+      if (typeof retries === 'number') {
+        maxRetries = retries
+      }
+      else if (typeof options.phoneRetries === 'number') {
+        maxRetries = options.phoneRetries
+      }
+      else {
+        maxRetries = AGENT_RETRIES
+      }
       var retryDelay = typeof options.phoneRetryDelay === 'number' ?
         options.phoneRetryDelay :
         AGENT_RETRY_DELAY
@@ -180,17 +199,20 @@ export default syrup.serial()
     }
 
     // Null means the identifiers could not be read conclusively and the poll
-    // should be skipped: a SIM card that seems present without an ICCID is an
-    // adb hiccup, not a removal, and publishing it would report the same card
-    // removed and inserted again once adb recovers.
+    // should be skipped: without an ICCID, only a SIM state confirming
+    // absence in every slot is a removal; anything else is a read the next
+    // tick can retry, not an event.
     function refresh(): Promise<PhoneProperties | null> {
       return readSimState().then(function(simState: string) {
         return fetch()
           .then(function(properties: PhoneProperties) {
-            return complete(properties, simState)
+            // The interval does the retrying on refreshes, so a card whose
+            // records are still loading is caught by the next tick instead
+            // of spinning the agent retry loop every time.
+            return complete(properties, simState, 0)
           })
           .then(function(completed: PhoneProperties) {
-            if (hasUsableSim(simState) && !completed.iccid) {
+            if (!completed.iccid && !confirmsNoSim(simState)) {
               return null
             }
             return attachRefresh(completed, refresh)

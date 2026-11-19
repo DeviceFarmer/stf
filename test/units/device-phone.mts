@@ -425,6 +425,34 @@ describe('device phone refresh', function() {
       expect(fresh).to.equal(null)
     })
 
+  ;['UNKNOWN', 'NOT_READY', 'ABSENT,NOT_READY', 'NOT_READY,UNKNOWN']
+    .forEach(function(state) {
+      it('should skip the poll when the SIM state is ' + state,
+        async function() {
+          var run = await invokePhone([
+            {imei: 'a', iccid: 'one'}
+          , {imei: 'a'}
+          ], [{'gsm.sim.state': state}])
+
+          var fresh = await run.properties.refresh()
+          expect(fresh).to.equal(null)
+        })
+    })
+
+  ;[{'gsm.sim.state': 'ABSENT'}, {'gsm.sim.state': 'ABSENT,ABSENT'}]
+    .forEach(function(simState) {
+      it('should report the removal when every slot confirms absence (' +
+        simState['gsm.sim.state'] + ')', async function() {
+        var run = await invokePhone([
+          {imei: 'a', iccid: 'one'}
+        , {imei: 'a'}
+        ], [simState])
+
+        var fresh = await run.properties.refresh()
+        expect(fresh).to.deep.equal({imei: 'a'})
+      })
+    })
+
   it('should skip the poll when the SIM state cannot be read',
     async function() {
       var run = await invokePhone([

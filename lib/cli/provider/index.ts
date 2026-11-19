@@ -190,6 +190,12 @@ var builder = function(yargs: Argv) {
         'connects. Passed on to every device unit.'
     , type: 'number'
     , default: 0
+    , coerce: function(value: number) {
+        if (!(value === 0 || value >= 10000)) {
+          throw new Error('--sim-refresh-interval must be 0 or at least 10000 ms')
+        }
+        return value
+      }
     })
     .option('storage-url', {
       alias: 'r'
@@ -260,12 +266,12 @@ var handler = function(argv: CommandArgv<typeof builder, {serial: (string | numb
       , '--screen-ping-interval', argv.screenPingInterval
       , '--screen-ws-url-pattern', argv.screenWsUrlPattern
       , '--connect-url-pattern', argv.connectUrlPattern
-        , '--heartbeat-interval', argv.heartbeatInterval
-        , '--boot-complete-timeout', argv.bootCompleteTimeout
-        , '--vnc-initial-size', argv.vncInitialSize.join('x')
-        , '--mute-master', argv.muteMaster
-        , '--sim-refresh-interval', argv.simRefreshInterval
-        ]
+      , '--heartbeat-interval', argv.heartbeatInterval
+      , '--boot-complete-timeout', argv.bootCompleteTimeout
+      , '--vnc-initial-size', argv.vncInitialSize.join('x')
+      , '--mute-master', argv.muteMaster
+      , '--sim-refresh-interval', argv.simRefreshInterval
+      ]
       .concat(argv.connectSub.reduce<CliArg[]>(function(all, val) {
         return all.concat(['--connect-sub', val])
       }, []))
