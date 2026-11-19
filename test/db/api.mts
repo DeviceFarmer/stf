@@ -180,9 +180,11 @@ describe('dbapi owner claim', function() {
     it('should match a legacy owner by email only when no reservation or managed lease exists',
       function() {
         dbapi.releaseDeviceOwner('serial', {email: owner.email} as DeviceOwner)
-        for (const reservationId of [undefined, null, '']) {
-          const current = reservationId === undefined ? {email: owner.email} :
-            {email: owner.email, reservationId}
+        for (const current of [
+          {email: owner.email}
+        , {email: owner.email, reservationId: null}
+        , {email: owner.email, reservationId: ''}
+        ]) {
           const change = evalUpdate(lastUpdate, {owner: current})
           expect(change).to.include({owner: null, automationLeaseId: null, usage: null
             , logs_enabled: false, usageChangedAt: NOW})

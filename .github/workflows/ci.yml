@@ -353,6 +353,12 @@ jobs:
       - name: Wait for RethinkDB
         run: bash .github/scripts/wait-for-port.sh 28015 60 rethinkdb
 
+      - name: Verify ownership ordering against real RethinkDB
+        timeout-minutes: 2
+        env:
+          STF_DB_TEST_PORT: '28015'
+        run: node test/integration/device-ownership.mts
+
       - name: stf doctor
         run: node lib/cli/index.js doctor || true
 
