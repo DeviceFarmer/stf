@@ -43,6 +43,26 @@ function setup() {
   return {plugin: plugin, handlers: handlers, push: push}
 }
 
+function messages(push: ReturnType<typeof setup>['push'], code: number) {
+  return push.send.getCalls().map(call => wire.Envelope.decode(call.args[0][1]))
+    .filter(envelope => envelope.type === code)
+}
+
+async function transaction(
+  context: ReturnType<typeof setup>, type: {$code: number}, message: unknown
+) {
+  const before = messages(context.push, wire.TransactionDoneMessage.$code).length
+  await context.handlers[type.$code]!('transaction', message)
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const replies = messages(context.push, wire.TransactionDoneMessage.$code)
+    if (replies.length > before) {
+      return wire.TransactionDoneMessage.decode(replies.at(-1)!.message)
+    }
+    await new globalThis.Promise(resolve => setTimeout(resolve, 1))
+  }
+  throw new Error('Timed out waiting for the ownership transaction')
+}
+
 function autoGroup(handlers: Record<number, Handler>, identifier: string) {
   var owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')
   return handlers[wire.AutoGroupMessage.$code]!(
@@ -95,31 +115,49 @@ describe('Device group plugin', function() {
   })
 
   it('refuses a delayed release after the same user acquired a new reservation', async function() {
-    const {plugin, handlers, push} = setup()
+    const context = setup()
     const owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')
-    const first = await plugin.join(owner)
-    await plugin.leave('test')
-    const second = await plugin.join(owner)
-    await handlers[wire.UngroupMessage.$code]!(
-      'transaction', new wire.UngroupMessage([], first.reservationId)
-    )
-    expect((await plugin.get()).reservationId).to.equal(second.reservationId)
-    let envelope = wire.Envelope.decode(push.send.lastCall.args[0][1])
-    expect(wire.TransactionDoneMessage.decode(envelope.message).success).to.equal(false)
-    await handlers[wire.UngroupMessage.$code]!(
-      'transaction', new wire.UngroupMessage([], second.reservationId)
-    )
-    for (let i = 0; i < 100; i++) {
-      envelope = wire.Envelope.decode(push.send.lastCall.args[0][1])
-      if (wire.TransactionDoneMessage.decode(envelope.message).success) {
-        break
-      }
-      await new Promise(resolve => setTimeout(resolve, 1))
-    }
-    expect(wire.TransactionDoneMessage.decode(envelope.message).success).to.equal(true)
-    await plugin.get().then(() => {
+    const first = await context.plugin.join(owner)
+    await context.plugin.leave('test')
+    const second = await context.plugin.join(owner)
+    const stale = await transaction(context, wire.UngroupMessage,
+      new wire.UngroupMessage([], first.reservationId))
+    expect((await context.plugin.get()).reservationId).to.equal(second.reservationId)
+    expect(stale.success).to.equal(false)
+    const current = await transaction(context, wire.UngroupMessage,
+      new wire.UngroupMessage([], second.reservationId))
+    expect(current.success).to.equal(true)
+    await context.plugin.get().then(() => {
       throw new Error('Expected no owner')
     }, () => undefined)
+  })
+
+  it('acknowledges the reservation while preserving the coordinator lease', async function() {
+    const context = setup()
+    const owner = new wire.OwnerMessage('ci@example.test', 'CI', 'ci-channel')
+    const reply = await transaction(context, wire.GroupMessage,
+      new wire.GroupMessage(owner, 10000, [], 'automation', 'lease-a'))
+    expect(reply.success).to.equal(true)
+    const announced = messages(context.push, wire.JoinGroupMessage.$code)
+    expect(announced).to.have.length(1)
+    const joined = wire.JoinGroupMessage.decode(announced[0]!.message)
+    expect(joined.usage).to.equal('automation')
+    expect(joined.leaseId).to.equal('lease-a')
+    expect(joined.owner.reservationId).to.be.a('string').with.length(36)
+    expect(JSON.parse(reply.body!).owner.reservationId).to.equal(joined.owner.reservationId)
+    expect((await context.plugin.get()).reservationId).to.equal(joined.owner.reservationId)
+    expect(owner.reservationId).to.equal(null)
+    const legacyRelease = await transaction(context, wire.UngroupMessage,
+      new wire.UngroupMessage([]))
+    expect(legacyRelease.success).to.equal(false)
+    expect((await context.plugin.get()).reservationId).to.equal(joined.owner.reservationId)
+    const renewal = await transaction(context, wire.AutomationLeaseMessage,
+      new wire.AutomationLeaseMessage('test-device', owner, 'lease-a', 'renew', 10000))
+    expect(renewal.success).to.equal(true)
+    const release = await transaction(context, wire.AutomationLeaseMessage,
+      new wire.AutomationLeaseMessage('test-device', owner, 'lease-a', 'release'))
+    expect(release.success).to.equal(true)
+    expect(messages(context.push, wire.LeaveGroupMessage.$code)).to.have.length(1)
   })
 
   it('acknowledges the exact acquired reservation, including idempotent joins', async function() {
@@ -138,5 +176,67 @@ describe('Device group plugin', function() {
     const response = wire.TransactionDoneMessage.decode(envelope.message)
     expect(response.success).to.equal(true)
     expect(JSON.parse(response.body!).owner.reservationId).to.equal(current.reservationId)
+  })
+
+  it('refuses another capture while the coordinator lease is pending', async function() {
+    const context = setup()
+    const owner = new wire.OwnerMessage('ci@example.test', 'CI', 'ci-channel')
+    const capture = context.plugin.join(owner, 10000, 'automation', undefined, 'lease-a')
+    const competing = await context.plugin.join(owner, 10000, 'automation', undefined, 'lease-b')
+      .then(() => true, () => false)
+    expect(competing).to.equal(false)
+    const acquired = await capture
+    const joined = messages(context.push, wire.JoinGroupMessage.$code)
+    expect(joined).to.have.length(1)
+    const message = wire.JoinGroupMessage.decode(joined[0]!.message)
+    expect(message.leaseId).to.equal('lease-a')
+    expect(message.owner.reservationId).to.equal(acquired.reservationId)
+    await context.plugin.leave('test_cleanup')
+  })
+
+  it('refuses renew or release of an old lease after a replacement capture', async function() {
+    const context = setup()
+    const owner = new wire.OwnerMessage('ci@example.test', 'CI', 'ci-channel')
+    const previous = await context.plugin.join(owner, 10000, 'automation', undefined, 'lease-a')
+    await context.plugin.leave('test_cleanup')
+    const replacement = await context.plugin.join(owner, 10000, 'automation', undefined, 'lease-b')
+    expect(replacement.reservationId).to.not.equal(previous.reservationId)
+
+    for (const action of ['renew', 'release']) {
+      const reply = await transaction(context, wire.AutomationLeaseMessage,
+        new wire.AutomationLeaseMessage('test-device', owner, 'lease-a', action, 10000))
+      expect(reply.success).to.equal(false)
+      expect(await context.plugin.get()).to.equal(replacement)
+    }
+    expect(messages(context.push, wire.LeaveGroupMessage.$code)).to.have.length(1)
+
+    const release = await transaction(context, wire.AutomationLeaseMessage,
+      new wire.AutomationLeaseMessage('test-device', owner, 'lease-b', 'release'))
+    expect(release.success).to.equal(true)
+    expect(messages(context.push, wire.LeaveGroupMessage.$code)).to.have.length(2)
+  })
+
+  it('releases an expired lease when the coordinator is absent', async function() {
+    const clock = sinon.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'Date']})
+    try {
+      const context = setup()
+      const owner = new wire.OwnerMessage('ci@example.test', 'CI', 'ci-channel')
+      const acquired = await context.plugin.join(owner, 10, 'automation', undefined, 'lease-a')
+      const left = new Promise(resolve => context.plugin.once('leave', resolve))
+      await clock.tickAsync(11)
+      await left
+
+      const messagesSent = messages(context.push, wire.LeaveGroupMessage.$code)
+      expect(messagesSent).to.have.length(1)
+      const leftGroup = wire.LeaveGroupMessage.decode(messagesSent[0]!.message)
+      expect(leftGroup.owner.reservationId).to.equal(acquired.reservationId)
+      expect(leftGroup.reason).to.equal('automatic_timeout')
+      expect(leftGroup.leaseId).to.equal('lease-a')
+      const unowned = await context.plugin.get().then(() => false, () => true)
+      expect(unowned).to.equal(true)
+    }
+    finally {
+      clock.restore()
+    }
   })
 })

@@ -1,0 +1,155 @@
+{{- if .Values.coordinator.enabled -}}
+{{- $c := .Values.coordinator -}}
+{{- $identity := dict "root" . "component" "coordinator" -}}
+{{- $name := include "stf.name" $identity -}}
+{{- $poolName := include "stf.name" (dict "root" . "component" "coordinator-adb-pools") -}}
+{{- $pools := toJson $c.adbPools -}}
+{{- $claimName := include "stf.name" (dict "root" . "component" "coordinator-state") -}}
+{{- $apiName := include "stf.name" (dict "root" . "component" "api") -}}
+{{- $image := default .Values.image $c.image -}}
+{{- $stfApiUrl := default (printf "http://%s:%v/api/v1" $apiName .Values.ports.http) $c.stfApiUrl -}}
+{{- $waitForMigration := and .Values.migration.enabled (not $c.stfApiUrl) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels: {{ include "stf.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate, rollingUpdate: null}
+  selector:
+    matchLabels: {{ include "stf.selector" $identity | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "stf.podLabels" $identity | nindent 8 }}
+      annotations:
+        checksum/adb-pools: {{ $pools | sha256sum }}
+        {{- with $c.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 120
+      {{- with $c.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $waitForMigration }}
+      serviceAccountName: {{ include "stf.name" (dict "root" . "component" "wait-migration") }}
+      initContainers: {{ include "stf.waitMigration" . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: {type: RuntimeDefault}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: coordinator
+          image: {{ include "stf.image" $image | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy $image.pullPolicy }}
+          command: [stf, coordinator]
+          args:
+            - --host=0.0.0.0
+            - --port=8080
+            - {{ printf "--public-url=%s" (default (printf "http://%s.%s.svc:8080" $name .Release.Namespace) $c.publicUrl) | quote }}
+            - {{ printf "--stf-api-url=%s" $stfApiUrl | quote }}
+            - {{ printf "--appium-grid-url=%s" $c.appiumGridUrl | quote }}
+            - --stf-token-file=/secrets/stf-token
+            - --api-token-file=/secrets/api-token
+            {{- if $c.projectTokensKey }}
+            - --project-tokens-file=/secrets/projects.json
+            {{- end }}
+            - --state-file=/state/coordinator.json
+            - --adb-pools-file=/config/adb-pools.json
+            - --max-parallel={{ $c.maxParallel }}
+            - --upstream-timeout-seconds={{ $c.upstreamTimeoutSeconds }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          ports: [{name: http, containerPort: 8080}]
+          resources: {{ toYaml $c.resources | nindent 12 }}
+          startupProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 2, failureThreshold: 30}
+          readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 10}
+          volumeMounts:
+            - {name: state, mountPath: /state}
+            - {name: credentials, mountPath: /secrets, readOnly: true}
+            - {name: adb-pools, mountPath: /config, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        {{- if $waitForMigration }}
+        {{- include "stf.migrationVolumes" . | nindent 8 }}
+        {{- end }}
+        - name: state
+          persistentVolumeClaim: {claimName: {{ default $claimName $c.persistence.existingClaim | quote }}}
+        - name: credentials
+          secret:
+            secretName: {{ required "coordinator.existingSecret is required when the coordinator is enabled" $c.existingSecret | quote }}
+            defaultMode: 0440
+            items:
+              - {key: stf-token, path: stf-token}
+              - {key: api-token, path: api-token}
+              {{- with $c.projectTokensKey }}
+              - {key: {{ . | quote }}, path: projects.json}
+              {{- end }}
+        - name: adb-pools
+          configMap: {name: {{ $poolName }}}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels: {{ include "stf.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector: {{ include "stf.selector" $identity | nindent 4 }}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $poolName }}
+  labels: {{ include "stf.labels" . | nindent 4 }}
+data:
+  adb-pools.json: {{ $pools | quote }}
+{{- include "stf.pvc" (dict "root" . "name" $claimName "persistence" (merge (dict "enabled" true) $c.persistence)) }}
+{{- if $c.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  labels: {{ include "stf.labels" . | nindent 4 }}
+  {{- with $c.ingress.annotations }}
+  annotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $c.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- with $c.ingress.tls }}
+  tls: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ regexReplaceAll ":[0-9]+$" (urlParse $c.publicUrl).host "" | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}
+                port: {name: http}
+{{- end }}
+{{- end }}

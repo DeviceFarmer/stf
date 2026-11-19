@@ -10,6 +10,7 @@ declare global {
       subdev: zmq.Socket
       channelRouter: events.EventEmitter
       secret: string
+      automationLeaseAccounts?: readonly string[]
     }
 
     interface Request {

@@ -1,0 +1,33 @@
+# Overlay reviewed farm values, for example: -f farm.yaml -f coordinator.yaml.
+# Build this STF image from the same checkout for API, processor and providers.
+image:
+  repository: registry.example.com/stf
+  tag: YOUR_VERSION
+coordinator:
+  enabled: true
+  # Existing Secret: stf-token, api-token and optional projects.json.
+  existingSecret: stf-coordinator-credentials
+  # Exact STF email of the service account that owns stf-token.
+  stfServiceAccountEmail: stf-coordinator@example.com
+  projectTokensKey: projects.json
+  appiumGridUrl: http://grid.appium.svc.cluster.local:4444
+  publicUrl: https://coordinator.example.com
+  # Use [] for iOS only. Provider names must match STF inventory exactly.
+  adbPools:
+    - provider: stf-android-android-a
+      host: stf-adb-android-a.stf.svc.cluster.local
+      port: 5037
+      systemPorts: [8200, 8201, 8202, 8203]
+  persistence:
+    size: 1Gi
+    # Set existingClaim instead to adopt the current coordinator state.
+  ingress:
+    enabled: true
+    className: nginx
+    tls: [{hosts: [coordinator.example.com], secretName: coordinator-tls}]
+networkPolicy:
+  # Match the controller that serves the coordinator Ingress.
+  coordinatorFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx

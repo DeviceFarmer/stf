@@ -598,6 +598,9 @@ export class IosRuntime {
     const active = AbortSignal.any([this.abort.signal, ...(signal ? [signal] : [])])
     return this.enqueue(async() => {
       active.throwIfAborted()
+      if (this.automationLease) {
+        throw new AutomationError('IOS_AUTOMATION_ACTIVE', 409)
+      }
       if (this.state !== 'ready' || (!allowLocked && this.telemetry.status.locked) ||
           generation !== this.generation) {
         throw new Error('iPhone is not ready')

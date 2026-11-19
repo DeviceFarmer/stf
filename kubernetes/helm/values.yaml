@@ -88,6 +88,9 @@ networkPolicy:
   # NetworkPolicyPeers for providers of other releases that connect to this
   # release's triproxy-dev; they get its pub and pull ports only.
   remoteProvidersFrom: []
+  # Additional peers allowed to reach the coordinator on TCP 8080. Empty keeps
+  # it accessible only from this release; allow the CI/gateway peers explicitly.
+  coordinatorFrom: []
 core:
   nodeSelector: {}
   tolerations: []
@@ -97,6 +100,43 @@ core:
     limits: {cpu: '1', memory: 1Gi}
   # Per-component pod/container overrides, e.g. units.api.resources.
   units: {}
+coordinator:
+  # Requires matching STF API, processor and provider images with lease support.
+  enabled: false
+  # Existing Secret keys: stf-token, api-token and optionally projectTokensKey.
+  existingSecret: ""
+  projectTokensKey: ""
+  maxParallel: 10
+  upstreamTimeoutSeconds: 30
+  # Empty inherits the main STF image; an override needs repository + tag/digest.
+  image: {}
+  # Empty uses this chart's API. An external URL must include /api/v1.
+  stfApiUrl: ""
+  # Required when enabled. Use the exact STF account that owns the stf-token.
+  stfServiceAccountEmail: ""
+  # Empty advertises the in-cluster Service. Set this for remote Appium clients.
+  publicUrl: ""
+  # Required external Appium Grid. This chart does not deploy Grid or its nodes.
+  appiumGridUrl: ""
+  # Explicit STF provider -> ADB host/port/systemPorts mapping; [] for iOS only.
+  adbPools: []
+  persistence:
+    existingClaim: ""
+    size: 1Gi
+    storageClass: ""
+    annotations: {}
+  nodeSelector: {}
+  tolerations: []
+  # Increment a custom annotation to restart after rotating the existing Secret.
+  podAnnotations: {}
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    tls: []
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: '1', memory: 512Mi}
 android:
   adbImage: devicefarmer/adb:latest
   # One entry per USB host/ADB pool. No USB access is enabled by default.

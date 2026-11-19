@@ -83,6 +83,7 @@ export interface Device {
   statusTimeStamp?: string
   using?: boolean
   usage?: string | null
+  automationLeaseId?: string | null
   usable?: boolean
   owner?: DeviceOwner | null
   group: DeviceGroup

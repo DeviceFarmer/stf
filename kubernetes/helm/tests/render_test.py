@@ -33,6 +33,11 @@ def iphone(name='iphone-a', udid='00008100-0000000000000001'):
 
 IOS_IMAGE = {'repository': 'example.invalid/ios-runtime', 'tag': 'test'}
 
+def coordinator(**overrides):
+    return {'enabled': True, 'existingSecret': 'coordinator-credentials',
+            'appiumGridUrl': 'http://grid.appium.svc:4444',
+            'stfServiceAccountEmail': 'coordinator@example.test', **overrides}
+
 class ChartTest(unittest.TestCase):
     def test_default_core_has_no_usb_and_exposes_only_http(self):
         items = render()
@@ -46,6 +51,214 @@ class ChartTest(unittest.TestCase):
             pod = spec.get('template', {}).get('spec', {})
             self.assertFalse(pod.get('hostNetwork', False))
             self.assertFalse(any('hostPath' in v for v in pod.get('volumes', [])))
+        self.assertFalse(any('coordinator' in x['metadata']['name'] for x in items))
+
+    def test_coordinator_is_a_single_persistent_unprivileged_appium_gateway(self):
+        items = render({'coordinator': coordinator()})
+        deployment = obj(items, 'Deployment', 'stf-coordinator')['spec']
+        self.assertEqual(len([x for x in items if x['kind'] == 'Deployment']), 14)
+        self.assertEqual(deployment['replicas'], 1)
+        self.assertEqual(deployment['strategy'], {'type': 'Recreate', 'rollingUpdate': None})
+        pod = deployment['template']['spec']
+        self.assertFalse(pod['automountServiceAccountToken'])
+        self.assertFalse(pod['enableServiceLinks'])
+        self.assertEqual(pod['terminationGracePeriodSeconds'], 120)
+        self.assertEqual(pod['securityContext'], {'runAsNonRoot': True, 'runAsUser': 1000,
+            'runAsGroup': 1000, 'fsGroup': 1000, 'fsGroupChangePolicy': 'OnRootMismatch',
+            'seccompProfile': {'type': 'RuntimeDefault'}})
+        self.assertEqual([c['name'] for c in pod['containers']], ['coordinator'])
+        c = pod['containers'][0]
+        self.assertEqual(c['command'], ['stf', 'coordinator'])
+        self.assertEqual(c['image'], 'devicefarmer/stf:3.9.0')
+        for flag in ['--stf-api-url=http://stf-api:7100/api/v1',
+                     '--appium-grid-url=http://grid.appium.svc:4444',
+                     '--public-url=http://stf-coordinator.test-stf.svc:8080',
+                     '--state-file=/state/coordinator.json', '--adb-pools-file=/config/adb-pools.json']:
+            self.assertIn(flag, c['args'])
+        self.assertNotIn('env', c)
+        self.assertNotIn('envFrom', c)
+        self.assertEqual(c['securityContext'], {'allowPrivilegeEscalation': False,
+            'readOnlyRootFilesystem': True, 'capabilities': {'drop': ['ALL']}})
+        self.assertEqual(c['startupProbe']['httpGet'], {'path': '/healthz', 'port': 'http'})
+        self.assertEqual(c['livenessProbe']['httpGet'], {'path': '/healthz', 'port': 'http'})
+        self.assertEqual(c['readinessProbe']['httpGet'], {'path': '/readyz', 'port': 'http'})
+        volumes = {v['name']: v for v in pod['volumes']}
+        self.assertEqual(volumes['state']['persistentVolumeClaim']['claimName'], 'stf-coordinator-state')
+        self.assertEqual(volumes['credentials']['secret'], {'secretName': 'coordinator-credentials',
+            'defaultMode': 0o440, 'items': [{'key': 'stf-token', 'path': 'stf-token'},
+                                        {'key': 'api-token', 'path': 'api-token'}]})
+        self.assertEqual(volumes['tmp'], {'name': 'tmp', 'emptyDir': {}})
+        self.assertTrue(all(m['readOnly'] for m in c['volumeMounts'] if m['name'] in ['credentials', 'adb-pools']))
+        self.assertFalse(any(m['name'] == 'migration-identity' for m in c['volumeMounts']))
+        self.assertEqual(obj(items, 'ConfigMap', 'stf-coordinator-adb-pools')['data'], {'adb-pools.json': '[]'})
+        claim = obj(items, 'PersistentVolumeClaim', 'stf-coordinator-state')
+        self.assertEqual(claim['spec']['accessModes'], ['ReadWriteOnce'])
+        self.assertEqual(claim['metadata']['annotations']['helm.sh/resource-policy'], 'keep')
+        service = obj(items, 'Service', 'stf-coordinator')['spec']
+        self.assertEqual(service['type'], 'ClusterIP')
+        self.assertEqual(service['ports'], [{'name': 'http', 'port': 8080, 'targetPort': 'http'}])
+        self.assertFalse(any(x['kind'] == 'Ingress' or 'appium-grid' in x['metadata']['name'] for x in items))
+        self.assertFalse(any(x['kind'] == 'Secret' for x in items))
+
+    def test_coordinator_grants_managed_leases_only_on_its_local_stf_api(self):
+        email = 'appium+coordinator@example.test'
+        for values, expected in [
+            (coordinator(stfServiceAccountEmail=email), [('stf-api', email)]),
+            (coordinator(stfServiceAccountEmail=email, enabled=False), []),
+            (coordinator(stfServiceAccountEmail=email, stfApiUrl='https://stf.example.test/api/v1'), []),
+        ]:
+            with self.subTest(values=values):
+                accounts = [(item['metadata']['name'], entry['value'])
+                            for item in render({'coordinator': values})
+                            if item['kind'] == 'Deployment'
+                            for container in item['spec']['template']['spec']['containers']
+                            for entry in container.get('env', [])
+                            if entry['name'] == 'STF_API_AUTOMATION_LEASE_ACCOUNTS']
+                self.assertEqual(accounts, expected)
+
+    def test_coordinator_external_api_adoption_keeps_existing_state_and_credentials(self):
+        pool = {'provider': 'existing-provider', 'host': 'adb.example.test', 'port': 5038,
+                'systemPorts': [8201, 8202]}
+        values = {'coordinator': coordinator(stfApiUrl='https://api.example.test/api/v1',
+                    publicUrl='https://ci.example.test', projectTokensKey='projects-v2.json',
+                    maxParallel=8, upstreamTimeoutSeconds=120, adbPools=[pool],
+                    persistence={'existingClaim': 'existing-coordinator-state'},
+                    image={'repository': 'example.invalid/stf', 'digest': 'sha256:' + 'a' * 64},
+                    nodeSelector={'role': 'services'}, tolerations=[{'key': 'services', 'operator': 'Exists'}],
+                    podAnnotations={'credentials-revision': '2'}),
+                  'networkPolicy': {'enabled': False},
+                  'imagePullSecrets': [{'name': 'registry-pull'}],
+                  'resourceNames': {'coordinator': 'previous-coordinator',
+                      'coordinator-adb-pools': 'previous-pools'},
+                  'selectorOverrides': {'coordinator': {'app': 'previous-coordinator'}}}
+        items = render(values, namespace='another-ns', upgrade=True)
+        spec = obj(items, 'Deployment', 'previous-coordinator')['spec']
+        self.assertEqual(spec['selector']['matchLabels'], {'app': 'previous-coordinator'})
+        self.assertEqual(spec['template']['metadata']['labels'], {'app': 'previous-coordinator'})
+        self.assertEqual(spec['template']['metadata']['annotations']['credentials-revision'], '2')
+        pod = spec['template']['spec']
+        self.assertNotIn('initContainers', pod)
+        self.assertNotIn('serviceAccountName', pod)
+        self.assertEqual(pod['nodeSelector'], {'role': 'services'})
+        self.assertEqual(pod['tolerations'], [{'key': 'services', 'operator': 'Exists'}])
+        self.assertEqual(pod['imagePullSecrets'], [{'name': 'registry-pull'}])
+        self.assertFalse(any(v.get('projected') or v.get('hostPath') for v in pod['volumes']))
+        c = pod['containers'][0]
+        self.assertEqual(c['image'], 'example.invalid/stf@sha256:' + 'a' * 64)
+        for flag in ['--stf-api-url=https://api.example.test/api/v1', '--public-url=https://ci.example.test',
+                     '--project-tokens-file=/secrets/projects.json', '--max-parallel=8', '--upstream-timeout-seconds=120']:
+            self.assertIn(flag, c['args'])
+        volumes = {v['name']: v for v in pod['volumes']}
+        self.assertEqual(volumes['state']['persistentVolumeClaim'], {'claimName': 'existing-coordinator-state'})
+        self.assertEqual(volumes['credentials']['secret']['items'][-1],
+                         {'key': 'projects-v2.json', 'path': 'projects.json'})
+        self.assertEqual(volumes['adb-pools']['configMap'], {'name': 'previous-pools'})
+        self.assertFalse(any(x['kind'] == 'PersistentVolumeClaim' and 'coordinator' in x['metadata']['name'] for x in items))
+        self.assertEqual(json.loads(obj(items, 'ConfigMap', 'previous-pools')['data']['adb-pools.json']), [pool])
+        self.assertEqual(obj(items, 'Service', 'previous-coordinator')['spec']['selector'], {'app': 'previous-coordinator'})
+
+    def test_coordinator_uses_local_migration_barrier_only_for_the_local_api(self):
+        for enabled in [True, False]:
+            items = render({'coordinator': coordinator(), 'migration': {'enabled': enabled}})
+            pod = obj(items, 'Deployment', 'stf-coordinator')['spec']['template']['spec']
+            if enabled:
+                job = next(x for x in items if x['kind'] == 'Job')
+                self.assertEqual(pod['initContainers'][0]['name'], 'wait-migration')
+                self.assertIn({'name': 'MIGRATION_JOB', 'value': job['metadata']['name']}, pod['initContainers'][0]['env'])
+            else:
+                self.assertNotIn('initContainers', pod)
+                self.assertNotIn('serviceAccountName', pod)
+                self.assertFalse(any(v['name'] == 'migration-identity' for v in pod['volumes']))
+
+    def test_coordinator_pool_change_rolls_the_pod_without_replacing_its_claim(self):
+        def objects(ports, upgrade):
+            pools = [{'provider': 'android-provider', 'host': 'adb', 'port': 5037, 'systemPorts': ports}]
+            items = render({'coordinator': coordinator(adbPools=pools)}, upgrade=upgrade)
+            return obj(items, 'Deployment', 'stf-coordinator'), obj(items, 'PersistentVolumeClaim', 'stf-coordinator-state')
+        old, claim = objects([8200], False)
+        same, same_claim = objects([8200], True)
+        new, new_claim = objects([8201], True)
+        self.assertEqual(old, same)
+        self.assertNotEqual(old['spec']['template']['metadata']['annotations'], new['spec']['template']['metadata']['annotations'])
+        self.assertEqual(claim, same_claim)
+        self.assertEqual(claim, new_claim)
+
+    def test_coordinator_requires_external_grid_and_rejects_unsafe_configuration(self):
+        for field in ['existingSecret', 'appiumGridUrl', 'stfServiceAccountEmail']:
+            render({'coordinator': coordinator(**{field: ''})}, failure=field)
+        for email in ['missing-at', 'one@example.test,two@example.test', 'coordinator@example.test ']:
+            render({'coordinator': coordinator(stfServiceAccountEmail=email)},
+                   failure='stfServiceAccountEmail')
+        for field in ['stfApiUrl', 'publicUrl', 'appiumGridUrl']:
+            for url in ['ftp://grid', 'http://user:password@grid', 'http://grid?token=bad', 'http://grid/#token', 'http://grid/has space']:
+                with self.subTest(field=field, url=url):
+                    render({'coordinator': coordinator(**{field: url})}, failure=field)
+        for override in [{'replicas': 2}, {'persistence': {'enabled': False}},
+                         {'upstreamTimeoutSeconds': 301}, {'maxParallel': 0},
+                         {'image': {'tag': 'alone'}}, {'image': {'repository': 'example.invalid/stf'}},
+                         {'image': {'repository': 'example.invalid/stf', 'digest': ''}}]:
+            render({'coordinator': coordinator(**override)}, failure='coordinator')
+        render({'coordinator': coordinator(podAnnotations={'checksum/adb-pools': 'override'})}, failure='checksum/adb-pools')
+
+    def test_coordinator_pool_validation_prevents_shared_system_ports(self):
+        first = {'provider': 'a', 'host': 'adb', 'port': 5037, 'systemPorts': [8200]}
+        for second, error in [(dict(first), 'provider names must be unique'),
+                              (dict(first, provider='b', port=5038), 'systemPorts must not overlap'),
+                              (dict(first, provider='b', port=8200, systemPorts=[8201]), 'ADB control port')]:
+            render({'coordinator': coordinator(adbPools=[first, second])}, failure=error)
+        render({'coordinator': coordinator(adbPools=[dict(first, systemPorts=[5037])])}, failure='ADB control port')
+        for pool in [dict(first, systemPorts=[]), dict(first, systemPorts=[8200, 8200]),
+                     dict(first, systemPorts=[1023]), dict(first, host='adb:5037'),
+                     dict(first, port=65536)]:
+            render({'coordinator': coordinator(adbPools=[pool])}, failure='adbPools')
+        render({'coordinator': coordinator(adbPools=[first, dict(first, provider='b', host='another-adb')])})
+
+    def test_coordinator_network_policy_allows_only_explicit_external_peers(self):
+        values = {'coordinator': coordinator(), 'selectorOverrides': {'coordinator': {'app': 'legacy'}}}
+        items = render(values)
+        self.assertFalse(any(x['kind'] == 'NetworkPolicy' and x['metadata']['name'] == 'stf-coordinator' for x in items))
+        labels = obj(items, 'Deployment', 'stf-coordinator')['spec']['template']['metadata']['labels']
+        self.assertEqual(labels, {'app': 'legacy', 'app.kubernetes.io/instance': 'stf',
+                                  'app.kubernetes.io/component': 'coordinator'})
+        peers = [{'namespaceSelector': {'matchLabels': {'kubernetes.io/metadata.name': 'ci'}},
+                  'podSelector': {'matchLabels': {'app': 'runner'}}}]
+        values['networkPolicy'] = {'coordinatorFrom': peers}
+        policy = obj(render(values), 'NetworkPolicy', 'stf-coordinator')['spec']
+        self.assertEqual(policy['podSelector'], {'matchLabels': {
+            'app.kubernetes.io/instance': 'stf', 'app.kubernetes.io/component': 'coordinator'}})
+        self.assertEqual(policy['ingress'], [{'ports': [{'protocol': 'TCP', 'port': 'http'}], 'from': peers}])
+        self.assertEqual(policy['policyTypes'], ['Ingress'])
+
+    def test_coordinator_ingress_uses_its_own_explicit_origin_and_service(self):
+        c = coordinator(publicUrl='https://ci.example.test', ingress={'enabled': True, 'className': 'private',
+            'annotations': {'example.test/timeout': '120'}, 'tls': [{'hosts': ['ci.example.test'], 'secretName': 'ci-tls'}]})
+        ingress = obj(render({'coordinator': c}), 'Ingress', 'stf-coordinator')
+        self.assertEqual(ingress['metadata']['annotations'], {'example.test/timeout': '120'})
+        self.assertEqual(ingress['spec']['ingressClassName'], 'private')
+        self.assertEqual(ingress['spec']['tls'], c['ingress']['tls'])
+        self.assertEqual(ingress['spec']['rules'], [{'host': 'ci.example.test', 'http': {'paths': [
+            {'path': '/', 'pathType': 'Prefix', 'backend': {'service': {'name': 'stf-coordinator', 'port': {'name': 'http'}}}}]}}])
+        for url in ['', 'https://ci.example.test/coordinator']:
+            render({'coordinator': coordinator(publicUrl=url, ingress={'enabled': True})}, failure='coordinator.ingress')
+
+    def test_coordinator_example_keeps_secrets_external_and_renders_the_gateway(self):
+        with open(CHART / 'examples' / 'coordinator.yaml') as f:
+            values = yaml.safe_load(f)
+        items = render(values)
+        pod = obj(items, 'Deployment', 'stf-coordinator')['spec']['template']['spec']
+        self.assertEqual(pod['containers'][0]['image'], 'registry.example.com/stf:YOUR_VERSION')
+        self.assertFalse(any(x['kind'] == 'Secret' for x in items))
+        self.assertEqual(obj(items, 'NetworkPolicy', 'stf-coordinator')['spec']['ingress'][0]['from'],
+                         values['networkPolicy']['coordinatorFrom'])
+        claim = obj(items, 'PersistentVolumeClaim', 'stf-coordinator-state')
+        self.assertEqual(claim['spec']['resources']['requests']['storage'], '1Gi')
+        items = render({'coordinator': coordinator(persistence={'size': '2Gi', 'storageClass': 'fast',
+                                   'annotations': {'example.test/backup': 'daily'}})})
+        claim = obj(items, 'PersistentVolumeClaim', 'stf-coordinator-state')
+        self.assertEqual(claim['spec']['storageClassName'], 'fast')
+        self.assertEqual(claim['spec']['resources']['requests']['storage'], '2Gi')
+        self.assertEqual(claim['metadata']['annotations'], {'helm.sh/resource-policy': 'keep',
+                                                          'example.test/backup': 'daily'})
 
     def test_missing_secret_and_invalid_origin_fail_without_cluster(self):
         render({'session': {'existingSecret': ''}}, failure='existingSecret')
@@ -432,7 +645,7 @@ class ChartTest(unittest.TestCase):
                    {'namespaceSelector': {'matchExpressions': [{'key': 'role', 'operator': 'Exists', 'values': ['x']}]}},
                    {'namespaceSelector': {'matchExpressions': [{'key': 'role', 'operator': 'DoesNotExist', 'values': ['x']}]}},
                    {'namespaceSelector': {'matchExpressions': [{'key': 'role', 'operator': 'Exists', 'unknown': True}]}}]
-        for setting in ['proxyFrom', 'remoteProvidersFrom']:
+        for setting in ['proxyFrom', 'remoteProvidersFrom', 'coordinatorFrom']:
             for peer in invalid:
                 with self.subTest(setting=setting, peer=peer):
                     render({'networkPolicy': {setting: [peer]}}, failure=setting)

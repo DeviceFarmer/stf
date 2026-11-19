@@ -61,6 +61,12 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: process.env.SSID || 'ssid'
     })
+    .option('automation-lease-accounts', {
+      type: 'string'
+    , default: ''
+    , describe: 'Comma-separated STF service account emails authorized to create and renew ' +
+        'managed automation leases.'
+    })
     .epilog('Each option can be be overwritten with an environment variable ' +
       'by converting the option to uppercase, replacing dashes with ' +
       'underscores and prefixing it with `STF_API_` (e.g. ' +
@@ -72,6 +78,8 @@ var handler = function(argv: CommandArgv<typeof builder>) {
     port: argv.port
   , ssid: argv.ssid
   , secret: argv.secret
+  , automationLeaseAccounts: argv.automationLeaseAccounts.split(',').map(email => email.trim())
+      .filter(Boolean)
   , endpoints: {
       push: argv.connectPush
     , sub: argv.connectSub

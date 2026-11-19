@@ -50,11 +50,11 @@ declare module 'rethinkdb' {
   interface Writeable {
     update(
       obj: object
-    , options: {returnChanges: true | 'always'}
+    , options: {returnChanges: true | 'always', durability?: 'hard' | 'soft'}
     ): Operation<WriteResultWithChanges>
     update(
       obj: object | ExpressionFunction<unknown>
-    , options?: {returnChanges?: boolean | 'always'}
+    , options?: {returnChanges?: boolean | 'always', durability?: 'hard' | 'soft'}
     ): Operation<WriteResult>
   }
 
