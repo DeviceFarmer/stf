@@ -550,6 +550,7 @@ export class IosBridge {
   private leaveNow(reason: string) {
     this.ownerAbort.abort()
     const owner = this.owner
+    const automationLeaseId = reason === 'device_absent' ? null : this.automationLeaseId
     const id = this.installId
     const lease = this.lease
     this.installId = null
@@ -567,11 +568,15 @@ export class IosBridge {
         reason !== 'device_absent') {
       return this.changeReservation(async() => {
         await this.setAppiumMode(false, owner.reservationId!).catch(this.report)
-        this.broadcast(new wire.LeaveGroupMessage(this.options.serial, owner, reason))
+        this.broadcast(new wire.LeaveGroupMessage(
+          this.options.serial, owner, reason, automationLeaseId
+        ))
       })
     }
     if (owner) {
-      this.broadcast(new wire.LeaveGroupMessage(this.options.serial, owner, reason))
+      this.broadcast(new wire.LeaveGroupMessage(
+        this.options.serial, owner, reason, automationLeaseId
+      ))
     }
   }
 

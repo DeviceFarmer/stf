@@ -46,6 +46,10 @@ import type {ReverseForwardFields} from '../types/wire.js'
 
 type UserExpression = r.Expression<UserDocument>
 
+export interface DeviceOwnershipWriteResult extends r.WriteResult {
+  applied: boolean
+}
+
 type InitialDeviceRow = Pick<
   DeviceDocument
 , 'present' | 'provider' | 'status' | 'statusTimeStamp' | 'ready' | 'reverseForwards'
@@ -174,9 +178,11 @@ interface DbApi {
   saveDeviceStatus(serial: string, status: number, statusTimeStamp: number): Promise<r.WriteResult>
   setDeviceIosStatus(serial: string, status: IosDeviceStatus): Promise<r.WriteResult>
   setDeviceOwner(
-    serial: string, owner: DeviceOwner, automationLeaseId?: string | null, usage?: string | null
-  ): Promise<r.WriteResult>
-  unsetDeviceOwner(serial: string, owner: DeviceOwner): Promise<r.WriteResult>
+    serial: string, owner: DeviceOwner, usage?: string | null, automationLeaseId?: string | null
+  ): Promise<DeviceOwnershipWriteResult>
+  releaseDeviceOwner(
+    serial: string, owner: DeviceOwner, automationLeaseId?: string | null
+  ): Promise<DeviceOwnershipWriteResult>
   hasDeviceAutomationRelease(serial: string, email: string, leaseId: string): Promise<boolean>
   reserveDeviceOwner(serial: string): Promise<r.WriteResult>
   clearDeviceRestoreOwner(serial: string): Promise<r.WriteResult>
@@ -1638,43 +1644,123 @@ dbapi.saveDeviceStatus = function(serial, status, statusTimeStamp) {
   }))
 }
 
-dbapi.setDeviceOwner = function(serial, owner, automationLeaseId, usage) {
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update({
-    owner: {...owner, reservationId: owner.reservationId ?? null}
-  , automationLeaseId: automationLeaseId || null
-  , usage: usage || null
-  , usageChangedAt: r.now()
-    // Taking a device supersedes any claim on it, so a reboot that never happened cannot hand it
-    // back to an earlier user later
-  , restoreOwner: null
-  }))
+function sameReservation(current: DeviceOwner | null | undefined, owner: DeviceOwner) {
+  return current?.email === owner.email &&
+    (current.reservationId || null) === (owner.reservationId || null)
 }
 
-dbapi.unsetDeviceOwner = function(serial, owner) {
-  const currentOwner = r.row('owner').default({})
-  const leaseId = r.row('automationLeaseId').default(null)
-  const reservation = owner.reservationId ?? null
-  const matching = currentOwner('email').default(null).eq(owner.email)
-    .and(currentOwner('reservationId').default(null).eq(reservation))
-  return db.run(r.table('devices').get<DeviceDocument>(serial).update(r.branch(
-    reservation ? matching : matching.and(leaseId.eq(null))
-  , {
-    owner: null
-  , automationLeaseId: null
-  , usage: null
-  , usageChangedAt: r.now()
-  , logs_enabled: false
-    // A provider reports LeaveGroup only after completing any runner cleanup.
-  , automationRelease: r.branch(leaseId.ne(null)
-    , {email: owner.email, leaseId}, r.row('automationRelease').default(null))
-  }
-  , {}
-  ), {durability: 'hard'}))
+dbapi.setDeviceOwner = function(serial, owner, usage, automationLeaseId) {
+  const reservationId = owner.reservationId || null
+  return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(
+    device: r.Expression<DeviceDocument>
+  ) {
+    // A new reservation supersedes an older reboot/restore claim in the same write.
+    const ownership = {
+      owner: {...owner, reservationId}
+    , automationLeaseId: automationLeaseId || null
+    , restoreOwner: null
+    }
+    const install = usage ? {...ownership, usage, usageChangedAt: r.now()} :
+      r.branch(device('automationLeaseId').default(null).ne(null)
+        , {...ownership, usage: null, usageChangedAt: r.now()}, ownership)
+    if (!reservationId) {
+      return install
+    }
+    const pending = device('pendingOwnerReleases').default([])
+    const released = pending.filter(function(release: r.Expression<{reservationId: string}>) {
+      return release('reservationId').eq(reservationId)
+    }).nth(0).default({})
+    const remaining = pending.filter(function(release: r.Expression<{reservationId: string}>) {
+      return release('reservationId').ne(reservationId)
+    })
+    const completed = device('lastOwnerRelease').default({})
+    // Providers emit one Join per reservation. Retain an early Leave until that Join arrives.
+    return r.branch(
+      released('email').default(null).eq(owner.email)
+    , {
+        pendingOwnerReleases: remaining
+      , lastOwnerRelease: {
+          email: owner.email, reservationId
+        , leaseId: released('leaseId').default(automationLeaseId || null)
+        }
+      }
+    , r.branch(
+        completed('email').default(null).eq(owner.email)
+          .and(completed('reservationId').default(null).eq(reservationId))
+      , {}
+      , install
+      )
+    )
+  }, {returnChanges: 'always', durability: 'hard'})).then(function(result) {
+    const applied = (result.changes || []).some(change =>
+      sameReservation(change.new_val?.owner, owner) &&
+      !(reservationId && sameReservation(change.new_val?.lastOwnerRelease, owner)))
+    return {...result, applied}
+  })
+}
+
+dbapi.releaseDeviceOwner = function(serial, owner, automationLeaseId) {
+  const reservationId = owner.reservationId || null
+  return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(
+    device: r.Expression<DeviceDocument>
+  ) {
+    const current = device('owner').default({})
+    const leaseId = device('automationLeaseId').default(null)
+    const matching = current('email').default(null).eq(owner.email)
+      .and(current('reservationId').default(null).eq(reservationId))
+    const release = {
+      owner: null, automationLeaseId: null, usage: null
+    , usageChangedAt: r.now(), logs_enabled: false
+    , automationRelease: r.branch(leaseId.ne(null)
+      , {email: owner.email, leaseId}, device('automationRelease').default(null))
+    }
+    if (!reservationId) {
+      // Pre-reservation workers can release only an unfenced owner with no ID.
+      return r.branch(matching.and(leaseId.eq(null)), release, {})
+    }
+    const pending = device('pendingOwnerReleases').default([])
+    const released = pending.filter(function(release: r.Expression<{reservationId: string}>) {
+      return release('reservationId').eq(reservationId)
+    }).nth(0).default({})
+    const remaining = pending.filter(function(release: r.Expression<{reservationId: string}>) {
+      return release('reservationId').ne(reservationId)
+    })
+    const completed = device('lastOwnerRelease').default({})
+    return r.branch(matching
+    , {...release, lastOwnerRelease: {email: owner.email, reservationId, leaseId}
+        , pendingOwnerReleases: remaining}
+    , r.branch(
+        completed('email').default(null).eq(owner.email)
+          .and(completed('reservationId').default(null).eq(reservationId))
+      , {}
+      , {pendingOwnerReleases: remaining.append({
+          email: owner.email, reservationId
+        , leaseId: automationLeaseId || released('leaseId').default(null)
+        })}
+      )
+    )
+  }, {returnChanges: 'always', durability: 'hard'})).then(function(result) {
+    const applied = (result.changes || []).some(change =>
+      sameReservation(change.old_val?.owner, owner) && change.new_val?.owner === null)
+    return {...result, applied}
+  })
 }
 
 dbapi.hasDeviceAutomationRelease = function(serial, email, leaseId) {
-  return db.run(r.table('devices').getAll(serial)
-    .filter({automationRelease: {email, leaseId}}).isEmpty().not())
+  return db.run(r.table('devices').getAll(serial).filter(function(device) {
+    const receipt = device('automationRelease').default({})
+    const completed = device('lastOwnerRelease').default({})
+    return receipt('email').default(null).eq(email)
+      .and(receipt('leaseId').default(null).eq(leaseId))
+      .or(completed('email').default(null).eq(email)
+        .and(completed('leaseId').default(null).eq(leaseId)))
+      .or(device('pendingOwnerReleases').default([]).contains(function(
+        released: r.Expression<{email: string, leaseId: string | null}>
+      ) {
+        return released('email').default(null).eq(email)
+          .and(released('leaseId').default(null).eq(leaseId))
+      }))
+  }).isEmpty().not())
 }
 
 // Snapshots the current owner so it can be handed back if the device returns before expiresAt.

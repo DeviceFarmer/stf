@@ -30,13 +30,13 @@ class Dealer extends EventEmitter {
 
 const dealers: Dealer[] = []
 const setDeviceOwner = sinon.stub()
-const unsetDeviceOwner = sinon.stub()
+const releaseDeviceOwner = sinon.stub()
 const mocks = [
   mockModule(new URL('../../lib/db/index.js', import.meta.url), {default: {
     ensureConnectivity: (start: unknown) => start
   }})
 , mockModule(new URL('../../lib/db/api.js', import.meta.url), {default: {
-    setDeviceOwner, unsetDeviceOwner
+    setDeviceOwner, releaseDeviceOwner
   }})
 , mockModule(new URL('../../lib/util/adbutil.js', import.meta.url), {default: () => ({})})
 , mockModule(new URL('../../lib/util/lifecycle.js', import.meta.url), {default: {observe() {}}})
@@ -64,17 +64,19 @@ function fixture() {
 const owner = new wire.OwnerMessage(
   'runner@example.test', 'Runner', 'runner-group', 'reservation-a'
 )
-const leave = wireutil.envelope(new wire.LeaveGroupMessage('phone', owner, 'automation_release'))
+const leave = wireutil.envelope(new wire.LeaveGroupMessage(
+  'phone', owner, 'automation_release', 'lease'
+))
 const reply = wireutil.reply('phone').okay()
 
 describe('processor ownership', function() {
   beforeEach(function() {
     setDeviceOwner.reset()
-    unsetDeviceOwner.reset()
+    releaseDeviceOwner.reset()
   })
 
   it('publishes a capture with the owner, lease and usage persisted together', async function() {
-    setDeviceOwner.resolves({errors: 0, replaced: 1})
+    setDeviceOwner.resolves({errors: 0, replaced: 1, applied: true})
     const processor = fixture()
     const join = wireutil.envelope(new wire.JoinGroupMessage('phone', owner, 'automation', 'lease'))
     const published = processor.app.whenSent(join)
@@ -82,14 +84,14 @@ describe('processor ownership', function() {
     assert.deepEqual(processor.app.packets, [])
     await published
     assert.equal(setDeviceOwner.callCount, 1)
-    assert.deepEqual(setDeviceOwner.firstCall.args.slice(2), ['lease', 'automation'])
+    assert.deepEqual(setDeviceOwner.firstCall.args.slice(2), ['automation', 'lease'])
     assert.deepEqual(processor.app.packets, [[wireutil.global, join]])
   })
 
   it('forwards a transaction reply after the durable join on the same processor', async() => {
     let persist = () => {}
     setDeviceOwner.returns(new Promise(resolve => {
-      persist = () => resolve({errors: 0, replaced: 1})
+      persist = () => resolve({errors: 0, replaced: 1, applied: true})
     }))
     const processor = fixture()
     const join = wireutil.envelope(new wire.JoinGroupMessage('phone', owner, 'automation', 'lease'))
@@ -105,8 +107,8 @@ describe('processor ownership', function() {
 
   it('keeps transaction replies independent of ownership writes on another processor', async() => {
     let persisted = () => {}
-    unsetDeviceOwner.returns(new Promise(resolve => {
-      persisted = () => resolve({errors: 0, replaced: 1})
+    releaseDeviceOwner.returns(new Promise(resolve => {
+      persisted = () => resolve({errors: 0, replaced: 1, applied: true})
     }))
     const writer = fixture()
     const responder = fixture()
@@ -117,37 +119,75 @@ describe('processor ownership', function() {
     assert.deepEqual(responder.app.packets, [['release-reply', reply]])
     persisted()
     await published
-    assert.equal(unsetDeviceOwner.firstCall.args[1].reservationId, 'reservation-a')
+    assert.equal(releaseDeviceOwner.firstCall.args[1].reservationId, 'reservation-a')
     assert.deepEqual(writer.app.packets, [[wireutil.global, leave]])
   })
 
   it('persists a leave after a preceding capture on the same processor', async() => {
     let captured = () => {}
     setDeviceOwner.returns(new Promise(resolve => {
-      captured = () => resolve({errors: 0, replaced: 1})
+      captured = () => resolve({errors: 0, replaced: 1, applied: true})
     }))
-    unsetDeviceOwner.resolves({errors: 0, replaced: 1})
+    releaseDeviceOwner.resolves({errors: 0, replaced: 1, applied: true})
     const processor = fixture()
     const join = wireutil.envelope(new wire.JoinGroupMessage('phone', owner, 'automation', 'lease'))
     const released = processor.app.whenSent(leave)
     processor.device.emit('message', wireutil.global, join)
     processor.device.emit('message', wireutil.global, leave)
     await nextTurn()
-    assert.equal(unsetDeviceOwner.callCount, 0)
+    assert.equal(releaseDeviceOwner.callCount, 0)
     captured()
     await released
     assert.deepEqual(processor.app.packets, [[wireutil.global, join], [wireutil.global, leave]])
   })
 
+  it('does not publish pending-leave or cancelled-join metadata across processors', async() => {
+    let finishJoin = () => {}
+    setDeviceOwner.returns(new Promise(resolve => {
+      finishJoin = () => resolve({errors: 0, replaced: 1, applied: false})
+    }))
+    releaseDeviceOwner.resolves({errors: 0, replaced: 1, applied: false})
+    const joining = fixture()
+    const leaving = fixture()
+    const join = wireutil.envelope(new wire.JoinGroupMessage('phone', owner, 'automation', 'lease'))
+    joining.device.emit('message', wireutil.global, join)
+    await nextTurn()
+    leaving.device.emit('message', wireutil.global, leave)
+    await nextTurn()
+    assert.deepEqual(releaseDeviceOwner.firstCall.args.slice(1), [owner, 'lease'])
+    finishJoin()
+    await nextTurn()
+    assert.deepEqual(joining.app.packets, [])
+    assert.deepEqual(leaving.app.packets, [])
+  })
+
+  it('keeps a group.kick reply behind its committed owner release', async() => {
+    let finishRelease = () => {}
+    releaseDeviceOwner.returns(new Promise(resolve => {
+      finishRelease = () => resolve({errors: 0, replaced: 1, applied: true})
+    }))
+    const processor = fixture()
+    const replied = processor.app.whenSent(reply)
+    processor.device.emit('message', wireutil.global, leave)
+    processor.device.emit('message', 'release-reply', reply)
+    await nextTurn()
+    assert.deepEqual(processor.app.packets, [])
+    finishRelease()
+    await replied
+    assert.deepEqual(processor.app.packets, [[wireutil.global, leave], ['release-reply', reply]])
+  })
+
   it('does not publish a stale leave or replace later successful command replies', async() => {
-    unsetDeviceOwner.onFirstCall().resolves({errors: 0, replaced: 0})
-    unsetDeviceOwner.onSecondCall().rejects(new Error('temporary database failure'))
+    releaseDeviceOwner.onFirstCall().resolves({errors: 0, replaced: 0, applied: false})
+    releaseDeviceOwner.onSecondCall().rejects(new Error('temporary database failure'))
     const processor = fixture()
     processor.device.emit('message', wireutil.global, leave)
     await nextTurn()
     processor.device.emit('message', wireutil.global, leave)
     await nextTurn()
+    const responded = processor.app.whenSent(reply)
     processor.device.emit('message', 'command-reply', reply)
+    await responded
     assert.deepEqual(processor.app.packets, [['command-reply', reply]])
   })
 })

@@ -38,6 +38,8 @@ interface DeviceView extends deviceutil.Claimable {
   remoteConnect?: boolean
   remoteConnectUrl?: string | null
   automationRelease?: DeviceDocument['automationRelease']
+  pendingOwnerReleases?: DeviceDocument['pendingOwnerReleases']
+  lastOwnerRelease?: DeviceDocument['lastOwnerRelease']
 }
 
 interface DataUtil {
@@ -186,6 +188,8 @@ datautil.normalize = function(device: DeviceView, user: deviceutil.Viewer) {
   device.claimed = deviceutil.isClaimLive(device, Date.now())
   delete device.restoreOwner
   delete device.automationRelease
+  delete device.pendingOwnerReleases
+  delete device.lastOwnerRelease
 }
 
 namespace datautil {

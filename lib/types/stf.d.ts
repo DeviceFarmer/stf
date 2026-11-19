@@ -119,6 +119,8 @@ export interface DeviceDocument {
   usage: string | null
   automationLeaseId?: string | null
   automationRelease?: {email: string, leaseId: string} | null
+  pendingOwnerReleases?: Array<{reservationId: string, email: string, leaseId: string | null}>
+  lastOwnerRelease?: {email: string, reservationId: string, leaseId: string | null} | null
   usageChangedAt?: Date
   logs_enabled: boolean
   restoreOwner?: DeviceRestoreOwner | null

@@ -231,6 +231,7 @@ describe('Device group plugin', function() {
       const leftGroup = wire.LeaveGroupMessage.decode(messagesSent[0]!.message)
       expect(leftGroup.owner.reservationId).to.equal(acquired.reservationId)
       expect(leftGroup.reason).to.equal('automatic_timeout')
+      expect(leftGroup.leaseId).to.equal('lease-a')
       const unowned = await context.plugin.get().then(() => false, () => true)
       expect(unowned).to.equal(true)
     }

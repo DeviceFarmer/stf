@@ -10,6 +10,7 @@ import wirerouter from '../../wire/router.js'
 import wireutil from '../../wire/util.js'
 import db from '../../db/index.js'
 import dbapi from '../../db/api.js'
+import type {DeviceOwnershipWriteResult} from '../../db/api.js'
 import lifecycle from '../../util/lifecycle.js'
 import deviceutil from '../../util/deviceutil.js'
 import srv from '../../util/srv.js'
@@ -45,7 +46,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
   // App side
   const ownershipWrites = new Map<string, Promise<void>>()
   function persistOwnership(
-    serial: string, update: () => Promise<WriteResult>, publish: () => void
+    serial: string, update: () => Promise<DeviceOwnershipWriteResult>, publish: () => void
   ) {
     const pending: Promise<void> = (ownershipWrites.get(serial) ?? Promise.resolve())
       .then(update)
@@ -53,7 +54,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
         if (stats.errors) {
           throw new Error(String(stats.first_error))
         }
-        if (stats.replaced) {
+        if (stats.applied) {
           publish()
         }
       })
@@ -176,8 +177,6 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
         )
       })
   }
-
-  const joinsInFlight = new Set<Promise<void>>()
 
   devDealer.on('message', wirerouter()
     .on(wire.UpdateAccessTokenMessage, function(channel, message, data) {
@@ -362,17 +361,13 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
       // Wait for the atomic owner, lease and usage update before forwarding the join.
-      const write = persistOwnership(message.serial, () =>
-        dbapi.setDeviceOwner(message.serial, message.owner, message.leaseId, message.usage)
+      return persistOwnership(message.serial, () =>
+        dbapi.setDeviceOwner(message.serial, message.owner, message.usage, message.leaseId)
       , () => appDealer.send([channel, data]))
-      joinsInFlight.add(write)
-      return write.then(() => {
-        joinsInFlight.delete(write)
-      })
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
       return persistOwnership(message.serial, () =>
-        dbapi.unsetDeviceOwner(message.serial, message.owner)
+        dbapi.releaseDeviceOwner(message.serial, message.owner, message.leaseId)
       , () => appDealer.send([channel, data]))
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {
@@ -393,12 +388,12 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      // Keeps a reply sent right after a join (group.invite) behind that join's forward.
-      if (!joinsInFlight.size) {
+      // Keep replies after prior Join/Leave writes and their post-commit notifications.
+      if (!ownershipWrites.size) {
         appDealer.send([channel, data])
         return
       }
-      Promise.all(joinsInFlight).then(function() {
+      Promise.all(ownershipWrites.values()).then(function() {
         appDealer.send([channel, data])
       })
     })

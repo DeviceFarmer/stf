@@ -158,6 +158,9 @@ describe('Provider automation lease fence', function() {
     assert.equal(wire.JoinGroupMessage.decode(join.message).leaseId, 'lease-a')
     await f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-a', 'release'))
     assert.equal(decodeReply(f.packets).success, true)
+    const released = f.packets.map(packet => wire.Envelope.decode(packet[1]!))
+      .find(envelope => envelope.type === wire.LeaveGroupMessage.$code)!
+    assert.equal(wire.LeaveGroupMessage.decode(released.message).leaseId, 'lease-a')
     await f.send(new wire.GroupMessage(owner, 1000, requirements, 'automation', 'lease-b'))
     await f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-a', 'release'))
     assert.equal(decodeReply(f.packets).success, false)
@@ -167,6 +170,18 @@ describe('Provider automation lease fence', function() {
     await f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-b', 'renew', 1000))
     assert.equal(decodeReply(f.packets).success, true)
     await f.bridge.leave('test_complete')
+  })
+
+  it('iOS absence fences a reservation without claiming an early WDA handback receipt',
+    async function() {
+    const f = await ios()
+    await f.send(new wire.GroupMessage(owner, 1000, requirements, 'automation', 'lease-a'))
+    f.bridge.absent()
+    const released = f.packets.map(packet => wire.Envelope.decode(packet[1]!))
+      .find(envelope => envelope.type === wire.LeaveGroupMessage.$code)!
+    const message = wire.LeaveGroupMessage.decode(released.message)
+    assert.equal(message.reason, 'device_absent')
+    assert.equal(message.leaseId, null)
   })
 
   for (const [platform, setup] of [['Android', android], ['iOS', ios]] as const) {

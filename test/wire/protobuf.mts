@@ -744,6 +744,14 @@ describe('wire protobuf', function() {
       expect(join.leaseId).to.equal('lease-test')
       expect(join.serial).to.equal('test-device')
       expect(join.usage).to.equal('automation')
+      const leave = wire.LeaveGroupMessage.decode(new wire.LeaveGroupMessage(
+        'test-device', owner, 'automation_release', capture.leaseId
+      ).encodeNB())
+      expect(leave.leaseId).to.equal('lease-test')
+      const legacyLeave = wire.LeaveGroupMessage.decode(new wire.LeaveGroupMessage(
+        'test-device', owner, 'device_absent'
+      ).encodeNB())
+      expect(legacyLeave.leaseId).to.equal(null)
     })
 
     it('should round-trip lease operations without changing existing message codes', function() {

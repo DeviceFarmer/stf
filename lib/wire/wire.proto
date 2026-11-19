@@ -541,6 +541,7 @@ message LeaveGroupMessage {
   required string serial = 1;
   required OwnerMessage owner = 2;
   required string reason = 3;
+  optional string leaseId = 4;
 }
 
 // Input

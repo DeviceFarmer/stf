@@ -70,59 +70,72 @@ describe('dbapi owner claim', function() {
   // between has to leave it alone. Both of these run in that window on every reboot.
   // The claim has to go when the device is taken, or a reboot that never happened could hand the
   // device back to an earlier user later. It rides the write that records the new owner.
+  function updateBody() {
+    expect(lastUpdate[0], 'atomic update is a function of the device row').to.equal(69)
+    return lastUpdate[1][1]
+  }
+
   describe('setDeviceOwner', function() {
-    it('should persist the automation fence and usage with its owner', function() {
+    it('should persist owner, usage and the automation fence atomically', function() {
       const owner = {email: 'runner@example.test', reservationId: 'reservation-a'} as DeviceOwner
-      dbapi.setDeviceOwner('serial', owner, 'lease-a', 'automation')
-      expect(lastUpdate.automationLeaseId).to.equal('lease-a')
-      expect(lastUpdate.owner).to.deep.equal(owner)
-      expect(lastUpdate.usage).to.equal('automation')
+      dbapi.setDeviceOwner('serial', owner, 'automation', 'lease-a')
+      const [, pending, completed] = updateBody()[1]
+      const [, cancelled, install] = completed[1]
+      expect(install.owner).to.deep.equal(owner)
+      expect(install.usage).to.equal('automation')
+      expect(install.automationLeaseId).to.equal('lease-a')
+      expect(install.restoreOwner).to.equal(null)
+      expect(cancelled).to.deep.equal({})
+      expect(pending).to.have.keys('pendingOwnerReleases', 'lastOwnerRelease')
+      expect(pending).not.to.have.property('owner')
+      expect(lastQuery[2]).to.include({durability: 'hard', return_changes: 'always'})
     })
 
-    it('should clear a previous fence and usage for legacy or manual ownership', function() {
+    it('should clear stale managed usage and preserve ordinary empty-usage semantics', function() {
       dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner)
-      expect(lastUpdate.automationLeaseId).to.equal(null)
-      expect(lastUpdate.usage).to.equal(null)
-      expect(lastUpdate.owner.reservationId).to.equal(null)
-    })
-
-    it('should drop any claim in the same write that records the owner', function() {
-      dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner)
-      expect(lastUpdate.restoreOwner).to.equal(null)
+      const [managed, clear, preserve] = updateBody()[1]
+      expect(JSON.stringify(managed)).to.include('automationLeaseId')
+      expect(clear).to.include({automationLeaseId: null, usage: null, restoreOwner: null})
+      expect(clear.owner.reservationId).to.equal(null)
+      expect(preserve).to.include({automationLeaseId: null, restoreOwner: null})
+      expect(preserve).not.to.have.property('usage')
+      expect(preserve).not.to.have.property('usageChangedAt')
     })
   })
 
-  describe('unsetDeviceOwner', function() {
+  describe('releaseDeviceOwner', function() {
     const owner = {email: 'runner@example.test', reservationId: 'reservation-a'} as DeviceOwner
-    const currentOwner = r.row('owner').default({})
-    const leaseId = r.row('automationLeaseId').default(null)
-    const ownerMatches = currentOwner('email').default(null).eq(owner.email)
 
-    it('should clear the matching reservation and write its durable receipt', function() {
-      dbapi.unsetDeviceOwner('serial', owner)
-      const [matches, release, stale] = lastUpdate[1][1][1]
-      expect(matches).to.deep.equal(built(ownerMatches
-        .and(currentOwner('reservationId').default(null).eq(owner.reservationId))))
-      expect(stale).to.deep.equal({})
+    it('should retain an early leave separately from the actual ownership release', function() {
+      dbapi.releaseDeviceOwner('serial', owner, 'lease-a')
+      const [, release, unmatched] = updateBody()[1]
       expect(release).to.include({owner: null, automationLeaseId: null, usage: null})
-      expect(release.automationRelease).to.deep.equal(built(r.branch(leaseId.ne(null)
-        , {email: owner.email, leaseId}, r.row('automationRelease').default(null))))
-      expect(lastQuery[2].durability).to.equal('hard')
+      expect(release).to.have.property('automationRelease')
+      expect(release).to.have.property('lastOwnerRelease')
+      const [, duplicate, pending] = unmatched[1]
+      expect(duplicate).to.deep.equal({})
+      expect(pending).to.have.keys('pendingOwnerReleases')
+      expect(pending).not.to.have.property('owner')
+      expect(lastQuery[2]).to.include({durability: 'hard', return_changes: 'always'})
     })
 
-    it('should only release an unmanaged legacy owner if the event has no reservation ID',
-      function() {
-        dbapi.unsetDeviceOwner('serial', {email: owner.email} as DeviceOwner)
-        const [matches, , stale] = lastUpdate[1][1][1]
-        expect(matches).to.deep.equal(built(ownerMatches
-          .and(currentOwner('reservationId').default(null).eq(null)).and(leaseId.eq(null))))
-        expect(stale).to.deep.equal({})
-      })
+    it('should keep legacy no-ID releases fenced by an absent automation lease', function() {
+      dbapi.releaseDeviceOwner('serial', {email: owner.email} as DeviceOwner)
+      const [matching, release, stale] = updateBody()[1]
+      expect(JSON.stringify(matching)).to.include('automationLeaseId')
+      expect(release).to.include({owner: null, automationLeaseId: null, usage: null})
+      expect(stale).to.deep.equal({})
+      expect(release).not.to.have.property('pendingOwnerReleases')
+    })
 
-    it('should look up only an exact release receipt', function() {
+    it('should find exact receipts in the latest and outstanding ownership records', function() {
       dbapi.hasDeviceAutomationRelease('serial', owner.email, 'lease-a')
-      expect(lastQuery).to.deep.equal(built(r.table('devices').getAll('serial')
-        .filter({automationRelease: {email: owner.email, leaseId: 'lease-a'}}).isEmpty().not()))
+      const query = JSON.stringify(lastQuery)
+      for (const field of ['automationRelease', 'lastOwnerRelease', 'pendingOwnerReleases']) {
+        expect(query).to.include(field)
+      }
+      expect(query).to.include(owner.email)
+      expect(query).to.include('lease-a')
     })
   })
 

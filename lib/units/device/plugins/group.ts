@@ -140,7 +140,7 @@ export default syrup.serial()
           channels.unregister(group.group)
           sub.unsubscribe(group.group)
           push.send([wireutil.global, wireutil.envelope(new wire.LeaveGroupMessage(
-            options.serial, group, reason
+            options.serial, group, reason, reason === 'device_absent' ? null : currentLeaseId
           ))])
           automationLease.clear()
           currentLeaseId = null

@@ -47,8 +47,16 @@ describe('datautil', function() {
     it('should keep a managed release receipt internal', function() {
       const released = device(null)
       released.automationRelease = {email: 'runner@example.test', leaseId: 'lease-a'}
+      released.pendingOwnerReleases = [{
+        reservationId: 'a', email: 'runner@example.test', leaseId: 'lease-a'
+      }]
+      released.lastOwnerRelease = {
+        email: 'runner@example.test', reservationId: 'a', leaseId: 'lease-a'
+      }
       datautil.normalize(released, user)
       expect(released).to.not.have.property('automationRelease')
+      expect(released).to.not.have.property('pendingOwnerReleases')
+      expect(released).to.not.have.property('lastOwnerRelease')
     })
   })
 })
