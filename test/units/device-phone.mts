@@ -9,6 +9,7 @@ import Promise from 'bluebird'
 import sinon from 'sinon'
 
 import phoneSyrup from '../../lib/units/device/plugins/util/phone.js'
+import type {RefreshablePhoneProperties} from '../../lib/types/device-plugins.js'
 
 type Properties = Record<string, string>
 
@@ -323,5 +324,152 @@ describe('device phone info', function() {
       })
 
       expect(run.properties).to.deep.equal({network: 'LTE'})
+    })
+})
+
+describe('device phone refresh', function() {
+  // Each service answer and SIM state is consumed by one read; later calls
+  // to refresh() take the next one, so a swap can be simulated without a
+  // device. The startup snapshot handed to the plugin says ABSENT.
+  function invokePhone(
+    fromService: Properties[]
+  , simStates: Properties[]
+  , agentText?: string | null
+  ) {
+    var adb = {
+      shell: sinon.stub().callsFake(function() {
+        return Promise.resolve(agentOutput(typeof agentText === 'string' ?
+          agentText : ''))
+      })
+    , getProperties: sinon.stub().callsFake(function() {
+        return Promise.resolve(simStates.length ? simStates.shift()! : {})
+      })
+    }
+    var service = {
+      getProperties: sinon.stub().callsFake(function() {
+        return Promise.resolve(fromService.length ? fromService.shift()! : {})
+      })
+    }
+    var result = phoneSyrup.invoke(
+      {serial: 'test-device', phoneRetries: 0, phoneRetryDelay: 0}
+    , adb
+    , {path: '/data/app/stf.apk', main: 'jp.co.cyberagent.stf.Agent'}
+    , service
+    , {'gsm.sim.state': 'ABSENT'}
+    )
+    return result.then(function(properties) {
+      return {
+        properties: properties as RefreshablePhoneProperties
+      , adb: adb
+      , service: service
+      }
+    })
+  }
+
+  it('should re-read the phone info on refresh', async function() {
+    var run = await invokePhone([
+      {imei: 'a', iccid: 'one'}
+    , {imei: 'a', iccid: 'two'}
+    ], [{'gsm.sim.state': 'ABSENT'}])
+
+    expect(run.properties.iccid).to.equal('one')
+    var fresh = await run.properties.refresh()
+    expect(fresh && fresh.iccid).to.equal('two')
+    expect(run.service.getProperties.callCount).to.equal(2)
+  })
+
+  it('should notice a SIM card disappearing on refresh', async function() {
+    var run = await invokePhone([
+      {imei: 'a', iccid: 'one'}
+    , {imei: 'a'}
+    ], [{'gsm.sim.state': 'ABSENT'}])
+
+    var fresh = await run.properties.refresh()
+    expect(fresh).to.deep.equal({imei: 'a'})
+  })
+
+  it('should keep refresh available on refreshed values', async function() {
+    var run = await invokePhone([
+      {imei: 'a', iccid: 'one'}
+    , {imei: 'a', iccid: 'two'}
+    , {imei: 'a', iccid: 'three'}
+    ], [{'gsm.sim.state': 'ABSENT'}, {'gsm.sim.state': 'ABSENT'}])
+
+    var fresh = await run.properties.refresh()
+    var fresher = await (fresh as RefreshablePhoneProperties).refresh()
+    expect(fresher && fresher.iccid).to.equal('three')
+    expect(run.service.getProperties.callCount).to.equal(3)
+  })
+
+  it('should ask the agent again when a SIM card appears after startup',
+    async function() {
+      var run = await invokePhone([
+        {imei: 'a'}
+      , {imei: 'a'}
+      ], [{'gsm.sim.state': 'READY'}], 'iccid=from-agent\n')
+
+      expect(run.adb.shell.called).to.equal(false)
+      var fresh = await run.properties.refresh()
+      expect(fresh).to.deep.equal({imei: 'a', iccid: 'from-agent'})
+      expect(run.adb.shell.callCount).to.equal(1)
+    })
+
+  it('should skip the poll when a present SIM card cannot be read',
+    async function() {
+      var run = await invokePhone([
+        {imei: 'a', iccid: 'one'}
+      , {imei: 'a'}
+      ], [{'gsm.sim.state': 'READY'}])
+
+      var fresh = await run.properties.refresh()
+      expect(fresh).to.equal(null)
+    })
+
+  ;['UNKNOWN', 'NOT_READY', 'ABSENT,NOT_READY', 'NOT_READY,UNKNOWN']
+    .forEach(function(state) {
+      it('should skip the poll when the SIM state is ' + state,
+        async function() {
+          var run = await invokePhone([
+            {imei: 'a', iccid: 'one'}
+          , {imei: 'a'}
+          ], [{'gsm.sim.state': state}])
+
+          var fresh = await run.properties.refresh()
+          expect(fresh).to.equal(null)
+        })
+    })
+
+  ;[{'gsm.sim.state': 'ABSENT'}, {'gsm.sim.state': 'ABSENT,ABSENT'}]
+    .forEach(function(simState) {
+      it('should report the removal when every slot confirms absence (' +
+        simState['gsm.sim.state'] + ')', async function() {
+        var run = await invokePhone([
+          {imei: 'a', iccid: 'one'}
+        , {imei: 'a'}
+        ], [simState])
+
+        var fresh = await run.properties.refresh()
+        expect(fresh).to.deep.equal({imei: 'a'})
+      })
+    })
+
+  it('should skip the poll when the SIM state cannot be read',
+    async function() {
+      var run = await invokePhone([
+        {imei: 'a', iccid: 'one'}
+      , {imei: 'a'}
+      ], [])
+
+      var fresh = await run.properties.refresh()
+      expect(fresh).to.equal(null)
+    })
+
+  it('should not leak refresh into copies of the properties',
+    async function() {
+      var run = await invokePhone([{imei: 'a', iccid: 'one'}], [])
+
+      var copy = Object.assign({}, run.properties)
+      expect(copy).to.deep.equal({imei: 'a', iccid: 'one'})
+      expect('refresh' in copy).to.equal(false)
     })
 })

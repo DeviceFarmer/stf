@@ -168,6 +168,14 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , demand: true
     })
+    .option('sim-refresh-interval', {
+      describe: 'How often in milliseconds to re-read phone/SIM info while the ' +
+        'device stays connected, so that a SIM card swap gets noticed without a ' +
+        'reconnect. Zero by default: the info is only read when the device ' +
+        'connects.'
+    , type: 'number'
+    , default: 0
+    })
     .option('storage-url', {
       alias: 'r'
     , describe: 'The URL to the storage unit.'
@@ -227,6 +235,7 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   , cleanupBluetoothBonds: argv.cleanupBluetoothBonds
   , cleanupFolder: argv.cleanupFolder
   , screenReset: argv.screenReset
+  , simRefreshInterval: argv.simRefreshInterval
   })
 }
 

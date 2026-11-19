@@ -383,7 +383,7 @@ ExecStart=/usr/bin/docker run --rm \
 
 **Requires** the `rethinkdb-proxy-28015.service` unit on the same host.
 
-The processor is the main workhorse of STF. It acts as a bridge between the devices and the app, and nearly all communication goes through it. You may wish to have more than one instance running.
+The processor is the main workhorse of STF. It acts as a bridge between the devices and the app, and nearly all communication goes through it. You may wish to have more than one instance running. The processor also owns the optional [SIM card change notifications](#sim-card-change-notifications).
 
 This is a template unit, meaning that you'll need to start it with an instance identifier. In this example the identifier has no special purpose, but having it allows you to start more than one unit on the same host.
 
@@ -410,6 +410,37 @@ ExecStart=/usr/bin/docker run --rm \
     --connect-dev-dealer tcp://devside.stf.example.org:7260
 ExecStop=-/usr/bin/docker stop -t 10 %p-%i
 ```
+
+### SIM card change notifications
+
+Two optional settings, both off by default, make STF report SIM card changes to an external webhook. The provider notices that the card in a connected device changed, and the processor delivers the event.
+
+On the **provider**, `--sim-refresh-interval` (env `STF_PROVIDER_SIM_REFRESH_INTERVAL`) is how often in milliseconds phone/SIM info is re-read while a device stays connected, so that a swap is noticed without a reconnect. The default `0` reads it only when the device connects, as before; the smallest accepted value is `10000`. The setting is passed on to every device unit.
+
+On the **processor**, `--sim-change-webhook-url` (env `STF_PROCESSOR_SIM_CHANGE_WEBHOOK_URL`) is the URL a JSON event is POSTed to whenever a device's ICCID is inserted, removed or replaced. With `--sim-change-webhook-secret` (env `STF_PROCESSOR_SIM_CHANGE_WEBHOOK_SECRET`) every request is signed in the `X-STF-Signature` header with `sha256=` followed by the HMAC-SHA256 of the raw body, so the receiver can verify authenticity. Delivery is best effort: three attempts with a one-second delay, then the failure is logged and dropped. STF does not queue or store events anywhere.
+
+```json
+{
+  "event": "sim.changed",
+  "change": "replaced",
+  "serial": "TA93003ELZ8",
+  "model": "Pixel 8",
+  "manufacturer": "Google",
+  "previous": {"iccid": "8944012345678", "imsi": "310260000000000", "imei": null},
+  "current": {"iccid": "8944087654321", "imsi": "310260111111111", "imei": "867400022047199"},
+  "timestamp": "2026-11-19T12:00:00.000Z"
+}
+```
+
+Known limitations on phones with more than one SIM slot:
+
+- STF tracks a single ICCID per device: the card of the **default mobile-data subscription**, which is not necessarily the one in slot 1.
+- A card in the other slot is invisible; swapping or removing it sends no event.
+- When Android switches the default data subscription (for example after the other card is removed), the remaining card is reported as `inserted` even though it never moved.
+- `imei` follows the slot, so it can change between events for the same phone.
+- A physical swap is usually reported as `removed` followed by `inserted` up to half a minute later, while the new card finishes loading, rather than as a single `replaced` event.
+
+The event body contains the IMSI and IMEI; treat delivered events as sensitive.
 
 ### `stf-provider@.service`
 
