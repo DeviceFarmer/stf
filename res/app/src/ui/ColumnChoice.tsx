@@ -12,13 +12,18 @@ export interface ColumnChoiceItem {
 
 const multiColumnThreshold = 12
 
-export function ColumnChoice({items, onChange, onReset, reorderable, compact, position = 'bottom-start'}: {
+export function ColumnChoice({items, onChange, onReset, reorderable, compact, position = 'bottom-start', popover}: {
   items: ColumnChoiceItem[]
   onChange: (items: ColumnChoiceItem[]) => void
   onReset: () => void
   reorderable?: boolean
   compact?: boolean
   position?: PopoverProps['position']
+  popover?: {
+    opened: boolean
+    onChange: (opened: boolean) => void
+    duration: number
+  }
 }) {
   const {t} = useTranslation()
   const [dragged, setDragged] = useState<number | null>(null)
@@ -43,22 +48,45 @@ export function ColumnChoice({items, onChange, onReset, reorderable, compact, po
     endDrag()
   }
 
+  const togglePopover = popover && (() => popover.onChange(!popover.opened))
+  const popoverProps: PopoverProps | undefined = popover && {
+    opened: popover.opened
+    , onChange: popover.onChange
+    , onClose: endDrag
+    // Preserve the dropdown position during exit when the trigger is hidden.
+    , keepMounted: true
+    , hideDetached: popover.opened
+    , transitionProps: {transition: 'fade', duration: popover.duration}
+  }
+
   const trigger = compact ? (
     <Tooltip label={t('Customize')}>
-      <ActionIcon variant='default' size='md' aria-label={t('Customize')} className='stf-column-choice'>
+      <ActionIcon
+        variant='default'
+        size='md'
+        aria-label={t('Customize')}
+        className='stf-column-choice'
+        onClick={togglePopover}
+      >
         <IconColumns size={16} />
       </ActionIcon>
     </Tooltip>
   ) : (
-    <Button size='xs' variant='default' leftSection={<IconColumns size={16} />} className='stf-column-choice'>
+    <Button
+      size='xs'
+      variant='default'
+      leftSection={<IconColumns size={16} />}
+      className='stf-column-choice'
+      onClick={togglePopover}
+    >
       {t('Customize')}
     </Button>
   )
 
   return (
-    <Popover position={position} shadow='md' withinPortal>
+    <Popover position={position} shadow='md' withinPortal {...popoverProps}>
       <Popover.Target>{trigger}</Popover.Target>
-      <Popover.Dropdown className='stf-column-customize'>
+      <Popover.Dropdown className='stf-column-customize' inert={popover?.opened === false}>
         <div className={classes.list} data-columns={items.length > multiColumnThreshold || undefined}>
           {items.map((item, index) => (
             <div
