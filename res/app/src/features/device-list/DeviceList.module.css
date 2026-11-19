@@ -320,6 +320,10 @@ tr:hover .noteEdit {
     width: 100%;
   }
 
+  .customize[inert] {
+    display: none;
+  }
+
   .search {
     flex: 1;
   }
