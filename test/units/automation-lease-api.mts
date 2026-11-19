@@ -6,6 +6,7 @@ import type {Response} from 'express'
 import type {AddUserDeviceBody, ApiLock, ApiRequest, AutomationLeaseBody}
   from '../../lib/types/units-api.js'
 import {setTimeout as delay} from 'node:timers/promises'
+import {automationLeaseMaxTimeoutMs} from '../../lib/util/automation-lease.js'
 import wire from '../../lib/wire/index.js'
 import wireutil from '../../lib/wire/util.js'
 import {importFresh, mockModule} from '../helpers/module-mock.mts'
@@ -46,7 +47,7 @@ function fixture(body: AutomationLeaseBody = {leaseId: 'lease-a', timeout: 18000
       , keepOwnership: {value: false}}}
     , user: {email: 'runner@example.test', name: 'Runner', group: 'runner-group', privilege: 'user'
       , groups: {subscribed: ['group']}}
-    , options: {channelRouter: router, sub, push}
+    , options: {channelRouter: router, sub, push, automationLeaseAccounts: ['runner@example.test']}
   } as unknown as ApiRequest<AutomationLeaseBody>
   let status = 200
   let result: any = null
@@ -68,6 +69,64 @@ describe('Automation lease API', function() {
     receipt = null
     device = {serial: 'device', channel: 'device-channel', present: true, ready: true
       , owner: {email: 'runner@example.test'}, usage: 'automation', automationLeaseId: 'lease-a'}
+  })
+
+  it('restricts managed captures and renewals to explicitly configured service accounts',
+    function() {
+      for (const privilege of ['user', 'admin']) {
+        const f = fixture()
+        f.req.user.email = 'other@example.test'
+        f.req.user.privilege = privilege
+        renewAutomationLease(f.req, f.res)
+        assert.equal(f.status(), 403)
+        const req = f.req as unknown as ApiRequest<AddUserDeviceBody>
+        req.body = {serial: 'device', leaseId: 'lease-a'}
+        addUserDevice(req, f.res)
+        assert.equal(f.status(), 403)
+        assert.equal(f.push.send.callCount, 0)
+      }
+      const unconfigured = fixture()
+      delete unconfigured.req.options.automationLeaseAccounts
+      renewAutomationLease(unconfigured.req, unconfigured.res)
+      assert.equal(unconfigured.status(), 403)
+      assert.equal(unconfigured.push.send.callCount, 0)
+      assert.equal(loadDevice.callCount, 0)
+      assert.equal(hasDeviceAutomationRelease.callCount, 0)
+    })
+
+  it('keeps ordinary reservations available without a service account', async function() {
+    Object.assign(device, {platform: 'Android', owner: null, automationLeaseId: null, usage: null})
+    const f = fixture()
+    f.req.options.automationLeaseAccounts = []
+    const req = f.req as unknown as ApiRequest<AddUserDeviceBody>
+    req.body = {serial: 'device'}
+    addUserDevice(req, f.res)
+    await flush()
+    assert.equal(f.push.send.callCount, 1)
+    const envelope = wire.Envelope.decode(f.push.send.firstCall.args[0][1])
+    const capture = wire.GroupMessage.decode(envelope.message)
+    assert.equal(capture.leaseId, null)
+    const joined = wireutil.envelope(new wire.JoinGroupMessage(
+      'device', capture.owner, 'automation'
+    ))
+    f.router.emit(wireutil.global, wireutil.global, joined)
+    assert.equal(f.status(), 200)
+    assert.equal(f.result().success, true)
+  })
+
+  it('rejects out-of-range timeouts for service account capture and renewal', function() {
+    for (const timeout of [0, automationLeaseMaxTimeoutMs + 1]) {
+      const f = fixture({leaseId: 'lease-a', timeout})
+      renewAutomationLease(f.req, f.res)
+      assert.equal(f.status(), 400)
+      const req = f.req as unknown as ApiRequest<AddUserDeviceBody>
+      req.body = {serial: 'device', leaseId: 'lease-a', timeout}
+      addUserDevice(req, f.res)
+      assert.equal(f.status(), 400)
+      assert.equal(f.push.send.callCount, 0)
+    }
+    assert.equal(loadDevice.callCount, 0)
+    assert.equal(hasDeviceAutomationRelease.callCount, 0)
   })
 
   it('waits for provider acknowledgment and returns the confirmed deadline', async function() {
@@ -127,6 +186,7 @@ describe('Automation lease API', function() {
     device.automationLeaseId = 'lease-b'
     receipt = 'lease-a'
     const f = fixture()
+    f.req.options.automationLeaseAccounts = []
     releaseAutomationLease(f.req, f.res)
     await flush()
     assert.deepEqual(f.result(), {success: true, leaseId: 'lease-a'})

@@ -48,6 +48,7 @@
 {{- $c := .Values.coordinator -}}
 {{- if not $c.existingSecret }}{{ fail "coordinator.existingSecret is required when the coordinator is enabled" }}{{ end -}}
 {{- if not $c.appiumGridUrl }}{{ fail "coordinator.appiumGridUrl is required when the coordinator is enabled" }}{{ end -}}
+{{- if not (regexMatch "^[^@,\\s]+@[^@,\\s]+$" $c.stfServiceAccountEmail) }}{{ fail "coordinator.stfServiceAccountEmail must be a single STF account email when the coordinator is enabled" }}{{ end -}}
 {{- if hasKey $c.podAnnotations "checksum/adb-pools" }}{{ fail "coordinator.podAnnotations must not override checksum/adb-pools" }}{{ end -}}
 {{- if and $c.ingress.enabled (not (regexMatch "^https?://[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?/?$" $c.publicUrl)) }}{{ fail "coordinator.ingress requires coordinator.publicUrl as an HTTP(S) origin without a path" }}{{ end -}}
 {{- $providers := dict -}}

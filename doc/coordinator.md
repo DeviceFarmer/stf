@@ -9,8 +9,11 @@ and reports stay with the client.
 
 Run one coordinator per device and port pool. Use matching STF API, processor,
 and provider builds that support [automation leases](API.md#automation-leases).
-The coordinator uses a regular STF access token from an account that can see
-the devices it should schedule.
+Use an STF access token from a dedicated service account that can see the
+devices it should schedule. Authorize its exact STF email on each STF API
+replica with `stf api --automation-lease-accounts` or
+`STF_API_AUTOMATION_LEASE_ACCOUNTS`. The value is a comma-separated list of
+service account emails. An empty list disables managed capture and renewal.
 
 Appium requires a reachable Grid with slots for the devices you want to use.
 Android slots must advertise the provider pool's `appium:remoteAdbHost` and,
@@ -86,8 +89,8 @@ The STF token stays with the coordinator. For shared use, pass
 and a `projects` array. Each project has a unique `id`, a lowercase SHA-256
 `tokenSha256` and a positive integer `maxParallel`. Give the client the
 original project token. Each project has its own idempotency keys, requests,
-leases and concurrency limit. The operator token can inspect all projects and
-run recovery. Keep it separate from project credentials.
+leases and concurrency limit. The operator token can inspect all projects,
+revoke their leases and run recovery. Keep it separate from project credentials.
 
 The API and WebDriver gateway accept a Bearer token or HTTP Basic authentication
 with username `coordinator` and the token as password. Both enforce the project's
@@ -133,7 +136,10 @@ WebDriver activity does not renew the lease. The default worker lease
 lifetime is 180 seconds and the default absolute limit is six hours. The
 coordinator enforces both limits and rejects commands after expiry. For slow
 Grid operations, set `--upstream-timeout-seconds` and give the client a longer
-HTTP timeout.
+HTTP timeout. STF providers cap each managed capture or renewal timeout at
+73 minutes and enforce a fixed ceiling of 24 hours plus 73 minutes from
+capture, including the maximum cleanup window. These provider limits apply
+even outside the coordinator.
 
 Close the Appium session, then release the lease.
 A cleanup request returns HTTP 202. Poll the lease to see whether cleanup
@@ -146,13 +152,19 @@ finished or the device entered quarantine.
 | POST | `/api/v1/requests` | Queue a device request |
 | GET, DELETE | `/api/v1/requests/:id` | Read or cancel a request |
 | GET | `/api/v1/leases` | List leases |
-| GET, DELETE | `/api/v1/leases/:id` | Read or release a lease |
+| GET, DELETE | `/api/v1/leases/:id` | Read or release a lease. Operators can release across projects |
 | POST | `/api/v1/leases/:id/renew` | Renew an active lease with an empty JSON object |
 | POST | `/api/v1/leases/:id/recover` | Retry quarantined cleanup as an operator |
 | POST | `/api/v1/maintenance` | Drain an iOS device as an operator |
 | GET, DELETE | `/api/v1/maintenance/:id` | Read or complete an iOS drain |
 
 ## Recovery and maintenance
+
+Use the coordinator operator token with `DELETE /api/v1/leases/:id` to revoke
+the exact lease in any project. The coordinator confirms Appium session cleanup
+with Grid before releasing the STF reservation. Poll the lease after HTTP 202.
+If the coordinator is unavailable, restore it with its existing state file and
+let recovery finish before retrying the request.
 
 Keep the state file across restarts. Startup recovers interrupted leases before
 reusing their devices. A lease remains quarantined if cleanup cannot be proved.
@@ -190,8 +202,9 @@ coordinator can recover and verify outstanding leases. Experimental state contai
 Maestro history is unsupported by this Appium-only coordinator, including
 resolved history. Preserve it and plan an explicit migration before switching
 images. Do not roll a v2 state file back to a v1-only runtime. A replacement
-coordinator recovers interrupted leases before becoming ready; `/healthz` remains
-live during that recovery and `/readyz` reports 503.
+coordinator recovers interrupted leases before becoming ready. During normal
+recovery `/healthz` remains live and `/readyz` returns 503. A state write failure
+logs the cause and makes `/healthz` return 503 so Kubernetes can restart it.
 
 The STF token, operator token, project policy and ADB pool configuration are
 loaded at startup. Restart the single coordinator after changing these files.

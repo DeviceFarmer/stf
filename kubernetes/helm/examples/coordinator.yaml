@@ -7,6 +7,8 @@ coordinator:
   enabled: true
   # Existing Secret: stf-token, api-token and optional projects.json.
   existingSecret: stf-coordinator-credentials
+  # Exact STF email of the service account that owns stf-token.
+  stfServiceAccountEmail: stf-coordinator@example.com
   projectTokensKey: projects.json
   appiumGridUrl: http://grid.appium.svc.cluster.local:4444
   publicUrl: https://coordinator.example.com

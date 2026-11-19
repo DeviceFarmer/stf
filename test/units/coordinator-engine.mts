@@ -526,9 +526,33 @@ describe('coordinator allocation and lifetime', () => {
     store.failWrites = true
     await rejectCode(engine.tick(), 'state_unavailable', 503)
     assert.equal(farm.captures.length, 0, 'No capture may happen before durable allocation')
+    assert.equal(engine.healthy, false)
     assert.equal(engine.ready, false)
     await rejectCode(engine.submit(input(), 'another'), 'not_ready', 503)
     assert.equal(engine.requestView(request.id).state, 'queued')
+  })
+
+  it('restarts from the last durable snapshot after a failed write', async() => {
+    const f = await fixture()
+    const lease = await f.allocate()
+    await f.create(lease.id)
+    const durable = structuredClone(f.store.state)
+    const events = [...f.farm.events]
+    f.store.failWrites = true
+    await rejectCode(f.engine.submit(input(), 'failed-write'), 'state_unavailable', 503)
+
+    f.store.failWrites = false
+    await f.engine.stop()
+    assert.deepEqual(f.store.state, durable)
+    assert.deepEqual(f.farm.events, events)
+
+    const replacement = new Coordinator(f.config, pools, f.farm, f.store, f.now)
+    await replacement.start()
+    assert.equal(replacement.healthy, true)
+    assert.equal(replacement.leaseView(lease.id).state, 'expired')
+    assert.deepEqual(f.store.state.requests, durable.requests)
+    assert.equal(f.farm.inventory[0]!.owner, null)
+    assert.equal(f.farm.slots.nodes[0]!.slots[0]!.session, null)
   })
 
   it('rejects an expired heartbeat immediately before the scheduler notices expiry', async() => {

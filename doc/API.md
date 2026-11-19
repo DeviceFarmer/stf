@@ -322,22 +322,27 @@ clientWithPromise.then(function(api) {
 
 #### Automation leases
 
-To fence an automation reservation, include a unique `leaseId` in
-`POST /api/v1/user/devices`. The capture response echoes the supplied lease ID.
+Only configured STF service accounts can create or renew managed automation
+leases. Set `STF_API_AUTOMATION_LEASE_ACCOUNTS` on each API replica to a
+comma-separated list of exact account emails. An empty list disables managed
+capture and renewal. Requests without a `leaseId` use the existing reservation API.
 
-Use the same STF account and lease ID for the following requests. The provider
-rejects stale IDs, including older leases held by the same account.
-Each capture needs a new lease ID. Reusing an ID with a recorded release is
-rejected before reservation.
+To create a managed lease, include a unique `leaseId` in
+`POST /api/v1/user/devices`. The response echoes that ID. Use the same account
+and lease ID for renewal and release. A former service account can release its
+existing lease after removal from the list. Each capture needs a new lease ID.
 
 | Method | STF API path | JSON body |
 | --- | --- | --- |
 | POST | `/api/v1/user/devices/{serial}/automation/renew` | `{"leaseId":"example-lease","timeout":180000}` |
 | POST | `/api/v1/user/devices/{serial}/automation/release` | `{"leaseId":"example-lease"}` |
 
-The renewal timeout is in milliseconds. Test clients using
-[the coordinator](coordinator.md) call its lease API and let it manage the STF
-reservation.
+Managed capture and renewal timeouts are in milliseconds, up to 73 minutes.
+The provider fixes an absolute deadline of 24 hours and 73 minutes from
+capture. Renewal cannot extend it. Test clients call the
+[coordinator API](coordinator.md), which also enforces the worker's own
+duration limit. Operators release coordinator leases through that API so it
+can confirm Appium cleanup before handing the device back.
 
 A successful release waits for the matching provider cleanup and its durable
 database receipt. STF keeps the latest release receipt for each device. Repeating

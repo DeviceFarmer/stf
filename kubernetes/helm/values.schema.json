@@ -664,6 +664,10 @@
           "type": "string",
           "pattern": "^(|https?://[^/?#@\\s]+(?:/[^?#\\s]*)?)$"
         },
+        "stfServiceAccountEmail": {
+          "type": "string",
+          "pattern": "^([^@,\\s]+@[^@,\\s]+)?$"
+        },
         "publicUrl": {
           "type": "string",
           "pattern": "^(|https?://[^/?#@\\s]+(?:/[^?#\\s]*)?)$"
@@ -808,13 +812,17 @@
           "then": {
             "required": [
               "existingSecret",
-              "appiumGridUrl"
+              "appiumGridUrl",
+              "stfServiceAccountEmail"
             ],
             "properties": {
               "existingSecret": {
                 "minLength": 1
               },
               "appiumGridUrl": {
+                "minLength": 1
+              },
+              "stfServiceAccountEmail": {
                 "minLength": 1
               }
             }

@@ -110,8 +110,10 @@ coordinator:
   upstreamTimeoutSeconds: 30
   # Empty inherits the main STF image; an override needs repository + tag/digest.
   image: {}
-  # Empty uses this chart's API; the external URL must include /api/v1.
+  # Empty uses this chart's API. An external URL must include /api/v1.
   stfApiUrl: ""
+  # Required when enabled. Use the exact STF account that owns the stf-token.
+  stfServiceAccountEmail: ""
   # Empty advertises the in-cluster Service. Set this for remote Appium clients.
   publicUrl: ""
   # Required external Appium Grid. This chart does not deploy Grid or its nodes.

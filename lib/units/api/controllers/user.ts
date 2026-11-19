@@ -14,7 +14,7 @@ import logger from '../../../util/logger.js'
 import datautil from '../../../util/datautil.js'
 import deviceutil from '../../../util/deviceutil.js'
 import {
-  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, isAutomationLeaseTimeout
 } from '../../../util/automation-lease.js'
 import wire from '../../../wire/index.js'
 import wireutil from '../../../wire/util.js'
@@ -150,16 +150,32 @@ function getUserDeviceBySerial(req: ApiRequest, res: Response) {
   }, 'read')
 }
 
+function authorizeAutomationLease(
+  req: ApiRequest<AddUserDeviceBody | AutomationLeaseBody>, res: Response
+) {
+  if (req.options.automationLeaseAccounts?.includes(req.user.email)) {
+    return true
+  }
+  apiutil.respond(res, 403, 'Managed automation leases require an authorized service account')
+  return false
+}
+
 function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   var serial = req.hasOwnProperty('body') ? req.body.serial : req.swagger.params.serial.value
-  var timeout = req.hasOwnProperty('body') ? req.body.timeout ||
-                                             null : req.swagger.params.timeout.value || null
-  const leaseId = req.body?.leaseId || null
-  if (leaseId && (typeof leaseId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(leaseId) ||
-      (timeout !== null && (!Number.isInteger(timeout) || timeout <= 0 || timeout > 2147483647)))) {
-    apiutil.respond(res, 400, 'Invalid automation lease ID')
-    return
+  const requestedTimeout = (req.hasOwnProperty('body') ? req.body.timeout :
+    req.swagger.params.timeout.value) ?? null
+  const leaseId = req.body?.leaseId ?? null
+  if (leaseId !== null) {
+    if (!authorizeAutomationLease(req, res)) {
+      return
+    }
+    if (typeof leaseId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(leaseId) ||
+        (requestedTimeout !== null && !isAutomationLeaseTimeout(requestedTimeout))) {
+      apiutil.respond(res, 400, 'Invalid automation lease ID or timeout')
+      return
+    }
   }
+  const timeout = requestedTimeout || null
   const lock: ApiLock = {}
 
   lockutil.lockGenericDevice(req, res, lock, dbapi.lockDeviceByCurrent)
@@ -248,10 +264,12 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
 function automationLeaseOperation(
   req: ApiRequest<AutomationLeaseBody>, res: Response, action: 'renew' | 'release'
 ) {
+  if (action === 'renew' && !authorizeAutomationLease(req, res)) {
+    return
+  }
   const {leaseId, timeout} = req.body || {}
   if (typeof leaseId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(leaseId) ||
-      (action === 'renew' &&
-        (!Number.isInteger(timeout) || timeout! <= 0 || timeout! > 2147483647))) {
+      (action === 'renew' && !isAutomationLeaseTimeout(timeout))) {
     apiutil.respond(res, 400, 'Invalid automation lease request')
     return
   }

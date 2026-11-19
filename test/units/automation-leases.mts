@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import events from 'node:events'
 import sinon from 'sinon'
-import {AutomationLease} from '../../lib/util/automation-lease.js'
+import {
+  AutomationLease, automationLeaseMaxLifetimeMs, automationLeaseMaxTimeoutMs
+} from '../../lib/util/automation-lease.js'
 import group from '../../lib/units/device/plugins/group.js'
 import lifecycle from '../../lib/util/lifecycle.js'
 import {IosBridge} from '../../lib/units/ios-provider/bridge.js'
@@ -28,7 +30,9 @@ describe('Provider automation lease fence', function() {
   afterEach(() => sinon.restore())
 
   it('expires in milliseconds and rejects an expired lease before its timer runs', function() {
-    const clock = sinon.useFakeTimers({now: 10000, toFake: ['Date', 'setTimeout', 'clearTimeout']})
+    const clock = sinon.useFakeTimers({
+      now: 10000, toFake: ['Date', 'performance', 'setTimeout', 'clearTimeout']
+    })
     const expired = sinon.spy()
     const lease = new AutomationLease(expired)
     lease.start(owner.email, 'lease-a', 100)
@@ -49,7 +53,9 @@ describe('Provider automation lease fence', function() {
   })
 
   it('replaces the expiration timer only after successful renewal', function() {
-    const clock = sinon.useFakeTimers({now: 10000, toFake: ['Date', 'setTimeout', 'clearTimeout']})
+    const clock = sinon.useFakeTimers({
+      now: 10000, toFake: ['Date', 'performance', 'setTimeout', 'clearTimeout']
+    })
     const expired = sinon.spy()
     const lease = new AutomationLease(expired)
     lease.start(owner.email, 'lease-a', 100)
@@ -57,6 +63,8 @@ describe('Provider automation lease fence', function() {
     assert.equal(lease.renew(owner.email, 'lease-a', 100), 10180)
     clock.tick(99)
     assert.equal(expired.callCount, 0)
+    assert.throws(() => lease.renew(owner.email, 'lease-a', automationLeaseMaxTimeoutMs + 1),
+      /Invalid automation lease timeout/)
     clock.tick(1)
     assert.equal(expired.callCount, 1)
   })
@@ -104,7 +112,9 @@ describe('Provider automation lease fence', function() {
 
   it('Android expires a fenced lease despite channel activity', async function() {
     const f = android()
-    const clock = sinon.useFakeTimers({now: 10000, toFake: ['Date', 'setTimeout', 'clearTimeout']})
+    const clock = sinon.useFakeTimers({
+      now: 10000, toFake: ['Date', 'performance', 'setTimeout', 'clearTimeout']
+    })
     await f.send(new wire.GroupMessage(owner, 100, requirements, 'automation', 'lease-a'))
     assert.equal(f.channels.register.firstCall.args[1].timeout, Infinity)
     clock.tick(80)
@@ -187,18 +197,52 @@ describe('Provider automation lease fence', function() {
   for (const [platform, setup] of [['Android', android], ['iOS', ios]] as const) {
     it(`${platform} permits acquisition after a rejected lease timeout`, async function() {
       const f = await setup()
-      await f.send(new wire.GroupMessage(owner, 2147483648, requirements, 'automation', 'invalid'))
-      assert.equal(decodeReply(f.packets).success, false)
+      for (const timeout of [0, automationLeaseMaxTimeoutMs + 1, 2147483648]) {
+        await f.send(new wire.GroupMessage(owner, timeout, requirements, 'automation', 'invalid'))
+        assert.equal(decodeReply(f.packets).success, false)
+      }
       await f.send(new wire.GroupMessage(owner, 1000, requirements, 'automation', 'valid'))
       assert.equal(decodeReply(f.packets).success, true)
       await f.send(new wire.AutomationLeaseMessage(serial, owner, 'valid', 'release'))
       assert.equal(decodeReply(f.packets).success, true)
     })
+
+    it(`${platform} expires after its original lifetime despite renewals and a clock adjustment`,
+      async function() {
+        const f = await setup()
+        const clock = sinon.useFakeTimers({
+          now: 1720000000000, toFake: ['Date', 'performance', 'setTimeout', 'clearTimeout']
+        })
+        const timeout = automationLeaseMaxTimeoutMs
+        const interval = timeout - 1000
+        const startedAt = performance.now()
+        const deadline = startedAt + automationLeaseMaxLifetimeMs
+        await f.send(new wire.GroupMessage(owner, timeout, requirements, 'automation', 'lease-a'))
+        assert.equal(decodeReply(f.packets).success, true)
+        for (let elapsed = interval; elapsed < automationLeaseMaxLifetimeMs; elapsed += interval) {
+          await clock.tickAsync(interval)
+          clock.setSystemTime(Date.now() - interval)
+          await f.send(new wire.AutomationLeaseMessage(serial, owner, 'lease-a', 'renew', timeout))
+          assert.equal(decodeReply(f.packets).success, true)
+        }
+
+        const release = () => f.packets.map(packet => wire.Envelope.decode(packet[1]!))
+          .find(envelope => envelope.type === wire.LeaveGroupMessage.$code)
+        await clock.tickAsync(deadline - performance.now() - 1)
+        assert.equal(release(), undefined)
+        await clock.tickAsync(1)
+        await flush()
+        const message = wire.LeaveGroupMessage.decode(release()!.message)
+        assert.equal(message.leaseId, 'lease-a')
+        assert.equal(message.reason, 'automatic_timeout')
+      })
   }
 
   it('iOS uses wire timeout milliseconds while its CLI default remains seconds', async function() {
     const f = await ios()
-    const clock = sinon.useFakeTimers({now: 10000, toFake: ['Date', 'setTimeout', 'clearTimeout']})
+    const clock = sinon.useFakeTimers({
+      now: 10000, toFake: ['Date', 'performance', 'setTimeout', 'clearTimeout']
+    })
     await f.send(new wire.GroupMessage(owner, 100, requirements, 'automation', 'lease-a'))
     clock.tick(99)
     f.bridge.keepalive()
@@ -219,7 +263,7 @@ describe('Provider automation lease fence', function() {
       const reported: unknown[] = []
       const f = await ios(error => reported.push(error))
       const clock = sinon.useFakeTimers({
-        now: 10000, toFake: ['Date', 'setTimeout', 'clearTimeout']
+        now: 10000, toFake: ['Date', 'performance', 'setTimeout', 'clearTimeout']
       })
       await f.send(new wire.GroupMessage(owner, 100, requirements, 'automation', 'lease-a'))
       const reservation = f.bridge.owner

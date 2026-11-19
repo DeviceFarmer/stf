@@ -35,7 +35,8 @@ IOS_IMAGE = {'repository': 'example.invalid/ios-runtime', 'tag': 'test'}
 
 def coordinator(**overrides):
     return {'enabled': True, 'existingSecret': 'coordinator-credentials',
-            'appiumGridUrl': 'http://grid.appium.svc:4444', **overrides}
+            'appiumGridUrl': 'http://grid.appium.svc:4444',
+            'stfServiceAccountEmail': 'coordinator@example.test', **overrides}
 
 class ChartTest(unittest.TestCase):
     def test_default_core_has_no_usb_and_exposes_only_http(self):
@@ -98,6 +99,22 @@ class ChartTest(unittest.TestCase):
         self.assertEqual(service['ports'], [{'name': 'http', 'port': 8080, 'targetPort': 'http'}])
         self.assertFalse(any(x['kind'] == 'Ingress' or 'appium-grid' in x['metadata']['name'] for x in items))
         self.assertFalse(any(x['kind'] == 'Secret' for x in items))
+
+    def test_coordinator_grants_managed_leases_only_on_its_local_stf_api(self):
+        email = 'appium+coordinator@example.test'
+        for values, expected in [
+            (coordinator(stfServiceAccountEmail=email), [('stf-api', email)]),
+            (coordinator(stfServiceAccountEmail=email, enabled=False), []),
+            (coordinator(stfServiceAccountEmail=email, stfApiUrl='https://stf.example.test/api/v1'), []),
+        ]:
+            with self.subTest(values=values):
+                accounts = [(item['metadata']['name'], entry['value'])
+                            for item in render({'coordinator': values})
+                            if item['kind'] == 'Deployment'
+                            for container in item['spec']['template']['spec']['containers']
+                            for entry in container.get('env', [])
+                            if entry['name'] == 'STF_API_AUTOMATION_LEASE_ACCOUNTS']
+                self.assertEqual(accounts, expected)
 
     def test_coordinator_external_api_adoption_keeps_existing_state_and_credentials(self):
         pool = {'provider': 'existing-provider', 'host': 'adb.example.test', 'port': 5038,
@@ -167,8 +184,11 @@ class ChartTest(unittest.TestCase):
         self.assertEqual(claim, new_claim)
 
     def test_coordinator_requires_external_grid_and_rejects_unsafe_configuration(self):
-        for field in ['existingSecret', 'appiumGridUrl']:
+        for field in ['existingSecret', 'appiumGridUrl', 'stfServiceAccountEmail']:
             render({'coordinator': coordinator(**{field: ''})}, failure=field)
+        for email in ['missing-at', 'one@example.test,two@example.test', 'coordinator@example.test ']:
+            render({'coordinator': coordinator(stfServiceAccountEmail=email)},
+                   failure='stfServiceAccountEmail')
         for field in ['stfApiUrl', 'publicUrl', 'appiumGridUrl']:
             for url in ['ftp://grid', 'http://user:password@grid', 'http://grid?token=bad', 'http://grid/#token', 'http://grid/has space']:
                 with self.subTest(field=field, url=url):

@@ -1,5 +1,7 @@
 import {createHash, randomUUID} from 'node:crypto'
 import {setTimeout as wait} from 'node:timers/promises'
+import {getSystemErrorMap} from 'node:util'
+import logger from '../../util/logger.js'
 import {BackendError} from './backend.js'
 import {CoordinatorError, endpoint} from './config.js'
 import {validMaintenanceId, validMaintenanceSerial} from './maintenance.js'
@@ -11,6 +13,7 @@ import type {
 , FarmDevice, GridStatus, Lease, UpstreamResponse
 } from './types.js'
 
+const log = logger.createLogger('coordinator')
 const terminal = new Set(['released', 'expired'])
 const requestTerminal = new Set(['cancelled', 'expired', 'failed'])
 const requestRetentionMs = 7 * 24 * 60 * 60 * 1000
@@ -73,24 +76,38 @@ export class Coordinator {
     return result
   }
 
-  private async save() {
-    try {
-      await this.store.save(this.state)
+  private async save(state = this.state) {
+    if (this.healthy) {
+      try {
+        await this.store.save(state)
+        return
+      }
+      catch (error) {
+        this.fault = true
+        // System diagnostics omit the filenames and other data from the exception.
+        const {errno, syscall} = error instanceof Error ? error as NodeJS.ErrnoException : {}
+        const systemError = typeof errno === 'number' ? getSystemErrorMap().get(errno) : null
+        const operation = typeof syscall === 'string' && /^[a-z_]{1,32}$/.test(syscall) ?
+          syscall : 'save'
+        const cause = systemError ? systemError.join(' ') : 'unknown storage error'
+        log.error('Coordinator state write failed (%s): %s', operation, cause)
+      }
     }
-    catch {
-      this.fault = true
-      throw new CoordinatorError(503, 'state_unavailable', 'Persistent state is unavailable')
-    }
+    throw new CoordinatorError(503, 'state_unavailable', 'Persistent state is unavailable')
   }
 
   private assertReady() {
-    if (!this.initialized || this.stopping || this.fault) {
+    if (!this.ready) {
       throw new CoordinatorError(503, 'not_ready', 'Coordinator is not ready')
     }
   }
 
+  get healthy() {
+    return !this.fault
+  }
+
   get ready() {
-    return this.initialized && !this.stopping && !this.fault
+    return this.initialized && !this.stopping && this.healthy
   }
 
   get stfTimeoutMs() {
@@ -477,13 +494,7 @@ export class Coordinator {
       // other Lease object identities used by operations already in flight.
       const state: CoordinatorState = {...this.state, leases: this.state.leases.map(item =>
         item === lease ? candidate : item)}
-      try {
-        await this.store.save(state)
-      }
-      catch {
-        this.fault = true
-        throw new CoordinatorError(503, 'state_unavailable', 'Persistent state is unavailable')
-      }
+      await this.save(state)
       Object.assign(lease, candidate)
       delete lease.captureUncertain
       delete lease.error
@@ -1235,8 +1246,16 @@ export class Coordinator {
   async stop() {
     this.stopping = true
     await this.exclusive(async() => {
+      // Restart recovery uses the durable snapshot after a failed write.
+      if (!this.healthy) {
+        return
+      }
       for (const lease of this.state.leases.filter(item => this.held(item))) {
         await this.beginCleanup(lease, 'expired', 'coordinator_stopped')
+      }
+    }).catch(error => {
+      if (this.healthy) {
+        throw error
       }
     })
     // Pending capture/commands cannot resurrect a lease after the stop marker.
@@ -1244,7 +1263,9 @@ export class Coordinator {
       this.ticking
     , ...this.allocations.values(), ...this.commands.values(), ...this.cleanups.values()
     ])
-    await Promise.all(this.state.leases.filter(item => this.held(item))
-      .map(lease => this.cleanup(lease)))
+    if (this.healthy) {
+      await Promise.all(this.state.leases.filter(item => this.held(item))
+        .map(lease => this.cleanup(lease)))
+    }
   }
 }

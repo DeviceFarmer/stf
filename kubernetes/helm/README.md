@@ -199,17 +199,22 @@ versions for the other units.
 Prepare an external Appium Grid with device slots as described in the
 [coordinator guide](../../doc/coordinator.md#start-the-coordinator). This chart
 does not create Appium nodes, WDA adapters or a Grid. Create an existing Secret
-in the release namespace with `stf-token` (an STF account access token) and
-`api-token` (a separate coordinator operator token). Both tokens need at least
-24 non-whitespace characters. For project isolation, add the project policy
-JSON under a key selected by `coordinator.projectTokensKey`. Keep token values
-and project policy out of Helm values and rendered manifests.
+in the release namespace with `stf-token` (the dedicated STF service account's
+access token) and `api-token` (a separate coordinator operator token). Set
+`coordinator.stfServiceAccountEmail` to the exact STF email of the account that
+owns `stf-token`. Both tokens need at least 24 non-whitespace characters.
+For project isolation, add the project policy JSON under the key selected by
+`coordinator.projectTokensKey`. Keep token values and project policy out of
+Helm values and rendered manifests.
 
 Overlay the [coordinator example](examples/coordinator.yaml) on your farm
-values after replacing its image, URLs, Secret names, pool mapping and Ingress
-settings. `coordinator.stfApiUrl` defaults to this release's API, and
-`coordinator.publicUrl` defaults to its in-cluster Service. Set the latter to
-the base URL Appium clients can reach. The optional `coordinator.ingress` uses
+values after replacing its image, URLs, service account email, Secret names,
+pool mapping and Ingress settings. With an empty `coordinator.stfApiUrl`, the
+chart configures this release's API to allow managed leases for the service
+account. When targeting an external STF API, add that email to
+`STF_API_AUTOMATION_LEASE_ACCOUNTS` on every replica of that API.
+`coordinator.publicUrl` defaults to the in-cluster Service. Set it to the
+base URL Appium clients can reach. The optional `coordinator.ingress` uses
 that URL's host and forwards requests from `/`. Use a separate hostname
 and configure TLS and `networkPolicy.coordinatorFrom` for your gateway.
 Without the Ingress, use the ClusterIP Service through a private gateway or
@@ -228,9 +233,9 @@ The coordinator always mounts persistent state: the chart creates a 1 Gi RWO
 claim with a `keep` annotation, or mounts `coordinator.persistence.existingClaim`
 without creating a claim. Do not run a second release or external coordinator
 against the same state, devices or system ports. Assign each coordinator
-an exclusive pool. `/healthz` checks process liveness while `/readyz` stays
-unready during lease recovery. A cleanup failure preserves quarantine rather
-than making an uncertain device available.
+an exclusive pool. `/readyz` stays unready during lease recovery. If a state
+write fails, the coordinator logs the cause and returns 503 from `/healthz`
+so Kubernetes can restart it. A cleanup failure keeps the device quarantined.
 
 Before upgrades or token rotation, pause submissions, finish/release active
 leases, check quarantine and back up the state. Preserve the PVC and its

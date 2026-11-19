@@ -1,10 +1,13 @@
 import express from 'express'
 import type {ErrorRequestHandler} from 'express'
+import logger from '../../util/logger.js'
 import {CoordinatorAccess, type Principal} from './access.js'
 import {CoordinatorError} from './config.js'
 import {validMaintenanceId, validMaintenanceSerial} from './maintenance.js'
 import {Coordinator} from './engine.js'
 import type {AllocationInput, CoordinatorOptions, CaptureReconciliationInput} from './types.js'
+
+const log = logger.createLogger('coordinator')
 
 function allocation(body: unknown, options: CoordinatorOptions): AllocationInput {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -91,7 +94,8 @@ export function createCoordinatorApp(engine: Coordinator, credential: string | C
     res.setHeader('Cache-Control', 'no-store')
     next()
   })
-  app.get('/healthz', (_req, res) => res.json({healthy: true}))
+  app.get('/healthz', (_req, res) => res.status(engine.healthy ? 200 : 503)
+    .json({healthy: engine.healthy}))
   app.get('/readyz', (_req, res) => res.status(engine.ready ? 200 : 503)
     .json({ready: engine.ready}))
   app.use('/api/v1', (req, res, next) => {
@@ -161,7 +165,11 @@ export function createCoordinatorApp(engine: Coordinator, credential: string | C
   })
   app.delete('/api/v1/leases/:id', async(req, res) => {
     scopeLease(req.params.id, res)
-    res.status(202).json({lease: await engine.release(req.params.id)})
+    const lease = await engine.release(req.params.id)
+    if (principal(res).admin) {
+      log.info('Operator requested release of lease %s for project %s', lease.id, lease.projectId)
+    }
+    res.status(202).json({lease})
   })
   app.post('/api/v1/leases/:id/recover', async(req, res) => {
     access.assertAdmin(principal(res))

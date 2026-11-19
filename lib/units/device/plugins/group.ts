@@ -85,15 +85,17 @@ export default syrup.serial()
             throw new Error('Device worker is stopping')
           }
           const group = new wire.OwnerMessage({...newGroup, reservationId: randomUUID()})
-          if (usage === 'automation' && leaseId) {
-            automationLease.start(group.email, leaseId, timeout || options.groupTimeout)
+          const automationLeaseId = usage === 'automation' ? leaseId || null : null
+          if (automationLeaseId) {
+            automationLease.start(group.email, automationLeaseId, timeout ?? options.groupTimeout)
           }
           currentGroup = group
-          currentLeaseId = usage === 'automation' ? leaseId || null : null
+          currentLeaseId = automationLeaseId
           log.important('Now owned by "%s"', currentGroup.email)
           log.info('Subscribing to group channel "%s"', currentGroup.group)
           channels.register(currentGroup.group, {
-            timeout: leaseId ? Infinity : timeout || options.groupTimeout, alias: solo.channel
+            timeout: automationLeaseId ? Infinity : timeout || options.groupTimeout
+          , alias: solo.channel
           })
           sub.subscribe(currentGroup.group)
           push.send([wireutil.global, wireutil.envelope(new wire.JoinGroupMessage(

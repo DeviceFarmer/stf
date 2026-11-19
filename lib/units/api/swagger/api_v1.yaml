@@ -1544,6 +1544,7 @@ paths:
     x-swagger-router-controller: user
     post:
       summary: Renew an existing fenced automation lease
+      description: Requires a configured service account and the exact lease ID
       operationId: renewAutomationLease
       tags:
         - user
@@ -1563,7 +1564,7 @@ paths:
           schema:
             $ref: "#/definitions/Response"
         default:
-          description: "400 invalid request; 401 unauthorized; 403 nonowner; 404 unknown device; 409 stale lease; 504 provider timeout"
+          description: "400 invalid request; 401 unauthorized; 403 unauthorized account or nonowner; 404 unknown device; 409 stale lease; 504 provider timeout"
           schema:
             $ref: "#/definitions/UnexpectedErrorResponse"
       security:
@@ -2630,7 +2631,7 @@ definitions:
         description: Device Serial
         type: string
       leaseId:
-        description: Optional coordinator fence; renew and release require this exact ID
+        description: Optional coordinator lease ID. Requires a configured service account. Renew and release require this exact ID.
         type: string
         pattern: '^[A-Za-z0-9_-]{1,128}$'
       timeout:
@@ -2657,7 +2658,7 @@ definitions:
         description: Lease duration from renewal in milliseconds; never captures an unowned device
         type: integer
         minimum: 1
-        maximum: 2147483647
+        maximum: 4380000
   GroupPayload:
     description: Payload object for creating/updating a group
     properties:

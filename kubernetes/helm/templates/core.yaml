@@ -74,6 +74,9 @@ spec:
           command: {{ toJson (prepend $args "stf") }}
           env:
             {{- include "stf.env" $r | nindent 12 }}
+            {{- if and (eq $component "api") $r.Values.coordinator.enabled (not $r.Values.coordinator.stfApiUrl) }}
+            - {name: STF_API_AUTOMATION_LEASE_ACCOUNTS, value: {{ $r.Values.coordinator.stfServiceAccountEmail | quote }}}
+            {{- end }}
             {{- if eq $component "auth" }}
             {{- range $key, $val := $r.Values.auth.env }}
             - {name: {{ $key | quote }}, value: {{ $val | quote }}}

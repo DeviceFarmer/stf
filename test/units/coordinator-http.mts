@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import http from 'node:http'
 import {once} from 'node:events'
 import {createHash} from 'node:crypto'
+import {getSystemErrorMap} from 'node:util'
+import logger from '../../lib/util/logger.js'
 import {Coordinator} from '../../lib/units/coordinator/engine.js'
 import {HttpFarmBackend} from '../../lib/units/coordinator/backend.js'
 import {createCoordinatorApp} from '../../lib/units/coordinator/http.js'
@@ -17,6 +19,7 @@ const basic = 'Basic ' + Buffer.from('coordinator:' + apiToken).toString('base64
 const owner = 'coordinator@example.test'
 const projectA = 'project-a-private-test-token-'.repeat(2)
 const projectB = 'project-b-private-test-token-'.repeat(2)
+const noSpaceErrno = [...getSystemErrorMap()].find(([, [name]]) => name === 'ENOSPC')![0]
 interface UpstreamCall {
   method: string
   route: string
@@ -54,7 +57,8 @@ class MemoryStore implements StateStore {
 }
   async save(state: CoordinatorState) {
     if (this.fail) {
-      throw new Error('private filesystem error ' + stfToken)
+      throw Object.assign(new Error('private filesystem error ' + stfToken),
+        {errno: noSpaceErrno, syscall: 'write'})
     }
     this.state = structuredClone(state)
   }
@@ -356,9 +360,24 @@ describe('coordinator HTTP and real upstream adapters', function() {
         'cleanup_unconfirmed')
     })
 
+  it('fails liveness when a reconciled capture cannot be durably saved', async function() {
+    const f = await uncertainCapture()
+    f.store.fail = true
+    const failed = await f.call(f.route, 'POST', f.body)
+    assert.equal(failed.status, 503)
+    assert.equal(failed.body.error.code, 'state_unavailable')
+    assert.equal(f.engine.leaseView(f.id).state, 'quarantined')
+    assert.equal(f.store.state.leases[0]!.state, 'quarantined')
+    const health = await f.call('/healthz', 'GET', undefined, null)
+    assert.equal(health.status, 503)
+    assert.deepEqual(health.body, {healthy: false})
+  })
+
   it('exposes readiness before recovery and refuses allocation before startup', async function() {
     const f = await fixture(false)
-    assert.deepEqual((await f.call('/healthz', 'GET', undefined, null)).body, {healthy: true})
+    const health = await f.call('/healthz', 'GET', undefined, null)
+    assert.equal(health.status, 200)
+    assert.deepEqual(health.body, {healthy: true})
     assert.equal((await f.call('/readyz', 'GET', undefined, null)).status, 503)
     const response = await f.call('/api/v1/requests', 'POST', {runId: 'early', platform: 'Android'},
       bearer, {'Idempotency-Key': 'early'})
@@ -803,6 +822,53 @@ describe('coordinator HTTP and real upstream adapters', function() {
       'Bearer ' + projectA)).body.request.state, 'allocated')
   })
 
+  it('lets an operator revoke an exact lease across projects after Appium cleanup', async() => {
+    const f = await fixture(true, true)
+    const allocate = async(token: string, runId: string) => {
+      const receipt = await f.call('/api/v1/requests', 'POST',
+        {runId, platform: 'Android', serial: 'phone-a'}, 'Bearer ' + token,
+        {'Idempotency-Key': runId})
+      assert.equal(receipt.status, 202)
+      await f.engine.tick()
+      const {body} = await f.call('/api/v1/requests/' + receipt.body.request.id)
+      assert.equal(body.request.state, 'allocated')
+      return body.request.leaseId as string
+    }
+    const leaseId = await allocate(projectA, 'operator-release-a')
+    const path = '/api/v1/leases/' + leaseId
+    const created = await f.call(path + '/webdriver/session', 'POST',
+      {capabilities: {alwaysMatch: {}, firstMatch: [{}]}}, 'Bearer ' + projectA)
+    assert.equal(created.status, 200)
+    const sessionId = created.body.value.sessionId
+    assert.equal((await f.call(path, 'DELETE', {}, 'Bearer ' + projectB)).status, 404)
+    assert.equal(f.devices[0]!.automationLeaseId, leaseId)
+
+    f.lagSessionDeletion()
+    const release = f.backend.release.bind(f.backend)
+    f.backend.release = async(serial, id) => {
+      assert.equal(serial, 'phone-a')
+      assert.equal(id, leaseId)
+      assert.ok(f.gridCalls.some(call => call.method === 'DELETE' &&
+        call.route === '/session/' + sessionId))
+      assert.ok(!f.grid.nodes.some(node => node.slots.some(slot =>
+        slot.session?.sessionId === sessionId)))
+      return release(serial, id)
+    }
+    const revoked = await f.call(path, 'DELETE')
+    assert.equal(revoked.status, 202)
+    assert.equal(revoked.body.lease.state, 'cleaning')
+    assert.equal(f.devices[0]!.automationLeaseId, leaseId)
+    await f.engine.tick()
+    assert.equal((await f.call(path)).body.lease.state, 'released')
+    assert.equal(f.devices[0]!.automationLeaseId, null)
+
+    const replacement = await allocate(projectB, 'operator-release-b')
+    assert.notEqual(replacement, leaseId)
+    assert.equal((await f.call(path, 'DELETE')).body.lease.state, 'released')
+    await f.engine.tick()
+    assert.equal(f.devices[0]!.automationLeaseId, replacement)
+  })
+
   it('redacts storage and upstream errors from HTTP responses and status', async function() {
     const f = await fixture()
     f.failInventory()
@@ -811,12 +877,39 @@ describe('coordinator HTTP and real upstream adapters', function() {
     await f.engine.tick()
     const status = await f.call('/api/v1/status')
     assert.equal(status.body.lastError, 'Farm inventory is temporarily unavailable')
-    f.store.fail = true
-    const failed = await f.call('/api/v1/requests', 'POST', {runId: 'fail', platform: 'Android'},
-      bearer, {'Idempotency-Key': 'fail'})
-    assert.equal(failed.status, 503)
-    assert.doesNotMatch(JSON.stringify([status.body, failed.body]),
-      new RegExp(stfToken + '|' + apiToken + '|private filesystem|stack'))
+    const diagnostics: string[] = []
+    const onLog = (entry: logger.Entry) => {
+      if (entry.tag === 'coordinator' && entry.priority === logger.Level.ERROR) {
+        diagnostics.push(entry.message)
+      }
+    }
+    logger.on('entry', onLog)
+    try {
+      f.store.fail = true
+      const failed = await f.call('/api/v1/requests', 'POST', {runId: 'fail', platform: 'Android'},
+        bearer, {'Idempotency-Key': 'fail'})
+      assert.equal(failed.status, 503)
+      assert.equal(failed.body.error.code, 'state_unavailable')
+      const ready = await f.call('/readyz', 'GET', undefined, null)
+      const health = await f.call('/healthz', 'GET', undefined, null)
+      assert.equal(ready.status, 503)
+      assert.equal(health.status, 503)
+      assert.deepEqual(health.body, {healthy: false})
+      assert.ok(diagnostics.some(message => /write.*ENOSPC/.test(message)))
+      assert.doesNotMatch(diagnostics.join(' '), new RegExp(stfToken + '|private filesystem'))
+      assert.doesNotMatch(JSON.stringify([status.body, failed.body, health.body]),
+        new RegExp(stfToken + '|' + apiToken + '|private filesystem|ENOSPC|stack'))
+
+      f.store.fail = false
+      assert.equal((await f.call('/healthz', 'GET', undefined, null)).status, 503)
+      const retry = await f.call('/api/v1/requests', 'POST', {runId: 'fail', platform: 'Android'},
+        bearer, {'Idempotency-Key': 'fail'})
+      assert.equal(retry.status, 503)
+      assert.equal(retry.body.error.code, 'not_ready')
+    }
+    finally {
+      logger.removeListener('entry', onLog)
+    }
   })
   it('restricts every maintenance operation to the operator and validates JSON before draining',
     async() => {

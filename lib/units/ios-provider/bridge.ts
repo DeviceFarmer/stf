@@ -2,7 +2,7 @@ import wire from '../../wire/index.js'
 import wireutil from '../../wire/util.js'
 import wirerouter from '../../wire/router.js'
 import grouputil from '../../util/grouputil.js'
-import {AutomationLease} from '../../util/automation-lease.js'
+import {AutomationLease, isAutomationLeaseTimeout} from '../../util/automation-lease.js'
 import {randomUUID} from 'node:crypto'
 import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
@@ -495,12 +495,16 @@ export class IosBridge {
     }
     if (!this.owner) {
       const epoch = this.epoch
+      const automated = usage === 'automation'
+      const automationLeaseId = automated ? leaseId || null : null
+      const leaseTimeout = timeout ?? this.options.groupTimeout * 1000
+      if (automationLeaseId && !isAutomationLeaseTimeout(leaseTimeout)) {
+        throw new Error('Invalid automation lease timeout')
+      }
       if (this.appiumHandoff) {
         await this.setAppiumMode(false, this.appiumHandoff)
       }
       const reservationId = randomUUID()
-      const automated = usage === 'automation'
-      const automationLeaseId = automated ? leaseId || null : null
       if (automated) {
         this.appiumHandoff = reservationId
         await this.setAppiumMode(true, reservationId)
@@ -512,8 +516,7 @@ export class IosBridge {
         throw new Error('Device session changed')
       }
       if (automationLeaseId) {
-        this.automationLease.start(owner.email, automationLeaseId,
-          timeout || this.options.groupTimeout * 1000)
+        this.automationLease.start(owner.email, automationLeaseId, leaseTimeout)
       }
       this.automationLeaseId = automationLeaseId
       this.ownerAbort = new AbortController()
