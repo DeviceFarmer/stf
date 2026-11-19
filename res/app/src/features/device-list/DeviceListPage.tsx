@@ -1,7 +1,7 @@
-import {useEffect, useMemo, useRef, useState} from 'react'
+import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {Center, CloseButton, Group, Loader, Modal, SegmentedControl, TextInput} from '@mantine/core'
 import {DeviceImage, deviceImageUrl} from '@/ui/DeviceImage'
-import {useDebouncedValue} from '@mantine/hooks'
+import {useDebouncedValue, useReducedMotion} from '@mantine/hooks'
 import {IconLayoutGrid, IconList, IconSearch, IconSitemap} from '@tabler/icons-react'
 import {useDateFormat} from '@/core/date-format'
 import {useDevices} from '@/core/devices/store'
@@ -33,6 +33,7 @@ import {parseQuery} from './query-parser'
 import classes from './DeviceList.module.css'
 
 type ViewMode = 'icons' | 'details'
+const viewTransitionDuration = 180
 
 export default function DeviceListPage() {
   const {t, language} = useTranslation()
@@ -45,11 +46,16 @@ export default function DeviceListPage() {
   const [search, setSearch] = useState('')
   const [query] = useDebouncedValue(search, 150)
   const [photo, setPhoto] = useState<Device | null>(null)
+  const [customizeOpened, setCustomizeOpened] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const reducedMotion = useReducedMotion(undefined, {getInitialValueInEffect: false})
 
   usePageTitle(t('Devices'))
 
   const view: ViewMode = !basicMode && activeTabs?.details ? 'details' : 'icons'
+  const previousView = useRef(view)
+  const hasDevices = devices.length > 0
   const columns = useMemo(() => normalizeColumns(storedColumns), [storedColumns])
   const sort = useMemo(() => normalizeSort(storedSort), [storedSort])
   const activeColumns = useMemo(
@@ -85,10 +91,28 @@ export default function DeviceListPage() {
   })), [columns, t])
 
   useEffect(() => {
+    if (view === 'icons') {
+      setCustomizeOpened(false)
+    }
     if (!basicMode) {
       searchRef.current?.focus()
     }
   }, [view])
+
+  useLayoutEffect(() => {
+    if (previousView.current === view) {
+      return
+    }
+    previousView.current = view
+    if (reducedMotion || !hasDevices) {
+      return
+    }
+    const animation = contentRef.current?.animate?.(
+      [{opacity: 0.55}, {opacity: 1}]
+      , {duration: viewTransitionDuration, easing: 'ease-out'}
+    )
+    return () => animation?.cancel()
+  }, [hasDevices, reducedMotion, view])
 
   function reset() {
     setSearch('')
@@ -126,34 +150,53 @@ export default function DeviceListPage() {
       <div className={`unselectable ${classes.header}`}>
         <DeviceStats devices={devices} adminMode={actions.adminMode} />
         <Group gap='sm' wrap='wrap' className={classes.toolbar}>
-          <TextInput
-            ref={searchRef}
-            name='deviceFilter'
-            type='search'
-            size='xs'
-            className={`device-search ${classes.search}`}
-            placeholder={t('Search')}
-            leftSection={<IconSearch size={14} />}
-            rightSection={search ? (
-              <CloseButton
-                size='xs'
-                aria-label={t('Clear')}
-                onClick={() => {
-                  setSearch('')
-                  searchRef.current?.focus()
-                }}
-              />
-            ) : null}
-            value={search}
-            onChange={(event) => setSearch(event.currentTarget.value)}
-            onFocus={(event) => event.currentTarget.select()}
-            list='searchFields'
-            accessKey='4'
-            autoCorrect='off'
-            autoCapitalize='off'
-            autoComplete='off'
-            spellCheck={false}
-          />
+          <Group gap='sm' wrap='nowrap' className={classes.searchGroup}>
+            {!basicMode && (
+              <div className={classes.customize} inert={view !== 'details'}>
+                <ColumnChoice
+                  reorderable
+                  items={choiceItems}
+                  popover={{
+                    opened: view === 'details' && customizeOpened
+                    , onChange: setCustomizeOpened
+                    , duration: reducedMotion ? 0 : viewTransitionDuration
+                  }}
+                  onChange={(items) => {
+                    setStoredColumns(items.map((item) => ({name: item.id, selected: item.selected})))
+                  }}
+                  onReset={reset}
+                />
+              </div>
+            )}
+            <TextInput
+              ref={searchRef}
+              name='deviceFilter'
+              type='search'
+              size='xs'
+              className={`device-search ${classes.search}`}
+              placeholder={t('Search')}
+              leftSection={<IconSearch size={14} />}
+              rightSection={search ? (
+                <CloseButton
+                  size='xs'
+                  aria-label={t('Clear')}
+                  onClick={() => {
+                    setSearch('')
+                    searchRef.current?.focus()
+                  }}
+                />
+              ) : null}
+              value={search}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              onFocus={(event) => event.currentTarget.select()}
+              list='searchFields'
+              accessKey='4'
+              autoCorrect='off'
+              autoCapitalize='off'
+              autoComplete='off'
+              spellCheck={false}
+            />
+          </Group>
           {!basicMode && (
             <SegmentedControl
               size='xs'
@@ -182,15 +225,6 @@ export default function DeviceListPage() {
               ]}
             />
           )}
-          {view === 'details' && (
-            <ColumnChoice
-              reorderable
-              position='bottom-end'
-              items={choiceItems}
-              onChange={(items) => setStoredColumns(items.map((item) => ({name: item.id, selected: item.selected})))}
-              onReset={reset}
-            />
-          )}
         </Group>
         <datalist id='searchFields'>
           {columns.map((column) => (
@@ -201,7 +235,7 @@ export default function DeviceListPage() {
         </datalist>
       </div>
 
-      <div className={`selectable ${classes.content}`}>
+      <div ref={contentRef} className={`selectable ${classes.content}`}>
         {renderContent()}
       </div>
 
