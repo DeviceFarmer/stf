@@ -924,3 +924,90 @@ describe('join notifications ahead of persistence', function() {
     })
   }
 })
+
+describe('invite replies ahead of the join notification', function() {
+  // The reply to group.invite and the device's JoinGroupMessage can reach the
+  // websocket through different processors, so the reply may arrive first.
+  async function invited(platform: string, clock: ReturnType<typeof sinon.useFakeTimers>) {
+    const f = fixture(platform, 5)
+    f.update({owner: null})
+    assert.equal(await tick(10, f.dispatch('group.invite', 'tx.take'), clock), undefined)
+    f.access.invited('tx.take', f.channel)
+    return {f, owner: {email: f.user.email, reservationId: 'fresh'}}
+  }
+
+  for (const platform of ['Android', 'iOS']) {
+    it(`waits for the ${platform} row when the invite reply comes first`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await invited(platform, clock)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, owner)
+        const pending = f.dispatch('wifi.get', 'tx.read')
+        setTimeout(() => f.update({owner}), 30)
+        await clock.tickAsync(100)
+        assert.equal(await pending, undefined)
+        assert.deepEqual(f.cancelled, [])
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`denies a ${platform} read at once without an invite reply`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = await invited(platform, clock)
+        const pending = f.dispatch('wifi.get', 'tx.read')
+        await clock.tickAsync(10)
+        assert.equal((await pending)?.message, 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`ignores a ${platform} invite reply seen after a newer leave`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await invited(platform, clock)
+        f.access.released('PHONE')
+        f.access.snapshot(f.device())
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, owner)
+        const pending = f.dispatch('wifi.get', 'tx.read')
+        await clock.tickAsync(10)
+        assert.equal((await pending)?.message, 'Device access denied')
+        assert.equal(f.access.awaitingJoin(f.channel, f.user.email, ['shared']), false)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`ignores ${platform} invite replies naming someone else or another device`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await invited(platform, clock)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email
+          , {email: 'someone@example.test', reservationId: 'theirs'})
+        f.access.invited('tx.wrong', f.channel)
+        f.access.inviteReplied('tx.wrong', 'OTHER', f.user.email, owner)
+        f.access.inviteReplied('tx.never', 'PHONE', f.user.email, owner)
+        f.access.invited('tx.cleaned', f.channel)
+        f.access.forgetInvite('tx.cleaned')
+        f.access.inviteReplied('tx.cleaned', 'PHONE', f.user.email, owner)
+        // None of them left an observation that would hold back a row.
+        assert.equal(f.access.snapshot(f.device()).ready, true)
+        assert.equal(f.access.snapshot({...f.device(), serial: 'OTHER'}).ready, true)
+        f.update({owner})
+        assert.equal(await tick(10, f.dispatch('wifi.get', 'tx.read'), clock), undefined)
+        f.update({owner: null})
+        assert.equal((await tick(10, f.dispatch('wifi.get', 'tx.free'), clock))?.message
+          , 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+  }
+})

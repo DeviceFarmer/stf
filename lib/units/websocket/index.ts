@@ -544,6 +544,19 @@ export default function(options: WebsocketOptions) {
         socket.emit('tx.progress', channel.toString(), message)
       })
       .on(wire.TransactionDoneMessage, function(channel, message) {
+        if (message.success && message.body) {
+          let owner
+          try {
+            owner = JSON.parse(message.body)?.owner
+          }
+          catch {
+            owner = null
+          }
+          deviceAccess.inviteReplied(channel.toString(), message.source, user.email, owner)
+        }
+        else {
+          deviceAccess.forgetInvite(channel.toString())
+        }
         socket.emit('tx.done', channel.toString(), message)
       })
       .on(wire.DeviceLogcatEntryMessage, function(channel, message) {
@@ -1037,6 +1050,7 @@ export default function(options: WebsocketOptions) {
         })
         .on('group.invite', function(channel, responseChannel, data) {
           joinChannel(responseChannel)
+          deviceAccess.invited(responseChannel, channel)
           push.send([
             channel
           , wireutil.transaction(
@@ -1066,6 +1080,7 @@ export default function(options: WebsocketOptions) {
           ])
         })
         .on('tx.cleanup', function(channel) {
+          deviceAccess.forgetInvite(channel)
           leaveChannel(channel)
         })
         .on('tx.punch', function(channel) {

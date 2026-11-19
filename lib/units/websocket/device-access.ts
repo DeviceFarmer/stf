@@ -31,6 +31,8 @@ export class DevicePacketAccess {
   private readonly lagging = new Map<string, LaggingRow>()
   private readonly misses = new Map<string, {until: number, groups: string}>()
   private readonly resolving = new Map<string, Promise<DeviceAccess | null | undefined>>()
+  // This user's group.invite transactions still waiting for a reply, by response channel.
+  private readonly invites = new Map<string, {channel: string, session: number}>()
   private revision = 0
   private subscriptionsChanged = 0
   private overflowed = false
@@ -50,6 +52,39 @@ export class DevicePacketAccess {
   released(serial: string) {
     this.sessions.set(serial, this.revision + 1)
     this.update(serial, {owner: null, usage: null})
+  }
+
+  /** Remembers this user's invite, so that its reply can stand in for a late join notification. */
+  invited(responseChannel: string, channel: string) {
+    this.invites.delete(responseChannel)
+    this.invites.set(responseChannel, {channel, session: this.session(channel)})
+    if (this.invites.size > maxEntries) {
+      this.invites.delete(this.invites.keys().next().value!)
+    }
+  }
+
+  forgetInvite(responseChannel: string) {
+    this.invites.delete(responseChannel)
+  }
+
+  /**
+   * The device answers an invite after announcing the join, but the two can reach
+   * this socket through different processors, so the reply may come first. Treat
+   * a successful reply naming this user as the join, unless a join or leave for the
+   * device was seen since the invite went out, which is at least as new. Like any
+   * notification, this only makes the guard wait for the row; it never allows.
+   */
+  inviteReplied(responseChannel: string, serial: string, email: string
+  , owner: DeviceAccess['owner'] | undefined) {
+    const invite = this.invites.get(responseChannel)
+    if (!invite) {
+      return
+    }
+    this.invites.delete(responseChannel)
+    if (owner?.email && owner.email === email && this.source(invite.channel) === serial &&
+        this.session(invite.channel) === invite.session) {
+      this.joined(serial, null, owner)
+    }
   }
 
   update(serial: string, change: Partial<DeviceAccess>) {
