@@ -40,6 +40,7 @@ import {usersApi} from '@/core/users-api'
 import {basicMode, useAdminMode, usePlatform, useStandalone} from './modes'
 import {closeSocketDisconnected, openAddAdbKey, openSocketDisconnected, openVersionUpdate} from './modals'
 import {queryClient} from './Providers'
+import {StfLogo} from './StfLogo'
 import classes from './AppLayout.module.css'
 
 const headerHeight = 56
@@ -257,7 +258,7 @@ export function AppLayout() {
           <Group gap='lg' wrap='nowrap'>
             <Burger opened={opened} onClick={toggle} hiddenFrom='sm' size='sm' />
             <UnstyledButton onClick={() => navigate('/devices')} className={classes.logo}>
-              <img src='/static/logo/exports/STF-128.png' alt='' width={28} height={28} />
+              <StfLogo size={28} alt='' />
               <Text fw={700} size='lg'>STF</Text>
             </UnstyledButton>
             <Group gap={4} visibleFrom='sm' wrap='nowrap'>

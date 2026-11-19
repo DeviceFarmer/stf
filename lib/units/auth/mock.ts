@@ -98,6 +98,7 @@ export default function(options: MockAuthOptions) {
   app.use(bodyParser.json())
   app.use(csrf())
   app.use('/static/auth/mock', serveStatic(pathutil.resource('auth/mock')))
+  app.use('/static/logo', serveStatic(pathutil.resource('common/logo')))
 
   app.use(function(req, res, next) {
     res.cookie('XSRF-TOKEN', req.csrfToken(), cookieutil.xsrfCookieOptions(options, req))
