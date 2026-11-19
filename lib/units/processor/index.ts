@@ -359,15 +359,20 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     })
     .on(wire.DeviceIdentityMessage, function(channel, message, data) {
       if (simChangeWebhookUrl) {
-        dbapi.loadDeviceBySerial(message.serial)
-          .then(function(device) {
-            var event = simchange.buildSimChangeEvent(device || null, message)
-            return dbapi.saveDeviceIdentity(message.serial, message)
-              .then(function() {
-                return event
-              })
-          })
-          .then(function(event) {
+        // The event is built from the write itself: with two processors
+        // racing on the same serial, reading the device before the write
+        // could emit the same change twice or miss the reverse one.
+        dbapi.saveDeviceIdentity(message.serial, message)
+          .then(function(stats) {
+            var change = stats.changes && stats.changes[0] ?
+              stats.changes[0] : null
+            if (!change) {
+              return null
+            }
+            var event = simchange.buildSimChangeEvent(
+              change.old_val || null
+            , change.new_val
+            )
             if (event) {
               log.important(
                 'SIM card change ("%s") detected on device "%s"'

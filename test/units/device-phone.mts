@@ -328,12 +328,21 @@ describe('device phone info', function() {
 })
 
 describe('device phone refresh', function() {
-  // Each service answer is consumed by one read; later calls to refresh()
-  // take the next one, so a swap can be simulated without a device.
-  function invokePhone(fromService: Properties[]) {
+  // Each service answer and SIM state is consumed by one read; later calls
+  // to refresh() take the next one, so a swap can be simulated without a
+  // device. The startup snapshot handed to the plugin says ABSENT.
+  function invokePhone(
+    fromService: Properties[]
+  , simStates: Properties[]
+  , agentText?: string | null
+  ) {
     var adb = {
       shell: sinon.stub().callsFake(function() {
-        return Promise.resolve(agentOutput(''))
+        return Promise.resolve(agentOutput(typeof agentText === 'string' ?
+          agentText : ''))
+      })
+    , getProperties: sinon.stub().callsFake(function() {
+        return Promise.resolve(simStates.length ? simStates.shift()! : {})
       })
     }
     var service = {
@@ -342,7 +351,7 @@ describe('device phone refresh', function() {
       })
     }
     var result = phoneSyrup.invoke(
-      {serial: 'test-device', phoneRetryDelay: 0}
+      {serial: 'test-device', phoneRetries: 0, phoneRetryDelay: 0}
     , adb
     , {path: '/data/app/stf.apk', main: 'jp.co.cyberagent.stf.Agent'}
     , service
@@ -351,6 +360,7 @@ describe('device phone refresh', function() {
     return result.then(function(properties) {
       return {
         properties: properties as RefreshablePhoneProperties
+      , adb: adb
       , service: service
       }
     })
@@ -360,11 +370,11 @@ describe('device phone refresh', function() {
     var run = await invokePhone([
       {imei: 'a', iccid: 'one'}
     , {imei: 'a', iccid: 'two'}
-    ])
+    ], [{'gsm.sim.state': 'ABSENT'}])
 
     expect(run.properties.iccid).to.equal('one')
     var fresh = await run.properties.refresh()
-    expect(fresh.iccid).to.equal('two')
+    expect(fresh && fresh.iccid).to.equal('two')
     expect(run.service.getProperties.callCount).to.equal(2)
   })
 
@@ -372,7 +382,7 @@ describe('device phone refresh', function() {
     var run = await invokePhone([
       {imei: 'a', iccid: 'one'}
     , {imei: 'a'}
-    ])
+    ], [{'gsm.sim.state': 'ABSENT'}])
 
     var fresh = await run.properties.refresh()
     expect(fresh).to.deep.equal({imei: 'a'})
@@ -383,17 +393,52 @@ describe('device phone refresh', function() {
       {imei: 'a', iccid: 'one'}
     , {imei: 'a', iccid: 'two'}
     , {imei: 'a', iccid: 'three'}
-    ])
+    ], [{'gsm.sim.state': 'ABSENT'}, {'gsm.sim.state': 'ABSENT'}])
 
     var fresh = await run.properties.refresh()
     var fresher = await (fresh as RefreshablePhoneProperties).refresh()
-    expect(fresher.iccid).to.equal('three')
+    expect(fresher && fresher.iccid).to.equal('three')
     expect(run.service.getProperties.callCount).to.equal(3)
   })
 
+  it('should ask the agent again when a SIM card appears after startup',
+    async function() {
+      var run = await invokePhone([
+        {imei: 'a'}
+      , {imei: 'a'}
+      ], [{'gsm.sim.state': 'READY'}], 'iccid=from-agent\n')
+
+      expect(run.adb.shell.called).to.equal(false)
+      var fresh = await run.properties.refresh()
+      expect(fresh).to.deep.equal({imei: 'a', iccid: 'from-agent'})
+      expect(run.adb.shell.callCount).to.equal(1)
+    })
+
+  it('should skip the poll when a present SIM card cannot be read',
+    async function() {
+      var run = await invokePhone([
+        {imei: 'a', iccid: 'one'}
+      , {imei: 'a'}
+      ], [{'gsm.sim.state': 'READY'}])
+
+      var fresh = await run.properties.refresh()
+      expect(fresh).to.equal(null)
+    })
+
+  it('should skip the poll when the SIM state cannot be read',
+    async function() {
+      var run = await invokePhone([
+        {imei: 'a', iccid: 'one'}
+      , {imei: 'a'}
+      ], [])
+
+      var fresh = await run.properties.refresh()
+      expect(fresh).to.equal(null)
+    })
+
   it('should not leak refresh into copies of the properties',
     async function() {
-      var run = await invokePhone([{imei: 'a', iccid: 'one'}])
+      var run = await invokePhone([{imei: 'a', iccid: 'one'}], [])
 
       var copy = Object.assign({}, run.properties)
       expect(copy).to.deep.equal({imei: 'a', iccid: 'one'})

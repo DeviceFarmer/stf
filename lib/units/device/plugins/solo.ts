@@ -102,21 +102,35 @@ export default syrup.serial()
       options.simRefreshInterval : 0
 
     if (refreshInterval > 0) {
+      // Only one refresh in flight: adb answers slowly at times, and an
+      // overlapping read finishing late could publish an older state over a
+      // newer one. A null result means the read was inconclusive and this
+      // poll is skipped rather than reported as a removal.
+      var refreshing = false
       var timer = setInterval(function() {
+        if (refreshing) {
+          return
+        }
+        refreshing = true
         phone.refresh()
           .then(function(fresh) {
-            var changed = SUBSCRIBER_PROPERTIES.some(function(name) {
-              return (identity.phone[name] || null) !== (fresh[name] || null)
-            })
-            if (changed) {
-              log.info('Phone info changed, repushing identity')
-              identity.phone = fresh
-              pushIdentity()
+            if (fresh) {
+              var changed = SUBSCRIBER_PROPERTIES.some(function(name) {
+                return (identity.phone[name] || null) !== (fresh[name] || null)
+              })
+              if (changed) {
+                log.info('Phone info changed, repushing identity')
+                identity.phone = fresh
+                pushIdentity()
+              }
             }
             return null
           })
           .catch(function(err) {
             log.warn('Unable to refresh phone info: %s', err.message)
+          })
+          .finally(function() {
+            refreshing = false
           })
       }, refreshInterval)
 

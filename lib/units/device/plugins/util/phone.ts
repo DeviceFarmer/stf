@@ -80,33 +80,46 @@ export default syrup.serial()
         })
     }
 
-    function hasConfirmedSim() {
-      var state = deviceProperties['gsm.sim.state']
-      if (!state) {
+    function hasConfirmedSim(simState: string) {
+      if (!simState) {
         return false
       }
-      return state.split(',').some(function(slot) {
+      return simState.split(',').some(function(slot) {
         var slotState = slot.trim()
         return slotState === 'READY' || slotState === 'LOADED'
       })
     }
 
-    function hasUsableSim() {
-      var state = deviceProperties['gsm.sim.state']
-      if (!state) {
+    function hasUsableSim(simState: string) {
+      if (!simState) {
         return true
       }
-      return hasConfirmedSim()
+      return hasConfirmedSim(simState)
     }
 
-    function missingSubscriberInfo(properties: PhoneProperties) {
-      var wanted = hasUsableSim() ? SUBSCRIBER_PROPERTIES : HANDSET_PROPERTIES
+    function missingSubscriberInfo(properties: PhoneProperties, simState: string) {
+      var wanted = hasUsableSim(simState) ? SUBSCRIBER_PROPERTIES : HANDSET_PROPERTIES
       return wanted.filter(function(name) {
         return !properties[name]
       })
     }
 
-    function complete(properties: PhoneProperties) {
+    // The startup snapshot of gsm.sim.state goes stale the moment a SIM card
+    // is inserted or removed, so refreshes must read it again to know which
+    // properties to expect.
+    function readSimState(): Promise<string> {
+      return adb.getProperties(options.serial)
+        .timeout(10000)
+        .then(function(properties: Properties) {
+          return properties['gsm.sim.state'] || ''
+        })
+        .catch(function(err: Error) {
+          log.warn('Unable to read the SIM state: %s', err.message)
+          return ''
+        })
+    }
+
+    function complete(properties: PhoneProperties, simState: string) {
       var maxRetries = typeof options.phoneRetries === 'number' ?
         options.phoneRetries :
         AGENT_RETRIES
@@ -120,7 +133,7 @@ export default syrup.serial()
       // and the agent supports --telephony, retry briefly if subscriber fields
       // are still empty.
       function queryAgent(retriesLeft: number): Promise<PhoneProperties> {
-        var missing = missingSubscriberInfo(properties)
+        var missing = missingSubscriberInfo(properties, simState)
         if (!missing.length) {
           return Promise.resolve(properties)
         }
@@ -135,9 +148,9 @@ export default syrup.serial()
             })
             if (
               retriesLeft > 0 &&
-              hasConfirmedSim() &&
+              hasConfirmedSim(simState) &&
               !result.unsupported &&
-              missingSubscriberInfo(properties).length > 0
+              missingSubscriberInfo(properties, simState).length > 0
             ) {
               return Promise.delay(retryDelay).then(function() {
                 return queryAgent(retriesLeft - 1)
@@ -158,7 +171,7 @@ export default syrup.serial()
     // plain phone properties wherever it is consumed.
     function attachRefresh(
       properties: PhoneProperties
-    , method: () => Promise<PhoneProperties>
+    , method: () => Promise<PhoneProperties | null>
     ): RefreshablePhoneProperties {
       Object.defineProperty(properties, 'refresh', {
         value: method
@@ -166,13 +179,28 @@ export default syrup.serial()
       return properties as RefreshablePhoneProperties
     }
 
-    function refresh(): Promise<PhoneProperties> {
-      return fetch().then(complete).then(function(properties) {
-        return attachRefresh(properties, refresh)
+    // Null means the identifiers could not be read conclusively and the poll
+    // should be skipped: a SIM card that seems present without an ICCID is an
+    // adb hiccup, not a removal, and publishing it would report the same card
+    // removed and inserted again once adb recovers.
+    function refresh(): Promise<PhoneProperties | null> {
+      return readSimState().then(function(simState: string) {
+        return fetch()
+          .then(function(properties: PhoneProperties) {
+            return complete(properties, simState)
+          })
+          .then(function(completed: PhoneProperties) {
+            if (hasUsableSim(simState) && !completed.iccid) {
+              return null
+            }
+            return attachRefresh(completed, refresh)
+          })
       })
     }
 
-    return fetch().then(complete).then(function(properties) {
+    return fetch().then(function(properties) {
+      return complete(properties, deviceProperties['gsm.sim.state'] || '')
+    }).then(function(properties) {
       return attachRefresh(properties, refresh)
     })
   })
