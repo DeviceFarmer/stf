@@ -39,6 +39,19 @@ var builder = function(yargs: Argv) {
     , type: 'boolean'
     , default: false
     })
+    .option('sim-change-webhook-url', {
+      describe: 'URL to POST a JSON event to whenever the SIM card (ICCID) of a ' +
+        'device is inserted, removed or replaced. Empty by default: no events ' +
+        'are sent.'
+    , type: 'string'
+    , default: ''
+    })
+    .option('sim-change-webhook-secret', {
+      describe: 'Shared secret used to sign SIM card change events with ' +
+        'HMAC-SHA256, sent in the X-STF-Signature header.'
+    , type: 'string'
+    , default: ''
+    })
     .epilog('Each option can be be overwritten with an environment variable ' +
       'by converting the option to uppercase, replacing dashes with ' +
       'underscores and prefixing it with `STF_PROCESSOR_` (e.g. ' +
@@ -49,6 +62,8 @@ var handler = function(argv: CommandArgv<typeof builder>) {
   return require('../../units/processor/index.js').default({
     name: argv.name
   , autoRestoreOwner: argv.autoRestoreOwner
+  , simChangeWebhookUrl: argv.simChangeWebhookUrl
+  , simChangeWebhookSecret: argv.simChangeWebhookSecret
   , endpoints: {
       appDealer: argv.connectAppDealer
     , devDealer: argv.connectDevDealer

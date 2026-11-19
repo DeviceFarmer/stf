@@ -61,6 +61,7 @@ export interface DevicePluginOptions {
   screenGrabber: string
   phoneRetries?: number
   phoneRetryDelay?: number
+  simRefreshInterval?: number
 }
 
 export interface StfServiceResource {
@@ -134,6 +135,16 @@ export interface DeviceDisplay extends EventEmitter3.EventEmitter<DisplayEvents>
 }
 
 export type PhoneProperties = Record<string, string>
+
+// Phone properties carrying a way to read them again, so that a SIM card
+// swap on a connected device can be noticed. The method is non-enumerable
+// and invisible to copies of the properties. It resolves to null when the
+// read was inconclusive (a SIM card seems present but its identifiers could
+// not be read), so that callers can skip the poll instead of mistaking it
+// for a removal.
+export type RefreshablePhoneProperties = PhoneProperties & {
+  refresh(): Bluebird<PhoneProperties | null>
+}
 
 export type DeviceIdentity = Identity & {
   display: DisplayProperties

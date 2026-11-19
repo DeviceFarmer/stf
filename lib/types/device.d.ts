@@ -32,6 +32,7 @@ export interface DeviceOptions {
   vncInitialSize: number[]
   heartbeatInterval: number
   bootCompleteTimeout: number
+  simRefreshInterval: number
   muteMaster: 'always' | 'inuse' | 'never'
   lockRotation?: boolean
   cleanup: boolean

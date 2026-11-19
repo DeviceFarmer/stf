@@ -1805,7 +1805,7 @@ dbapi.saveDeviceIdentity = function(serial, identity) {
   , cpu: identity.cpu || null
   , memory: identity.memory || null
   , releasedAt: identity.releasedAt || null
-  }))
+  }, {returnChanges: true}))
 }
 
 // Returns every device, whatever its group; reserved to privileged (admin) operations
