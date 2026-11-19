@@ -77,6 +77,12 @@ export type AlertMessageBody = Partial<AlertMessage>
 export type AddUserDeviceBody = {
   serial: string
   timeout?: number
+  leaseId?: string
+}
+
+export type AutomationLeaseBody = {
+  leaseId: string
+  timeout?: number
 }
 
 export type NoBody = {
@@ -112,6 +118,7 @@ export interface ApiUnitOptions {
   port: number
   ssid: string
   secret: string
+  automationLeaseAccounts?: readonly string[]
   endpoints: {
     push: string[]
     sub: string[]

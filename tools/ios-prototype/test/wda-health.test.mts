@@ -368,6 +368,7 @@ describe('Appium WDA handoff', () => {
     const change = (active: boolean, id: string = lease) => fetch(origin + '/automation', {
       headers, method: 'POST', body: JSON.stringify({active, lease: id})
     })
+    assert.equal((await fetch(origin + '/automation', {method: 'POST'})).status, 401)
     assert.equal((await change(true, 'invalid')).status, 400)
     assert.deepEqual(await (await change(true)).json(), {active: true})
     assert.equal(f.healthSignal().aborted, true)
@@ -379,14 +380,15 @@ describe('Appium WDA handoff', () => {
     assert.equal(device.automationLease, lease)
     assert.equal(f.wda.sessionId, f.baseline.sessionId)
     assert.equal((await fetch(f.origin + '/session/' + f.wda.sessionId + '/source')).status, 200)
-    const source = await f.runtime.execute(wda => wda.call('GET', '/source'))
-    assert.equal(source.value, '<source/>')
+    assert.equal((await fetch(origin + '/screenshot', {headers})).status, 409)
     assert.deepEqual(await (await change(false)).json(), {active: false})
     assert.equal(f.runtime.automationLease, null)
     assert.equal(f.wda.sessionId, f.baseline.sessionId)
     assert.equal(f.sessions(), f.baseline.sessions)
     assert.equal(f.deleted(), false)
     assert.equal(f.runtime.generation, f.baseline.generation)
+    const source = await f.runtime.execute(wda => wda.call('GET', '/source'))
+    assert.equal(source.value, '<source/>')
   })
 
   it('preserves the WDA forwards when Appium replaces the session and restores STF on release',

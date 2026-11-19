@@ -44,6 +44,32 @@
 
 {{- if and .Values.database.bundled .Values.database.external.existingSecret }}{{ fail "database.external.existingSecret requires database.bundled=false" }}{{ end -}}
 
+{{- if .Values.coordinator.enabled -}}
+{{- $c := .Values.coordinator -}}
+{{- if not $c.existingSecret }}{{ fail "coordinator.existingSecret is required when the coordinator is enabled" }}{{ end -}}
+{{- if not $c.appiumGridUrl }}{{ fail "coordinator.appiumGridUrl is required when the coordinator is enabled" }}{{ end -}}
+{{- if not (regexMatch "^[^@,\\s]+@[^@,\\s]+$" $c.stfServiceAccountEmail) }}{{ fail "coordinator.stfServiceAccountEmail must be a single STF account email when the coordinator is enabled" }}{{ end -}}
+{{- if hasKey $c.podAnnotations "checksum/adb-pools" }}{{ fail "coordinator.podAnnotations must not override checksum/adb-pools" }}{{ end -}}
+{{- if and $c.ingress.enabled (not (regexMatch "^https?://[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?/?$" $c.publicUrl)) }}{{ fail "coordinator.ingress requires coordinator.publicUrl as an HTTP(S) origin without a path" }}{{ end -}}
+{{- $providers := dict -}}
+{{- $systemPorts := dict -}}
+{{- $adbPorts := dict -}}
+{{- range $c.adbPools -}}
+{{- $_ := set $adbPorts (printf "%s:%v" .host .port) true -}}
+{{- end -}}
+{{- range $c.adbPools -}}
+{{- if hasKey $providers .provider }}{{ fail "coordinator.adbPools provider names must be unique" }}{{ end -}}
+{{- $_ := set $providers .provider true -}}
+{{- $host := .host -}}
+{{- range .systemPorts -}}
+{{- $key := printf "%s:%v" $host . -}}
+{{- if hasKey $systemPorts $key }}{{ fail "coordinator.adbPools systemPorts must not overlap on the same ADB host" }}{{ end -}}
+{{- if hasKey $adbPorts $key }}{{ fail "coordinator.adbPools systemPorts must not use an ADB control port" }}{{ end -}}
+{{- $_ := set $systemPorts $key true -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{- range $bus := list .Values.messaging.app .Values.messaging.dev -}}
 {{- if or (eq (int $bus.pub) (int $bus.dealer)) (eq (int $bus.pub) (int $bus.pull)) (eq (int $bus.dealer) (int $bus.pull)) }}{{ fail "messaging ports must be distinct within each triproxy" }}{{ end -}}
 {{- end -}}

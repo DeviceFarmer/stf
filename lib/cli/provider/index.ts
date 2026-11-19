@@ -183,6 +183,20 @@ var builder = function(yargs: Argv) {
     , type: 'string'
     , default: 'ws://${publicIp}:${publicPort}'
     })
+    .option('sim-refresh-interval', {
+      describe: 'How often in milliseconds to re-read phone/SIM info while a ' +
+        'device stays connected, so that a SIM card swap gets noticed without a ' +
+        'reconnect. Zero by default: the info is only read when the device ' +
+        'connects. Passed on to every device unit.'
+    , type: 'number'
+    , default: 0
+    , coerce: function(value: number) {
+        if (!(value === 0 || value >= 10000)) {
+          throw new Error('--sim-refresh-interval must be 0 or at least 10000 ms')
+        }
+        return value
+      }
+    })
     .option('storage-url', {
       alias: 'r'
     , describe: 'The URL to the storage unit.'
@@ -256,6 +270,7 @@ var handler = function(argv: CommandArgv<typeof builder, {serial: (string | numb
       , '--boot-complete-timeout', argv.bootCompleteTimeout
       , '--vnc-initial-size', argv.vncInitialSize.join('x')
       , '--mute-master', argv.muteMaster
+      , '--sim-refresh-interval', argv.simRefreshInterval
       ]
       .concat(argv.connectSub.reduce<CliArg[]>(function(all, val) {
         return all.concat(['--connect-sub', val])

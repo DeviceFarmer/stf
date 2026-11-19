@@ -10,9 +10,11 @@ import wirerouter from '../../wire/router.js'
 import wireutil from '../../wire/util.js'
 import db from '../../db/index.js'
 import dbapi from '../../db/api.js'
+import type {DeviceOwnershipWriteResult} from '../../db/api.js'
 import lifecycle from '../../util/lifecycle.js'
 import deviceutil from '../../util/deviceutil.js'
 import srv from '../../util/srv.js'
+import simchange from '../../util/simchange.js'
 import zmqutil from '../../util/zmqutil.js'
 import type {DeviceDocument, UserIdentity} from '../../types/stf.js'
 import type {WriteResult} from 'rethinkdb'
@@ -24,6 +26,8 @@ var adb = adbutil()
 interface ProcessorOptions {
   name?: string
   autoRestoreOwner: boolean
+  simChangeWebhookUrl?: string
+  simChangeWebhookSecret?: string
   endpoints: {
     appDealer: string[]
     devDealer: string[]
@@ -34,6 +38,11 @@ interface ProcessorOptions {
 export default db.ensureConnectivity(function(options: ProcessorOptions) {
   var log = logger.createLogger('processor')
 
+  // Kept empty when the feature is not configured, so the identity handler
+  // below behaves exactly as it did without it.
+  var simChangeWebhookUrl = options.simChangeWebhookUrl || ''
+  var simChangeWebhookSecret = options.simChangeWebhookSecret || ''
+
   if (options.name) {
     logger.setGlobalIdentifier(options.name)
   }
@@ -43,6 +52,30 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
   log.info('Automatic owner restore is %s', options.autoRestoreOwner ? 'on' : 'off')
 
   // App side
+  const ownershipWrites = new Map<string, Promise<void>>()
+  function persistOwnership(
+    serial: string, update: () => Promise<DeviceOwnershipWriteResult>, publish: () => void
+  ) {
+    const pending: Promise<void> = (ownershipWrites.get(serial) ?? Promise.resolve())
+      .then(update)
+      .then(stats => {
+        if (stats.errors) {
+          throw new Error(String(stats.first_error))
+        }
+        if (stats.applied) {
+          publish()
+        }
+      })
+      .catch(error => log.error('Failed to persist device ownership', error))
+      .finally(() => {
+        if (ownershipWrites.get(serial) === pending) {
+          ownershipWrites.delete(serial)
+        }
+      })
+    ownershipWrites.set(serial, pending)
+    return pending
+  }
+
   var appDealer = zmqutil.socket('dealer')
   Promise.map(options.endpoints.appDealer, function(endpoint) {
     return srv.resolve(endpoint).then(function(records) {
@@ -152,8 +185,6 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
         )
       })
   }
-
-  let ownerWritesInFlight: Promise<unknown> = Promise.resolve()
 
   devDealer.on('message', wirerouter()
     .on(wire.UpdateAccessTokenMessage, function(channel, message, data) {
@@ -337,33 +368,61 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      // Forward only once the row is written: the app side treats the join as news of a row it
-      // can then read, and the transaction reply that follows must not overtake it.
-      const write = dbapi.setDeviceOwner(message.serial, message.owner, message.usage)
-        .catch(function(err) {
-          log.error('Unable to persist join of "%s"', message.serial, err.stack)
-        })
-      ownerWritesInFlight = Promise.all([ownerWritesInFlight, write])
-      write.then(function() {
-        appDealer.send([channel, data])
-      })
+      // Forward only after the ownership commit so the app can read the resulting row.
+      return persistOwnership(message.serial, () =>
+        dbapi.setDeviceOwner(message.serial, message.owner, message.usage, message.leaseId)
+      , () => appDealer.send([channel, data]))
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
-      // Same as a join: the app side may read the row as soon as it hears of the leave
-      const write = dbapi.releaseDeviceOwner(message.serial, message.owner)
-        .catch(function(err) {
-          log.error('Unable to persist leave of "%s"', message.serial, err.stack)
-        })
-      ownerWritesInFlight = Promise.all([ownerWritesInFlight, write])
-      write.then(function() {
-        appDealer.send([channel, data])
-      })
+      // A recorded early Leave does not change the current owner.
+      return persistOwnership(message.serial, () =>
+        dbapi.releaseDeviceOwner(message.serial, message.owner, message.leaseId)
+      , () => appDealer.send([channel, data]))
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {
       appDealer.send([channel, data])
     })
     .on(wire.DeviceIdentityMessage, function(channel, message, data) {
-      dbapi.saveDeviceIdentity(message.serial, message)
+      if (simChangeWebhookUrl) {
+        // The event is built from the write itself: with two processors
+        // racing on the same serial, reading the device before the write
+        // could emit the same change twice or miss the reverse one.
+        dbapi.saveDeviceIdentity(message.serial, message)
+          .then(function(stats) {
+            var change = stats.changes && stats.changes[0] ?
+              stats.changes[0] : null
+            if (!change || !change.new_val) {
+              return null
+            }
+            var event = simchange.buildSimChangeEvent(
+              change.old_val || null
+            , change.new_val
+            )
+            if (event) {
+              log.important(
+                'SIM card change ("%s") detected on device "%s"'
+              , event.change
+              , message.serial
+              )
+              return simchange.sendSimChangeEvent(
+                simChangeWebhookUrl
+              , simChangeWebhookSecret
+              , event
+              )
+            }
+            return null
+          })
+          .catch(function(err) {
+            log.error(
+              'Unable to process the SIM card change of device "%s"'
+            , message.serial
+            , err.stack
+            )
+          })
+      }
+      else {
+        dbapi.saveDeviceIdentity(message.serial, message)
+      }
       appDealer.send([channel, data])
     })
     .on(wire.DevicePropertiesMessage, function(channel, message, data) {
@@ -377,8 +436,12 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      // Keeps a reply sent right after a join or leave (group.invite, group.kick) behind its forward.
-      ownerWritesInFlight.then(function() {
+      // Keep group.invite and group.kick replies behind local ownership commits and events.
+      if (!ownershipWrites.size) {
+        appDealer.send([channel, data])
+        return
+      }
+      Promise.all(ownershipWrites.values()).then(function() {
         appDealer.send([channel, data])
       })
     })
