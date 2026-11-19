@@ -15,6 +15,11 @@ export function isDeviceCommand(event: unknown): boolean {
   return event !== 'device.note' && deviceCommands.has(family)
 }
 
+/** Seeing a device is enough to try to take it; other commands need its owner or an admin. */
+export function requiresOwner(event: unknown): boolean {
+  return isDeviceCommand(event) && event !== 'group.invite'
+}
+
 /** Wire notifications take precedence while their database writes are pending. */
 // What the last lagging row said; empty strings mean the row had no channel or group.
 interface LaggingRow {
@@ -31,6 +36,8 @@ export class DevicePacketAccess {
   private readonly lagging = new Map<string, LaggingRow>()
   private readonly misses = new Map<string, {until: number, groups: string}>()
   private readonly resolving = new Map<string, Promise<DeviceAccess | null | undefined>>()
+  // This user's group.invite transactions still waiting for a reply, by response channel.
+  private readonly invites = new Map<string, {channel: string, session: number}>()
   private revision = 0
   private subscriptionsChanged = 0
   private overflowed = false
@@ -50,6 +57,50 @@ export class DevicePacketAccess {
   released(serial: string) {
     this.sessions.set(serial, this.revision + 1)
     this.update(serial, {owner: null, usage: null})
+  }
+
+  /** Remembers this user's invite, so that its reply can stand in for a late join notification. */
+  invited(responseChannel: string, channel: string) {
+    this.invites.delete(responseChannel)
+    this.invites.set(responseChannel, {channel, session: this.session(channel)})
+    if (this.invites.size > maxEntries) {
+      this.invites.delete(this.invites.keys().next().value!)
+    }
+  }
+
+  forgetInvite(responseChannel: string) {
+    this.invites.delete(responseChannel)
+  }
+
+  /**
+   * The device answers an invite after announcing the join, but the two can reach
+   * this socket through different processors, so the reply may come first. Treat
+   * a successful reply naming this user as the join, unless a join or leave for the
+   * device was seen since the invite went out, which is at least as new. Only the
+   * owner is taken from it: a re-invite by the current owner gets a reply but no
+   * join notification, and its row keeps whatever usage it had. Like any
+   * notification, this only makes the guard wait for the row; it never allows.
+   */
+  inviteReplied(responseChannel: string, serial: string, email: string
+  , success: boolean, body: string | null | undefined) {
+    const invite = this.invites.get(responseChannel)
+    if (!invite) {
+      return
+    }
+    // Any reply ends the wait for it; a failed or unreadable one records nothing.
+    this.invites.delete(responseChannel)
+    let owner: DeviceAccess['owner'] | undefined
+    try {
+      owner = success && body ? JSON.parse(body)?.owner : null
+    }
+    catch {
+      return
+    }
+    if (owner?.email && owner.email === email && this.source(invite.channel) === serial &&
+        this.session(invite.channel) === invite.session) {
+      this.sessions.set(serial, this.revision + 1)
+      this.update(serial, {owner})
+    }
   }
 
   update(serial: string, change: Partial<DeviceAccess>) {

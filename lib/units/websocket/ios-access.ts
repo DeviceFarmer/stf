@@ -10,6 +10,8 @@ interface IosUser {
 
 interface DevicePacketPolicy {
   matches: (event: unknown) => boolean
+  // Commands only the device's owner or an admin may send; input always needs the owner.
+  requiresOwner?: (event: unknown) => boolean
   allows: (channel: unknown, groups: string[], load: LoadDevice) => PromiseLike<boolean>
   source: (channel: string) => string
   snapshot?: (device: DeviceAccess) => DeviceAccess
@@ -193,12 +195,14 @@ export function createDevicePacketGuard(
                 !await allowIosPacket(event, channel, user, loadOnce)) {
               return 'Device access denied'
             }
-            if (input) {
+            if (input || devicePolicy?.requiresOwner?.(event)) {
               const serial = devicePolicy?.source(channel) ||
                 (channel.startsWith('ios:') ? channel.slice(4) : channel)
               const device = await loadOnce(serial)
-              if (!device?.owner || (device.owner.email !== user.email &&
-                  user.privilege !== 'admin')) {
+              const admin = user.privilege === 'admin'
+              // Admin input still needs a manual owner to stamp the gesture with.
+              if (input ? !device?.owner || (device.owner.email !== user.email && !admin) :
+                !admin && device?.owner?.email !== user.email) {
                 return 'Device access denied'
               }
             }
