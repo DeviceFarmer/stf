@@ -15,14 +15,29 @@ export function isDeviceCommand(event: unknown): boolean {
   return event !== 'device.note' && deviceCommands.has(family)
 }
 
+/** Seeing a device is enough to try to take it; other commands need its owner or an admin. */
+export function requiresOwner(event: unknown): boolean {
+  return isDeviceCommand(event) && event !== 'group.invite'
+}
+
 /** Wire notifications take precedence while their database writes are pending. */
+// What the last lagging row said; empty strings mean the row had no channel or group.
+interface LaggingRow {
+  channel: string
+  group: string
+}
+
 export class DevicePacketAccess {
   private readonly channels = new Map<string, string>()
   private readonly changed = new Map<string, number>()
   private readonly sessions = new Map<string, number>()
   private readonly observations = new Map<string, Partial<DeviceAccess>>()
+  // Serials whose last snapshot lagged an observation that the row can still catch up with.
+  private readonly lagging = new Map<string, LaggingRow>()
   private readonly misses = new Map<string, {until: number, groups: string}>()
   private readonly resolving = new Map<string, Promise<DeviceAccess | null | undefined>>()
+  // This user's group.invite transactions still waiting for a reply, by response channel.
+  private readonly invites = new Map<string, {channel: string, session: number}>()
   private revision = 0
   private subscriptionsChanged = 0
   private overflowed = false
@@ -44,14 +59,60 @@ export class DevicePacketAccess {
     this.update(serial, {owner: null, usage: null})
   }
 
+  /** Remembers this user's invite, so that its reply can stand in for a late join notification. */
+  invited(responseChannel: string, channel: string) {
+    this.invites.delete(responseChannel)
+    this.invites.set(responseChannel, {channel, session: this.session(channel)})
+    if (this.invites.size > maxEntries) {
+      this.invites.delete(this.invites.keys().next().value!)
+    }
+  }
+
+  forgetInvite(responseChannel: string) {
+    this.invites.delete(responseChannel)
+  }
+
+  /**
+   * The device answers an invite after announcing the join, but the two can reach
+   * this socket through different processors, so the reply may come first. Treat
+   * a successful reply naming this user as the join, unless a join or leave for the
+   * device was seen since the invite went out, which is at least as new. Only the
+   * owner is taken from it: a re-invite by the current owner gets a reply but no
+   * join notification, and its row keeps whatever usage it had. Like any
+   * notification, this only makes the guard wait for the row; it never allows.
+   */
+  inviteReplied(responseChannel: string, serial: string, email: string
+  , success: boolean, body: string | null | undefined) {
+    const invite = this.invites.get(responseChannel)
+    if (!invite) {
+      return
+    }
+    // Any reply ends the wait for it; a failed or unreadable one records nothing.
+    this.invites.delete(responseChannel)
+    let owner: DeviceAccess['owner'] | undefined
+    try {
+      owner = success && body ? JSON.parse(body)?.owner : null
+    }
+    catch {
+      return
+    }
+    if (owner?.email && owner.email === email && this.source(invite.channel) === serial &&
+        this.session(invite.channel) === invite.session) {
+      this.sessions.set(serial, this.revision + 1)
+      this.update(serial, {owner})
+    }
+  }
+
   update(serial: string, change: Partial<DeviceAccess>) {
     this.invalidate(serial)
     const previous = this.observations.get(serial)
     this.observations.delete(serial)
+    this.lagging.delete(serial)
     if (!previous && this.observations.size >= this.maxObservations) {
       // These are trusted wire observations, not request cache entries. Losing
       // one could authorize an old database row, so keep this socket read-only.
       this.overflowed = true
+      this.lagging.clear()
       this.invalidate()
       return
     }
@@ -89,14 +150,47 @@ export class DevicePacketAccess {
       return device[field as keyof DeviceAccess] === value
     })
     if (!caughtUp) {
+      // A row owned by someone else will not turn into the observed owner by waiting.
+      const rowOwner = device.owner?.email
+      if (!rowOwner || rowOwner === observed.owner?.email) {
+        this.lagging.set(device.serial, {
+          channel: device.channel ?? '', group: device.group?.id ?? ''
+        })
+      }
+      else {
+        this.lagging.delete(device.serial)
+      }
       // Never turn an old database row into an allow using a notification.
       // Wait for persistence; this also fences reads from before a transfer.
       return {...device, ready: false}
     }
     this.observations.delete(device.serial)
+    this.lagging.delete(device.serial)
     // Force concurrent snapshots from before persistence to be read again.
     this.invalidate(device.serial)
     return device
+  }
+
+  /**
+   * Whether a denied command should be retried against the database instead of
+   * failing: the outstanding observation is a manual join by `email`, and the
+   * last row read still lags it in a way persistence can fix. That means the row
+   * is free or already the same user's, and its channel and group are ones this
+   * user may use. A row owned by someone else, a revoked group or a channel
+   * mismatch deny immediately. This only buys time; it never authorizes, as an
+   * allow still needs a caught-up row. Read-only, unlike snapshot().
+   */
+  awaitingJoin(channel: string, email: string, groups: string[] = []): boolean {
+    if (this.overflowed) {
+      return false
+    }
+    const serial = this.source(channel)
+    const observed = this.observations.get(serial)
+    const row = this.lagging.get(serial)
+    return Boolean(row && observed?.owner?.email && observed.owner.email === email &&
+      observed.usage !== 'automation' && observed.present !== false &&
+      observed.ready !== false && row.channel === channel &&
+      row.group !== '' && groups.includes(row.group))
   }
 
   invalidate(serial?: string) {

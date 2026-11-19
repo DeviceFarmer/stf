@@ -48,7 +48,7 @@ function fixture(enabled = false, unsupported = false, ios26 = false, lock = fal
       }
       throw new Error('Unexpected route ' + route)
     }
-    , async gesture(point: unknown) {
+    , async tap(point: unknown) {
       taps.push(point)
       stage++
     }
@@ -102,7 +102,7 @@ describe('physical iPhone Shake', () => {
   it('cleans up when the owner cancels and issues no further gestures', async() => {
     const f = fixture()
     const abort = new AbortController()
-    f.wda.gesture = async() => {
+    f.wda.tap = async() => {
       f.taps.push('first tap')
       abort.abort()
     }

@@ -161,6 +161,8 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       })
   }
 
+  let ownerWritesInFlight: Promise<unknown> = Promise.resolve()
+
   devDealer.on('message', wirerouter()
     .on(wire.UpdateAccessTokenMessage, function(channel, message, data) {
       appDealer.send([channel, data])
@@ -343,16 +345,27 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      dbapi.setDeviceOwner(message.serial, message.owner)
-      if (message.usage) {
-        dbapi.setDeviceUsage(message.serial, message.usage)
-      }
-      appDealer.send([channel, data])
+      // Forward only once the row is written: the app side treats the join as news of a row it
+      // can then read, and the transaction reply that follows must not overtake it.
+      const write = dbapi.setDeviceOwner(message.serial, message.owner, message.usage)
+        .catch(function(err) {
+          log.error('Unable to persist join of "%s"', message.serial, err.stack)
+        })
+      ownerWritesInFlight = Promise.all([ownerWritesInFlight, write])
+      write.then(function() {
+        appDealer.send([channel, data])
+      })
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
-      dbapi.unsetDeviceOwner(message.serial)
-      dbapi.unsetDeviceUsage(message.serial)
-      appDealer.send([channel, data])
+      // Same as a join: the app side may read the row as soon as it hears of the leave
+      const write = dbapi.releaseDeviceOwner(message.serial, message.owner)
+        .catch(function(err) {
+          log.error('Unable to persist leave of "%s"', message.serial, err.stack)
+        })
+      ownerWritesInFlight = Promise.all([ownerWritesInFlight, write])
+      write.then(function() {
+        appDealer.send([channel, data])
+      })
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {
       appDealer.send([channel, data])
@@ -411,7 +424,10 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      appDealer.send([channel, data])
+      // Keeps a reply sent right after a join or leave (group.invite, group.kick) behind its forward.
+      ownerWritesInFlight.then(function() {
+        appDealer.send([channel, data])
+      })
     })
     .on(wire.DeviceLogcatEntryMessage, function(channel, message, data) {
       appDealer.send([channel, data])

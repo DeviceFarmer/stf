@@ -26,6 +26,7 @@ WORKDIR /opt/stf
 USER node
 RUN ios version && iproxy --version && pymobiledevice3 version \
     && node tools/ios-prototype/main.mts --help \
-    && node --test tools/ios-prototype/test/*.test.mts
+    && node --test tools/ios-prototype/test/*.test.mts \
+    && python3 -B tools/ios-prototype/test/coredevice_worker_test.py
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["node", "tools/ios-prototype/main.mts", "--help"]

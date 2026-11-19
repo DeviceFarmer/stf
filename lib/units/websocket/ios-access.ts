@@ -10,17 +10,21 @@ interface IosUser {
 
 interface DevicePacketPolicy {
   matches: (event: unknown) => boolean
+  // Commands only the device's owner or an admin may send; input always needs the owner.
+  requiresOwner?: (event: unknown) => boolean
   allows: (channel: unknown, groups: string[], load: LoadDevice) => PromiseLike<boolean>
   source: (channel: string) => string
   snapshot?: (device: DeviceAccess) => DeviceAccess
   session?: (channel: string) => number
   checkpoint?: () => number
   current?: (channel: string, checkpoint: number) => boolean
+  awaitingJoin?: (channel: string, email: string, groups: string[]) => boolean
 }
 
 export interface AuthorizedInput {
   gestureId: string | null
   reservationId: string | null
+  screenSessionId?: string
 }
 
 interface PacketGuardOptions {
@@ -29,6 +33,8 @@ interface PacketGuardOptions {
   maxTotalPendingPackets?: number
   maxChannels?: number
   inputCacheMs?: number
+  persistRetryMs?: number
+  persistWaitMs?: number
   resetGesture?: (channel: string, identity?: AuthorizedInput) => void
   onAuthorizedInput?: (packet: readonly unknown[], identity: AuthorizedInput) => void
 }
@@ -86,7 +92,7 @@ export function createDevicePacketGuard(
   const queues = new Map<string, PacketQueue>()
   const inputPermissions = new Map<string, {checkpoint: number, until: number
     , groups: string, identity: string, reservationId: string | null}>()
-  const gestures = new Map<string, {identity: string, id: string, reservationId: string | null}>()
+  const gestures = new Map<string, {identity: string, scope: AuthorizedInput}>()
   const gestureSource = randomUUID()
   let gestureCounter = 0
   const timeoutMs = options.lookupTimeoutMs ?? 2000
@@ -94,6 +100,8 @@ export function createDevicePacketGuard(
   const maxTotalPending = options.maxTotalPendingPackets ?? 4096
   const maxChannels = options.maxChannels ?? 16
   const cacheMs = Math.min(1000, Math.max(0, options.inputCacheMs ?? 100))
+  const persistRetryMs = Math.max(1, options.persistRetryMs ?? 20)
+  const persistWaitMs = Math.max(0, options.persistWaitMs ?? 1000)
   let pendingCount = 0
 
   function finish(entry: PendingPacket, reason?: string | null) {
@@ -116,10 +124,7 @@ export function createDevicePacketGuard(
     queue.failed = true
     inputPermissions.delete(channel)
     // A scoped provider reset cannot affect a newer gesture or another owner.
-    const gesture = gestures.get(channel)
-    options.resetGesture?.(channel, gesture ? {
-      gestureId: gesture.id, reservationId: gesture.reservationId
-    } : undefined)
+    options.resetGesture?.(channel, gestures.get(channel)?.scope)
     gestures.delete(channel)
     for (const entry of queue.pending.splice(0)) {
       finish(entry, reason)
@@ -134,6 +139,7 @@ export function createDevicePacketGuard(
     let snapshots = new Map<string, Promise<DeviceAccess | null | undefined>>()
     let snapshotExpires = 0
     let identity = ''
+    let joinWait = null as {entry: PendingPacket, start: number, retries: number} | null
     let reservationId: string | null = null
     const current = (value: number | undefined) => typeof value === 'undefined' ||
       !devicePolicy?.current || devicePolicy.current(channel, value)
@@ -189,12 +195,14 @@ export function createDevicePacketGuard(
                 !await allowIosPacket(event, channel, user, loadOnce)) {
               return 'Device access denied'
             }
-            if (input) {
+            if (input || devicePolicy?.requiresOwner?.(event)) {
               const serial = devicePolicy?.source(channel) ||
                 (channel.startsWith('ios:') ? channel.slice(4) : channel)
               const device = await loadOnce(serial)
-              if (!device?.owner || (device.owner.email !== user.email &&
-                  user.privilege !== 'admin')) {
+              const admin = user.privilege === 'admin'
+              // Admin input still needs a manual owner to stamp the gesture with.
+              if (input ? !device?.owner || (device.owner.email !== user.email && !admin) :
+                !admin && device?.owner?.email !== user.email) {
                 return 'Device access denied'
               }
             }
@@ -244,6 +252,26 @@ export function createDevicePacketGuard(
         commandClass = undefined
         continue
       }
+      // The user's own join was announced but its row is not written yet. Re-read
+      // with backoff until it persists rather than deny; the decision still comes
+      // from the row, and both the original deadline and persistWaitMs bound it.
+      if (reason === 'Device access denied' &&
+          devicePolicy?.awaitingJoin?.(channel, user.email, user.groups.subscribed)) {
+        if (joinWait?.entry !== entry) {
+          joinWait = {entry, start: Date.now(), retries: 0}
+        }
+        const until = Math.min(entry.deadline, joinWait.start + persistWaitMs)
+        if (Date.now() < until) {
+          const step = Math.min(persistRetryMs * 2 ** joinWait.retries++, 250, until - Date.now())
+          await new Promise(resolve => setTimeout(resolve, Math.max(1, step)))
+          if (queue.failed) {
+            return
+          }
+          snapshots = new Map()
+          commandClass = undefined
+          continue
+        }
+      }
       if (input && event !== 'input.gestureStart' && gestures.has(channel) &&
           gestures.get(channel)!.identity !== identity) {
         reason = 'Device access denied'
@@ -257,21 +285,25 @@ export function createDevicePacketGuard(
           failChannel(channel, queue, 'Device gesture counter exhausted; reconnect to continue')
           return
         }
-        gestures.set(channel, {identity
-          , id: gestureSource + ':' + ++gestureCounter + ':' + Date.now(), reservationId})
+        const {screenSessionId} = (entry.packet[2] || {}) as {screenSessionId?: unknown}
+        const scope: AuthorizedInput = {
+          gestureId: gestureSource + ':' + ++gestureCounter + ':' + Date.now(), reservationId
+        }
+        if (channel.startsWith('ios:') && typeof screenSessionId === 'string' &&
+            /^[a-z0-9-]{1,128}$/i.test(screenSessionId)) {
+          scope.screenSessionId = screenSessionId
+        }
+        gestures.set(channel, {identity, scope})
         if (gestures.size > 128) {
           const oldest = gestures.keys().next().value!
           const previous = gestures.get(oldest)!
-          options.resetGesture?.(oldest, {
-            gestureId: previous.id, reservationId: previous.reservationId
-          })
+          options.resetGesture?.(oldest, previous.scope)
           gestures.delete(oldest)
         }
       }
       if (input) {
-        options.onAuthorizedInput?.(entry.packet, {
-          gestureId: gestures.get(channel)?.id || null, reservationId
-        })
+        options.onAuthorizedInput?.(entry.packet,
+          gestures.get(channel)?.scope || {gestureId: null, reservationId})
       }
       if (event === 'input.gestureStop') {
         gestures.delete(channel)

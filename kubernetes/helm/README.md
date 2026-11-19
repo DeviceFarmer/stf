@@ -1,8 +1,45 @@
 # STF on Kubernetes
 
+## Contents
+
+- [Destiny](#destiny)
+- [Project structure](#project-structure)
+- [Stack and tools](#stack-and-tools)
+- [Prerequisites](#prerequisites)
+- [Quickstart](#quickstart-a-new-installation)
+- [Configuration](#configuration)
+- [Network isolation](#network-isolation)
+- [USB providers](#usb-providers)
+- [Database migration and upgrades](#database-migration-and-upgrades)
+- [Verification](#verification)
+
+## Destiny
+
 The Helm chart in [`kubernetes/helm`](.) deploys the STF server, a browser-facing proxy and an optional single-node RethinkDB. Android and Linux iOS USB providers are opt-in and can be assigned to separate nodes. The chart uses the existing STF commands and images; it does not install Argo CD, Appium Grid or a test scheduler.
 
-Run the commands below from the root of the STF repository. Examples and verification scripts are provided in the repository checkout.
+Run the [quickstart](#quickstart-a-new-installation) from the root of the STF repository to render and install an instance without USB providers.
+
+## Project structure
+
+```text
+kubernetes/helm/
+├── Chart.yaml          # Declares chart metadata and the supported Kubernetes version.
+├── values.yaml         # Sets default deployment options.
+├── values.schema.json  # Validates supplied values.
+├── templates/          # Renders core services, networking, migrations and USB providers.
+├── examples/           # Provides sample values for local and USB deployments.
+└── tests/              # Checks rendered resources and the installation lifecycle.
+```
+
+## Stack and tools
+
+| Tool | Purpose |
+| --- | --- |
+| Helm | Renders and installs the STF chart |
+| Kubernetes | Schedules STF services and optional USB providers |
+| RethinkDB | Stores STF device and user state |
+| Nginx | Proxies browser HTTP and WebSocket traffic |
+| Kind | Provides an isolated cluster for the optional smoke test |
 
 ## Prerequisites
 
@@ -134,6 +171,18 @@ The [USB values example](examples/usb.yaml) combines Android and iOS configurati
 Register the OAuth client callback as `https://stf.example.com/auth/oauth/callback` and create an existing Secret named `stf-oauth` in the release namespace with keys `STF_AUTH_OAUTH2_OAUTH_CLIENT_ID` and `STF_AUTH_OAUTH2_OAUTH_CLIENT_SECRET`. Keep the secret values out of Helm values files. The provider's UserInfo response must include `email`; `email_verified: false` is rejected.
 
 Keep the pairing/state claim for each phone. Confirm that the selected node exposes the expected usbmuxd socket and has already established trust with that iPhone. WDA must be signed and installed beforehand; the Kubernetes chart does not perform signing or first-time device preparation. See the [provider limits and recovery behavior](../../doc/ios-provider.md).
+
+The iOS Service and browser proxy carry the authenticated screen connection.
+STF selects the screen mode per phone. iOS 27 and later use CoreDevice HEVC and
+live touch events. Earlier supported iOS releases use WDA MJPEG and WDA taps and
+swipes. Configure HTTPS on shared deployments so browsers can decode CoreDevice
+video with WebCodecs.
+
+For an Appium sidecar that needs recording or streamed screenshots, set
+`ios.devices[].appiumMjpegPort`. A value of `19100` makes WDA MJPEG available at
+`http://127.0.0.1:19100/` within the pod. On earlier iOS releases, the WDA screen
+uses that internal port by default. On iOS 27 and later, the WDA stream is
+forwarded only when an Appium port is configured.
 
 ## Database migration and upgrades
 

@@ -66,7 +66,8 @@ export function createControl(target: Device, channel: string, isReadOnly = () =
       return isReadOnly()
     }
     , channel
-    , gestureStart: (seq: number) => sendOneWay('input.gestureStart', {seq})
+    , gestureStart: (seq: number, screenSessionId?: string) =>
+      sendOneWay('input.gestureStart', screenSessionId ? {seq, screenSessionId} : {seq})
     , gestureStop: (seq: number) => sendOneWay('input.gestureStop', {seq})
     , touchDown: (seq: number, contact: number, x: number, y: number, pressure?: number) =>
       sendOneWay('input.touchDown', {seq, contact, x, y, pressure})

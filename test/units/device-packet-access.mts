@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import sinon from 'sinon'
 import {createDevicePacketGuard} from '../../lib/units/websocket/ios-access.js'
-import {DevicePacketAccess, isDeviceCommand} from '../../lib/units/websocket/device-access.js'
+import {DevicePacketAccess, isDeviceCommand, requiresOwner}
+  from '../../lib/units/websocket/device-access.js'
 import {isValidSerial} from '../../lib/units/websocket/access.js'
 import type {DeviceAccess} from '../../lib/units/websocket/access.js'
 
@@ -30,12 +31,14 @@ function fixture(platform = 'Android', delay = 0, options = {}) {
   const user = {email: 'owner@example.test', groups: {subscribed: ['shared']}}
   const guard = createDevicePacketGuard(user, load, (...args) => cancelled.push(args), {
     matches: isDeviceCommand
+    , requiresOwner
     , allows: (channel, groups, lookup) => access.allows(channel, groups, lookup)
     , source: channel => access.source(channel)
     , snapshot: row => access.snapshot(row)
     , session: channel => access.session(channel)
     , checkpoint: () => access.checkpoint()
     , current: (channel, checkpoint) => access.current(channel, checkpoint)
+    , awaitingJoin: (channel, email, groups) => access.awaitingJoin(channel, email, groups)
   }, {...options, resetGesture: () => resets++})
   const channel = device.channel!
   const dispatch = (event: string, response?: string) =>
@@ -478,21 +481,53 @@ describe('manual device packet authorization', function() {
     })
   }
 
-  it('denies input to foreign or unowned Android devices', async function() {
-    const authorized: unknown[] = []
-    const f = fixture('Android', 0, {onAuthorizedInput: (...args: unknown[]) => {
-      authorized.push(args)
-    }})
-    f.update({owner: {email: 'someone@example.test', reservationId: 'victim'}})
-    for (const event of ['input.gestureStart', 'input.keyPress', 'input.type']) {
-      assert.equal((await f.dispatch(event))?.message, 'Device access denied')
-    }
-    f.update({owner: null})
-    f.access.released('PHONE')
-    assert.equal((await f.dispatch('input.gestureStart'))?.message, 'Device access denied')
-    assert.deepEqual(authorized, [])
-    assert.equal(await f.dispatch('group.invite', 'tx.free'), undefined)
-  })
+  // Commands a user who can only see the device must not send: the device obeys any of them.
+  // Reads such as screenshots and logcat count too: they expose the owner's session.
+  const commands = ['shell.command', 'clipboard.paste', 'clipboard.copy', 'device.install'
+    , 'device.reboot', 'forward.create', 'connect.start', 'wifi.get', 'group.kick'
+    , 'logcat.start', 'screen.capture', 'display.rotate', 'store.open']
+
+  for (const platform of ['Android', 'iOS']) {
+    it(`denies input and commands to foreign or unowned ${platform} devices`, async function() {
+      const authorized: unknown[] = []
+      const f = fixture(platform, 0, {onAuthorizedInput: (...args: unknown[]) => {
+        authorized.push(args)
+      }})
+      f.update({owner: {email: 'someone@example.test', reservationId: 'victim'}})
+      for (const event of ['input.gestureStart', 'input.keyPress', 'input.type', ...commands]) {
+        assert.equal((await f.dispatch(event, 'tx.foreign'))?.message, 'Device access denied'
+          , event)
+      }
+      f.update({owner: null})
+      f.access.released('PHONE')
+      for (const event of ['input.gestureStart', ...commands]) {
+        assert.equal((await f.dispatch(event, 'tx.free'))?.message, 'Device access denied'
+          , event)
+      }
+      assert.deepEqual(authorized, [])
+      assert.equal(await f.dispatch('group.invite', 'tx.free'), undefined)
+    })
+
+    it(`lets the ${platform} owner and an admin send commands`, async function() {
+      const f = fixture(platform)
+      for (const event of commands) {
+        assert.equal(await f.dispatch(event, 'tx.owner'), undefined, event)
+      }
+      Object.assign(f.user, {privilege: 'admin'})
+      f.update({owner: {email: 'someone@example.test', reservationId: 'manual'}})
+      for (const event of commands) {
+        assert.equal(await f.dispatch(event, 'tx.admin'), undefined, event)
+      }
+      f.update({owner: null})
+      f.access.released('PHONE')
+      for (const event of commands) {
+        assert.equal(await f.dispatch(event, 'tx.admin-free'), undefined, event)
+      }
+      assert.deepEqual(f.cancelled, [])
+      assert.equal((await f.dispatch('input.keyPress'))?.message, 'Device access denied'
+        , 'Admin input still needs a manual owner')
+    })
+  }
 
   it('retains visibility and automation checks for stamped admin input', async function() {
     const authorized: {gestureId: string, reservationId: string}[] = []
@@ -531,6 +566,26 @@ describe('manual device packet authorization', function() {
     assert.equal((await f.dispatch('input.keyPress'))?.message, 'Device access denied')
     assert.equal(authorized.length, 1)
   })
+
+  for (const platform of ['iOS', 'Android']) {
+    it(`scopes ${platform} gesture packets consistently`, async function() {
+      const authorized: {screenSessionId?: string}[] = []
+      const f = fixture(platform, 0, {onAuthorizedInput: (_packet: unknown, scope: any) => {
+        authorized.push(scope)
+      }})
+      const dispatch = (event: string, screenSessionId: string) =>
+        new Promise<Error | undefined>(resolve =>
+          f.guard([event, f.channel, {screenSessionId}], resolve))
+      assert.ifError(await dispatch('input.gestureStart', 'screen-a'))
+      assert.ifError(await dispatch('input.touchDown', 'screen-b'))
+      assert.ifError(await dispatch('input.gestureStop', 'screen-b'))
+      assert.ifError(await dispatch('input.gestureStart', 'screen-b'))
+      assert.equal(authorized.length, 4)
+      const screenIds = authorized.map(scope => scope.screenSessionId).filter(Boolean)
+      assert.deepEqual(screenIds, platform === 'iOS' ?
+        ['screen-a', 'screen-a', 'screen-a', 'screen-b'] : [])
+    })
+  }
 
   it('validates serials and distinguishes controls from metadata', function() {
     for (const value of ['A', 'a'.repeat(128), '00008110-000625A02146201E', 'usb_serial.1'
@@ -661,4 +716,330 @@ describe('authorization cache eviction boundaries', function() {
     assert.equal(await access.allows('invented-0', ['shared']), false)
     assert.equal(lookups, 131)
   })
+})
+
+describe('join notifications ahead of persistence', function() {
+  // The processor forwards JoinGroupMessage before its owner write commits, and
+  // the device sends the join before its group.invite reply, so a client can
+  // act on tx.done while the database row still shows the device as free.
+  function joining(platform = 'Android') {
+    const f = fixture(platform, 5)
+    f.update({owner: null})
+    const owner = {email: f.user.email, reservationId: 'fresh'}
+    f.access.joined('PHONE', null, owner)
+    return {f, owner}
+  }
+
+  for (const platform of ['Android', 'iOS']) {
+    for (const event of ['clipboard.paste', 'input.keyPress']) {
+      it(`lets the joining ${platform} owner send ${event} once the join persists`
+        , async function() {
+        const clock = sinon.useFakeTimers()
+        try {
+          const {f, owner} = joining(platform)
+          const pending = f.dispatch(event, 'tx.join')
+          setTimeout(() => f.update({owner}), 30)
+          await clock.tickAsync(100)
+          assert.equal(await pending, undefined)
+          assert.deepEqual(f.cancelled, [])
+        }
+        finally {
+          clock.restore()
+        }
+      })
+    }
+
+    it(`denies a ${platform} user kicked before the join persists`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = joining(platform)
+        const pending = f.dispatch('clipboard.paste', 'tx.kicked')
+        setTimeout(() => {
+          // The join commits, but the kick that followed it has not.
+          f.update({owner})
+          f.access.released('PHONE')
+        }, 10)
+        await clock.tickAsync(40)
+        assert.equal((await pending)?.message, 'Device access denied')
+        assert.equal(f.cancelled.length, 1)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`denies a ${platform} device transferred before the join persists`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = joining(platform)
+        const pending = f.dispatch('input.keyPress', 'tx.transferred')
+        setTimeout(() => {
+          f.access.joined('PHONE', null, {email: 'other@example.test', reservationId: 'other'})
+        }, 10)
+        await clock.tickAsync(40)
+        assert.equal((await pending)?.message, 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`gives up within the persistence wait when a ${platform} join never persists`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = joining(platform)
+        let settled: Error | undefined | null = null
+        f.dispatch('clipboard.paste', 'tx.stale').then(error => {
+          settled = error
+        })
+        await clock.tickAsync(900)
+        assert.equal(settled, null, 'Still waiting for persistence')
+        await clock.tickAsync(300)
+        assert.ok(settled! instanceof Error, 'An old row never becomes an allow')
+        assert.equal(f.cancelled.length, 1)
+        // 5 ms lookups with 20 ms doubling to 250 ms is about a dozen reads, not one per 20 ms.
+        assert.ok(f.lookups() <= 12, `Observed ${f.lookups()} database reads`)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`denies a ${platform} join at once when the row has a different owner`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = joining(platform)
+        f.update({owner: {email: 'other@example.test', reservationId: 'other'}})
+        const pending = f.dispatch('clipboard.paste', 'tx.other')
+        await clock.tickAsync(10)
+        assert.equal((await pending)?.message, 'Device access denied')
+        assert.equal(f.lookups(), 1, 'No retry for a row that cannot catch up')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    for (const [label, change] of [['revoked group', {group: {id: 'foreign'}}]
+      , ['channel mismatch', {channel: 'replacement'}]
+    ] as const) {
+      it(`denies a ${platform} join at once on a ${label}`, async function() {
+        const clock = sinon.useFakeTimers()
+        try {
+          const {f} = joining(platform)
+          f.update(change)
+          const pending = f.dispatch('clipboard.paste', 'tx.unrelated')
+          await clock.tickAsync(10)
+          assert.equal((await pending)?.message, 'Device access denied')
+          assert.ok(f.lookups() <= 1, 'Unrelated denials are not delayed')
+        }
+        finally {
+          clock.restore()
+        }
+      })
+    }
+
+    it(`stops waiting once a ${platform} row moves to another owner`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = joining(platform)
+        const pending = f.dispatch('clipboard.paste', 'tx.moved')
+        setTimeout(() => f.update({owner: {email: 'other@example.test', reservationId: 'o'}}), 30)
+        await clock.tickAsync(100)
+        assert.equal((await pending)?.message, 'Device access denied')
+        assert.ok(f.lookups() < 5)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`keeps ${platform} packets in order behind a waiting packet`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = joining(platform)
+        const order: string[] = []
+        f.guard(['clipboard.paste', f.channel, 'tx.first'], () => order.push('first'))
+        f.guard(['clipboard.paste', f.channel, 'tx.second'], () => order.push('second'))
+        await clock.tickAsync(30)
+        assert.deepEqual(order, [])
+        f.update({owner})
+        await clock.tickAsync(300)
+        assert.deepEqual(order, ['first', 'second'])
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`stops retrying a ${platform} join once the channel fails`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = joining(platform)
+        const pending = f.dispatch('input.touchMove', 'tx.reset')
+        await clock.tickAsync(10)
+        assert.ok((await pending) instanceof Error, 'Touch without a gesture fails at once')
+        assert.equal(f.lookups(), 0)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`reads ${platform} awaitingJoin without consuming the observation`, async function() {
+      const {f} = joining(platform)
+      await f.access.allows(f.channel, f.user.groups.subscribed)
+      const groups = f.user.groups.subscribed
+      assert.equal(f.access.awaitingJoin(f.channel, f.user.email, groups), true)
+      assert.equal(f.access.awaitingJoin(f.channel, f.user.email, groups), true)
+      assert.equal(f.access.awaitingJoin(f.channel, 'other@example.test', groups), false)
+      assert.equal(f.access.awaitingJoin(f.channel, f.user.email, []), false)
+      f.access.snapshot({...f.device(), owner: {email: f.user.email, reservationId: 'fresh'}})
+      assert.equal(f.access.awaitingJoin(f.channel, f.user.email, groups), false
+        , 'A caught-up row ends the wait')
+    })
+
+    it(`honours a tight ${platform} persistRetryMs`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const f = fixture(platform, 0, {persistRetryMs: 1, persistWaitMs: 40})
+        f.update({owner: null})
+        f.access.joined('PHONE', null, {email: f.user.email, reservationId: 'fresh'})
+        let settled: Error | undefined | null = null
+        f.dispatch('clipboard.paste', 'tx.tight').then(error => {
+          settled = error
+        })
+        await clock.tickAsync(60)
+        assert.ok(settled! instanceof Error)
+        assert.ok(f.lookups() > 4 && f.lookups() < 12, `Observed ${f.lookups()} reads`)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`does not wait for the user's own ${platform} automation join`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const f = fixture(platform, 5)
+        f.update({owner: null})
+        f.access.joined('PHONE', 'automation', {email: f.user.email, reservationId: 'auto'})
+        const pending = f.dispatch('clipboard.paste', 'tx.automation')
+        await clock.tickAsync(10)
+        assert.equal((await pending)?.message, 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+  }
+})
+
+describe('invite replies ahead of the join notification', function() {
+  const reply = (owner: unknown) => JSON.stringify({owner})
+
+  // The reply to group.invite and the device's JoinGroupMessage can reach the
+  // websocket through different processors, so the reply may arrive first.
+  async function invited(platform: string, clock: ReturnType<typeof sinon.useFakeTimers>) {
+    const f = fixture(platform, 5)
+    f.update({owner: null})
+    assert.equal(await tick(10, f.dispatch('group.invite', 'tx.take'), clock), undefined)
+    f.access.invited('tx.take', f.channel)
+    return {f, owner: {email: f.user.email, reservationId: 'fresh'}}
+  }
+
+  for (const platform of ['Android', 'iOS']) {
+    it(`waits for the ${platform} row when the invite reply comes first`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await invited(platform, clock)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
+        const pending = f.dispatch('wifi.get', 'tx.read')
+        setTimeout(() => f.update({owner}), 30)
+        await clock.tickAsync(100)
+        assert.equal(await pending, undefined)
+        assert.deepEqual(f.cancelled, [])
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`keeps the ${platform} row usage when the owner invites again`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const f = fixture(platform, 5)
+        f.update({usage: 'debugging'})
+        f.access.invited('tx.again', f.channel)
+        // The device answers with the current owner and sends no join notification.
+        f.access.inviteReplied('tx.again', 'PHONE', f.user.email, true, reply(f.device().owner))
+        assert.equal(await tick(10, f.dispatch('wifi.get', 'tx.read'), clock), undefined)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`denies a ${platform} read at once without an invite reply`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f} = await invited(platform, clock)
+        const pending = f.dispatch('wifi.get', 'tx.read')
+        await clock.tickAsync(10)
+        assert.equal((await pending)?.message, 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`ignores a ${platform} invite reply seen after a newer leave`, async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await invited(platform, clock)
+        f.access.released('PHONE')
+        f.access.snapshot(f.device())
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
+        const pending = f.dispatch('wifi.get', 'tx.read')
+        await clock.tickAsync(10)
+        assert.equal((await pending)?.message, 'Device access denied')
+        assert.equal(f.access.awaitingJoin(f.channel, f.user.email, ['shared']), false)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`ignores ${platform} invite replies naming someone else or another device`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await invited(platform, clock)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true
+          , reply({email: 'someone@example.test', reservationId: 'theirs'}))
+        f.access.invited('tx.wrong', f.channel)
+        f.access.inviteReplied('tx.wrong', 'OTHER', f.user.email, true, reply(owner))
+        f.access.inviteReplied('tx.never', 'PHONE', f.user.email, true, reply(owner))
+        f.access.invited('tx.failed', f.channel)
+        f.access.inviteReplied('tx.failed', 'PHONE', f.user.email, false, reply(owner))
+        f.access.invited('tx.garbled', f.channel)
+        f.access.inviteReplied('tx.garbled', 'PHONE', f.user.email, true, '{not json')
+        f.access.invited('tx.cleaned', f.channel)
+        f.access.forgetInvite('tx.cleaned')
+        f.access.inviteReplied('tx.cleaned', 'PHONE', f.user.email, true, reply(owner))
+        // None of them left an observation that would hold back a row.
+        assert.equal(f.access.snapshot(f.device()).ready, true)
+        assert.equal(f.access.snapshot({...f.device(), serial: 'OTHER'}).ready, true)
+        f.update({owner})
+        assert.equal(await tick(10, f.dispatch('wifi.get', 'tx.read'), clock), undefined)
+        f.update({owner: null})
+        const denied = await tick(10, f.dispatch('wifi.get', 'tx.free'), clock) as Error
+        assert.equal(denied?.message, 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+  }
 })

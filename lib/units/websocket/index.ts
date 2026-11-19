@@ -25,7 +25,7 @@ import ip from './middleware/remote-ip.js'
 import auth from './middleware/auth.js'
 import {createDevicePacketGuard} from './ios-access.js'
 import type {AuthorizedInput} from './ios-access.js'
-import {DevicePacketAccess, isDeviceCommand} from './device-access.js'
+import {DevicePacketAccess, isDeviceCommand, requiresOwner} from './device-access.js'
 import {readIosProperties} from '../../util/ios-device-status.js'
 import jwtutil from '../../util/jwtutil.js'
 
@@ -279,12 +279,15 @@ export default function(options: WebsocketOptions) {
       socket.emit('tx.cancel', channel, failure)
     }, {
       matches: isDeviceCommand
+    , requiresOwner
     , allows: (channel, groups, load) => deviceAccess.allows(channel, groups, load)
     , source: channel => deviceAccess.source(channel)
     , snapshot: device => deviceAccess.snapshot(device)
     , session: channel => deviceAccess.session(channel)
     , checkpoint: () => deviceAccess.checkpoint()
     , current: (channel, checkpoint) => deviceAccess.current(channel, checkpoint)
+    , awaitingJoin: (channel, email, groups) =>
+        deviceAccess.awaitingJoin(channel, email, groups)
     }, {resetGesture, onAuthorizedInput(packet, identity) {
       const data = packet[2]
       if (data && typeof data === 'object') {
@@ -542,6 +545,8 @@ export default function(options: WebsocketOptions) {
         socket.emit('tx.progress', channel.toString(), message)
       })
       .on(wire.TransactionDoneMessage, function(channel, message) {
+        deviceAccess.inviteReplied(channel.toString(), message.source, user.email
+        , message.success, message.body)
         socket.emit('tx.done', channel.toString(), message)
       })
       .on(wire.DeviceLogcatEntryMessage, function(channel, message) {
@@ -884,6 +889,7 @@ export default function(options: WebsocketOptions) {
           ])
         })
         .on('device.identify', function(channel, responseChannel) {
+          joinChannel(responseChannel)
           push.send([
             channel
           , wireutil.transaction(
@@ -1034,6 +1040,7 @@ export default function(options: WebsocketOptions) {
         })
         .on('group.invite', function(channel, responseChannel, data) {
           joinChannel(responseChannel)
+          deviceAccess.invited(responseChannel, channel)
           push.send([
             channel
           , wireutil.transaction(
@@ -1063,6 +1070,7 @@ export default function(options: WebsocketOptions) {
           ])
         })
         .on('tx.cleanup', function(channel) {
+          deviceAccess.forgetInvite(channel)
           leaveChannel(channel)
         })
         .on('tx.punch', function(channel) {

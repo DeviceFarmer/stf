@@ -64,6 +64,9 @@ spec:
             - --udid={{ .udid }}
             - --wda-bundle-id={{ .wdaBundleId }}
             - --image-mounter=pymobiledevice3
+            {{- with .appiumMjpegPort }}
+            - --appium-mjpeg-port={{ . }}
+            {{- end }}
             - --token-file=/token/token
             - --storage-url=http://{{ include "stf.name" (dict "root" $r "component" "storage") }}:{{ $r.Values.ports.http }}/
           env: [{name: HOME, value: /home/node/home}]

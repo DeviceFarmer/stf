@@ -38,13 +38,13 @@ describe('iPhone controls', () => {
     vi.unstubAllGlobals()
   })
 
-  it('switches between lock and unlock, with manual passcode guidance on an unsuccessful unlock', async() => {
+  it('switches between lock and unlock and explains when physical access is needed', async() => {
     control.unlock.mockResolvedValue({body: {locked: true}})
     await render(true)
     expect(button('Shake phone').disabled).toBe(true)
     await click('Unlock screen')
     expect(control.unlock).toHaveBeenCalledOnce()
-    expect(host.textContent).toContain('The screen is still locked. Swipe up and enter the passcode')
+    expect(host.textContent).toContain('The iPhone is still locked. Unlock it on the device.')
     control.unlock.mockResolvedValue({body: {locked: false}})
     await click('Unlock screen')
     expect(host.textContent).toContain('The iPhone is unlocked.')
