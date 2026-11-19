@@ -1699,6 +1699,8 @@ dbapi.setDeviceOwner = function(serial, owner, usage, automationLeaseId) {
   })
 }
 
+// Only a matching reservation may clear owner and usage. An early Leave from another
+// processor records its reservation so it cannot be reinstated by a delayed Join.
 dbapi.releaseDeviceOwner = function(serial, owner, automationLeaseId) {
   const reservationId = owner.reservationId || null
   return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(
@@ -1707,7 +1709,7 @@ dbapi.releaseDeviceOwner = function(serial, owner, automationLeaseId) {
     const current = device('owner').default({})
     const leaseId = device('automationLeaseId').default(null)
     const matching = current('email').default(null).eq(owner.email)
-      .and(current('reservationId').default(null).eq(reservationId))
+      .and(current('reservationId').default('').eq(reservationId || ''))
     const release = {
       owner: null, automationLeaseId: null, usage: null
     , usageChangedAt: r.now(), logs_enabled: false

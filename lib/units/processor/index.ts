@@ -360,12 +360,13 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.JoinGroupMessage, function(channel, message, data) {
-      // Wait for the atomic owner, lease and usage update before forwarding the join.
+      // Forward only after the ownership commit so the app can read the resulting row.
       return persistOwnership(message.serial, () =>
         dbapi.setDeviceOwner(message.serial, message.owner, message.usage, message.leaseId)
       , () => appDealer.send([channel, data]))
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
+      // A recorded early Leave does not change the current owner.
       return persistOwnership(message.serial, () =>
         dbapi.releaseDeviceOwner(message.serial, message.owner, message.leaseId)
       , () => appDealer.send([channel, data]))
@@ -388,7 +389,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       appDealer.send([channel, data])
     })
     .on(wire.TransactionDoneMessage, function(channel, message, data) {
-      // Keep replies after prior Join/Leave writes and their post-commit notifications.
+      // Keep group.invite and group.kick replies behind local ownership commits and events.
       if (!ownershipWrites.size) {
         appDealer.send([channel, data])
         return

@@ -29,6 +29,64 @@ mockModule(new URL('../../lib/db/index.js', import.meta.url), {default: {
   }
 }})
 
+// Evaluates a built update function against a row, for the few terms a conditional update uses.
+// Anything else throws, so a query that grows past this fails the test instead of passing it.
+var NOW = {now: true}
+var VAR = 10
+var EQ = 17
+var NE = 18
+var BRANCH = 65
+var AND = 67
+var FUNC = 69
+var DEFAULT = 92
+var NOW_TERM = 103
+var BRACKET = 170
+class Missing extends Error {}
+
+function evalTerm(term: any, vars: Record<number, unknown>): any {
+  if (term === null || typeof term !== 'object') {
+    return term
+  }
+  if (!Array.isArray(term)) {
+    return Object.fromEntries(Object.entries(term).map(([k, v]) => [k, evalTerm(v, vars)]))
+  }
+  var [type, args] = term
+  switch (type) {
+  case VAR: return vars[args[0]]
+  case NOW_TERM: return NOW
+  case BRACKET: {
+    var target = evalTerm(args[0], vars)
+    if (target === null || typeof target !== 'object' || !(args[1] in target)) {
+      throw new Missing()
+    }
+    return target[args[1]]
+  }
+  case DEFAULT:
+    try {
+      var value = evalTerm(args[0], vars)
+      return value === null ? evalTerm(args[1], vars) : value
+    }
+    catch (err) {
+      if (err instanceof Missing) {
+        return evalTerm(args[1], vars)
+      }
+      throw err
+    }
+  case EQ: return evalTerm(args[0], vars) === evalTerm(args[1], vars)
+  case NE: return evalTerm(args[0], vars) !== evalTerm(args[1], vars)
+  case AND: return args.every((arg: any) => evalTerm(arg, vars) === true)
+  case BRANCH:
+    return evalTerm(args[0], vars) === true ? evalTerm(args[1], vars) : evalTerm(args[2], vars)
+  default: throw new Error(`Unsupported term ${type}`)
+  }
+}
+
+function evalUpdate(update: any, row: Record<string, unknown>) {
+  expect(update[0], 'update should be a function of the row').to.equal(FUNC)
+  var [[, [id]], body] = update[1]
+  return evalTerm(body, {[id]: row})
+}
+
 var dbapi: typeof DbApi =
   (await importFresh(new URL('../../lib/db/api.js', import.meta.url))).default
 
@@ -119,14 +177,24 @@ describe('dbapi owner claim', function() {
       expect(lastQuery[2]).to.include({durability: 'hard', return_changes: 'always'})
     })
 
-    it('should keep legacy no-ID releases fenced by an absent automation lease', function() {
-      dbapi.releaseDeviceOwner('serial', {email: owner.email} as DeviceOwner)
-      const [matching, release, stale] = updateBody()[1]
-      expect(JSON.stringify(matching)).to.include('automationLeaseId')
-      expect(release).to.include({owner: null, automationLeaseId: null, usage: null})
-      expect(stale).to.deep.equal({})
-      expect(release).not.to.have.property('pendingOwnerReleases')
-    })
+    it('should match a legacy owner by email only when no reservation or managed lease exists',
+      function() {
+        dbapi.releaseDeviceOwner('serial', {email: owner.email} as DeviceOwner)
+        for (const reservationId of [undefined, null, '']) {
+          const current = reservationId === undefined ? {email: owner.email} :
+            {email: owner.email, reservationId}
+          const change = evalUpdate(lastUpdate, {owner: current})
+          expect(change).to.include({owner: null, automationLeaseId: null, usage: null
+            , logs_enabled: false, usageChangedAt: NOW})
+        }
+        for (const row of [
+          {}, {owner: null}, {owner: {email: 'other@example.test'}}
+        , {owner: {email: owner.email, reservationId: 'another-reservation'}}
+        , {owner: {email: owner.email}, automationLeaseId: 'managed'}
+        ]) {
+          expect(evalUpdate(lastUpdate, row)).to.deep.equal({})
+        }
+      })
 
     it('should find exact receipts in the latest and outstanding ownership records', function() {
       dbapi.hasDeviceAutomationRelease('serial', owner.email, 'lease-a')
