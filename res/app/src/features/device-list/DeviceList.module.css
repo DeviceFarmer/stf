@@ -21,9 +21,29 @@
   margin-left: auto;
 }
 
+.searchGroup {
+  max-width: 100%;
+}
+
+.customize {
+  flex: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.customize[inert] {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customize {
+    transition: none;
+  }
+}
+
 .search {
   width: 20em;
-  max-width: 100%;
+  min-width: 0;
 }
 
 .search input::-webkit-calendar-picker-indicator {
@@ -296,8 +316,12 @@ tr:hover .noteEdit {
     height: 84px;
   }
 
-  .search {
+  .searchGroup {
     width: 100%;
+  }
+
+  .search {
+    flex: 1;
   }
 
   .toolbar {

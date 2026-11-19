@@ -126,34 +126,49 @@ export default function DeviceListPage() {
       <div className={`unselectable ${classes.header}`}>
         <DeviceStats devices={devices} adminMode={actions.adminMode} />
         <Group gap='sm' wrap='wrap' className={classes.toolbar}>
-          <TextInput
-            ref={searchRef}
-            name='deviceFilter'
-            type='search'
-            size='xs'
-            className={`device-search ${classes.search}`}
-            placeholder={t('Search')}
-            leftSection={<IconSearch size={14} />}
-            rightSection={search ? (
-              <CloseButton
-                size='xs'
-                aria-label={t('Clear')}
-                onClick={() => {
-                  setSearch('')
-                  searchRef.current?.focus()
-                }}
-              />
-            ) : null}
-            value={search}
-            onChange={(event) => setSearch(event.currentTarget.value)}
-            onFocus={(event) => event.currentTarget.select()}
-            list='searchFields'
-            accessKey='4'
-            autoCorrect='off'
-            autoCapitalize='off'
-            autoComplete='off'
-            spellCheck={false}
-          />
+          <Group gap='sm' wrap='nowrap' className={classes.searchGroup}>
+            {!basicMode && (
+              <div className={classes.customize} inert={view !== 'details'}>
+                <ColumnChoice
+                  key={view}
+                  reorderable
+                  items={choiceItems}
+                  onChange={(items) => {
+                    setStoredColumns(items.map((item) => ({name: item.id, selected: item.selected})))
+                  }}
+                  onReset={reset}
+                />
+              </div>
+            )}
+            <TextInput
+              ref={searchRef}
+              name='deviceFilter'
+              type='search'
+              size='xs'
+              className={`device-search ${classes.search}`}
+              placeholder={t('Search')}
+              leftSection={<IconSearch size={14} />}
+              rightSection={search ? (
+                <CloseButton
+                  size='xs'
+                  aria-label={t('Clear')}
+                  onClick={() => {
+                    setSearch('')
+                    searchRef.current?.focus()
+                  }}
+                />
+              ) : null}
+              value={search}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              onFocus={(event) => event.currentTarget.select()}
+              list='searchFields'
+              accessKey='4'
+              autoCorrect='off'
+              autoCapitalize='off'
+              autoComplete='off'
+              spellCheck={false}
+            />
+          </Group>
           {!basicMode && (
             <SegmentedControl
               size='xs'
@@ -180,15 +195,6 @@ export default function DeviceListPage() {
                   )
                 }
               ]}
-            />
-          )}
-          {view === 'details' && (
-            <ColumnChoice
-              reorderable
-              position='bottom-end'
-              items={choiceItems}
-              onChange={(items) => setStoredColumns(items.map((item) => ({name: item.id, selected: item.selected})))}
-              onReset={reset}
             />
           )}
         </Group>
