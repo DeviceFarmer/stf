@@ -2718,3 +2718,7 @@ msgstr ""
 
 msgid "Stop Automation"
 msgstr "Arrêter l'automatisation"
+
+#: res/app/src/features/control/ControlPage.tsx
+msgid "Stop this automation from its test runner."
+msgstr ""
