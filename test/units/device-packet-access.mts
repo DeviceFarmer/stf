@@ -1002,8 +1002,8 @@ describe('invite replies ahead of the join notification', function() {
         f.update({owner})
         assert.equal(await tick(10, f.dispatch('wifi.get', 'tx.read'), clock), undefined)
         f.update({owner: null})
-        assert.equal((await tick(10, f.dispatch('wifi.get', 'tx.free'), clock))?.message
-          , 'Device access denied')
+        const denied = await tick(10, f.dispatch('wifi.get', 'tx.free'), clock) as Error
+        assert.equal(denied?.message, 'Device access denied')
       }
       finally {
         clock.restore()
