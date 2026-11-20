@@ -8,7 +8,7 @@ This page explains both: what each value means, what causes it and what to do ab
 
 | Field | Type | Meaning |
 | ----- | ---- | ------- |
-| `present` | boolean | A provider sees the device and its worker is alive. |
+| `present` | boolean | A provider sees the device. A device worker does not have to run. See the notes below. |
 | `status` | number | The `adb` state of the device. See [`status` values](#status-values). |
 | `ready` | boolean | The device worker finished its setup. The device can be used. |
 | `owner` | object or `null` | The user who holds the device: `email`, `name` and `group`. |
@@ -20,18 +20,26 @@ This page explains both: what each value means, what causes it and what to do ab
 Notes:
 
 * `present` becomes `true` when a provider finds the device, and again when its worker sends a
-  heartbeat. It becomes `false` when the device is unplugged, when its worker stops or when no
+  heartbeat. Offline, Unauthorized and Connected devices have no worker.
+  `present` becomes `false` when the device is unplugged, when its worker stops or when no
   heartbeat arrives within the reaper `--heartbeat-timeout` (30 seconds by default).
 * `ready` becomes `false` when a provider finds the device and `true` when the device worker
   finishes its setup. It is not reset when the device goes away. Always check `present` first.
-* The API returns `owner` as `null` when `present` is `false`.
+* The API returns `owner` as `null` when `present` is `false`. It computes `using` before it
+  removes `owner`, so an absent device can come back with `owner: null` and `using: true`. This
+  happens when the stored owner is you, or when you are an administrator and the device still has
+  an owner.
 * `using` does not tell whether someone else holds the device. Use `owner` for that.
   For an administrator, `using` is `true` for every device that has an owner.
 * `claimed` is `true` for up to 2 minutes after the owner reboots the device with
   `keepOwnership`, or after a device in use disappears when the processor runs with
-  `--auto-restore-owner`. Nobody else can reserve the device during that time.
+  `--auto-restore-owner`. The 2 minutes start when the device goes away. A device with an
+  automation lease is never claimed. While `claimed` is `true`, `POST /api/v1/user/devices` and
+  the coordinator refuse the device for everyone, including the owner it is kept for. The web UI
+  does not check `claimed`. See [Available](#available-available).
 * `bookable` is not a device field. It is a group class. `GET /api/v1/devices?target=bookable`
-  lists the devices whose origin group is a bookable group.
+  lists the devices whose origin group is a group you subscribe to and whose current group is not
+  of class `standard`. It does not check the class of the origin group.
 
 ## `status` values
 
@@ -117,12 +125,15 @@ and `automation`.
 * **Cause:** a client reserved the device through the API, for example a test run or the
   [coordinator](coordinator.md).
 * **What to do:** you can watch the device but not control it. Wait until the client releases it.
-  An administrator can release it with **Stop Automation**, unless it has a coordinator lease.
+  An administrator can release it with **Stop Automation**, unless it has an automation lease
+  (`automationLeaseId` is set). The coordinator and any API client that passes a `leaseId` create
+  one. Such a device is released only by the client that holds the lease, or when the lease
+  expires.
 
 ### Using (`using`)
 
 * **Cause:** you hold the device. For an administrator, every device with an owner shows as
-  Using.
+  Using, except a device reserved through the API. That one shows as Automated.
 * **What to do:** select **Stop Using** when you are done, so other users can take the device.
 
 ### Busy (`busy`)
@@ -137,8 +148,11 @@ and `automation`.
 * **Cause:** the device is ready and nobody holds it.
 * **What to do:** select **Use**.
 
-A `claimed` device also shows as Available. STF does not let you use it until the claim ends
-or its owner takes it back.
+A `claimed` device also shows as Available, and its **Use** button works. The web UI does not
+check the claim, so any user can take the device there, and that ends the claim. Only
+`POST /api/v1/user/devices` and the coordinator respect the claim. They refuse the device for
+everyone, including the owner it is kept for. When the device is ready again, the processor gives
+it back to its owner, and the claim ends. If that fails, the claim stays until it expires.
 
 ## Why a device was taken from you
 
@@ -151,6 +165,10 @@ When you lose a device on the control page, STF shows the likely reason.
 | `automatic_timeout` | Device was kicked by automatic timeout. |
 | `device_absent` | Device is not present anymore for some reason. |
 | `status_change` | Device is present but offline. |
+| `automation_release` | Unknown reason. |
+
+`automation_release` means that the client holding the automation lease released the device. The
+web UI has no message for it, so it shows "Unknown reason."
 
 ## Reserving a device through the API
 
