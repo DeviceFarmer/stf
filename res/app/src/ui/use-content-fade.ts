@@ -1,7 +1,7 @@
 import {useLayoutEffect, useRef} from 'react'
 import {useReducedMotion} from '@mantine/hooks'
 
-export const contentFadeDuration = 180
+export const contentFadeDuration = 250
 
 export function animateContentFade(element: HTMLElement | null) {
   return element?.animate?.(
