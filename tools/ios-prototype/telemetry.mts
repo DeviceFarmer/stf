@@ -1,4 +1,6 @@
-import {decodeIosDeviceStatus, type IosDeviceStatus} from '../../lib/util/ios-device-status.ts'
+import {
+  decodeIosDeviceStatus, wdaProfileExpiryState, type IosDeviceStatus
+} from '../../lib/util/ios-device-status.ts'
 import type {RuntimeOptions} from './runtime.mts'
 import {runJson} from './process.mts'
 import fs from 'node:fs/promises'
@@ -29,16 +31,7 @@ export function profileStatus(
   }
   // Multiple matching profiles do not identify which one signed the installed app.
   const expires = Math.min(...dates)
-  let profile: IosDeviceStatus['wda']['profile'] = 'valid'
-  if (matching.length > 1) {
-    profile = 'ambiguous'
-  }
-  else if (expires <= now) {
-    profile = 'expired'
-  }
-  else if (expires - now <= 48 * 3600000) {
-    profile = 'expiring'
-  }
+  const profile = matching.length > 1 ? 'ambiguous' : wdaProfileExpiryState(expires, now)
   return {profile, expiresAt: new Date(expires).toISOString()}
 }
 
@@ -91,14 +84,7 @@ export class Telemetry {
   private clock() {
     const wda = this.status.wda
     if (wda.expiresAt && ['valid', 'expiring', 'expired'].includes(wda.profile)) {
-      const remaining = Date.parse(wda.expiresAt) - Date.now()
-      wda.profile = 'valid'
-      if (remaining <= 48 * 3600000) {
-        wda.profile = 'expiring'
-      }
-      if (remaining <= 0) {
-        wda.profile = 'expired'
-      }
+      wda.profile = wdaProfileExpiryState(Date.parse(wda.expiresAt))
     }
   }
 
