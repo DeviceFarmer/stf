@@ -33,8 +33,8 @@ Notes:
   For an administrator, `using` is `true` for every device that has an owner.
 * `claimed` is `true` for up to 2 minutes after the owner reboots the device with
   `keepOwnership`, or after a device in use disappears when the processor runs with
-  `--auto-restore-owner`. The 2 minutes start when the device goes away. A device with an
-  automation lease is never claimed. While `claimed` is `true`, `POST /api/v1/user/devices` and
+  `--auto-restore-owner`. The 2 minutes start when the reboot is requested, or when the device
+  goes away. A device with an automation lease is never claimed. While `claimed` is `true`, `POST /api/v1/user/devices` and
   the coordinator refuse the device for everyone, including the owner it is kept for. The web UI
   does not check `claimed`. See [Available](#available-available).
 * `bookable` is not a device field. It is a group class. `GET /api/v1/devices?target=bookable`
@@ -127,8 +127,8 @@ and `automation`.
 * **What to do:** you can watch the device but not control it. Wait until the client releases it.
   An administrator can release it with **Stop Automation**, unless it has an automation lease
   (`automationLeaseId` is set). The coordinator and any API client that passes a `leaseId` create
-  one. Such a device is released only by the client that holds the lease, or when the lease
-  expires.
+  one. Such a device is released by the client that holds the lease, when the lease expires or
+  when the device goes away.
 
 ### Using (`using`)
 
