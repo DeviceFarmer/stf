@@ -109,6 +109,7 @@
     "zeromq": "^6.1.2"
   },
   "overrides": {
+    "@typescript/native": "$@typescript/native",
     "autodesk-forks-swagger-express-mw": {
       "autodesk-forks-swagger-node-runner": {
         "autodesk-forks-sway": {
