@@ -133,7 +133,7 @@ try {
   })
 
   await check('packaged-assets', async () => {
-    for (const file of ['LICENSE', 'res/build/entry/app.entry.js',
+    for (const file of ['LICENSE', 'NOTICE', 'res/build/entry/app.entry.js',
       'res/build/entry/authmock.entry.js', 'res/build/entry/authldap.entry.js',
       'res/common/logo/exports/STF-128.png', 'lib/wire/wire.proto',
       'tools/ios-prototype/main.mts']) await requiredFile(file)

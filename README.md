@@ -537,7 +537,7 @@ DeviceFarmer team have no access to OpenSTF donations collected using [Open Coll
 
 ## License
 
-See [LICENSE](LICENSE).
+See [LICENSE](LICENSE) and [NOTICE](NOTICE). NOTICE also covers the browser icons in `res/common/browser-icons/`.
 
 Copyright © 2017 The OpenSTF Project. All Rights Reserved.
 

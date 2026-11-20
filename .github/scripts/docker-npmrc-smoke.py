@@ -78,6 +78,7 @@ if (phase === 'pack') {
   try {
     fs.mkdirSync(path.join(temporary, 'package'))
     fs.writeFileSync(path.join(temporary, 'package', 'LICENSE'), 'Smoke fixture\n')
+    fs.writeFileSync(path.join(temporary, 'package', 'NOTICE'), 'Smoke fixture\n')
     cp.execFileSync('tar', ['-czf', '/build/npmrc-smoke-package.tgz', '-C', temporary, 'package'],
       {stdio: ['ignore', 'ignore', 'pipe']})
   }

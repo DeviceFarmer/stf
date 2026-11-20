@@ -1,0 +1,12 @@
+STF
+Copyright © 2013 CyberAgent, Inc.
+Copyright © 2016 The OpenSTF Project
+Copyright © 2019 Orange SA
+
+Third-Party Trademarks and Browser Icons
+----------------------------------------
+The browser icons in `res/common/browser-icons/` are trademarks and/or
+copyrights of their respective owners, included solely for nominative
+identification of browser applications on connected devices. Except where noted
+otherwise in `res/common/browser-icons/README.md`, they are excluded from the
+Apache-2.0 license governing the rest of this repository.
