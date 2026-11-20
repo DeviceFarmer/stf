@@ -13,6 +13,7 @@ import {ColumnChoice, type ColumnChoiceItem} from '@/ui/ColumnChoice'
 import {basicMode} from '@/ui/modes'
 import {NothingToShow} from '@/ui/NothingToShow'
 import {usePageTitle} from '@/ui/page-title'
+import {animateContentFade, contentFadeDuration} from '@/ui/use-content-fade'
 import {columnDefinition, defaultColumns, type CellContext} from './columns'
 import {useDeviceActions} from './device-actions'
 import {DeviceIconsView} from './DeviceIconsView'
@@ -33,7 +34,6 @@ import {parseQuery} from './query-parser'
 import classes from './DeviceList.module.css'
 
 type ViewMode = 'icons' | 'details'
-const viewTransitionDuration = 180
 
 export default function DeviceListPage() {
   const {t, language} = useTranslation()
@@ -107,10 +107,7 @@ export default function DeviceListPage() {
     if (reducedMotion || !hasDevices) {
       return
     }
-    const animation = contentRef.current?.animate?.(
-      [{opacity: 0.55}, {opacity: 1}]
-      , {duration: viewTransitionDuration, easing: 'ease-out'}
-    )
+    const animation = animateContentFade(contentRef.current)
     return () => animation?.cancel()
   }, [hasDevices, reducedMotion, view])
 
@@ -159,7 +156,7 @@ export default function DeviceListPage() {
                   popover={{
                     opened: view === 'details' && customizeOpened
                     , onChange: setCustomizeOpened
-                    , duration: reducedMotion ? 0 : viewTransitionDuration
+                    , duration: reducedMotion ? 0 : contentFadeDuration
                   }}
                   onChange={(items) => {
                     setStoredColumns(items.map((item) => ({name: item.id, selected: item.selected})))
