@@ -296,6 +296,11 @@ reported as ambiguous with the earliest date; the service cannot prove which
 one signed the installed app. Missing/unreadable profiles are not presented as
 valid. An expiry warning starts 48 hours before the reported UTC expiry.
 
+Devices shows the expiry on each iPhone card in the browser's local time zone.
+For Kubernetes deployments, the [on-demand WDA renewal tool](../tools/wda-renewal/README.md)
+signs the runner on a Mac and installs it through the Linux USB node while the
+device is drained.
+
 The STF bridge publishes the existing `DevicePropertiesMessage` with reserved
 property `stf.ios.status`. The processor validates and saves it only on iOS
 records; WebSocket updates the device card and control/info panes. Metadata also

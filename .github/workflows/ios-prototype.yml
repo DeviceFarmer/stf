@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - tools/ios-prototype/**
+      - tools/wda-renewal/**
       - bin/stf-ios-compose
       - docker/ios/**
       - docker/compose/**
@@ -94,3 +95,15 @@ jobs:
           push: false
           cache-from: type=gha,scope=ios-runtime-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=ios-runtime-${{ matrix.arch }}
+
+  wda-renewal:
+    name: WDA renewal fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Test signing and installation without Apple tools or devices
+        run: python3 -B -m unittest discover -s tools/wda-renewal -p 'test_*.py'
