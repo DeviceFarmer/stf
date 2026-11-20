@@ -229,9 +229,11 @@ You may have to change the `--auth-url` depending on which authentication method
 
 ### `stf-auth@.service`
 
-You have multiple options here. STF currently provides authentication units for [OAuth 2.0](http://oauth.net/2/) and [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol), plus a mock implementation that simply asks for a name and an email address.
+You have multiple options here. STF currently provides authentication units for [OAuth 2.0](http://oauth.net/2/) and [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol), plus a mock implementation that simply asks for a name and an email address. All of them read from the database (for example to look up the contact shown on the login page via `/auth/contact`), so every auth unit needs access to RethinkDB.
 
 #### Option A: Mock auth
+
+**Requires** the `rethinkdb-proxy-28015.service` unit on the same host.
 
 With the mock auth provider the user simply enters their name and email and the system trusts those values. This is what the development version uses by default. Obviously not very secure, but very easy to set up if you can trust your users.
 
@@ -242,8 +244,8 @@ This is a template unit, meaning that you'll need to start it with an instance i
 ```ini
 [Unit]
 Description=STF mock auth
-After=docker.service
-Requires=docker.service
+After=rethinkdb-proxy-28015.service
+BindsTo=rethinkdb-proxy-28015.service
 
 [Service]
 EnvironmentFile=/etc/environment
@@ -254,6 +256,8 @@ ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
+  --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -p %i:3000 \
   devicefarmer/stf:latest \
@@ -263,6 +267,8 @@ ExecStop=-/usr/bin/docker stop -t 10 %p-%i
 ```
 
 #### Option B: OAuth 2.0
+
+**Requires** the `rethinkdb-proxy-28015.service` unit on the same host.
 
 We'll set up [Google's OAuth 2.0 provider](https://developers.google.com/identity/protocols/OpenIDConnect#appsetup) as an example, allowing users to log in with their Google accounts. You must be able to sign up for the API and configure the authorized URLs by yourself, we won't help you. You can see the callback URL in the unit config below. Proceed once you've received the client id and client secret.
 
@@ -275,8 +281,8 @@ This is a template unit, meaning that you'll need to start it with an instance i
 ```ini
 [Unit]
 Description=STF OAuth 2.0 auth
-After=docker.service
-Requires=docker.service
+After=rethinkdb-proxy-28015.service
+BindsTo=rethinkdb-proxy-28015.service
 
 [Service]
 EnvironmentFile=/etc/environment
@@ -287,6 +293,8 @@ ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
+  --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -e "OAUTH_AUTHORIZATION_URL=https://accounts.google.com/o/oauth2/v2/auth" \
   -e "OAUTH_TOKEN_URL=https://www.googleapis.com/oauth2/v4/token" \
@@ -304,11 +312,15 @@ ExecStop=-/usr/bin/docker stop -t 10 %p-%i
 
 #### Option C: LDAP
 
-See `stf auth-ldap --help` and change one of the unit files above as required.
+**Requires** the `rethinkdb-proxy-28015.service` unit on the same host, like the other auth options.
+
+See `stf auth-ldap --help` and change one of the unit files above as required, keeping the `rethinkdb-proxy-28015.service` dependency and the `--link` and `RETHINKDB_PORT_28015_TCP` settings.
 
 **NOTE:** Don't forget to change the `--auth-url` option in the `stf-app` unit. For LDAP, the value should be `https://stf.example.org/auth/ldap/`.
 
 #### Option D: SAML 2.0
+
+**Requires** the `rethinkdb-proxy-28015.service` unit on the same host.
 
 This is one of the multiple options for authentication provided by STF. It uses [SAML 2.0](http://saml.xml.org/saml-specifications) protocol. If your company uses [Okta](https://www.okta.com/) or some other SAML 2.0 supported id provider, you can use it.
 
@@ -319,8 +331,8 @@ This is a template unit, meaning that you'll need to start it with an instance i
 ```ini
 [Unit]
 Description=STF SAML 2.0 auth
-After=docker.service
-Requires=docker.service
+After=rethinkdb-proxy-28015.service
+BindsTo=rethinkdb-proxy-28015.service
 
 [Service]
 EnvironmentFile=/etc/environment
@@ -331,6 +343,8 @@ ExecStartPre=-/usr/bin/docker kill %p-%i
 ExecStartPre=-/usr/bin/docker rm %p-%i
 ExecStart=/usr/bin/docker run --rm \
   --name %p-%i \
+  --link rethinkdb-proxy-28015:rethinkdb \
+  -e "RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015" \
   -v /srv/ssl/id_provider.cert:/etc/id_provider.cert:ro \
   -e "SECRET=YOUR_SESSION_SECRET_HERE" \
   -e "SAML_ID_PROVIDER_ENTRY_POINT_URL=YOUR_ID_PROVIDER_ENTRY_POINT" \
