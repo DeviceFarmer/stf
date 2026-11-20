@@ -26,7 +26,8 @@ export function canStartUsing(device: Device): boolean {
 }
 
 export function canStopAutomation(device: Device): boolean {
-  return currentUser.privilege === 'admin' && device.state === 'automation' && isAutomated(device)
+  return currentUser.privilege === 'admin' && !device.automationLeaseId &&
+    device.state === 'automation' && isAutomated(device)
 }
 
 export function useDeviceActions(): DeviceActions {

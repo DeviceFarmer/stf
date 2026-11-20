@@ -7,6 +7,11 @@ const deviceCommands = new Set([
 ])
 const maxEntries = 128
 
+function sameOwner(left: DeviceAccess['owner'], right: DeviceAccess['owner']) {
+  return (left?.email || null) === (right?.email || null) &&
+    (left?.reservationId || null) === (right?.reservationId || null)
+}
+
 export function isDeviceCommand(event: unknown): boolean {
   if (typeof event !== 'string') {
     return false
@@ -32,6 +37,7 @@ export class DevicePacketAccess {
   private readonly changed = new Map<string, number>()
   private readonly sessions = new Map<string, number>()
   private readonly observations = new Map<string, Partial<DeviceAccess>>()
+  private readonly owners = new Map<string, DeviceAccess['owner']>()
   // Serials whose last snapshot lagged an observation that the row can still catch up with.
   private readonly lagging = new Map<string, LaggingRow>()
   private readonly misses = new Map<string, {until: number, groups: string}>()
@@ -49,14 +55,21 @@ export class DevicePacketAccess {
   , private readonly maxObservations = 4096
   ) {}
 
-  joined(serial: string, usage?: string | null, owner?: DeviceAccess['owner']) {
+  joined(serial: string, usage?: string | null, owner?: DeviceAccess['owner'],
+    automationLeaseId?: string | null) {
     this.sessions.set(serial, this.revision + 1)
-    this.update(serial, {usage: usage || null, ...(owner ? {owner} : {})})
+    this.update(serial, {usage: usage || null, automationLeaseId: automationLeaseId || null
+      , ...(owner ? {owner} : {})})
   }
 
-  released(serial: string) {
+  released(serial: string, owner?: DeviceAccess['owner']): boolean {
+    if (owner && (this.owners.has(serial) ?
+      !sameOwner(this.owners.get(serial), owner) : this.overflowed)) {
+      return false
+    }
     this.sessions.set(serial, this.revision + 1)
-    this.update(serial, {owner: null, usage: null})
+    this.update(serial, {owner: null, usage: null, automationLeaseId: null})
+    return true
   }
 
   /** Remembers this user's invite, so that its reply can stand in for a late join notification. */
@@ -105,6 +118,15 @@ export class DevicePacketAccess {
 
   update(serial: string, change: Partial<DeviceAccess>) {
     this.invalidate(serial)
+    if (Object.hasOwn(change, 'owner')) {
+      if (!this.owners.has(serial) && this.owners.size >= this.maxObservations) {
+        this.overflowed = true
+        this.invalidate()
+        return
+      }
+      // Keep the latest wire reservation after its database snapshot has caught up.
+      this.owners.set(serial, change.owner ?? null)
+    }
     const previous = this.observations.get(serial)
     this.observations.delete(serial)
     this.lagging.delete(serial)
@@ -134,9 +156,6 @@ export class DevicePacketAccess {
     if (!observed) {
       return device
     }
-    const sameOwner = (left: DeviceAccess['owner'], right: DeviceAccess['owner']) =>
-      (left?.email || null) === (right?.email || null) &&
-      (left?.reservationId || null) === (right?.reservationId || null)
     const caughtUp = Object.entries(observed).every(([field, value]) => {
       if (field === 'owner') {
         return sameOwner(device.owner, observed.owner)
@@ -144,8 +163,8 @@ export class DevicePacketAccess {
       if (field === 'group') {
         return device.group?.id === observed.group?.id
       }
-      if (field === 'usage') {
-        return (device.usage || null) === (value || null)
+      if (field === 'usage' || field === 'automationLeaseId') {
+        return (device[field] || null) === (value || null)
       }
       return device[field as keyof DeviceAccess] === value
     })
@@ -294,6 +313,6 @@ export class DevicePacketAccess {
     const device = loaded && this.snapshot(loaded)
     return Boolean(device && device.channel === channel && device.present && device.ready &&
       device.group?.id && groups.includes(device.group.id) &&
-      device.usage !== 'automation')
+      device.usage !== 'automation' && !device.automationLeaseId)
   }
 }

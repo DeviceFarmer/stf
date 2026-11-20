@@ -112,6 +112,15 @@ describe('administrator Stop Automation action', () => {
     expect(actions.confirm).not.toHaveBeenCalled()
     expect(actions.release).not.toHaveBeenCalled()
   })
+  it('keeps leased automation view-only instead of offering an unsafe release', () => {
+    actions.user.privilege = 'admin'
+    setup(phone({automationLeaseId: 'coordinator-lease'}))
+    expect(screen.queryByRole('button', {name: 'Stop Automation'})).toBeNull()
+    fireEvent.click(screen.getByRole('button', {name: 'Automated'}))
+    expect(screen.getByRole('status').textContent).toBe('/control/phone?mode=watch')
+    expect(actions.confirm).not.toHaveBeenCalled()
+    expect(actions.release).not.toHaveBeenCalled()
+  })
   it('keeps name links and Shift-click as watch entry points for administrators', () => {
     actions.user.privilege = 'admin'
     const device = phone()

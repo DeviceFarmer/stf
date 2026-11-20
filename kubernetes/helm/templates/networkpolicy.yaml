@@ -52,4 +52,24 @@ spec:
     - ports: [{protocol: TCP, port: pub}, {protocol: TCP, port: pull}]
       from: {{ toJson . }}
 {{- end }}
+{{- if .Values.coordinator.enabled }}
+{{- with .Values.networkPolicy.coordinatorFrom }}
+---
+# CI workers or a dedicated gateway can reach only the authenticated coordinator.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "stf.name" (dict "root" $ "component" "coordinator") }}
+  labels: {{ include "stf.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+      app.kubernetes.io/component: coordinator
+  policyTypes: [Ingress]
+  ingress:
+    - ports: [{protocol: TCP, port: http}]
+      from: {{ toJson . }}
+{{- end }}
+{{- end }}
 {{- end }}

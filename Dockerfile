@@ -75,7 +75,8 @@ RUN --mount=type=secret,id=npmrc,mode=0444 \
     && cd /tmp/app \
     && rm -rf doc .github .tx .semaphore *.md *.yaml Dockerfile* \
       .eslintrc .nvmrc .tool-versions res/.eslintrc \
-    && test -s LICENSE
+    && test -s LICENSE \
+    && test -s NOTICE
 
 FROM node-base AS bundletool
 ARG BUNDLETOOL_VERSION=1.2.0

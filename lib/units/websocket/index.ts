@@ -433,7 +433,7 @@ export default function(options: WebsocketOptions) {
       })
       .on(wire.DeviceIntroductionMessage, function(channel, message) {
         deviceAccess.update(message.serial, {present: true, ready: false, owner: null
-          , usage: null, group: message.group!})
+          , usage: null, automationLeaseId: null, group: message.group!})
         if (user.groups.subscribed.indexOf(message.group!.id) > -1) {
           socket.emit('device.add', {
             important: true
@@ -442,6 +442,7 @@ export default function(options: WebsocketOptions) {
             , present: true
             , provider: message.provider
             , owner: null
+            , automationLeaseId: null
             , status: message.status
             , ready: false
             , reverseForwards: []
@@ -460,6 +461,7 @@ export default function(options: WebsocketOptions) {
             serial: message.serial
           , channel: message.channel
           , owner: null // @todo Get rid of need to reset this here.
+          , automationLeaseId: null
           , ready: true
           , reverseForwards: [] // @todo Get rid of need to reset this here.
           }
@@ -488,7 +490,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.JoinGroupMessage, function(channel, message) {
-        deviceAccess.joined(message.serial, message.usage, message.owner)
+        deviceAccess.joined(message.serial, message.usage, message.owner, message.leaseId)
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({
@@ -496,6 +498,7 @@ export default function(options: WebsocketOptions) {
             , owner: message.owner
             , likelyLeaveReason: 'owner_change'
             , usage: message.usage
+            , automationLeaseId: message.leaseId || null
             }
           , user
           )
@@ -508,12 +511,16 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.LeaveGroupMessage, function(channel, message) {
-        deviceAccess.released(message.serial)
+        if (!deviceAccess.released(message.serial, message.owner)) {
+          return
+        }
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({
               serial: message.serial
             , owner: null
+            , usage: null
+            , automationLeaseId: null
             , likelyLeaveReason: message.reason
             }
           , user

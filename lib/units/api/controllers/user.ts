@@ -3,6 +3,7 @@
 **/
 
 import util from 'util'
+import {setTimeout as delay} from 'node:timers/promises'
 
 import _ from 'lodash'
 import Promise from 'bluebird'
@@ -12,6 +13,9 @@ import dbapi from '../../../db/api.js'
 import logger from '../../../util/logger.js'
 import datautil from '../../../util/datautil.js'
 import deviceutil from '../../../util/deviceutil.js'
+import {
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, isAutomationLeaseTimeout
+} from '../../../util/automation-lease.js'
 import wire from '../../../wire/index.js'
 import wireutil from '../../../wire/util.js'
 import wirerouter from '../../../wire/router.js'
@@ -23,6 +27,7 @@ import lockutil from '../../../util/lockutil.js'
 import type {Response} from 'express'
 import type {
   AddUserDeviceBody
+, AutomationLeaseBody
 , ApiLock
 , ApiRequest
 , MessageListener
@@ -34,7 +39,7 @@ var log = logger.createLogger('api:controllers:user')
 
 function reservationTimeout(device: DeviceDocument) {
   // The iOS provider drains CoreDevice and hands WDA over before acknowledging.
-  return device.platform === 'iOS' ? 40000 : 5000
+  return device.platform === 'iOS' ? iosAutomationCaptureTimeoutMs : 5000
 }
 
 function getUser(req: ApiRequest, res: Response) {
@@ -80,36 +85,50 @@ function getUserDevices(req: ApiRequest, res: Response) {
     })
 }
 
-// Every device endpoint below opens the same way: find a device this user can see, and refuse
-// unless they are the one using it. Only the wording of the refusal differs, so the 404, the 403
-// and the 500 are all the helper's to answer.
+function withVisibleDevice(
+  req: ApiRequest
+, res: Response
+, serial: string
+, handler: (device: DeviceDocument) => unknown
+) {
+  const fail = (err: Error) =>
+    apiutil.internalError(res, 'Failed to load device "%s": ', serial, err.stack)
+  return dbapi.loadDevice(req.user.groups.subscribed, serial)
+    .then(function(cursor) {
+      cursor.next(function(err: Error, device: DeviceDocument) {
+        if (err || !device) {
+          apiutil.respond(res, 404, 'Device not found')
+          return
+        }
+
+        datautil.normalize(device, req.user)
+        Promise.try(() => handler(device)).catch(fail)
+      })
+    })
+    .catch(fail)
+}
+
 function withOwnedDevice(
   req: ApiRequest
 , res: Response
 , serial: string
 , notOwnedMessage: string
 , handler: (device: DeviceDocument) => void
+, access: 'manual' | 'read' = 'manual'
 ) {
-  return dbapi.loadDevice(req.user.groups.subscribed, serial)
-    .then(function(cursor) {
-      cursor.next(function(err: Error, device: DeviceDocument) {
-        if (err) {
-          apiutil.respond(res, 404, 'Device not found')
-          return
-        }
+  return withVisibleDevice(req, res, serial, device => {
+    if (!deviceutil.isOwnedByUser(device, req.user)) {
+      apiutil.respond(res, 403, notOwnedMessage)
+      return
+    }
 
-        datautil.normalize(device, req.user)
-        if (!deviceutil.isOwnedByUser(device, req.user)) {
-          apiutil.respond(res, 403, notOwnedMessage)
-          return
-        }
-
-        handler(device)
-      })
-    })
-    .catch(function(err) {
-      apiutil.internalError(res, 'Failed to load device "%s": ', serial, err.stack)
-    })
+    if (device.automationLeaseId && access === 'manual') {
+      apiutil.respond(res, 409,
+        'Device has a coordinator lease; use its fenced automation release endpoint')
+      return
+    }
+    handler(device)
+  })
 }
 
 function getUserDeviceBySerial(req: ApiRequest, res: Response) {
@@ -128,17 +147,39 @@ function getUserDeviceBySerial(req: ApiRequest, res: Response) {
     , description: 'Controlled device information'
     , device: responseDevice
     })
-  })
+  }, 'read')
+}
+
+function authorizeAutomationLease(
+  req: ApiRequest<AddUserDeviceBody | AutomationLeaseBody>, res: Response
+) {
+  if (req.options.automationLeaseAccounts?.includes(req.user.email)) {
+    return true
+  }
+  apiutil.respond(res, 403, 'Managed automation leases require an authorized service account')
+  return false
 }
 
 function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   var serial = req.hasOwnProperty('body') ? req.body.serial : req.swagger.params.serial.value
-  var timeout = req.hasOwnProperty('body') ? req.body.timeout ||
-                                             null : req.swagger.params.timeout.value || null
+  const requestedTimeout = (req.hasOwnProperty('body') ? req.body.timeout :
+    req.swagger.params.timeout.value) ?? null
+  const leaseId = req.body?.leaseId ?? null
+  if (leaseId !== null) {
+    if (!authorizeAutomationLease(req, res)) {
+      return
+    }
+    if (typeof leaseId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(leaseId) ||
+        (requestedTimeout !== null && !isAutomationLeaseTimeout(requestedTimeout))) {
+      apiutil.respond(res, 400, 'Invalid automation lease ID or timeout')
+      return
+    }
+  }
+  const timeout = requestedTimeout || null
   const lock: ApiLock = {}
 
   lockutil.lockGenericDevice(req, res, lock, dbapi.lockDeviceByCurrent)
-    .then(function(lockingSuccessed) {
+    .then(async function(lockingSuccessed) {
       if (lockingSuccessed) {
         const device = lock.device!
 
@@ -149,6 +190,11 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
             success: false
           , description: 'Device is being used or not available'
           })
+          return
+        }
+        if (leaseId && await dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)) {
+          lockutil.unlockDevice(lock)
+          apiutil.respond(res, 409, 'Automation lease ID was already released')
           return
         }
 
@@ -166,7 +212,8 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
 
         messageListener = wirerouter()
           .on(wire.JoinGroupMessage, function(channel, message) {
-            if (message.serial === serial && message.owner.email === req.user.email) {
+            if (message.serial === serial && message.owner.email === req.user.email &&
+                (message.leaseId || null) === leaseId) {
               clearTimeout(responseTimer)
               req.options.channelRouter.removeListener(wireutil.global, messageListener)
               lockutil.unlockDevice(lock)
@@ -174,6 +221,9 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               res.json({
                 success: true
               , description: 'Device successfully added'
+              , owner: message.owner
+              , deviceChannel: device.channel
+              , ...(leaseId ? {leaseId} : {})
               })
             }
           })
@@ -199,6 +249,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               }
             })
             , usage
+            , leaseId
             )
           )
         ])
@@ -208,6 +259,114 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
       lockutil.unlockDevice(lock)
       apiutil.internalError(res, `Failed to take control of ${serial} device: `, err.stack)
     })
+}
+
+function automationLeaseOperation(
+  req: ApiRequest<AutomationLeaseBody>, res: Response, action: 'renew' | 'release'
+) {
+  if (action === 'renew' && !authorizeAutomationLease(req, res)) {
+    return
+  }
+  const {leaseId, timeout} = req.body || {}
+  if (typeof leaseId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(leaseId) ||
+      (action === 'renew' && !isAutomationLeaseTimeout(timeout))) {
+    apiutil.respond(res, 400, 'Invalid automation lease request')
+    return
+  }
+  const serial = req.swagger.params.serial.value
+  const releasing = action === 'release'
+  const hasReceipt = () => dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)
+  withVisibleDevice(req, res, serial, async device => {
+    if (releasing && await hasReceipt()) {
+      res.json({success: true, leaseId})
+      return
+    }
+    if (device.owner && device.owner.email !== req.user.email) {
+      apiutil.respond(res, 403, 'Device is not owned by you')
+      return
+    }
+    if (!device.present || !device.ready || !device.owner || device.usage !== 'automation' ||
+        device.automationLeaseId !== leaseId) {
+      apiutil.respond(res, 409, 'Stale automation lease')
+      return
+    }
+    const responseChannel = 'txn_' + uuid.v4()
+    const pending = new AbortController()
+    const cleanup = () => {
+      if (pending.signal.aborted) {
+        return
+      }
+      pending.abort()
+      clearTimeout(timer)
+      res.off('close', cleanup)
+      req.options.channelRouter.removeListener(responseChannel, listener)
+      req.options.sub.unsubscribe(responseChannel)
+    }
+    const timer = setTimeout(() => {
+      cleanup()
+      apiutil.respond(res, 504, 'Device is not responding')
+    }, releasing ? automationReleaseTimeoutMs : 5000)
+    const listener = wirerouter().on(wire.TransactionDoneMessage, (_channel, message) => {
+      if (message.source !== serial) {
+        return
+      }
+      if (releasing) {
+        req.options.channelRouter.removeListener(responseChannel, listener)
+        const confirm = async() => {
+          let retryMs = 50
+          // A different STF processor may still be committing the matching LeaveGroup.
+          while (!pending.signal.aborted) {
+            const released = await hasReceipt()
+            if (pending.signal.aborted) {
+              return
+            }
+            if (released || !message.success) {
+              cleanup()
+              if (released) {
+                res.json({success: true, leaseId})
+              }
+              else {
+                apiutil.respond(res, 409, message.data || 'Stale automation lease')
+              }
+              return
+            }
+            await delay(retryMs, null, {signal: pending.signal})
+            retryMs = Math.min(500, retryMs * 2)
+          }
+        }
+        confirm().catch(error => {
+          if (!pending.signal.aborted) {
+            cleanup()
+            apiutil.internalError(res, 'Failed to confirm automation release: ', error.stack)
+          }
+        })
+        return
+      }
+      cleanup()
+      if (!message.success) {
+        apiutil.respond(res, 409, message.data || 'Stale automation lease')
+        return
+      }
+      const body = message.body ? JSON.parse(message.body) : {}
+      res.json({success: true, leaseId, ...body})
+    }).handler()
+    res.once('close', cleanup)
+    req.options.sub.subscribe(responseChannel)
+    req.options.channelRouter.on(responseChannel, listener)
+    req.options.push.send([device.channel, wireutil.transaction(responseChannel,
+      new wire.AutomationLeaseMessage(serial, new wire.OwnerMessage(
+        req.user.email, req.user.name, req.user.group
+      ), leaseId, action, timeout)
+    )])
+  })
+}
+
+function renewAutomationLease(req: ApiRequest<AutomationLeaseBody>, res: Response) {
+  return automationLeaseOperation(req, res, 'renew')
+}
+
+function releaseAutomationLease(req: ApiRequest<AutomationLeaseBody>, res: Response) {
+  return automationLeaseOperation(req, res, 'release')
 }
 
 function deleteUserDeviceBySerial(req: ApiRequest, res: Response) {
@@ -596,6 +755,8 @@ export {
 , addUserDevice
 , getUserDeviceBySerial
 , deleteUserDeviceBySerial
+, renewAutomationLease
+, releaseAutomationLease
 , rebootUserDeviceBySerial
 , remoteConnectUserDeviceBySerial
 , remoteDisconnectUserDeviceBySerial

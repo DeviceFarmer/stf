@@ -291,7 +291,9 @@ clientWithPromise.then(function(api) {
 #### DELETE /user/devices/{serial}
 
 Releases a device owned by the authenticated user. Close the test session before
-releasing its reservation, including in cleanup after a failed test.
+releasing its reservation, including in cleanup after a failed test. Release
+coordinator-managed devices through the coordinator so it can verify transport
+and session cleanup.
 
 ```bash
 DELETE /api/v1/user/devices/{serial}
@@ -317,6 +319,35 @@ clientWithPromise.then(function(api) {
   console.log(err)
 })
 ```
+
+#### Automation leases
+
+Only configured STF service accounts can create or renew managed automation
+leases. Set `STF_API_AUTOMATION_LEASE_ACCOUNTS` on each API replica to a
+comma-separated list of exact account emails. An empty list disables managed
+capture and renewal. Requests without a `leaseId` use the existing reservation API.
+
+To create a managed lease, include a unique `leaseId` in
+`POST /api/v1/user/devices`. The response echoes that ID. Use the same account
+and lease ID for renewal and release. A former service account can release its
+existing lease after removal from the list. Each capture needs a new lease ID.
+
+| Method | STF API path | JSON body |
+| --- | --- | --- |
+| POST | `/api/v1/user/devices/{serial}/automation/renew` | `{"leaseId":"example-lease","timeout":180000}` |
+| POST | `/api/v1/user/devices/{serial}/automation/release` | `{"leaseId":"example-lease"}` |
+
+Managed capture and renewal timeouts are in milliseconds, up to 73 minutes.
+The provider fixes an absolute deadline of 24 hours and 73 minutes from
+capture. Renewal cannot extend it. Test clients call the
+[coordinator API](coordinator.md), which also enforces the worker's own
+duration limit. Operators release coordinator leases through that API so it
+can confirm Appium cleanup before handing the device back.
+
+A successful release waits for the matching provider cleanup and its durable
+database receipt. STF keeps the latest release receipt for each device. Repeating
+that exact release with the original account can return the receipt after the
+device has changed owners. It leaves the current reservation intact.
 
 #### POST /user/devices/{serial}/remoteConnect
 
