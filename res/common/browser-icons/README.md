@@ -9,6 +9,7 @@ Except where explicitly noted below under an open-source or Creative Commons
 license, these icons are **excluded** from the Apache-2.0 license governing
 the rest of the `DeviceFarmer/stf` repository, and their inclusion does not
 imply endorsement by or affiliation with the respective trademark holders.
+The repository's [NOTICE](../../../NOTICE) states the same exclusion.
 
 | File | Browser | Source (fetched by `npm run fetch:browser-icons`) | License / Legal Status (as stated on the cited page) |
 | :--- | :--- | :--- | :--- |
