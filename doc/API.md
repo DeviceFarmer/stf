@@ -80,6 +80,9 @@ It also provides much more complex patterns for retrieving and/or filtering data
 
 ### Devices
 
+See [Device states](device-states.md) for the meaning of the device fields, such as `present`,
+`status`, `ready`, `owner`, `using` and `claimed`.
+
 #### GET /devices
 
 List **all** STF devices (including disconnected or otherwise inaccessible devices).
@@ -549,11 +552,12 @@ var serial = process.argv.slice(2)[0]
 client.then(function(api) {
   return api.devices.getDeviceBySerial({
     serial: serial
-  , fields: 'serial,present,ready,using,owner'
+  , fields: 'serial,present,status,ready,using,owner,claimed'
   }).then(function(res) {
       // check if device can be added or not
       var device = res.obj.device
-      if (!device.present || !device.ready || device.using || device.owner) {
+      if (!device.present || device.status !== 3 || !device.ready || device.using ||
+          device.owner || device.claimed) {
         console.log('Device is not available')
         return
       }

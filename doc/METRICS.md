@@ -45,7 +45,8 @@ state machine as the one the device list uses:
 | `present` | The device is present and currently being connected or authorized |
 
 The `using` and `automation` states of the device list are not exposed since they only make sense
-for a given user session.
+for a given user session. See [Device states](device-states.md) for the causes of each state and
+what to do about it.
 
 Every label value is known in advance, so a counter which drops to zero is exported as zero instead
 of vanishing, and a device or a group holding an unexpected value can't create new time series.
