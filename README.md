@@ -55,7 +55,7 @@ Thank you to all the people who have already contributed to STF!
   - File Explorer to access device file system
   - Experimental VNC support (work in progress)
 * Monitor your device inventory
-  - See which devices are connected, offline/unavailable (indicating a weak USB connection), unauthorized or unplugged
+  - See which devices are connected, offline/unavailable (indicating a weak USB connection), unauthorized or unplugged. See [device states](doc/device-states.md) for what each state means
   - See who's using a device
   - Search devices by phone number, IMEI, ICCID, Android version, operator, product name, group name and/or many other attributes with easy but powerful queries
   - Show a bright red screen with identifying information on a device you need to locate physically
