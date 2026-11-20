@@ -34,9 +34,10 @@ Notes:
 * `claimed` is `true` for up to 2 minutes after the owner reboots the device with
   `keepOwnership`, or after a device in use disappears when the processor runs with
   `--auto-restore-owner`. The 2 minutes start when the reboot is requested, or when the device
-  goes away. A device with an automation lease is never claimed. While `claimed` is `true`, `POST /api/v1/user/devices` and
-  the coordinator refuse the device for everyone, including the owner it is kept for. The web UI
-  does not check `claimed`. See [Available](#available-available).
+  goes away. A device with an automation lease is never claimed. While `claimed` is `true`,
+  `POST /api/v1/user/devices` and the coordinator refuse the device for everyone, including the
+  owner it is kept for. The web UI does not check `claimed`. See
+  [Available](#available-available).
 * `bookable` is not a device field. It is a group class. `GET /api/v1/devices?target=bookable`
   lists the devices whose origin group is a group you subscribe to and whose current group is not
   of class `standard`. It does not check the class of the origin group.
