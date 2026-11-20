@@ -56,10 +56,13 @@ The provider reads the `adb` state of each device and stores it as a number.
 
 The provider starts a device worker only when the state is `device` or `emulator`. Other `adb`
 states, such as `recovery`, `sideload` or `bootloader`, have no STF status. The device cannot be
-used until `adb` reports it as `device` again.
+used until `adb` reports it as `device` again. The provider does not handle these states fully: a
+device first seen in one of them is not registered, and an online device that changes to one of
+them keeps its worker. If that happens, restart the provider once the device is back.
 
-Without a worker, the device sends no heartbeat. When an online device changes to another state,
-the provider stops its worker and marks the device absent. A device that is never online is marked
+Without a worker, the device sends no heartbeat. When an online device changes to one of the
+states in the table, the provider stops its worker and marks the device absent. A device that is
+never online is marked
 absent when the heartbeat timeout expires. So the device list shows **Offline** or
 **Unauthorized** only for a short time. After that it shows **Disconnected**. To see the real
 state, run `adb devices` on the provider host.
