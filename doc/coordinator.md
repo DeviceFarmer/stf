@@ -196,6 +196,9 @@ confirms the slot is available. Drains survive restart. The loader accepts v1
 state and writes v2, which older v1-only coordinators cannot load. If persistent
 state contains an unsupported runner, startup stops and preserves the state file.
 
+The [on-demand WDA renewal tool](../tools/wda-renewal/README.md) uses this drain
+while it installs and verifies a new WebDriverAgent build on one iPhone.
+
 Pause submissions and finish/release active leases before a coordinated upgrade
 or credential rotation. Back up the state file and keep its PVC so the
 coordinator can recover and verify outstanding leases. Experimental state containing
