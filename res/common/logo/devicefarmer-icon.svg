@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Creator: CorelDRAW 2019 (64-Bit). Wordmark converted to outlines using Arimo Bold (SIL OFL 1.1, metric-compatible with Arial); no font dependencies. -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="512" height="512" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 1967.45 1967.45"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+
+  <style type="text/css">
+   <![CDATA[
+        .str0 {stroke:black;stroke-width:2.04;stroke-miterlimit:22.9256}
+    .fil3 {fill:#006AB3}
+    .fil11 {fill:#009036}
+    .fil1 {fill:#009790}
+    .fil2 {fill:#009EE0}
+    .fil0 {fill:#040707}
+    .fil4 {fill:#93117E}
+    .fil10 {fill:#96BF0D}
+    .fil6 {fill:#DC3C14}
+    .fil5 {fill:#E2007A}
+    .fil7 {fill:#F29400}
+    .fil9 {fill:#FFED00}
+    .fil12 {fill:white}
+    .fil8 {fill:white;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Plan_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <rect class="fil0 str0" x="1.02" y="1.02" width="1965.4" height="1965.4" rx="202.21" ry="202.21"/>
+  <circle class="fil0" cx="983.72" cy="983.72" r="982.7"/>
+  <rect class="fil1" transform="matrix(1.04735 -0.604688 0.746972 1.29379 442.224 227.834)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <rect class="fil2" transform="matrix(0.604688 -1.04735 1.29379 0.746972 136.827 599.854)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <rect class="fil3" transform="matrix(3.18634E-14 -1.20938 1.49394 3.95239E-14 58.3554 1074.73)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <rect class="fil4" transform="matrix(-0.604688 -1.04735 1.29379 -0.746972 227.835 1525.22)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <rect class="fil5" transform="matrix(-1.04735 -0.604688 0.746972 -1.29379 599.855 1830.62)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <rect class="fil6" x="892.72" y="1571.82" width="182.02" height="337.27" rx="39.05" ry="48.23"/>
+  <rect class="fil7" transform="matrix(-9.57012E-14 1.20938 -1.49394 -1.18572E-13 1909.09 892.715)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <path class="fil8" d="M983.72 1508.72c-144.97,0 -276.22,-58.77 -371.22,-153.77 -95.01,-95.01 -153.77,-226.26 -153.77,-371.23 0,-144.97 58.76,-276.22 153.77,-371.22 95,-95.01 226.25,-153.77 371.22,-153.77 144.97,0 276.22,58.76 371.23,153.77 91.81,91.81 149.77,217.47 153.56,356.66l63.31 0 0 29.13 -92.24 0 0 -14.57c0,-136.93 -55.5,-260.89 -145.23,-350.63 -89.73,-89.73 -213.7,-145.23 -350.63,-145.23 -136.93,0 -260.89,55.5 -350.63,145.23 -89.73,89.74 -145.23,213.7 -145.23,350.63 0,136.93 55.5,260.9 145.23,350.63 89.74,89.73 213.7,145.23 350.63,145.23l0 29.14z"/>
+  <rect class="fil9" transform="matrix(0.604688 1.04735 -1.29379 0.746972 1739.61 442.223)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <rect class="fil10" transform="matrix(1.04735 0.604688 -0.746972 1.29379 1367.59 136.826)" width="150.5" height="225.76" rx="32.29" ry="32.29"/>
+  <polygon class="fil8" points="395.62,969.16 473.3,969.16 473.3,998.29 395.62,998.29 "/>
+  <polygon class="fil8" points="481.7,677.1 548.86,715.95 534.29,741.1 467.13,702.25 "/>
+  <polygon class="fil8" points="702.25,467.13 741.1,534.29 715.95,548.86 677.1,481.7 "/>
+  <polygon class="fil8" points="998.29,395.62 998.29,473.3 969.16,473.3 969.16,395.62 "/>
+  <polygon class="fil8" points="1290.35,481.7 1251.5,548.86 1226.35,534.29 1265.2,467.13 "/>
+  <polygon class="fil8" points="1495.4,693.32 1428.83,733.37 1413.93,708.45 1480.49,668.4 "/>
+  <polygon class="fil8" points="998.29,1274.89 998.29,1571.82 969.16,1571.82 969.16,1274.89 "/>
+  <polygon class="fil8" points="677.1,1485.75 715.95,1418.59 741.1,1433.15 702.25,1500.32 "/>
+  <polygon class="fil8" points="467.13,1265.2 534.29,1226.35 548.86,1251.5 481.7,1290.35 "/>
+  <rect class="fil11" x="892.72" y="58.35" width="182.02" height="337.27" rx="39.05" ry="48.23"/>
+  <path class="fil12" d="M1126.63 878.44c99.29,-13.83 184.97,-88.43 209.3,-183.95 -44.33,66.03 -118.92,110.03 -203.92,112.15l-5.38 71.8zm-285.81 0c-99.3,-13.83 -184.98,-88.43 -209.3,-183.95 44.33,66.03 118.92,110.03 203.91,112.15l5.39 71.8zm44.65 -101.13l195.29 0c7.79,0 38.86,-1.01 36.1,36.1l-31.47 423.45c-1.47,19.8 -12.42,36.1 -27.6,36.1l-149.35 0c-15.18,0 -26.13,-16.3 -27.6,-36.1l-31.47 -423.45c-2.76,-37.11 28.3,-36.1 36.1,-36.1zm97.64 438.24c10.33,0 18.7,8.37 18.7,18.7 0,10.32 -8.37,18.69 -18.7,18.69 -10.32,0 -18.69,-8.37 -18.69,-18.69 0,-10.33 8.37,-18.7 18.69,-18.7z"/>
+ </g>
+</svg>

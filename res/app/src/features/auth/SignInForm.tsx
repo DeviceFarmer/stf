@@ -91,7 +91,7 @@ export function SignInForm({mode}: {mode: Mode}) {
     <Center className={classes.page}>
       <Paper className={classes.card} shadow='xl' p='xl' withBorder>
         <Stack align='center' gap='xs' mb='lg'>
-          <StfLogo size={88} alt='STF' />
+          <StfLogo size={88} alt='DeviceFarmer' />
           <Title order={2}>{t('Smartphone Test Farm')}</Title>
           <Text c='dimmed' size='sm'>
             {mode === 'ldap' ? t('Sign in with your LDAP account') : t('Sign in to continue')}
