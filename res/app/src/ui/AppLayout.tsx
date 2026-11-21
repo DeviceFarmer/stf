@@ -37,6 +37,7 @@ import {ColorSchemeToggle} from './ColorSchemeToggle'
 import {basicMode, useAdminMode, usePlatform, useStandalone} from './modes'
 import {closeSocketDisconnected, openAddAdbKey, openSocketDisconnected, openVersionUpdate} from './modals'
 import {queryClient} from './Providers'
+import {StfLogo} from './StfLogo'
 import {animateContentFade} from './use-content-fade'
 import classes from './AppLayout.module.css'
 
@@ -270,11 +271,11 @@ export function AppLayout() {
     >
       <AppShell.Header className='stf-menu'>
         <Group h={headerHeight} px='md' justify='space-between' wrap='nowrap'>
-          <Group gap='lg' wrap='nowrap'>
+          <Group gap='lg' wrap='nowrap' className={classes.navigation}>
             <Burger opened={opened} onClick={toggle} hiddenFrom='sm' size='sm' />
             <UnstyledButton onClick={() => navigate('/devices')} className={classes.logo}>
-              <img src='/static/logo/exports/STF-128.png' alt='' width={28} height={28} />
-              <Text fw={700} size='lg'>STF</Text>
+              <StfLogo size={28} alt='' />
+              <Text component='span' fw={700} size='lg' truncate>DeviceFarmer</Text>
             </UnstyledButton>
             <Group gap={4} visibleFrom='sm' wrap='nowrap'>
               {links.map((link) => <NavItem key={link.to} {...link} />)}
