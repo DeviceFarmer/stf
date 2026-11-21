@@ -25,10 +25,8 @@ Notes:
   heartbeat arrives within the reaper `--heartbeat-timeout` (30 seconds by default).
 * `ready` becomes `false` when a provider finds the device and `true` when the device worker
   finishes its setup. It is not reset when the device goes away. Always check `present` first.
-* The API returns `owner` as `null` when `present` is `false`. It computes `using` before it
-  removes `owner`, so an absent device can come back with `owner: null` and `using: true`. This
-  happens when the stored owner is you, or when you are an administrator and the device still has
-  an owner.
+* The API returns `owner` as `null` and `using` as `false` when `present` is `false`, even if
+  the device still has an owner in the database.
 * `using` does not tell whether someone else holds the device. Use `owner` for that.
   For an administrator, `using` is `true` for every device that has an owner.
 * `claimed` is `true` for up to 2 minutes after the owner reboots the device with
@@ -180,12 +178,13 @@ web UI has no message for it, so it shows "Unknown reason."
 
 * `present` is `true`
 * `ready` is `true`
+* `status` is 3
 * `owner` is `null`
 * `using` is `false`
 * `claimed` is `false`
 
-Otherwise the API answers `403` with "Device is being used or not available". The web UI also
-requires `status` to be 3. Do the same in your client. Ask for the fields you need, for example
+Otherwise the API answers `403` with "Device is being used or not available". Ask for the
+fields you need, for example
 `GET /api/v1/devices/{serial}?fields=serial,present,status,ready,owner,using,claimed`.
 
 After a reboot through `POST /api/v1/user/devices/{serial}/reboot`, poll the device until
