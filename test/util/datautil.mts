@@ -58,5 +58,12 @@ describe('datautil', function() {
       expect(released).to.not.have.property('pendingOwnerReleases')
       expect(released).to.not.have.property('lastOwnerRelease')
     })
+
+    it('should keep the restore timeout of a reservation internal', function() {
+      const owned = device(null)
+      owned.ownerTimeout = 180000
+      datautil.normalize(owned, user)
+      expect(owned).to.not.have.property('ownerTimeout')
+    })
   })
 })

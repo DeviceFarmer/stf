@@ -234,7 +234,7 @@ export default syrup.serial()
         // A restore after a reboot carries the usage and timeout of the reservation it replays
         return plugin.join(
           message.owner
-        , message.timeout || undefined
+        , message.timeout || null
         , message.usage || null
         , message.identifier
         )

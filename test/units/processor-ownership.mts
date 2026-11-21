@@ -31,12 +31,15 @@ class Dealer extends EventEmitter {
 const dealers: Dealer[] = []
 const setDeviceOwner = sinon.stub()
 const releaseDeviceOwner = sinon.stub()
+const setDeviceReady = sinon.stub()
+const loadUser = sinon.stub()
+const clearDeviceRestoreOwner = sinon.stub()
 const mocks = [
   mockModule(new URL('../../lib/db/index.js', import.meta.url), {default: {
     ensureConnectivity: (start: unknown) => start
   }})
 , mockModule(new URL('../../lib/db/api.js', import.meta.url), {default: {
-    setDeviceOwner, releaseDeviceOwner
+    setDeviceOwner, releaseDeviceOwner, setDeviceReady, loadUser, clearDeviceRestoreOwner
   }})
 , mockModule(new URL('../../lib/util/adbutil.js', import.meta.url), {default: () => ({})})
 , mockModule(new URL('../../lib/util/lifecycle.js', import.meta.url), {default: {observe() {}}})
@@ -73,6 +76,9 @@ describe('processor ownership', function() {
   beforeEach(function() {
     setDeviceOwner.reset()
     releaseDeviceOwner.reset()
+    setDeviceReady.reset()
+    loadUser.reset()
+    clearDeviceRestoreOwner.reset()
   })
 
   it('publishes a capture with the owner, lease and usage persisted together', async function() {
@@ -84,7 +90,7 @@ describe('processor ownership', function() {
     assert.deepEqual(processor.app.packets, [])
     await published
     assert.equal(setDeviceOwner.callCount, 1)
-    assert.deepEqual(setDeviceOwner.firstCall.args.slice(2), ['automation', 'lease'])
+    assert.deepEqual(setDeviceOwner.firstCall.args.slice(2), ['automation', 'lease', null])
     assert.deepEqual(processor.app.packets, [[wireutil.global, join]])
   })
 
@@ -189,5 +195,73 @@ describe('processor ownership', function() {
     processor.device.emit('message', 'command-reply', reply)
     await responded
     assert.deepEqual(processor.app.packets, [['command-reply', reply]])
+  })
+
+  it('persists the timeout a join reports so a reboot claim can carry it', async function() {
+    setDeviceOwner.resolves({errors: 0, replaced: 1, applied: true})
+    const processor = fixture()
+    const join = wireutil.envelope(new wire.JoinGroupMessage('phone', owner, 'automation', null
+      , 180000))
+    const published = processor.app.whenSent(join)
+    processor.device.emit('message', wireutil.global, join)
+    await published
+    assert.deepEqual(setDeviceOwner.firstCall.args.slice(2), ['automation', null, 180000])
+  })
+
+  describe('restoring an owner after a reboot', function() {
+    const user = {
+      email: 'runner@example.test', name: 'Runner', group: 'runner-group'
+    , groups: {subscribed: ['origin-group']}
+    }
+
+    function readyWithClaim(claim: Record<string, unknown>) {
+      setDeviceReady.resolves({changes: [{new_val: {
+        serial: 'phone', owner: null, group: {id: 'origin-group'}
+      , restoreOwner: {email: user.email, expiresAt: Date.now() + 60000, ...claim}
+      }}]})
+      loadUser.resolves(user)
+    }
+
+    async function restore() {
+      const processor = fixture()
+      const ready = wireutil.envelope(new wire.DeviceReadyMessage('phone', 'worker-channel'))
+      const announced = processor.app.whenSent(ready)
+      processor.device.emit('message', wireutil.global, ready)
+      await announced
+      return processor.device.packets
+        .filter(([channel]) => channel === 'worker-channel')
+        .map(([, data]) => wire.Envelope.decode(data))
+        .filter(envelope => envelope.type === wire.AutoGroupMessage.$code)
+        .map(envelope => wire.AutoGroupMessage.decode(envelope.message))
+    }
+
+    it('hands the device back with the usage and timeout of the reservation', async function() {
+      readyWithClaim({usage: 'automation', timeout: 180000})
+      const [autoGroup, ...rest] = await restore()
+      assert.deepEqual(rest, [])
+      assert.equal(autoGroup!.owner.email, user.email)
+      assert.equal(autoGroup!.owner.group, user.group)
+      assert.equal(autoGroup!.usage, 'automation')
+      assert.equal(autoGroup!.timeout, 180000)
+      // No ADB or VNC authorization waits on a restore, so it must not look like one
+      assert.equal(autoGroup!.identifier, '')
+      assert.equal(clearDeviceRestoreOwner.callCount, 0)
+    })
+
+    it('leaves usage and timeout unset for a plain reservation or an older claim', async() => {
+      readyWithClaim({usage: null})
+      const [autoGroup] = await restore()
+      assert.equal(autoGroup!.usage, null)
+      assert.equal(autoGroup!.timeout, null)
+      assert.equal(autoGroup!.identifier, '')
+    })
+
+    it('drops an expired claim without handing the device back', async function() {
+      readyWithClaim({usage: 'automation', timeout: 180000, expiresAt: Date.now() - 1})
+      clearDeviceRestoreOwner.resolves({})
+      assert.deepEqual(await restore(), [])
+      assert.equal(clearDeviceRestoreOwner.callCount, 1)
+      assert.equal(loadUser.callCount, 0)
+    })
   })
 })

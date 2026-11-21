@@ -302,6 +302,23 @@ describe('Linux iOS integration', function() {
     ])
   })
 
+  it('restores an iPhone after a reboot with its automation usage and timeout', async function() {
+    const f = await fixture()
+    await f.bridge.poll()
+    f.send(new wire.DeviceRegisteredMessage(serial), false, f.bridge.solo)
+    f.send(new wire.AutoGroupMessage(owner, '', 'automation', 180000))
+    await until(() => f.bridge.owner !== null)
+    const joined = f.sent.find(item => item.envelope.type === wire.JoinGroupMessage.$code)
+    const reservation = wire.JoinGroupMessage.decode(joined!.envelope.message)
+    assert.equal(reservation.usage, 'automation')
+    assert.equal(reservation.timeout, 180000)
+    assert.equal(reservation.leaseId, null)
+    assert.equal(f.bridge.screenMode(), 'automation')
+    assert.deepEqual(f.requests.filter(request => request.path === '/automation')
+      .map(request => request.body), [{active: true, lease: f.bridge.owner!.reservationId}])
+    await f.bridge.leave('test_complete')
+  })
+
   it('waits for WDA handoff before publishing coordinator ownership', async function() {
     const f = await fixture()
     await f.bridge.poll()
