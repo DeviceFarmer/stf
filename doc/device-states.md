@@ -48,20 +48,18 @@ The provider reads the `adb` state of each device and stores it as a number.
 
 | Value | Name | `adb` state | Meaning |
 | ----- | ---- | ----------- | ------- |
-| 1 | offline | `offline` | `adb` sees the device but cannot talk to it. |
+| 1 | offline | `offline`, or any state not listed here, such as `recovery`, `sideload`, `rescue`, `bootloader`, `host` or `no permissions (...)` | `adb` sees the device but STF cannot talk to it. |
 | 2 | unauthorized | `unauthorized` | The device has not accepted the `adb` key of the provider. |
 | 3 | online | `device` or `emulator` | `adb` can use the device. |
 | 4 | connecting | `connecting` | `adb` is still connecting to the device. |
 | 5 | authorizing | `authorizing` | `adb` is still checking its key with the device. |
 
-The provider starts a device worker only when the state is `device` or `emulator`. Other `adb`
-states, such as `recovery`, `sideload` or `bootloader`, have no STF status. The device cannot be
-used until `adb` reports it as `device` again. The provider does not handle these states fully: a
-device first seen in one of them is not registered, and an online device that changes to one of
-them keeps its worker. If that happens, restart the provider once the device is back.
+The provider starts a device worker only when the state is `device` or `emulator`. The device
+cannot be used in any other state. STF has no status of its own for the `adb` states that are not
+in the table, so it reports them as offline. The provider logs a warning with the real state.
 
-Without a worker, the device sends no heartbeat. When an online device changes to one of the
-states in the table, the provider stops its worker and marks the device absent. A device that is
+Without a worker, the device sends no heartbeat. When an online device changes to any other
+state, the provider stops its worker and marks the device absent. A device that is
 never online is marked
 absent when the heartbeat timeout expires. So the device list shows **Offline** or
 **Unauthorized** only for a short time. After that it shows **Disconnected**. To see the real
@@ -100,9 +98,16 @@ and `automation`.
 ### Offline (`offline`)
 
 * **Cause:** `adb` lost the connection to the device. Common reasons are a bad cable, a weak USB
-  connection, a hub without enough power or a device that is rebooting.
+  connection, a hub without enough power or a device that is rebooting. A device in an `adb` state
+  that STF does not know is shown as Offline too. The provider log tells which state it is.
+  Common ones are `recovery`, `sideload`, `rescue` and `bootloader` after the device was rebooted
+  into one of these modes, and `no permissions` when the provider user may not open the USB device.
 * **What to do:** wait a few seconds if the device is rebooting. Otherwise reconnect the device,
-  or try another cable, port or hub.
+  or try another cable, port or hub. Run `adb devices` on the provider host to see the real state.
+  Reboot the device into Android if it is in recovery, rescue or bootloader mode, or wait for a
+  sideload to finish. For `no permissions` on Linux, add udev rules for the device and make sure
+  the provider user can use them (for example through the `plugdev` group), then plug the device
+  back in.
 
 ### Unauthorized (`unauthorized`)
 
