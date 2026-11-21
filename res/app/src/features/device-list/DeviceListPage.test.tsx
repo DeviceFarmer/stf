@@ -75,7 +75,7 @@ it('keeps the closing menu visible and inert until its exit transition finishes'
   const customize = screen.getByRole('button', {name: 'Customize'})
   vi.spyOn(customize, 'getBoundingClientRect').mockReturnValue(new DOMRect(20, 20, 110, 28))
   fireEvent.click(customize)
-  await act(async() => vi.advanceTimersByTimeAsync(250))
+  await act(async() => vi.advanceTimersByTimeAsync(300))
   const menu = screen.getByRole('dialog')
 
   fireEvent.click(screen.getByRole('radio', {name: 'Devices'}))
@@ -83,8 +83,10 @@ it('keeps the closing menu visible and inert until its exit transition finishes'
   expect(menu.style.display).not.toBe('none')
   await act(async() => vi.advanceTimersByTimeAsync(50))
   expect(menu.style.opacity).toBe('0')
-  expect(menu.style.transitionDuration).toBe('180ms')
-  await act(async() => vi.advanceTimersByTimeAsync(200))
+  expect(menu.style.transitionDuration).toBe('250ms')
+  await act(async() => vi.advanceTimersByTimeAsync(150))
+  expect(menu.style.display).not.toBe('none')
+  await act(async() => vi.advanceTimersByTimeAsync(100))
   expect(screen.queryByRole('dialog')).toBeNull()
 })
 
@@ -107,4 +109,10 @@ it.each([false, true])('switches the device workspace with reduced motion set to
   expect(container.querySelector('.selectable')).toBe(content)
   expect(content.animate).toHaveBeenCalledTimes(reducedMotion ? 0 : 2)
   expect(cancel).toHaveBeenCalledTimes(reducedMotion ? 0 : 1)
+  if (!reducedMotion) {
+    expect(content.animate).toHaveBeenLastCalledWith(
+      [{opacity: 0.55}, {opacity: 1}]
+      , {duration: 250, easing: 'ease-out'}
+    )
+  }
 })

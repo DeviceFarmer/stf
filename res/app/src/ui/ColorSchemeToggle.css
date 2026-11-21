@@ -1,0 +1,7 @@
+html:active-view-transition-type(stf-color-scheme)::view-transition-group(root) {
+  animation-duration: 250ms;
+}
+
+html:active-view-transition-type(stf-color-scheme)::view-transition {
+  pointer-events: none;
+}
