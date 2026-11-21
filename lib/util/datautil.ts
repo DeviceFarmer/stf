@@ -40,6 +40,7 @@ interface DeviceView extends deviceutil.Claimable {
   automationRelease?: DeviceDocument['automationRelease']
   pendingOwnerReleases?: DeviceDocument['pendingOwnerReleases']
   lastOwnerRelease?: DeviceDocument['lastOwnerRelease']
+  ownerTimeout?: DeviceDocument['ownerTimeout']
 }
 
 interface DataUtil {
@@ -187,6 +188,7 @@ datautil.normalize = function(device: DeviceView, user: deviceutil.Viewer) {
   // must not read as held here either: this is the only place the expiry is judged for readers.
   device.claimed = deviceutil.isClaimLive(device, Date.now())
   delete device.restoreOwner
+  delete device.ownerTimeout
   delete device.automationRelease
   delete device.pendingOwnerReleases
   delete device.lastOwnerRelease

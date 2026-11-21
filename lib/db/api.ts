@@ -53,7 +53,8 @@ export interface DeviceOwnershipWriteResult extends r.WriteResult {
 type InitialDeviceRow = Pick<
   DeviceDocument
 , 'present' | 'provider' | 'status' | 'statusTimeStamp' | 'ready' | 'reverseForwards'
-  | 'remoteConnect' | 'remoteConnectUrl' | 'usage' | 'automationLeaseId' | 'logs_enabled'
+  | 'remoteConnect' | 'remoteConnectUrl' | 'usage' | 'automationLeaseId' | 'ownerTimeout'
+  | 'logs_enabled'
 > & {
   owner: null
   presenceChangedAt: r.Expression<r.Time>
@@ -179,6 +180,7 @@ interface DbApi {
   setDeviceIosStatus(serial: string, status: IosDeviceStatus): Promise<r.WriteResult>
   setDeviceOwner(
     serial: string, owner: DeviceOwner, usage?: string | null, automationLeaseId?: string | null
+  , timeout?: number | null
   ): Promise<DeviceOwnershipWriteResult>
   releaseDeviceOwner(
     serial: string, owner: DeviceOwner, automationLeaseId?: string | null
@@ -1575,6 +1577,7 @@ dbapi.saveDeviceInitialState = function(serial, device) {
   , remoteConnectUrl: null
   , usage: null
   , automationLeaseId: null
+  , ownerTimeout: null
   , logs_enabled: false
   }
   return db.run(r.table('devices').get(serial).update({
@@ -1649,7 +1652,7 @@ function sameReservation(current: DeviceOwner | null | undefined, owner: DeviceO
     (current.reservationId || null) === (owner.reservationId || null)
 }
 
-dbapi.setDeviceOwner = function(serial, owner, usage, automationLeaseId) {
+dbapi.setDeviceOwner = function(serial, owner, usage, automationLeaseId, timeout) {
   const reservationId = owner.reservationId || null
   return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(
     device: r.Expression<DeviceDocument>
@@ -1658,6 +1661,7 @@ dbapi.setDeviceOwner = function(serial, owner, usage, automationLeaseId) {
     const ownership = {
       owner: {...owner, reservationId}
     , automationLeaseId: automationLeaseId || null
+    , ownerTimeout: timeout || null
     , restoreOwner: null
     }
     const install = usage ? {...ownership, usage, usageChangedAt: r.now()} :
@@ -1711,7 +1715,7 @@ dbapi.releaseDeviceOwner = function(serial, owner, automationLeaseId) {
     const matching = current('email').default(null).eq(owner.email)
       .and(current('reservationId').default('').eq(reservationId || ''))
     const release = {
-      owner: null, automationLeaseId: null, usage: null
+      owner: null, automationLeaseId: null, usage: null, ownerTimeout: null
     , usageChangedAt: r.now(), logs_enabled: false
     , automationRelease: r.branch(leaseId.ne(null)
       , {email: owner.email, leaseId}, device('automationRelease').default(null))
@@ -1781,6 +1785,7 @@ dbapi.reserveDeviceOwner = function(serial) {
       , {restoreOwner: {
             email: device('owner')('email')
           , usage: device('usage').default(null)
+          , timeout: device('ownerTimeout').default(null)
           , expiresAt: expiresAt
           }
         }
@@ -1891,6 +1896,7 @@ dbapi.setDeviceReady = function(serial, channel) {
   , owner: null
   , automationLeaseId: null
   , usage: null
+  , ownerTimeout: null
   , usageChangedAt: r.now()
   , logs_enabled: false
   , restoreOwner: keepManualRestoreClaim()

@@ -10,7 +10,7 @@ import wireutil from '../../../wire/util.js'
 import grouputil from '../../../util/grouputil.js'
 import lifecycle from '../../../util/lifecycle.js'
 import {AutomationLease} from '../../../util/automation-lease.js'
-import type {AutoGroupMessage, OwnerMessage} from '../../../types/wire.js'
+import type {OwnerMessage} from '../../../types/wire.js'
 import type {
   Channels
 , DeviceIdentity
@@ -98,8 +98,10 @@ export default syrup.serial()
           , alias: solo.channel
           })
           sub.subscribe(currentGroup.group)
+          // The requested timeout, not the resolved one, so a restore after a reboot falls back to
+          // the provider default just like the original reservation did
           push.send([wireutil.global, wireutil.envelope(new wire.JoinGroupMessage(
-            options.serial, currentGroup, usage, leaseId
+            options.serial, currentGroup, usage, leaseId, timeout || null
           ))])
           plugin.emit('join', currentGroup, identifier)
           return currentGroup
@@ -229,10 +231,11 @@ export default syrup.serial()
         })
       })
       .on(wire.AutoGroupMessage, function(channel, message) {
+        // A restore after a reboot carries the usage and timeout of the reservation it replays
         return plugin.join(
           message.owner
-        , (message as AutoGroupMessage & {timeout?: number}).timeout
-        , null
+        , message.timeout || undefined
+        , message.usage || null
         , message.identifier
         )
           .then(function() {
