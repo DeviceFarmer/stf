@@ -6,7 +6,6 @@ import {
   , Button
   , Center
   , Group
-  , Image
   , Paper
   , PasswordInput
   , Stack
@@ -19,6 +18,7 @@ import {IconAlertCircle, IconLock, IconMail, IconUser} from '@tabler/icons-react
 import {api, ApiError} from '@/core/api'
 import {useContactEmail} from '@/core/contact'
 import {useTranslation} from '@/core/i18n'
+import {StfLogo} from '@/ui/StfLogo'
 import classes from './SignInForm.module.css'
 
 type Mode = 'mock' | 'ldap'
@@ -91,7 +91,7 @@ export function SignInForm({mode}: {mode: Mode}) {
     <Center className={classes.page}>
       <Paper className={classes.card} shadow='xl' p='xl' withBorder>
         <Stack align='center' gap='xs' mb='lg'>
-          <Image src='/static/logo/exports/STF-512.png' w={88} h={88} alt='STF' />
+          <StfLogo size={88} alt='DeviceFarmer' />
           <Title order={2}>{t('Smartphone Test Farm')}</Title>
           <Text c='dimmed' size='sm'>
             {mode === 'ldap' ? t('Sign in with your LDAP account') : t('Sign in to continue')}

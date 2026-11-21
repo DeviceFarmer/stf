@@ -69,6 +69,7 @@ export default function(options: LdapAuthOptions) {
   app.use(bodyParser.json())
   app.use(csrf())
   app.use('/static/auth/ldap', serveStatic(pathutil.resource('auth/ldap')))
+  app.use('/static/logo', serveStatic(pathutil.resource('common/logo')))
 
   app.use(function(req, res, next) {
     res.cookie('XSRF-TOKEN', req.csrfToken(), cookieutil.xsrfCookieOptions(options, req))

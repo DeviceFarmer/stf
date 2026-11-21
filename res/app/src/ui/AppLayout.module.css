@@ -1,7 +1,16 @@
+.navigation {
+  min-width: 0;
+}
+
 .logo {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 36px;
+}
+
+.logo img {
+  flex-shrink: 0;
 }
 
 .link {
