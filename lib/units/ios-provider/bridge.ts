@@ -107,7 +107,9 @@ export class IosBridge {
       })
       .on(wire.AutoGroupMessage, (_channel, message) => {
         if (this.registered && !this.owner) {
-          this.changeReservation(() => this.join(message.owner)).catch(this.report)
+          this.changeReservation(() => this.join(
+            message.owner, message.timeout, message.usage
+          )).catch(this.report)
         }
       })
       .on(wire.UngroupMessage, (channel, message) => {
@@ -528,7 +530,9 @@ export class IosBridge {
       // GroupMessage/API timeouts are milliseconds; the CLI fallback is seconds.
       this.timeout = Math.min(3600, Math.max(10,
         timeout ? timeout / 1000 : this.options.groupTimeout))
-      this.broadcast(new wire.JoinGroupMessage(this.options.serial, this.owner, usage, leaseId))
+      this.broadcast(new wire.JoinGroupMessage(
+        this.options.serial, this.owner, usage, leaseId, timeout || null
+      ))
     }
     this.keepalive()
   }

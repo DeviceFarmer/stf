@@ -130,7 +130,13 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
       })
   }
 
-  function sendAutoGroup(deviceChannel: string | Buffer, user: UserIdentity, identifier: string) {
+  function sendAutoGroup(
+    deviceChannel: string | Buffer
+  , user: UserIdentity
+  , identifier: string
+  , usage?: string | null
+  , timeout?: number | null
+  ) {
     devDealer.send([
       deviceChannel
     , wireutil.envelope(new wire.AutoGroupMessage(
@@ -140,6 +146,8 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
         , user.group
         )
       , identifier
+      , usage || null
+      , timeout || null
       ))
     ])
   }
@@ -175,7 +183,9 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
 
         log.important('Restoring device "%s" to "%s"', device.serial, user.email)
 
-        return sendAutoGroup(deviceChannel, user, claim.usage || '')
+        // The identifier names the credential an autojoin listener is waiting for. A restore has
+        // none, and an empty one never matches a pending ADB or VNC authorization.
+        return sendAutoGroup(deviceChannel, user, '', claim.usage, claim.timeout)
       })
       .catch(function(err) {
         log.error(
@@ -370,7 +380,9 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     .on(wire.JoinGroupMessage, function(channel, message, data) {
       // Forward only after the ownership commit so the app can read the resulting row.
       return persistOwnership(message.serial, () =>
-        dbapi.setDeviceOwner(message.serial, message.owner, message.usage, message.leaseId)
+        dbapi.setDeviceOwner(
+          message.serial, message.owner, message.usage, message.leaseId, message.timeout
+        )
       , () => appDealer.send([channel, data]))
     })
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
