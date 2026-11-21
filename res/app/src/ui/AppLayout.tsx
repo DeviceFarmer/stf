@@ -271,11 +271,11 @@ export function AppLayout() {
     >
       <AppShell.Header className='stf-menu'>
         <Group h={headerHeight} px='md' justify='space-between' wrap='nowrap'>
-          <Group gap='lg' wrap='nowrap'>
+          <Group gap='lg' wrap='nowrap' className={classes.navigation}>
             <Burger opened={opened} onClick={toggle} hiddenFrom='sm' size='sm' />
             <UnstyledButton onClick={() => navigate('/devices')} className={classes.logo}>
               <StfLogo size={28} alt='' />
-              <Text fw={700} size='lg'>STF</Text>
+              <Text component='span' fw={700} size='lg' truncate>DeviceFarmer</Text>
             </UnstyledButton>
             <Group gap={4} visibleFrom='sm' wrap='nowrap'>
               {links.map((link) => <NavItem key={link.to} {...link} />)}
