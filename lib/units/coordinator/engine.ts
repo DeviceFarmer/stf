@@ -394,8 +394,8 @@ export class Coordinator {
     const device = matches.length === 1 ? matches[0]! : null
     if (!device || device.platform !== lease.device.platform ||
         device.provider !== lease.device.provider || device.present !== true ||
-        device.ready !== true || device.owner || device.using || device.claimed ||
-        device.usage || device.automationLeaseId) {
+        device.ready !== true || device.status !== 3 || device.owner || device.using ||
+        device.claimed || device.usage || device.automationLeaseId) {
       throw new CoordinatorError(409, 'device_busy', 'STF does not confirm the device is free')
     }
     const record = (value: unknown): value is Record<string, unknown> =>
@@ -592,7 +592,7 @@ export class Coordinator {
       const matches = devices.filter(device => device.serial === maintenance.serial)
       const device = matches.length === 1 ? matches[0]! : null
       const free = device && device.platform === 'iOS' && device.present && device.ready &&
-        !device.owner && !device.using && !device.claimed && !device.usage &&
+        device.status === 3 && !device.owner && !device.using && !device.claimed && !device.usage &&
         !device.automationLeaseId
       if (!free || !wdaProfileCovers(device!.ios?.wda, this.now(),
         this.options.maxDurationSeconds)) {
@@ -633,8 +633,8 @@ export class Coordinator {
     return !this.state.maintenance.some(item => item.serial === device.serial) &&
       (input.platform !== 'iOS' || wdaProfileCovers(device.ios?.wda, this.now(),
         input.maxDurationSeconds)) &&
-      device.present && device.ready && !device.owner && !device.using && !device.claimed &&
-      device.platform === input.platform &&
+      device.present && device.ready && device.status === 3 && !device.owner && !device.using &&
+      !device.claimed && device.platform === input.platform &&
       (!input.serial || input.serial === device.serial) &&
       (!input.model || input.model === device.model) &&
       (!input.provider || input.provider === device.provider) &&
