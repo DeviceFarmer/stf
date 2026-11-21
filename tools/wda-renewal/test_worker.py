@@ -76,13 +76,17 @@ class FakeFarm(worker.Worker):
         self.drain, self.installed, self.cleaned, self.refreshed = False, False, False, False
         self.drain_id = None
         self.reject_drain = False
+        self.interrupt_delete = None
         self.wrong_post_drain_id = False
         self.obsolete = True
         self.owner = None
         self.marker = None
+        self.retired_markers = set()
+        self.capture_error = None
         self.ready = True
         self.present = True
         self.profile_state = 'expiring'
+        self.installed_profile_state = 'valid'
         self.previous = PREVIOUS
         self.usb_matches = 1
         self.usb_local = True
@@ -95,6 +99,7 @@ class FakeFarm(worker.Worker):
         self.active_drain = False
         self.drain_reads = 0
         self.probe_fails = False
+        self.runtime_probes = []
         self.deploy = {'metadata': {'uid': 'deployment-uid', 'resourceVersion': '1'}, 'spec': {
             'replicas': 1, 'selector': {'matchLabels': {'instance': 'phone'}}, 'template': {'spec': {
             'containers': [{'name': 'prototype', 'image': 'test/runtime@sha256:' + 'a' * 64,
@@ -118,7 +123,14 @@ class FakeFarm(worker.Worker):
                     raise worker.RenewalError('farm_api_409')
                 self.drain = True
                 self.drain_id = body['operationId']
-            if method == 'DELETE':self.drain = False
+            if method == 'DELETE':
+                if self.interrupt_delete != 'before':
+                    self.drain = False
+                if self.interrupt_delete:
+                    self.interrupt_delete = None
+                    raise subprocess.TimeoutExpired('delete maintenance', 25)
+            if method == 'GET' and not self.drain:
+                raise worker.FarmApiError(404, {'error': {'code': 'maintenance_not_found'}})
             drain_id = 'another-operation' if method == 'POST' and self.wrong_post_drain_id else self.drain_id
             if self.active_drain and method == 'GET':
                 self.drain_reads += 1
@@ -133,15 +145,28 @@ class FakeFarm(worker.Worker):
             return {'device': {'serial': SERIAL, 'platform': 'iOS', 'present': self.present and live,
                 'ready': self.ready and live, 'owner': None if self.hide_absent_owner and not live else self.owner, 'using': bool(self.owner),
                 'usage': 'automation' if self.owner else None, 'automationLeaseId': self.marker,
-                'ios': {'wda': {'profile': ('ambiguous' if self.obsolete and not self.refreshed else 'valid') if self.installed else self.profile_state, 'expiresAt': iso(EXPIRES if self.installed and (not self.obsolete or self.refreshed) else self.previous)}}}}
+                'ios': {'wda': {'profile': ('ambiguous' if self.obsolete and not self.refreshed else self.installed_profile_state) if self.installed else self.profile_state, 'expiresAt': iso(EXPIRES if self.installed and (not self.obsolete or self.refreshed) else self.previous)}}}}
+        lease_id = body['leaseId']
         if path.endswith('/automation/renew'):
+            assert self.marker == lease_id
             self.renew_count += 1
         elif path.endswith('/automation/release'):
+            assert self.marker == lease_id
+            self.retired_markers.add(lease_id)
             self.owner = self.marker = None
         else:
+            persisted = worker.private_json(self.journal)
+            assert persisted.get('captureLeaseId', persisted['operationId']) == lease_id
+            assert persisted.get('capturePending', True) is True
+            if self.capture_error:
+                error, self.capture_error = self.capture_error, None
+                raise error
+            if lease_id in self.retired_markers:
+                raise worker.FarmApiError(409, {'description': 'Automation lease ID was already released'})
+            assert self.marker is None and self.owner is None
             self.owner = {'email': 'farm-service@example.invalid'}
-            self.marker = body['leaseId']
-        return {'success': True}
+            self.marker = lease_id
+        return {'success': True, 'leaseId': lease_id}
 
     def pod(self):
         spec = copy.deepcopy(self.deploy['spec']['template']['spec'])
@@ -163,6 +188,8 @@ class FakeFarm(worker.Worker):
             self.scales.append(replica)
             self.deploy['spec']['replicas'] = replica
             if replica:
+                if self.marker:
+                    self.retired_markers.add(self.marker)
                 self.owner = self.marker = None
                 self.ready = self.present = True
                 if self.cleaned:self.refreshed = True
@@ -217,11 +244,14 @@ class FakeFarm(worker.Worker):
     def helper_result(self, pod):return self.helpers[pod].get('result', {})
     def runtime_probe(self, pod):
         if self.probe_fails:raise worker.RenewalError('injected_probe_failure')
-        return {'deviceHttp': 200, 'state': 'ready', 'screenshot': True,
-                'wda': {'profile': 'ambiguous' if self.obsolete and not self.refreshed else 'valid',
+        self.runtime_probes.append((self.drain, self.drain_id, self.marker))
+        return {'deviceHttp': 200, 'state': 'ready', 'serial': self.runtime_serial,
+                'screenshot': self.marker is None, 'automationLease': self.marker,
+                'wda': {'bundleId': self.runtime_bundle,
+                        'profile': 'ambiguous' if self.obsolete and not self.refreshed else self.installed_profile_state,
                         'expiresAt': iso(EXPIRES).replace('Z', '.000Z')}}
     def completed_health_probe(self, pod, manifest):
-        return {'deviceHttp': 200, 'state': 'ready', 'wdaProfile': 'valid', 'expiresAt': iso(EXPIRES),
+        return {'deviceHttp': 200, 'state': 'ready', 'wdaProfile': self.installed_profile_state, 'expiresAt': iso(EXPIRES),
                 'wdaHttp': 200, 'wdaReady': not self.probe_fails, 'selectedProfileCount': 1,
                 'expectedProfilePresent': True, 'installedExpiresAt': iso(EXPIRES)}
     def wait(self, operation, timeout=300, interval=5):
@@ -248,10 +278,21 @@ class WorkerTests(unittest.TestCase):
         self.assertGreater(self.farm.renew_count, 0)
         state = worker.private_json(self.farm.journal)
         self.assertTrue(state['completed'])
+        capture_ids = self.capture_ids()
+        self.assertEqual(len(set(capture_ids)), len(capture_ids))
+        self.assertEqual(len(capture_ids), 2)
+        self.assertNotIn(state['operationId'], capture_ids)
+        self.assertEqual(self.farm.runtime_probes, [(True, state['operationId'], None)] * 2)
         self.assertTrue(all(p.stat().st_mode & 0o077 == 0 for p in self.farm.state_dir.iterdir()))
 
+    def capture_ids(self):
+        return [body['leaseId'] for target, method, path, body in self.farm.api_calls
+                if (target, method, path) == ('stf', 'POST', '/user/devices')]
+
     def test_capture_renews_same_uuid_and_service_owner_only(self):
-        operation = str(uuid.uuid4())
+        self.farm.state = self.farm.prepare(self.manifest)
+        operation = self.farm.state['operationId']
+        self.farm.drain, self.farm.drain_id = True, operation
         self.farm.capture(operation);self.farm.capture(operation)
         self.assertEqual(self.farm.renew_count, 1)
         self.farm.owner = {'email': 'other@example.invalid'}
@@ -260,6 +301,106 @@ class WorkerTests(unittest.TestCase):
         self.assertFalse(any(m == 'POST' for _, m, _, _ in self.farm.api_calls[count:]))
         with self.assertRaises(worker.RenewalError):self.farm.release(operation)
         self.assertIsNotNone(self.farm.owner)
+
+    def test_legacy_retired_capture_id_after_provider_restart(self):
+        state = self.farm.prepare(self.manifest)
+        operation_id = state['operationId']
+        state.pop('captureLeaseId')
+        state.pop('capturePending')
+        state.update(phase='installed', installResult={
+            'obsoleteProfiles': [{'UUID': OLD_ID}], 'expectedTeamIdentifier': ['TEST_TEAM']})
+        worker.save_json(self.farm.journal, state)
+        self.farm.installed = True
+        self.farm.retired_markers.add(operation_id)
+
+        self.assertEqual(self.farm.run(self.manifest)['status'], 'renewed')
+
+        old_id, new_id = self.capture_ids()
+        self.assertEqual(old_id, operation_id)
+        self.assertNotEqual(new_id, old_id)
+        self.assertEqual((self.farm.install_count, self.farm.clean_count), (0, 1))
+        self.assertEqual(self.farm.runtime_probes, [(True, operation_id, None)] * 2)
+
+    def test_timeouts_and_unrelated_conflicts_keep_the_pending_capture_id(self):
+        for error in (subprocess.TimeoutExpired('capture', 60),
+                      worker.FarmApiError(409, {'description': 'Device is locked'})):
+            with self.subTest(error=error):
+                self.farm.capture_error = error
+                with self.assertRaises(type(error)):
+                    self.farm.run(self.manifest)
+                state = worker.private_json(self.farm.journal)
+                self.assertTrue(state['capturePending'])
+                self.assertEqual(self.capture_ids(), [state['captureLeaseId']] * len(self.capture_ids()))
+                self.assertFalse(self.farm.scales)
+                self.assertTrue(self.farm.drain)
+        self.assertEqual(len(self.capture_ids()), 2)
+        self.assertNotIn(state['operationId'], self.capture_ids())
+
+        # The first POST can still take effect after both calls failed.
+        self.farm.owner = {'email': self.farm.identity()}
+        self.farm.marker = state['captureLeaseId']
+        count = len(self.farm.api_calls)
+        self.assertEqual(self.farm.run(self.manifest)['status'], 'renewed')
+        lease_operations = [(path, body['leaseId']) for target, method, path, body in self.farm.api_calls[count:]
+                            if target == 'stf' and method == 'POST']
+        self.assertEqual(lease_operations[0],
+                         ('/user/devices/' + SERIAL + '/automation/renew', state['captureLeaseId']))
+
+    def test_pending_capture_never_renews_or_releases_another_same_account_marker(self):
+        self.farm.capture_error = worker.FarmApiError(503, {})
+        with self.assertRaisesRegex(worker.RenewalError, 'farm_api_503'):
+            self.farm.run(self.manifest)
+        state = worker.private_json(self.farm.journal)
+        foreign_id = str(uuid.uuid4())
+        self.farm.owner = {'email': self.farm.identity()}
+        self.farm.marker = foreign_id
+        count = len(self.farm.api_calls)
+
+        with self.assertRaisesRegex(worker.RenewalError, 'device_not_free'):
+            self.farm.run(self.manifest)
+
+        self.assertEqual(self.farm.marker, foreign_id)
+        self.assertFalse(any(target == 'stf' and method == 'POST'
+                             for target, method, _, _ in self.farm.api_calls[count:]))
+        saved = worker.private_json(self.farm.journal)
+        self.assertEqual(saved['captureLeaseId'], state['captureLeaseId'])
+        self.assertTrue(saved['capturePending'])
+        self.assertTrue(self.farm.drain)
+
+    def test_invalid_capture_journal_fails_before_any_farm_mutation(self):
+        state = self.farm.prepare(self.manifest)
+        for changes in ({'captureLeaseId': 'invalid'}, {'capturePending': True}, {'capturePending': 'no'}):
+            with self.subTest(changes=changes):
+                worker.save_json(self.farm.journal, {**state, **changes})
+                after_prepare = len(self.farm.api_calls)
+                with self.assertRaisesRegex(worker.RenewalError, 'journal_capture_invalid'):
+                    self.farm.run(self.manifest)
+                self.assertEqual(len(self.farm.api_calls), after_prepare)
+
+    def test_runtime_probe_releases_only_exact_own_capture_before_png(self):
+        self.farm.state = self.farm.prepare(self.manifest)
+        operation_id = self.farm.state['operationId']
+        self.farm.drain, self.farm.drain_id = True, operation_id
+        self.farm.capture(operation_id)
+        own_id = self.farm.marker
+        self.assertFalse(self.farm.verify_runtime(operation_id, self.manifest, intermediate=True))
+        self.assertIn(own_id, self.farm.retired_markers)
+        self.assertFalse(self.farm.runtime_probes)
+        self.assertTrue(self.farm.verify_runtime(operation_id, self.manifest, intermediate=True))
+        self.assertEqual(self.farm.runtime_probes, [(True, operation_id, None)])
+        self.assertTrue(self.farm.drain)
+
+    def test_runtime_probe_rechecks_drain_and_grid_before_making_device_available(self):
+        probe = self.farm.runtime_probe
+        def grid_starts_during_probe(pod):
+            result = probe(pod)
+            self.farm.busy_grid = True
+            return result
+        self.farm.runtime_probe = grid_starts_during_probe
+        with self.assertRaisesRegex(worker.RenewalError, 'grid_target_busy'):
+            self.farm.run(self.manifest)
+        self.assertTrue(self.farm.drain)
+        self.assertEqual(self.farm.clean_count, 0)
 
     def test_busy_grid_or_foreign_owner_never_stops_device(self):
         self.farm.busy_grid = True
@@ -416,6 +557,29 @@ class WorkerTests(unittest.TestCase):
         self.assertFalse(self.farm.scales)
         self.assertTrue(self.farm.drain)
 
+    def test_installation_validity_floor_does_not_block_a_verified_install_on_retry(self):
+        self.farm.config['minValidityHours'] = 168
+        with self.assertRaisesRegex(worker.RenewalError, 'artifact_expiring'):
+            self.farm.run(self.manifest)
+        self.assertFalse(self.farm.api_calls)
+
+        self.farm.config['minValidityHours'] = 48
+        self.farm.probe_fails = True
+        with self.assertRaisesRegex(worker.RenewalError, 'injected_probe_failure'):
+            self.farm.run(self.manifest)
+        state = worker.private_json(self.farm.journal)
+        self.assertEqual(state['phase'], 'installed')
+
+        self.farm.probe_fails = False
+        self.farm.installed_profile_state = 'expiring'
+        later = EXPIRES - dt.timedelta(hours=12)
+        with patch.object(worker.dt, 'datetime', wraps=dt.datetime) as clock:
+            clock.now.return_value = later
+            self.assertEqual(self.farm.run(self.manifest)['status'], 'renewed')
+            self.assertEqual(self.farm.run(self.manifest)['status'], 'renewed')
+        self.assertEqual(self.farm.install_count, 1)
+        self.assertFalse(self.farm.drain)
+
     def test_empty_container_statuses_cannot_prove_runtime(self):
         self.farm.empty_statuses = True
         self.assertFalse(self.farm.verify_runtime(str(uuid.uuid4()), self.manifest))
@@ -524,7 +688,9 @@ class WorkerTests(unittest.TestCase):
         self.farm.deploy['spec']['replicas'] = 0
         self.farm.hide_absent_owner = True
         self.farm.owner = {'email': 'farm-service@example.invalid'}
-        self.farm.marker = self.farm.state['operationId']
+        self.farm.marker = str(uuid.uuid4())
+        self.farm.state['captureLeaseId'] = self.farm.marker
+        worker.save_json(self.farm.journal, self.farm.state)
         with self.assertRaises(worker.RenewalError):self.farm.run(self.manifest)
         self.assertEqual(self.farm.deploy['spec']['replicas'], 1)
         self.assertEqual(self.farm.install_count, 0)
@@ -553,6 +719,30 @@ class WorkerTests(unittest.TestCase):
         self.farm.unknown_grid_session = True
         with self.assertRaisesRegex(worker.RenewalError, 'grid_sessions_unconfirmed'):
             self.farm.assert_grid_free(allow_offline=True)
+
+    def test_return_retry_observes_existing_or_removed_drain_without_recreating_it(self):
+        for interruption in ('before', 'after'):
+            with self.subTest(interruption=interruption):
+                self.farm = FakeFarm(self.root / ('delete-' + interruption))
+                self.farm.interrupt_delete = interruption
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    self.farm.run(self.manifest)
+                state = worker.private_json(self.farm.journal)
+                self.assertEqual(state['phase'], 'returning')
+                self.assertEqual(self.farm.drain, interruption == 'before')
+                if interruption == 'after':
+                    self.farm.owner = {'email': 'another-ci@example.invalid'}
+                    self.farm.marker = str(uuid.uuid4())
+                count = len(self.farm.api_calls)
+
+                self.assertEqual(self.farm.run(self.manifest)['status'], 'renewed')
+
+                mutations = [(target, method, path) for target, method, path, _ in self.farm.api_calls[count:]
+                             if method != 'GET']
+                expected = [('coordinator', 'DELETE', '/api/v1/maintenance/' + state['operationId'])]
+                self.assertEqual(mutations, expected if interruption == 'before' else [])
+                self.assertFalse(self.farm.drain)
+                self.assertTrue(worker.private_json(self.farm.journal)['completed'])
 
     def test_completed_replay_validates_live_profile_without_touching_new_ci_owner(self):
         self.assertEqual(self.farm.run(self.manifest)['status'], 'renewed')
