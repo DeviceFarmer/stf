@@ -2,13 +2,16 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import {createRequire} from 'node:module'
 import _ from 'lodash'
+import yaml from 'js-yaml'
 import ZSchema from 'z-schema'
 import datautil from '../../../lib/util/datautil.js'
 import type {DeviceDocument} from '../../../lib/types/stf.js'
 
-const require = createRequire(import.meta.url)
-const yaml = require('js-yaml') as {
-  load: (content: string) => unknown
+// sway ships no types
+const sway = createRequire(import.meta.url)('autodesk-forks-sway') as {
+  create: (options: {definition: string}) => Promise<{
+    validate: () => {errors: unknown[], warnings: unknown[]}
+  }>
 }
 
 type Schema = Record<string, unknown>
@@ -122,22 +125,48 @@ function androidDevice(): DeviceDocument {
   }
 }
 
+// What IosBridge sends: no product, CPU, memory, GL, display size or Android-only blocks.
 function iosDevice(): DeviceDocument {
   return {
-    ...androidDevice()
-  , serial: '00008110-000000000000001E'
-  , platform: 'iOS'
-  , manufacturer: 'Apple'
-  , model: 'iPhone14,2'
+    serial: '00008110-000000000000001E'
+  , present: true
+  , presenceChangedAt: date
+  , ready: true
+  , status: 3
+  , statusChangedAt: date
+  , statusTimeStamp: 1763632800000.123
+  , channel: 'aGVsbG8gd29ybGQ='
   , owner: null
   , usage: null
   , automationLeaseId: null
+  , pendingOwnerReleases: []
+  , lastOwnerRelease: null
+  , group: androidDevice().group
+  , provider: {name: 'ios-host-1', channel: 'aW9zLXByb3ZpZGVy'}
+  , createdAt: date
+  , remoteConnect: false
+  , remoteConnectUrl: null
+  , reverseForwards: []
+  , logs_enabled: false
+  , platform: 'iOS'
+  , manufacturer: 'Apple'
+  , model: 'iPhone14,2'
+  , marketName: 'iPhone 13 Pro'
+  , version: '17.5'
+  , sdk: '17.5'
+  , abi: 'arm64'
+  , display: {
+      id: 0, width: 1170, height: 2532, rotation: 0, xdpi: 0, ydpi: 0, fps: 0
+    , density: 1, secure: true, url: 'ws://stf.example.org/d/ios-host-1/00008110-000000000000001E/7400/'
+    }
+  , phone: {imei: null, imsi: null, phoneNumber: null, iccid: null, network: null}
   , browser: {selected: false, apps: []}
   , ios: {
       phase: 'ready', reason: 'locked', attempts: 0, lastReadyAt: date.toISOString()
     , updatedAt: date.toISOString(), name: 'iPhone', locked: true
     , battery: {level: 80, charging: false, externalPower: false, full: false}
-    , storage: null, telemetryAt: null
+    , storage: {total: 256000000000, free: 123456789012}
+    , telemetryAt: date.toISOString()
     , wda: {
         installed: true, bundleId: 'com.facebook.WebDriverAgentRunner.xctrunner'
       , version: null, profile: 'valid', expiresAt: date.toISOString(), checkedAt: null
@@ -152,6 +181,14 @@ function publish(device: DeviceDocument) {
 }
 
 describe('API Device schema', function() {
+  it('is a valid Swagger document without unused definitions or broken $refs', async function() {
+    const api = await sway.create({
+      definition: new URL('../../../lib/units/api/swagger/api_v1.yaml', import.meta.url).pathname
+    })
+    const result = api.validate()
+    assert.deepEqual([result.errors, result.warnings], [[], []])
+  })
+
   it('documents every field of a normalized Android device', function() {
     const device = publish(androidDevice())
     assert.equal((device as datautil.Device).using, true)

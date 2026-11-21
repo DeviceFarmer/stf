@@ -193,9 +193,11 @@
     "@types/split": "^1.0.5",
     "@types/temp": "^0.9.4",
     "@types/yargs": "^17.0.35",
+    "@types/js-yaml": "^4.0.9",
     "@types/yauzl": "^3.4.0",
     "@typescript/native": "npm:typescript@~7.0.2",
     "async": "^3.2.6",
+    "autodesk-forks-sway": "^2.2.0",
     "chai": "^6.2.2",
     "css-loader": "^7.1.5",
     "esbuild-loader": "^4.5.0",
@@ -206,6 +208,7 @@
     "globals": "^17.12.0",
     "http-https": "^1.0.0",
     "jiti": "^2.7.0",
+    "js-yaml": "^4.3.2",
     "jsdom": "^31.0.0",
     "ldapjs": "^3.0.7",
     "memory-fs": "^0.5.0",
@@ -221,6 +224,7 @@
     "vitest": "^5.0.1",
     "webpack": "^5.97.0",
     "webpack-dev-server": "^6.0.0",
+    "z-schema": "^6.0.2",
     "zustand": "^5.0.15"
   },
   "engines": {
