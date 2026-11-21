@@ -16,7 +16,7 @@ describe('wireutil', function() {
     })
 
     it('should map every other adb state to UNSUPPORTED', function() {
-      ;[
+      [
         'recovery'
       , 'sideload'
       , 'rescue'
