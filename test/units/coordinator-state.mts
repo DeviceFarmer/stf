@@ -42,7 +42,7 @@ describe('coordinator persistent state', () => {
     }], leases: [{id: 'legacy-lease', requestId: 'legacy-request', runId: 'legacy-run'
       , state: 'released', createdAt: 0, expiresAt: 10000, deadlineAt: 60000
       , device: {serial: 'ANDROID-A', platform: 'Android', model: 'Phone', version: '16'
-        , provider: 'provider', present: true, ready: true}
+        , provider: 'provider', present: true, ready: true, status: 3}
       , capabilities: {'appium:udid': 'ANDROID-A'}}]}
     await writeFile(filename, JSON.stringify(legacy), {mode: 0o600})
     const migrated = await store.load()
@@ -61,7 +61,7 @@ describe('coordinator persistent state', () => {
       id: 'lease', requestId: 'request', runId: 'run', state: 'quarantined'
     , createdAt: 0, expiresAt: 10000, deadlineAt: 60000
     , device: {serial: 'ANDROID-A', platform: 'Android', model: 'Phone', version: '16'
-        , provider: 'provider', present: true, ready: true}
+        , provider: 'provider', present: true, ready: true, status: 3}
     , capabilities: {'appium:udid': 'ANDROID-A'}, sessionId: 'session', appiumNodeId: 'grid-node'
     }]}
     await store.save(state)
@@ -85,7 +85,7 @@ describe('coordinator persistent state', () => {
       id: 'lease', requestId: 'request', runId: 'run', runner: 'appium', state: 'active'
     , createdAt: 0, expiresAt: 10000, deadlineAt: 60000
     , device: {serial: 'ANDROID-A', platform: 'Android', model: 'Phone', version: '16'
-        , provider: 'provider', present: true, ready: true}
+        , provider: 'provider', present: true, ready: true, status: 3}
     , capabilities: {'appium:udid': 'ANDROID-A'}
     }]}
     await store.save(state)
@@ -139,7 +139,7 @@ describe('coordinator persistent state', () => {
       id: 'lease', requestId: 'request', runId: 'run', state: 'released', runner: 'appium'
     , createdAt: 0, expiresAt: 10000, deadlineAt: 60000
     , device: {serial: '2a3e120', platform: 'Android', model: 'Phone', version: '16'
-        , provider: 'provider', present: true, ready: true}
+        , provider: 'provider', present: true, ready: true, status: 3}
     , capabilities: {'appium:udid': '2a3e120'}, captureReconciliation: audit
     }]}
     await store.save(reconciled)

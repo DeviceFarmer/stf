@@ -1802,6 +1802,9 @@ dbapi.setDevicePresent = function(serial) {
   }))
 }
 
+// Leaves `ready` alone on purpose. When the reaper marks a device absent after missed heartbeats
+// and the heartbeats come back, setDevicePresent brings it back, but the worker does not send ready
+// again. Resetting `ready` here would leave such a device stuck in Preparing.
 dbapi.setDeviceAbsent = function(serial) {
   return db.run(r.table('devices').get<DeviceDocument>(serial).update({
     present: false

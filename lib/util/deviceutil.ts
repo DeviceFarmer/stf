@@ -11,6 +11,7 @@ interface ClaimableDevice {
 interface HoldableDevice extends ClaimableDevice {
   present: boolean
   ready: boolean
+  status: number
   using?: boolean
   claimed?: boolean
 }
@@ -49,6 +50,9 @@ deviceutil.isOwnedByUser = function(device: HoldableDevice, user: DeviceViewer) 
 deviceutil.isAddable = function(device: HoldableDevice) {
   return device.present &&
          device.ready &&
+         // Ready is not reset when adb loses the device, so it can still be set while the device is
+         // offline or unauthorized, until the provider stops the worker
+         device.status === 3 &&
          !device.using &&
          !device.owner &&
          // Held for whoever is coming back to it: ready and unowned, but not free

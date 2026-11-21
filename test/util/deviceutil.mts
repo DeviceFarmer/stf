@@ -6,10 +6,11 @@ import deviceutil from '../../lib/util/deviceutil.js'
 describe('deviceutil', function() {
   describe('isAddable', function() {
     function free(extra?: object): deviceutil.Holdable {
-      return Object.assign({present: true, ready: true, using: false, owner: null}, extra)
+      return Object.assign(
+        {present: true, ready: true, status: 3, using: false, owner: null}, extra)
     }
 
-    it('should allow a device that is present, ready and unowned', function() {
+    it('should allow a device that is present, ready, online and unowned', function() {
       expect(deviceutil.isAddable(free())).to.be.true
     })
 
@@ -17,6 +18,15 @@ describe('deviceutil', function() {
     // ready and unowned, and without this anyone polling could take it out from under them
     it('should refuse a device that is being held for someone', function() {
       expect(deviceutil.isAddable(free({claimed: true}))).to.be.false
+    })
+
+    // `ready` stays set while adb reports the device offline or unauthorized, until the provider
+    // stops the worker, so `status` is what tells whether the device can be used
+    it('should refuse a device that adb does not report as online', function() {
+      expect(deviceutil.isAddable(free({status: 1}))).to.be.false
+      expect(deviceutil.isAddable(free({status: 2}))).to.be.false
+      expect(deviceutil.isAddable(free({status: 4}))).to.be.false
+      expect(deviceutil.isAddable(free({status: 5}))).to.be.false
     })
 
     it('should refuse a device that is absent, not ready, in use or owned', function() {

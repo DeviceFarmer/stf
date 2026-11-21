@@ -44,6 +44,30 @@ describe('datautil', function() {
       expect(free.claimed).to.be.false
     })
 
+    it('should report a present device held by the viewer as used', function() {
+      const held = {...device(null), owner: {email: user.email}}
+      datautil.normalize(held, user)
+      expect(held.owner).to.deep.equal({email: user.email})
+      expect(held.using).to.be.true
+    })
+
+    // The owner is blanked for an absent device, and `using` must agree with it rather than with
+    // the owner still stored on the row
+    it('should not report an absent device as used by its stored owner', function() {
+      const gone = {...device(null), present: false, owner: {email: user.email}}
+      datautil.normalize(gone, user)
+      expect(gone.owner).to.be.null
+      expect(gone.using).to.be.false
+    })
+
+    it('should not report an absent owned device as used to an administrator', function() {
+      const admin: deviceutil.Viewer = {email: 'admin@example.com', privilege: 'admin'}
+      const gone = {...device(null), present: false, owner: {email: 'someone@example.com'}}
+      datautil.normalize(gone, admin)
+      expect(gone.owner).to.be.null
+      expect(gone.using).to.be.false
+    })
+
     it('should keep a managed release receipt internal', function() {
       const released = device(null)
       released.automationRelease = {email: 'runner@example.test', leaseId: 'lease-a'}
