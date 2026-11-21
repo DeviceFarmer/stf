@@ -30,8 +30,6 @@ describe('Metrics', function() {
         .to.equal('offline')
       expect(metrics.deviceState(device({status: wire.DeviceStatus.UNAUTHORIZED})))
         .to.equal('unauthorized')
-      expect(metrics.deviceState(device({status: wire.DeviceStatus.UNSUPPORTED})))
-        .to.equal('unsupported')
     })
 
     it('should report a not yet prepared online device as preparing', function() {

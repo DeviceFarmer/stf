@@ -15,7 +15,7 @@ describe('wireutil', function() {
       expect(wireutil.toDeviceStatus('authorizing')).to.equal(wire.DeviceStatus.AUTHORIZING)
     })
 
-    it('should map every other adb state to UNSUPPORTED', function() {
+    it('should map every other adb state to OFFLINE', function() {
       [
         'recovery'
       , 'sideload'
@@ -29,7 +29,7 @@ describe('wireutil', function() {
       , 'toString'
       , '__proto__'
       ].forEach(function(type) {
-        expect(wireutil.toDeviceStatus(type), type).to.equal(wire.DeviceStatus.UNSUPPORTED)
+        expect(wireutil.toDeviceStatus(type), type).to.equal(wire.DeviceStatus.OFFLINE)
       })
     })
 
@@ -45,13 +45,13 @@ describe('wireutil', function() {
         )
       ))
       expect(wire.DeviceIntroductionMessage.decode(introduction.message).status)
-        .to.equal(wire.DeviceStatus.UNSUPPORTED)
+        .to.equal(wire.DeviceStatus.OFFLINE)
 
       var change = wire.Envelope.decode(wireutil.envelope(
         new wire.DeviceStatusMessage('serial', status, 1)
       ))
       expect(wire.DeviceStatusMessage.decode(change.message).status)
-        .to.equal(wire.DeviceStatus.UNSUPPORTED)
+        .to.equal(wire.DeviceStatus.OFFLINE)
     })
   })
 })

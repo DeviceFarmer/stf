@@ -781,14 +781,13 @@ describe('wire protobuf', function() {
         , IosLockMessage: 101, IosPowerMessage: 102, AutomationLeaseMessage: 1300})
     })
 
-    it('should keep the DeviceStatus values protobufjs 5 exposed and add UNSUPPORTED', function() {
+    it('should keep the DeviceStatus values protobufjs 5 exposed', function() {
       expect(wire.DeviceStatus).to.eql({
         OFFLINE: 1
       , UNAUTHORIZED: 2
       , ONLINE: 3
       , CONNECTING: 4
       , AUTHORIZING: 5
-      , UNSUPPORTED: 6
       })
     })
 
@@ -966,6 +965,47 @@ describe('wire protobuf', function() {
         ])
       }
     )
+
+    it('should drop a message it cannot decode instead of throwing', function() {
+      var seen: unknown[] = []
+      var handler = wirerouter()
+        .on(wire.DeviceStatusMessage, function(channel, message) {
+          seen.push(message.status)
+        })
+        .handler()
+
+      // A DeviceStatusMessage with status 7, a value this version does not
+      // know, as a newer version could send it. protobufjs drops the unknown
+      // value of the required enum and the decoding fails.
+      var body = Buffer.concat([
+        Buffer.from('0a0173100719', 'hex')
+      , Buffer.alloc(8)
+      ])
+      var envelope = new wire.Envelope(wire.MessageType.DeviceStatusMessage, body).encodeNB()
+
+      expect(function() {
+        handler('chan', envelope)
+      }).to.not.throw()
+      expect(function() {
+        handler('chan', Buffer.from('not an envelope'))
+      }).to.not.throw()
+      expect(seen).to.eql([])
+
+      handler('chan', wireutil.envelope(new wire.DeviceStatusMessage('s', 3, 1)))
+      expect(seen).to.eql([3])
+    })
+
+    it('should still surface errors thrown by a listener', function() {
+      var handler = wirerouter()
+        .on(wire.TypeMessage, function() {
+          throw new Error('listener failed')
+        })
+        .handler()
+
+      expect(function() {
+        handler('chan', wireutil.envelope(new wire.TypeMessage('hello')))
+      }).to.throw('listener failed')
+    })
   })
 
   describe('STFService wire', function() {

@@ -20,7 +20,7 @@ This page explains both: what each value means, what causes it and what to do ab
 Notes:
 
 * `present` becomes `true` when a provider finds the device, and again when its worker sends a
-  heartbeat. Offline, Unauthorized, Unsupported state and Connected devices have no worker.
+  heartbeat. Offline, Unauthorized and Connected devices have no worker.
   `present` becomes `false` when the device is unplugged, when its worker stops or when no
   heartbeat arrives within the reaper `--heartbeat-timeout` (30 seconds by default).
 * `ready` becomes `false` when a provider finds the device and `true` when the device worker
@@ -48,23 +48,22 @@ The provider reads the `adb` state of each device and stores it as a number.
 
 | Value | Name | `adb` state | Meaning |
 | ----- | ---- | ----------- | ------- |
-| 1 | offline | `offline` | `adb` sees the device but cannot talk to it. |
+| 1 | offline | `offline`, or any state not listed here, such as `recovery`, `sideload`, `rescue`, `bootloader`, `host` or `no permissions (...)` | `adb` sees the device but STF cannot talk to it. |
 | 2 | unauthorized | `unauthorized` | The device has not accepted the `adb` key of the provider. |
 | 3 | online | `device` or `emulator` | `adb` can use the device. |
 | 4 | connecting | `connecting` | `adb` is still connecting to the device. |
 | 5 | authorizing | `authorizing` | `adb` is still checking its key with the device. |
-| 6 | unsupported | any other state, such as `recovery`, `sideload`, `rescue`, `bootloader`, `host` or `no permissions (...)` | `adb` lists the device, but STF cannot use it in this state. |
 
 The provider starts a device worker only when the state is `device` or `emulator`. The device
-cannot be used in any other state. The provider logs a warning with the `adb` state when it
-reports status 6.
+cannot be used in any other state. STF has no status of its own for the `adb` states that are not
+in the table, so it reports them as offline. The provider logs a warning with the real state.
 
-Without a worker, the device sends no heartbeat. When an online device changes to one of the
-other states, the provider stops its worker and marks the device absent. A device that is
+Without a worker, the device sends no heartbeat. When an online device changes to any other
+state, the provider stops its worker and marks the device absent. A device that is
 never online is marked
-absent when the heartbeat timeout expires. So the device list shows **Offline**,
-**Unauthorized** or **Unsupported state** only for a short time. After that it shows
-**Disconnected**. To see the real state, run `adb devices` on the provider host.
+absent when the heartbeat timeout expires. So the device list shows **Offline** or
+**Unauthorized** only for a short time. After that it shows **Disconnected**. To see the real
+state, run `adb devices` on the provider host.
 
 ## States in the device list
 
@@ -75,8 +74,7 @@ The web UI checks these conditions in order. The first one that matches gives th
 | `absent` | Disconnected | `present` is `false` |
 | `offline` | Offline | `status` is 1 |
 | `unauthorized` | Unauthorized | `status` is 2 |
-| `unsupported` | Unsupported state | `status` is 6 |
-| `present` | Connected | `status` is anything other than 1, 2, 3 or 6 |
+| `present` | Connected | `status` is anything other than 1, 2 or 3 |
 | `preparing` | Preparing | `status` is 3 and `ready` is `false` |
 | `automation` | Automated | `owner` is set and `usage` is `"automation"` |
 | `using` | Using | `using` is `true` |
@@ -100,9 +98,16 @@ and `automation`.
 ### Offline (`offline`)
 
 * **Cause:** `adb` lost the connection to the device. Common reasons are a bad cable, a weak USB
-  connection, a hub without enough power or a device that is rebooting.
+  connection, a hub without enough power or a device that is rebooting. A device in an `adb` state
+  that STF does not know is shown as Offline too. The provider log tells which state it is.
+  Common ones are `recovery`, `sideload`, `rescue` and `bootloader` after the device was rebooted
+  into one of these modes, and `no permissions` when the provider user may not open the USB device.
 * **What to do:** wait a few seconds if the device is rebooting. Otherwise reconnect the device,
-  or try another cable, port or hub.
+  or try another cable, port or hub. Run `adb devices` on the provider host to see the real state.
+  Reboot the device into Android if it is in recovery, rescue or bootloader mode, or wait for a
+  sideload to finish. For `no permissions` on Linux, add udev rules for the device and make sure
+  the provider user can use them (for example through the `plugdev` group), then plug the device
+  back in.
 
 ### Unauthorized (`unauthorized`)
 
@@ -111,16 +116,6 @@ and `automation`.
   `adb` key.
 * **What to do:** accept the "Allow USB debugging?" dialog on the device. Select "Always allow from
   this computer". If the dialog does not appear, unplug and plug the device back in.
-
-### Unsupported state (`unsupported`)
-
-* **Cause:** `adb` reports a state that STF cannot use. The provider log tells which one. Common
-  states are `recovery`, `sideload`, `rescue` and `bootloader` after the device was rebooted into
-  one of these modes, and `no permissions` when the provider user may not open the USB device.
-* **What to do:** run `adb devices` on the provider host. Reboot the device into Android if it is
-  in recovery, rescue or bootloader mode, or wait for a sideload to finish. For `no permissions`
-  on Linux, add udev rules for the device and make sure the provider user can use them (for
-  example through the `plugdev` group), then plug the device back in.
 
 ### Connected (`present`)
 

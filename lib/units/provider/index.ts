@@ -168,18 +168,18 @@ export default function(options: ProviderOptions) {
     var flippedTracker = new (EventEmitter as unknown as typeof EventEmitter.default)()
 
     // Status of the device for the wire. Warns about adb states that STF
-    // cannot use, such as recovery, bootloader or "no permissions".
+    // does not know, such as recovery, bootloader or "no permissions", since
+    // they are reported as offline.
     function deviceStatus(device: TrackedDevice) {
-      var status = wireutil.toDeviceStatus(device.type)
-      if (status === wire.DeviceStatus.UNSUPPORTED) {
+      if (!wireutil.isKnownAdbState(device.type)) {
         log.warn(
-          'Device "%s" is in unsupported adb state "%s"; it cannot be used ' +
-          'until adb reports it as "device"'
+          'Device "%s" is in unsupported adb state "%s", reporting it as ' +
+          'offline; it cannot be used until adb reports it as "device"'
         , device.id
         , device.type
         )
       }
-      return status
+      return wireutil.toDeviceStatus(device.type)
     }
 
     tracker.on('add', filterDevice(function(device: TrackedDevice) {

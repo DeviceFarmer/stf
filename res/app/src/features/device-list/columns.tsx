@@ -155,7 +155,6 @@ const stateOrder: Record<DeviceState, number> = {
   , ready: 40
   , preparing: 50
   , unauthorized: 60
-  , unsupported: 65
   , offline: 70
   , present: 80
   , absent: 90

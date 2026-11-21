@@ -5,7 +5,6 @@ export type DeviceState =
   | 'present'
   | 'offline'
   | 'unauthorized'
-  | 'unsupported'
   | 'preparing'
   | 'ready'
   | 'using'

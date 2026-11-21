@@ -19,8 +19,6 @@ describe('enhanceDevice', () => {
     expect(computeState(device({present: false}))).toBe('absent')
     expect(computeState(device({status: 1}))).toBe('offline')
     expect(computeState(device({status: 2}))).toBe('unauthorized')
-    expect(computeState(device({status: 6}))).toBe('unsupported')
-    expect(computeState(device({status: 4}))).toBe('present')
     expect(computeState(device({ready: false}))).toBe('preparing')
     expect(computeState(device({}))).toBe('available')
     expect(computeState(device({owner: {email: 'x'}}))).toBe('busy')

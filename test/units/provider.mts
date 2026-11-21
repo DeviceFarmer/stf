@@ -118,7 +118,7 @@ describe('Provider', function() {
     var introductions = sent(wire.DeviceIntroductionMessage)
     expect(introductions).to.have.length(1)
     expect(introductions[0]!.serial).to.equal('serial1')
-    expect(introductions[0]!.status).to.equal(wire.DeviceStatus.UNSUPPORTED)
+    expect(introductions[0]!.status).to.equal(wire.DeviceStatus.OFFLINE)
 
     register('serial1')
     await settle()
@@ -159,7 +159,7 @@ describe('Provider', function() {
 
       var statuses = sent(wire.DeviceStatusMessage)
       expect(statuses).to.have.length(1)
-      expect(statuses[0]!.status).to.equal(wire.DeviceStatus.UNSUPPORTED)
+      expect(statuses[0]!.status).to.equal(wire.DeviceStatus.OFFLINE)
       expect(procs[0]!.kill.calledWith('SIGTERM')).to.equal(true)
 
       tracker.emit('change', {id: 'serial1', type: 'device'})

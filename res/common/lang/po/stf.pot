@@ -2379,11 +2379,6 @@ msgstr ""
 msgid "Unspecified Failure"
 msgstr ""
 
-#: res/app/src/core/devices/enhance.ts:11
-#: res/app/src/core/devices/enhance.ts:25
-msgid "Unsupported state"
-msgstr ""
-
 #: res/app/src/ui/IosDeviceHealth.tsx:71
 msgid "Updated"
 msgstr ""

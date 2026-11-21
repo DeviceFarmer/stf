@@ -9,7 +9,6 @@ export const stateColors: Record<DeviceState, string> = {
   , present: 'gray'
   , preparing: 'yellow'
   , unauthorized: 'red'
-  , unsupported: 'red'
   , offline: 'orange'
   , absent: 'gray'
 }
@@ -26,7 +25,6 @@ const classedStates = new Set([
   , 'present'
   , 'preparing'
   , 'unauthorized'
-  , 'unsupported'
   , 'offline'
   , 'automation'
 ])

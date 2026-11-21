@@ -44,14 +44,18 @@ var wireutil = {
 , makePrivateChannel: function() {
     return uuid.v4(null as unknown as undefined, Buffer.alloc(16)).toString('base64')
   }
+, isKnownAdbState: function(type: string): boolean {
+    return Object.prototype.hasOwnProperty.call(adbDeviceStatuses, type)
+  }
 , toDeviceStatus: function(type: string): number {
     // adb has more states than STF handles (recovery, sideload, bootloader,
-    // rescue, host, "no permissions (...)", ...). They all map to UNSUPPORTED,
-    // so a device in such a state can still be introduced to the system.
-    var name = Object.prototype.hasOwnProperty.call(adbDeviceStatuses, type) ?
+    // rescue, host, "no permissions (...)", ...). They all map to OFFLINE, so a
+    // device in such a state can still be introduced to the system. Adding a
+    // new DeviceStatus value instead would make older units fail to decode
+    // the message, since protobufjs drops unknown values of a required enum.
+    return wire.DeviceStatus[wireutil.isKnownAdbState(type) ?
       adbDeviceStatuses[type]! :
-      'UNSUPPORTED'
-    return wire.DeviceStatus[name]
+      'OFFLINE']
   }
 , toDeviceRequirements: function(requirements: Record<string, DeviceRequirementSpec>) {
     return Object.keys(requirements).map(function(name) {
