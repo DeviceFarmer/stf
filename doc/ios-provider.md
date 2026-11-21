@@ -297,9 +297,6 @@ one signed the installed app. Missing/unreadable profiles are not presented as
 valid. An expiry warning starts 48 hours before the reported UTC expiry.
 
 Devices shows the expiry on each iPhone card in the browser's local time zone.
-For Kubernetes deployments, the [on-demand WDA renewal tool](../tools/wda-renewal/README.md)
-signs the runner on a Mac and installs it through the Linux USB node while the
-device is drained.
 
 The STF bridge publishes the existing `DevicePropertiesMessage` with reserved
 property `stf.ios.status`. The processor validates and saves it only on iOS
@@ -351,6 +348,37 @@ To renew a Personal Team runner:
 
 Do not delete persistent pairing state or replace the runner through App Upload as a
 renewal shortcut. A profile alone cannot renew the app's code signature.
+
+### Remote WDA renewal
+
+For a Linux Kubernetes deployment, use the signing Mac to renew WDA while the
+selected iPhone stays connected to its Linux USB node.
+
+1. Set up the [renewal command](../tools/wda-renewal/README.md#quickstart) and
+   [Xcode signer](../tools/wda-renewal/SIGNER.md). Keep Apple credentials on
+   the Mac. Pick an available iPhone and check that the phone itself can reach
+   `ppq.apple.com` over HTTPS for developer app verification.
+2. Run the command on the Mac from the STF checkout. Use the configuration for
+   the intended iPhone when checking one device.
+
+   ```sh
+   python3 tools/wda-renewal/renew.py --config /secure/wda/config/renew.json
+   ```
+
+   The command reports `notDue` when the profile is outside the configured
+   renewal window.
+
+3. For a one-iPhone run, look for `renewed: 1`. Confirm the new expiry on its
+   Devices card and take a screenshot through WDA. Close any manual STF session,
+   then acquire and release a fresh Coordinator lease for that phone.
+
+On failure, add `--status` to the command to read the saved result and inspect
+the private attempt logs. Keep the drain, journal and signed artifact while
+resolving the reported cause, then rerun with the same configuration. If the
+runner was replaced manually, reconcile the installed app and profile with the
+journal before resuming. A saved installation can cause the worker to skip USB
+installation on retry. If the pending profile has expired, keep the operation
+drained while arranging signing and recovery for that iPhone.
 
 ## Shake on physical iPhones
 

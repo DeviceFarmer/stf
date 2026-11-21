@@ -18,6 +18,15 @@ class RenewalError(Exception):
     pass
 
 
+class FarmApiError(RenewalError):
+    def __init__(self, status, body):
+        super().__init__('farm_api_' + str(status))
+        self.status = status
+        self.description = body.get('description') if isinstance(body, dict) else None
+        error = body.get('error') if isinstance(body, dict) else None
+        self.code = error.get('code') if isinstance(error, dict) else None
+
+
 def require(condition, code):
     if not condition:
         raise RenewalError(code)
@@ -74,7 +83,7 @@ def helper_module():
     return module
 
 
-def validate_artifact(manifest, target, minimum_hours):
+def validate_artifact(manifest, target):
     require(manifest.get('version') == 1 and manifest.get('bundleId') == target['bundleId'] and
             target['serial'] in manifest.get('deviceUDIDs', []) and
             re.fullmatch(r'[a-f0-9]{64}', manifest.get('archiveSha256', '')) and
@@ -85,8 +94,7 @@ def validate_artifact(manifest, target, minimum_hours):
             archive.stat().st_mode & 0o077 == 0 and 0 < archive.stat().st_size < 128 * 1024 * 1024,
             'artifact_archive_invalid')
     require(hashlib.sha256(archive.read_bytes()).hexdigest() == manifest['archiveSha256'], 'artifact_hash_mismatch')
-    require(date(manifest['expiresAt']) > dt.datetime.now(dt.timezone.utc) +
-            dt.timedelta(hours=minimum_hours), 'artifact_expiring')
+    require(date(manifest['expiresAt']) > dt.datetime.now(dt.timezone.utc), 'artifact_expiring')
     try:
         helper_module().validate_archive(archive)
     except Exception:
@@ -103,7 +111,7 @@ const files={coordinator:'/secrets/api-token',stf:'/secrets/stf-token'};
  const headers={'Content-Type':'application/json'};
  if(files[input.target])headers.Authorization='Bearer '+fs.readFileSync(files[input.target],'utf8').trim();
  const response=await fetch(origins[input.target]+input.path,{method:input.method,
-  redirect:'error',signal:AbortSignal.timeout(10000),headers,
+  redirect:'error',signal:AbortSignal.timeout(input.timeoutMs ?? 10000),headers,
   ...(input.body===undefined?{}:{body:JSON.stringify(input.body)})});
  process.stdout.write(JSON.stringify({status:response.status,body:await response.json()}));
 })().catch(()=>{process.stdout.write(JSON.stringify({status:503,body:{error:{code:'upstream_unavailable'}}}));});
@@ -114,7 +122,7 @@ const fs=require('fs');(async()=>{const headers={Authorization:'Bearer '+fs.read
 const d=await fetch('http://127.0.0.1:7400/device',{headers,redirect:'error',signal:AbortSignal.timeout(10000)});
 const body=await d.json();const s=await fetch('http://127.0.0.1:7400/screenshot',{headers,redirect:'error',signal:AbortSignal.timeout(10000)});
 const b=Buffer.from(await s.arrayBuffer());console.log(JSON.stringify({deviceHttp:d.status,state:body.state,
-wda:body.ios?.wda,screenshot:s.status===200&&b.length>32&&b.subarray(0,8).toString('hex')==='89504e470d0a1a0a'&&b.toString('ascii',12,16)==='IHDR'&&b.readUInt32BE(16)>0&&b.readUInt32BE(20)>0&&b.toString('ascii',b.length-8,b.length-4)==='IEND'}));
+serial:body.udid,automationLease:body.automationLease??null,wda:body.ios?.wda,screenshot:s.status===200&&b.length>32&&b.subarray(0,8).toString('hex')==='89504e470d0a1a0a'&&b.toString('ascii',12,16)==='IHDR'&&b.readUInt32BE(16)>0&&b.readUInt32BE(20)>0&&b.toString('ascii',b.length-8,b.length-4)==='IEND'}));
 })().catch(()=>process.exit(1));
 """
 
@@ -186,7 +194,14 @@ class Worker:
         return json.loads(self.kubectl(*arguments).stdout)
 
     def call(self, target, method, path, body=None, allowed=(200, 202)):
-        request = {'target': target, 'method': method, 'path': path,
+        timeout = 10
+        if target == 'stf' and method == 'POST':
+            # Match the iOS provider deadlines used by the coordinator backend.
+            if path == '/user/devices':
+                timeout = 45
+            elif path.endswith('/automation/release'):
+                timeout = 95
+        request = {'target': target, 'method': method, 'path': path, 'timeoutMs': timeout * 1000,
                    'stfApiUrl': self.config['stfApiUrl'].rstrip('/'),
                    'gridUrl': self.config['gridUrl'].rstrip('/')}
         if body is not None:
@@ -194,8 +209,9 @@ class Worker:
         response = json.loads(self.kubectl('exec', '-i',
             'deployment/' + self.config['coordinatorDeployment'], '-n',
             self.config['coordinatorNamespace'], '-c', 'coordinator', '--',
-            'node', '-e', COORDINATOR_CALL, data=json.dumps(request).encode()).stdout)
-        require(response['status'] in allowed, 'farm_api_' + str(response['status']))
+            'node', '-e', COORDINATOR_CALL, data=json.dumps(request).encode(), timeout=timeout + 15).stdout)
+        if response['status'] not in allowed:
+            raise FarmApiError(response['status'], response['body'])
         require(response['body'].get('success') is not False, 'farm_operation_failed')
         return response['body']
 
@@ -211,14 +227,15 @@ class Worker:
             require(isinstance(self.service_email, str) and self.service_email, 'stf_identity_unavailable')
         return self.service_email
 
-    def owned(self, device, operation_id):
-        return (device.get('automationLeaseId') == operation_id and
+    def owned(self, device, lease_id):
+        return (lease_id is not None and device.get('automationLeaseId') == lease_id and
                 (device.get('owner') or {}).get('email') == self.identity() and
                 device.get('usage') == 'automation' and device.get('using') is True)
 
     def assert_unowned(self, device):
         require(not device.get('owner') and not device.get('using') and
-                not device.get('claimed') and not device.get('automationLeaseId'), 'device_not_free')
+                not device.get('claimed') and not device.get('usage') and
+                not device.get('automationLeaseId'), 'device_not_free')
 
     def assert_free(self, device):
         self.assert_unowned(device)
@@ -249,31 +266,71 @@ class Worker:
                     target_slots.append(slot)
         require(bool(target_slots), 'grid_target_missing')
 
+    def capture_id(self, operation_id):
+        require(self.state['operationId'] == operation_id, 'maintenance_identity_unconfirmed')
+        # A journal from the earlier worker may have dispatched a capture using the drain UUID.
+        return self.state.get('captureLeaseId', operation_id)
+
+    def capture_pending(self):
+        return self.state.get('capturePending', True)
+
+    def record_capture(self, lease_id, pending):
+        self.state.update(captureLeaseId=lease_id, capturePending=pending)
+        save_json(self.journal, self.state)
+
+    def request_capture(self, lease_id):
+        try:
+            response = self.call('stf', 'POST', '/user/devices', {'serial': self.target['serial'],
+                                 'leaseId': lease_id, 'timeout': 900000})
+        except FarmApiError as error:
+            if error.status != 409 or error.description != 'Automation lease ID was already released':
+                raise
+            # This response proves an exact release receipt for this UUID. A generic
+            # conflict or a temporarily free device cannot settle an outstanding POST.
+            self.assert_free(self.device())
+            self.record_capture(None, False)
+            return False
+        require(response.get('leaseId') == lease_id, 'maintenance_capture_unconfirmed')
+        self.wait(lambda: self.owned(self.device(), lease_id), 30, 1)
+        self.record_capture(lease_id, False)
+        return True
+
     def capture(self, operation_id):
-        device = self.device()
+        lease_id = self.capture_id(operation_id)
+        self.require_ready_drain(operation_id)
         self.assert_grid_free()
-        if self.owned(device, operation_id):
+        device = self.device()
+        if self.owned(device, lease_id):
+            if self.capture_pending():
+                self.record_capture(lease_id, False)
             self.call('stf', 'POST', '/user/devices/' + self.target['serial'] +
-                      '/automation/renew', {'leaseId': operation_id, 'timeout': 900000})
-        else:
-            self.assert_free(device)
-            self.call('stf', 'POST', '/user/devices', {'serial': self.target['serial'],
-                'leaseId': operation_id, 'timeout': 900000})
-        require(self.owned(self.device(), operation_id), 'maintenance_capture_unconfirmed')
+                      '/automation/renew', {'leaseId': lease_id, 'timeout': 900000})
+            require(self.owned(self.device(), lease_id), 'maintenance_capture_unconfirmed')
+            return
+        self.assert_free(device)
+        if self.capture_pending() and self.request_capture(lease_id):
+            return
+        lease_id = str(uuid.uuid4())
+        self.record_capture(lease_id, True)
+        require(self.request_capture(lease_id), 'maintenance_capture_unconfirmed')
 
     def release(self, operation_id):
+        lease_id = self.capture_id(operation_id)
         device = self.device()
-        if device.get('automationLeaseId') == operation_id:
-            require(self.owned(device, operation_id), 'maintenance_ownership_changed')
+        if lease_id is not None and device.get('automationLeaseId') == lease_id:
+            require(self.owned(device, lease_id), 'maintenance_ownership_changed')
             self.call('stf', 'POST', '/user/devices/' + self.target['serial'] +
-                      '/automation/release', {'leaseId': operation_id})
-            self.wait(lambda: self.unowned_now(), 30, 1)
+                      '/automation/release', {'leaseId': lease_id})
+            self.wait(self.unowned_now, 30, 1)
         else:
             self.assert_unowned(device)
+            require(not self.capture_pending(), 'maintenance_capture_unconfirmed')
+        if lease_id is not None:
+            self.record_capture(None, False)
 
     def unowned_now(self):
         device = self.device()
-        return not any(device.get(k) for k in ('owner', 'using', 'claimed', 'automationLeaseId'))
+        return not any(device.get(k) for k in ('owner', 'using', 'claimed', 'usage', 'automationLeaseId'))
 
     def deployment(self):
         return self.json('get', 'deployment', self.target['deployment'], '-n', self.target['namespace'], '-o', 'json')
@@ -450,6 +507,7 @@ class Worker:
                  'bundleId': self.target['bundleId'], 'archiveSha256': manifest['archiveSha256'],
                  'artifactIdentity': artifact_identity(manifest),
                  'previousExpiresAt': previous, 'phase': 'prepared', 'completed': False,
+                 'captureLeaseId': None, 'capturePending': False,
                  'deploymentUid': deployment['metadata']['uid'], 'templateHash': digest(deployment['spec']['template'])}
         state['helperSpec'] = self.helper_spec(deployment, pods[0], 'wda-renew-' + operation_id[:12])
         state['helperSpecHash'] = digest(state['helperSpec'])
@@ -465,8 +523,18 @@ class Worker:
                 state.get('artifactIdentity') == artifact_identity(manifest) and
                 state.get('helperSpecHash') == digest(state['helperSpec']) and
                 helper_module().valid_uuid(state.get('operationId')), 'journal_conflict')
+        if 'captureLeaseId' in state or 'capturePending' in state:
+            lease_id = state.get('captureLeaseId')
+            pending = state.get('capturePending')
+            require('captureLeaseId' in state and isinstance(pending, bool) and
+                    (helper_module().valid_uuid(lease_id) or (lease_id is None and not pending)),
+                    'journal_capture_invalid')
         require(state['phase'] in ('prepared', 'installing', 'installed', 'launch_verified',
-                'cleaning', 'cleaned', 'refreshing', 'verified', 'completed'), 'journal_phase_invalid')
+                'cleaning', 'cleaned', 'refreshing', 'verified', 'returning', 'completed'),
+                'journal_phase_invalid')
+        if state['phase'] == 'returning':
+            require(state.get('capturePending') is False and state.get('captureLeaseId') is None,
+                    'journal_capture_invalid')
         self.guard_deployment()
 
     def upload(self, pod, path, content):
@@ -606,11 +674,12 @@ class Worker:
 
     def stop_for_install(self):
         replicas = self.guard_deployment()['spec'].get('replicas', 1)
+        operation_id = self.state['operationId']
         if replicas == 1:
             device = self.device()
             self.assert_grid_free()
             if device.get('ready') is True and device.get('present') is True:
-                self.capture(self.state['operationId'])
+                self.capture(operation_id)
             else:
                 self.expired_usb_proof(device)
                 self.state['expiredRecovery'] = True
@@ -619,7 +688,7 @@ class Worker:
             # Recheck immediately before stopping, including fresh Grid state.
             self.assert_grid_free()
             current = self.device()
-            if not self.owned(current, self.state['operationId']):
+            if not self.owned(current, self.capture_id(operation_id)):
                 self.assert_unowned(current)
                 require(self.state.get('expiredRecovery') is True, 'maintenance_capture_unconfirmed')
             self.scale(1, 0)
@@ -628,7 +697,7 @@ class Worker:
             self.wait(lambda: not self.pods(), 180)
             self.assert_grid_free(allow_offline=True)
             current = self.device()
-            if not self.owned(current, self.state['operationId']):
+            if not self.owned(current, self.capture_id(operation_id)):
                 self.assert_unowned(current)
         self.wait(lambda: not self.pods(), 180)
 
@@ -643,30 +712,48 @@ class Worker:
         if not pod or device.get('ready') is not True or device.get('present') is not True:
             return False
         self.assert_selected_pod(pod, self.guard_deployment())
+        self.require_ready_drain(operation_id)
         try:
             self.assert_grid_free()
         except RenewalError as error:
             if str(error) in ('grid_relay_unavailable', 'grid_unavailable'):
                 return False
             raise
-        self.capture(operation_id)
+        lease_id = self.capture_id(operation_id)
+        if self.owned(device, lease_id):
+            self.release(operation_id)
+            return False
+        self.assert_free(device)
+        if self.capture_pending():
+            if self.request_capture(lease_id):
+                self.release(operation_id)
+            return False
+
+        # Managed STF captures hand WDA over to Appium and disable the runtime screenshot.
         result = self.runtime_probe(pod)
         wda = result.get('wda', {})
         require(result.get('deviceHttp') == 200 and result.get('state') == 'ready' and
+                result.get('serial') == self.target['serial'] and wda.get('bundleId') == self.target['bundleId'] and
+                'automationLease' in result and result['automationLease'] is None and
                 result.get('screenshot') is True, 'wda_verification_failed')
         if intermediate:
             require(wda.get('profile') in ('valid', 'expiring', 'ambiguous'), 'wda_verification_failed')
         else:
-            require(wda.get('profile') == 'valid' and wda.get('expiresAt') and
+            require(wda.get('profile') in ('valid', 'expiring') and wda.get('expiresAt') and
                     date(wda['expiresAt']) == date(manifest['expiresAt']), 'wda_verification_failed')
+        self.require_ready_drain(operation_id)
+        self.assert_grid_free()
+        self.assert_free(self.device())
         return True
 
     def refresh_restart(self):
         if self.guard_deployment()['spec'].get('replicas', 1) == 1:
-            self.capture(self.state['operationId'])
+            operation_id = self.state['operationId']
+            self.capture(operation_id)
             self.state['phase'] = 'refreshing'
             save_json(self.journal, self.state)
             self.assert_grid_free()
+            require(self.owned(self.device(), self.capture_id(operation_id)), 'maintenance_capture_unconfirmed')
             self.scale(1, 0)
         try:
             self.wait(lambda: not self.pods(), 180)
@@ -687,12 +774,12 @@ class Worker:
                 'completed_runtime_unhealthy')
         self.assert_selected_pod(pod, self.guard_deployment())
         profile = device.get('ios', {}).get('wda', {})
-        require(profile.get('profile') == 'valid' and profile.get('expiresAt') and
+        require(profile.get('profile') in ('valid', 'expiring') and profile.get('expiresAt') and
                 date(profile['expiresAt']) == date(manifest['expiresAt']), 'completed_profile_mismatch')
         health = self.completed_health_probe(pod, manifest)
         require(health.get('deviceHttp') == 200 and health.get('state') == 'ready' and
                 health.get('wdaHttp') == 200 and health.get('wdaReady') is True and
-                health.get('wdaProfile') == 'valid' and health.get('selectedProfileCount') == 1 and
+                health.get('wdaProfile') in ('valid', 'expiring') and health.get('selectedProfileCount') == 1 and
                 health.get('expectedProfilePresent') is True and health.get('expiresAt') and
                 health.get('installedExpiresAt') and
                 date(health['expiresAt']) == date(manifest['expiresAt']) == date(health['installedExpiresAt']),
@@ -738,25 +825,64 @@ class Worker:
                 maintenance.get('state') in ('draining', 'ready'), 'maintenance_identity_unconfirmed')
         return maintenance['state'] == 'ready'
 
+    def drain_ready(self, operation_id):
+        response = self.call('coordinator', 'GET', '/api/v1/maintenance/' + operation_id)
+        return self.confirmed_drain(response, operation_id)
+
+    def require_ready_drain(self, operation_id):
+        require(self.drain_ready(operation_id), 'maintenance_drain_not_ready')
+
+    def verify_return(self, operation_id, manifest):
+        self.wait(lambda: self.verify_runtime(operation_id, manifest), 300)
+        self.release(operation_id)
+        self.require_ready_drain(operation_id)
+        self.assert_grid_free()
+        self.assert_free(self.device())
+
+    def record_completion(self, manifest):
+        self.state.update(phase='completed', completed=True, expiresAt=manifest['expiresAt'])
+        self.state.pop('cleanupErrors', None)
+        save_json(self.journal, self.state)
+        return {'status': 'renewed', 'expiresAt': manifest['expiresAt']}
+
+    def resume_return(self, operation_id, manifest):
+        try:
+            self.require_ready_drain(operation_id)
+        except FarmApiError as error:
+            if error.status != 404 or error.code != 'maintenance_not_found':
+                raise
+            # DELETE may have succeeded before the worker could record completion.
+            self.completed_result(manifest)
+        else:
+            self.verify_return(operation_id, manifest)
+            self.call('coordinator', 'DELETE', '/api/v1/maintenance/' + operation_id)
+        return self.record_completion(manifest)
+
     def _run(self, manifest):
         self.state = private_json(self.journal) if self.journal.exists() else None
         may_recover = False
         try:
-            validate_artifact(manifest, self.target, self.config.get('minValidityHours', 48))
+            validate_artifact(manifest, self.target)
             if self.state and self.state.get('completed'):
                 if self.state.get('artifactIdentity') == artifact_identity(manifest):
                     return self.completed_result(manifest)
                 self.state = None
+            if not self.state or self.state.get('phase') in ('prepared', 'installing'):
+                # The installation floor applies before USB install. Afterward,
+                # Coordinator checks whether the installed profile can cover a lease.
+                require(date(manifest['expiresAt']) > dt.datetime.now(dt.timezone.utc) +
+                        dt.timedelta(hours=self.config.get('minValidityHours', 48)), 'artifact_expiring')
             if not self.state:
                 self.state = self.prepare(manifest)
             self.check_state(manifest)
             operation_id = self.state['operationId']
+            if self.state['phase'] == 'returning':
+                return self.resume_return(operation_id, manifest)
             drain = self.call('coordinator', 'POST', '/api/v1/maintenance',
                               {'serial': self.target['serial'], 'operationId': operation_id})
             self.confirmed_drain(drain, operation_id)
             may_recover = True
-            self.wait(lambda: self.confirmed_drain(self.call('coordinator', 'GET', '/api/v1/maintenance/' +
-                operation_id), operation_id), self.config.get('drainTimeoutSeconds', 7200), 15)
+            self.wait(lambda: self.drain_ready(operation_id), self.config.get('drainTimeoutSeconds', 7200), 15)
             phase = self.state['phase']
             if phase in ('prepared', 'installing'):
                 self.stop_for_install()
@@ -765,10 +891,11 @@ class Worker:
                 save_json(self.journal, self.state)
             if self.state['phase'] != 'refreshing':
                 self.restore()
-            if self.state['phase'] in ('installed', 'launch_verified', 'cleaning'):
+            if self.state['phase'] == 'installed':
                 self.wait(lambda: self.verify_runtime(operation_id, manifest, intermediate=True), 300)
                 self.state['phase'] = 'launch_verified'
                 save_json(self.journal, self.state)
+            if self.state['phase'] in ('launch_verified', 'cleaning'):
                 if self.state['installResult']['obsoleteProfiles']:
                     self.state['phase'] = 'cleaning'
                     save_json(self.journal, self.state)
@@ -783,15 +910,12 @@ class Worker:
                 self.refresh_restart()
                 self.state['phase'] = 'verified'
                 save_json(self.journal, self.state)
-            self.wait(lambda: self.verify_runtime(operation_id, manifest), 300)
-            self.release(operation_id)
-            self.assert_grid_free()
+            self.verify_return(operation_id, manifest)
+            self.state['phase'] = 'returning'
+            save_json(self.journal, self.state)
             may_recover = False
             self.call('coordinator', 'DELETE', '/api/v1/maintenance/' + operation_id)
-            self.state.update(phase='completed', completed=True, expiresAt=manifest['expiresAt'])
-            self.state.pop('cleanupErrors', None)
-            save_json(self.journal, self.state)
-            return {'status': 'renewed', 'expiresAt': manifest['expiresAt']}
+            return self.record_completion(manifest)
         finally:
             if may_recover:
                 self.safety_restore()
