@@ -20,7 +20,7 @@ This page explains both: what each value means, what causes it and what to do ab
 Notes:
 
 * `present` becomes `true` when a provider finds the device, and again when its worker sends a
-  heartbeat. Offline, Unauthorized and Connected devices have no worker.
+  heartbeat. Offline, Unauthorized, Unsupported state and Connected devices have no worker.
   `present` becomes `false` when the device is unplugged, when its worker stops or when no
   heartbeat arrives within the reaper `--heartbeat-timeout` (30 seconds by default).
 * `ready` becomes `false` when a provider finds the device and `true` when the device worker
@@ -53,19 +53,18 @@ The provider reads the `adb` state of each device and stores it as a number.
 | 3 | online | `device` or `emulator` | `adb` can use the device. |
 | 4 | connecting | `connecting` | `adb` is still connecting to the device. |
 | 5 | authorizing | `authorizing` | `adb` is still checking its key with the device. |
+| 6 | unsupported | any other state, such as `recovery`, `sideload`, `rescue`, `bootloader`, `host` or `no permissions (...)` | `adb` lists the device, but STF cannot use it in this state. |
 
-The provider starts a device worker only when the state is `device` or `emulator`. Other `adb`
-states, such as `recovery`, `sideload` or `bootloader`, have no STF status. The device cannot be
-used until `adb` reports it as `device` again. The provider does not handle these states fully: a
-device first seen in one of them is not registered, and an online device that changes to one of
-them keeps its worker. If that happens, restart the provider once the device is back.
+The provider starts a device worker only when the state is `device` or `emulator`. The device
+cannot be used in any other state. The provider logs a warning with the `adb` state when it
+reports status 6.
 
 Without a worker, the device sends no heartbeat. When an online device changes to one of the
-states in the table, the provider stops its worker and marks the device absent. A device that is
+other states, the provider stops its worker and marks the device absent. A device that is
 never online is marked
-absent when the heartbeat timeout expires. So the device list shows **Offline** or
-**Unauthorized** only for a short time. After that it shows **Disconnected**. To see the real
-state, run `adb devices` on the provider host.
+absent when the heartbeat timeout expires. So the device list shows **Offline**,
+**Unauthorized** or **Unsupported state** only for a short time. After that it shows
+**Disconnected**. To see the real state, run `adb devices` on the provider host.
 
 ## States in the device list
 
@@ -76,7 +75,8 @@ The web UI checks these conditions in order. The first one that matches gives th
 | `absent` | Disconnected | `present` is `false` |
 | `offline` | Offline | `status` is 1 |
 | `unauthorized` | Unauthorized | `status` is 2 |
-| `present` | Connected | `status` is anything other than 1, 2 or 3 |
+| `unsupported` | Unsupported state | `status` is 6 |
+| `present` | Connected | `status` is anything other than 1, 2, 3 or 6 |
 | `preparing` | Preparing | `status` is 3 and `ready` is `false` |
 | `automation` | Automated | `owner` is set and `usage` is `"automation"` |
 | `using` | Using | `using` is `true` |
@@ -111,6 +111,16 @@ and `automation`.
   `adb` key.
 * **What to do:** accept the "Allow USB debugging?" dialog on the device. Select "Always allow from
   this computer". If the dialog does not appear, unplug and plug the device back in.
+
+### Unsupported state (`unsupported`)
+
+* **Cause:** `adb` reports a state that STF cannot use. The provider log tells which one. Common
+  states are `recovery`, `sideload`, `rescue` and `bootloader` after the device was rebooted into
+  one of these modes, and `no permissions` when the provider user may not open the USB device.
+* **What to do:** run `adb devices` on the provider host. Reboot the device into Android if it is
+  in recovery, rescue or bootloader mode, or wait for a sideload to finish. For `no permissions`
+  on Linux, add udev rules for the device and make sure the provider user can use them (for
+  example through the `plugdev` group), then plug the device back in.
 
 ### Connected (`present`)
 

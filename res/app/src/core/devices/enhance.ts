@@ -8,6 +8,7 @@ const stateActions: Record<DeviceState, string> = {
   , present: gettext('Connected')
   , offline: gettext('Offline')
   , unauthorized: gettext('Unauthorized')
+  , unsupported: gettext('Unsupported state')
   , preparing: gettext('Preparing')
   , ready: gettext('Ready')
   , using: gettext('Stop Using')
@@ -21,6 +22,7 @@ const statePassives: Record<DeviceState, string> = {
   , present: gettext('Connected')
   , offline: gettext('Offline')
   , unauthorized: gettext('Unauthorized')
+  , unsupported: gettext('Unsupported state')
   , preparing: gettext('Preparing')
   , ready: gettext('Ready')
   , using: gettext('Using')
@@ -125,6 +127,8 @@ export function computeState(device: Device): DeviceState {
       return 'offline'
     case 2:
       return 'unauthorized'
+    case 6:
+      return 'unsupported'
     case 3:
       if (!device.ready) {
         return 'preparing'
