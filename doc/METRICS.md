@@ -39,6 +39,7 @@ state machine as the one the device list uses:
 | `absent` | The device is not plugged to any provider |
 | `offline` | The device is present but `adb` reports it offline |
 | `unauthorized` | The device is present but `adb` is not authorized to use it |
+| `unsupported` | The device is present but `adb` reports a state STF cannot use, such as `recovery`, `bootloader` or `no permissions` |
 | `preparing` | The device is online but not ready yet |
 | `available` | The device is ready and owned by nobody |
 | `busy` | The device is ready and owned by a user |

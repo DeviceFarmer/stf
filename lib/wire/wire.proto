@@ -376,6 +376,9 @@ enum DeviceStatus {
   ONLINE = 3;
   CONNECTING = 4;
   AUTHORIZING = 5;
+  // Any other adb state, such as recovery, sideload, bootloader or
+  // "no permissions". The device is listed but cannot be used.
+  UNSUPPORTED = 6;
 }
 
 message DeviceStatusMessage {

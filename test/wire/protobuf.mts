@@ -781,13 +781,14 @@ describe('wire protobuf', function() {
         , IosLockMessage: 101, IosPowerMessage: 102, AutomationLeaseMessage: 1300})
     })
 
-    it('should keep the DeviceStatus values protobufjs 5 exposed', function() {
+    it('should keep the DeviceStatus values protobufjs 5 exposed and add UNSUPPORTED', function() {
       expect(wire.DeviceStatus).to.eql({
         OFFLINE: 1
       , UNAUTHORIZED: 2
       , ONLINE: 3
       , CONNECTING: 4
       , AUTHORIZING: 5
+      , UNSUPPORTED: 6
       })
     })
 

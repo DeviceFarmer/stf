@@ -10,7 +10,8 @@ import wire from '../wire/index.js'
 type Counts = {[label: string]: number}
 
 type DeviceState =
-  'absent' | 'present' | 'offline' | 'unauthorized' | 'preparing' | 'available' | 'busy'
+  'absent' | 'present' | 'offline' | 'unauthorized' | 'unsupported' | 'preparing' | 'available' |
+  'busy'
 
 interface MetricsDevice {
   present?: boolean
@@ -74,6 +75,7 @@ metrics.DEVICE_STATES = [
 , 'present'
 , 'offline'
 , 'unauthorized'
+, 'unsupported'
 , 'preparing'
 , 'available'
 , 'busy'
@@ -186,6 +188,8 @@ metrics.deviceState = function(device: MetricsDevice) {
       return 'offline'
     case wire.DeviceStatus.UNAUTHORIZED:
       return 'unauthorized'
+    case wire.DeviceStatus.UNSUPPORTED:
+      return 'unsupported'
     case wire.DeviceStatus.ONLINE:
       if (!device.ready) {
         return 'preparing'
