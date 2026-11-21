@@ -235,8 +235,8 @@ and `reason` tells what went wrong. The runtime then retries from the start.
 | `tunnel_unavailable` | The USB tunnel is not available yet. |
 | `image_mount_failed` | The developer disk image could not be mounted. |
 | `wda_unavailable` | WDA is restarting. Check that the iPhone is unlocked and trusts the developer. |
-| `recovering` | The runtime is preparing the iPhone. Wait. |
-| `provider_unavailable` | The runtime is stopped, restarting the iPhone or cannot be reached. |
+| `recovering` | The runtime is preparing the iPhone, for example after an accepted restart or power off. Wait. |
+| `provider_unavailable` | The runtime is stopped or cannot be reached. |
 
 See [Health, signing and recovery](ios-provider.md#health-signing-and-recovery) for how to renew
 WDA.
