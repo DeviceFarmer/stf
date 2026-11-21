@@ -78,7 +78,7 @@ describe('coordinator HTTP and real upstream adapters', function() {
     const store = new MemoryStore()
     const devices: FarmDevice[] = ['phone-a', 'phone-b'].map(serial => ({
       serial, model: 'Test phone', version: '15', platform: 'Android', provider: 'android-pool'
-      , present: true, ready: true, owner: null, usage: null, automationLeaseId: null
+      , present: true, ready: true, status: 3, owner: null, usage: null, automationLeaseId: null
     }))
     const grid: GridStatus = {ready: true, nodes: devices.map((_, index) => ({
       id: 'node-' + index, availability: 'UP', slots: [{session: null, stereotype: {

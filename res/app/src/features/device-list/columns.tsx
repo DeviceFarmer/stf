@@ -152,7 +152,6 @@ const stateOrder: Record<DeviceState, number> = {
   , automation: 15
   , available: 20
   , busy: 30
-  , ready: 40
   , preparing: 50
   , unauthorized: 60
   , offline: 70

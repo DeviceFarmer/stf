@@ -40,7 +40,7 @@ function setup() {
   , sub
   , channels
   ) as GroupPlugin
-  return {plugin: plugin, handlers: handlers, push: push}
+  return {plugin: plugin, handlers: handlers, push: push, channels: channels}
 }
 
 function messages(push: ReturnType<typeof setup>['push'], code: number) {
@@ -63,12 +63,18 @@ async function transaction(
   throw new Error('Timed out waiting for the ownership transaction')
 }
 
-function autoGroup(handlers: Record<number, Handler>, identifier: string) {
+function autoGroup(
+  handlers: Record<number, Handler>, identifier: string, usage?: string, timeout?: number
+) {
   var owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')
   return handlers[wire.AutoGroupMessage.$code]!(
     'channel'
-  , new wire.AutoGroupMessage(owner, identifier)
+  , new wire.AutoGroupMessage(owner, identifier, usage, timeout)
   )
+}
+
+function lastJoin(push: ReturnType<typeof setup>['push']) {
+  return wire.JoinGroupMessage.decode(messages(push, wire.JoinGroupMessage.$code).at(-1)!.message)
 }
 
 describe('Device group plugin', function() {
@@ -100,6 +106,47 @@ describe('Device group plugin', function() {
       var message = wire.JoinGroupMessage.decode(envelope.message)
       expect(message.usage).to.not.equal('fingerprint')
     })
+  })
+
+  // A reservation kept across a reboot is replayed with AutoGroupMessage, and has to come back
+  // as the same kind of reservation, not as a plain one on the provider default timeout
+  it('should restore the usage and timeout an autojoin carries', async function() {
+    var context = setup()
+    var autojoins: Array<[string, boolean]> = []
+    context.plugin.on('autojoin', (identifier, joined) => autojoins.push([identifier, joined]))
+
+    await autoGroup(context.handlers, '', 'automation', 180000)
+
+    var joined = lastJoin(context.push)
+    expect(joined.usage).to.equal('automation')
+    expect(joined.timeout).to.equal(180000)
+    expect(joined.leaseId).to.equal(null)
+    expect(context.channels.register.firstCall.args[1].timeout).to.equal(180000)
+    expect(autojoins).to.eql([['', true]])
+  })
+
+  it('should fall back to the provider timeout for an autojoin without one', async function() {
+    var context = setup()
+
+    await autoGroup(context.handlers, 'fingerprint')
+
+    var joined = lastJoin(context.push)
+    expect(joined.usage).to.equal(null)
+    expect(joined.timeout).to.equal(null)
+    expect(context.channels.register.firstCall.args[1].timeout).to.equal(1000)
+  })
+
+  it('should report the requested timeout, not the resolved one, on join', async function() {
+    var context = setup()
+    var owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')
+
+    await transaction(context, wire.GroupMessage
+    , new wire.GroupMessage(owner, 120000, [], 'automation'))
+    expect(lastJoin(context.push)).to.include({usage: 'automation', timeout: 120000})
+    await context.plugin.leave('test')
+
+    await transaction(context, wire.GroupMessage, new wire.GroupMessage(owner, null, []))
+    expect(lastJoin(context.push).timeout).to.equal(null)
   })
 
   it('assigns a fresh reservation id without changing the caller owner', async function() {

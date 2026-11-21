@@ -30,20 +30,32 @@ interface Reply {
   progress(data?: string, progress?: number): Buffer
 }
 
+var adbDeviceStatuses: Record<string, keyof DeviceStatusValues> = {
+  device: 'ONLINE'
+, emulator: 'ONLINE'
+, unauthorized: 'UNAUTHORIZED'
+, offline: 'OFFLINE'
+, connecting: 'CONNECTING'
+, authorizing: 'AUTHORIZING'
+}
+
 var wireutil = {
   global: '*ALL'
 , makePrivateChannel: function() {
     return uuid.v4(null as unknown as undefined, Buffer.alloc(16)).toString('base64')
   }
-, toDeviceStatus: function(type: string): number | undefined {
-    return wire.DeviceStatus[({
-      device: 'ONLINE'
-    , emulator: 'ONLINE'
-    , unauthorized: 'UNAUTHORIZED'
-    , offline: 'OFFLINE'
-    , connecting: 'CONNECTING'
-    , authorizing: 'AUTHORIZING'
-    } as Record<string, keyof DeviceStatusValues>)[type]!]
+, isKnownAdbState: function(type: string): boolean {
+    return Object.prototype.hasOwnProperty.call(adbDeviceStatuses, type)
+  }
+, toDeviceStatus: function(type: string): number {
+    // adb has more states than STF handles (recovery, sideload, bootloader,
+    // rescue, host, "no permissions (...)", ...). They all map to OFFLINE, so a
+    // device in such a state can still be introduced to the system. Adding a
+    // new DeviceStatus value instead would make older units fail to decode
+    // the message, since protobufjs drops unknown values of a required enum.
+    return wire.DeviceStatus[wireutil.isKnownAdbState(type) ?
+      adbDeviceStatuses[type]! :
+      'OFFLINE']
   }
 , toDeviceRequirements: function(requirements: Record<string, DeviceRequirementSpec>) {
     return Object.keys(requirements).map(function(name) {

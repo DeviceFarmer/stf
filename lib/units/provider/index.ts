@@ -167,6 +167,21 @@ export default function(options: ProviderOptions) {
     // device data in the same scope.
     var flippedTracker = new (EventEmitter as unknown as typeof EventEmitter.default)()
 
+    // Status of the device for the wire. Warns about adb states that STF
+    // does not know, such as recovery, bootloader or "no permissions", since
+    // they are reported as offline.
+    function deviceStatus(device: TrackedDevice) {
+      if (!wireutil.isKnownAdbState(device.type)) {
+        log.warn(
+          'Device "%s" is in unsupported adb state "%s", reporting it as ' +
+          'offline; it cannot be used until adb reports it as "device"'
+        , device.id
+        , device.type
+        )
+      }
+      return wireutil.toDeviceStatus(device.type)
+    }
+
     tracker.on('add', filterDevice(function(device: TrackedDevice) {
       log.info('Found device "%s" (%s)', device.id, device.type)
 
@@ -198,7 +213,7 @@ export default function(options: ProviderOptions) {
           wireutil.global
         , wireutil.envelope(new wire.DeviceIntroductionMessage(
             device.id
-          , wireutil.toDeviceStatus(device.type)
+          , deviceStatus(device)
           , new wire.ProviderMessage(
               solo
             , options.name
@@ -425,7 +440,7 @@ export default function(options: ProviderOptions) {
             wireutil.global
           , wireutil.envelope(new wire.DeviceStatusMessage(
               device.id
-            , wireutil.toDeviceStatus(device.type)
+            , deviceStatus(device)
             , timeutil.now('nano')
             ))
           ])

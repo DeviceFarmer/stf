@@ -258,6 +258,8 @@ describe('iOS prototype HTTP and WDA integration', () => {
       ]])
       assert.equal(runtime.state, 'waiting')
       assert.equal(runtime.generation, 1)
+      assert.equal(runtime.telemetry.status.phase, 'recovering')
+      assert.equal(runtime.telemetry.status.reason, 'recovering')
       assert.equal((await request(action)).status, 503)
     }
     const runtime = new IosRuntime(options, {wda: f.wda, power: async() => {

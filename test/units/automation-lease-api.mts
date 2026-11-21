@@ -67,7 +67,7 @@ describe('Automation lease API', function() {
     hasDeviceAutomationRelease.resetHistory()
     unlockDevice.resetHistory()
     receipt = null
-    device = {serial: 'device', channel: 'device-channel', present: true, ready: true
+    device = {serial: 'device', channel: 'device-channel', present: true, ready: true, status: 3
       , owner: {email: 'runner@example.test'}, usage: 'automation', automationLeaseId: 'lease-a'}
   })
 
@@ -93,6 +93,22 @@ describe('Automation lease API', function() {
       assert.equal(loadDevice.callCount, 0)
       assert.equal(hasDeviceAutomationRelease.callCount, 0)
     })
+
+  // `ready` is not reset when adb loses the device, so an offline device can still read as ready
+  // until the provider stops its worker
+  it('refuses to reserve a device that adb does not report as online', async function() {
+    Object.assign(device, {platform: 'Android', owner: null, automationLeaseId: null, usage: null
+      , status: 1})
+    const f = fixture()
+    f.req.options.automationLeaseAccounts = []
+    const req = f.req as unknown as ApiRequest<AddUserDeviceBody>
+    req.body = {serial: 'device'}
+    addUserDevice(req, f.res)
+    await flush()
+    assert.equal(f.status(), 403)
+    assert.equal(f.push.send.callCount, 0)
+    assert.equal(unlockDevice.callCount, 1)
+  })
 
   it('keeps ordinary reservations available without a service account', async function() {
     Object.assign(device, {platform: 'Android', owner: null, automationLeaseId: null, usage: null})

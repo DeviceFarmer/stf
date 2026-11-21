@@ -73,6 +73,7 @@ export interface FarmDevice {
   provider: string
   present: boolean
   ready: boolean
+  status: number
   using?: boolean
   claimed?: boolean
   owner?: {email: string} | null

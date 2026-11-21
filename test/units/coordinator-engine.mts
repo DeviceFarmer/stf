@@ -34,7 +34,7 @@ const input = (overrides: Partial<AllocationInput> = {}): AllocationInput => ({
 })
 const phone = (serial: string, overrides: Partial<FarmDevice> = {}): FarmDevice => ({
   serial, platform: 'Android', model: 'Example phone', version: '15'
-, provider: 'provider-one', present: true, ready: true, owner: null
+, provider: 'provider-one', present: true, ready: true, status: 3, owner: null
 , usage: null, automationLeaseId: null, ...overrides
 })
 const response = (status: number, value: unknown): UpstreamResponse => ({
@@ -359,6 +359,17 @@ describe('coordinator allocation and lifetime', () => {
     assert.deepEqual(farm.captures.map(item => item.serial), ['ANDROID-B'])
     assert.equal(farm.inventory[0]!.owner?.email, 'manual@example.test')
     assert.equal(engine.leasesView().length, 1)
+  })
+
+  // A phone that adb reports offline still reads as ready until the provider stops its worker
+  it('never captures a phone that adb does not report as online', async() => {
+    const farm = new FakeFarm()
+    farm.inventory[0]!.status = 1
+    const {engine} = await fixture({}, farm)
+    await engine.submit(input({serial: farm.inventory[0]!.serial}), 'offline')
+    await engine.tick()
+    assert.equal(farm.captures.length, 0)
+    assert.equal(engine.leasesView().length, 0)
   })
 
   it('respects parallel limits, remote ADB occupied ports and queue expiry', async() => {
@@ -1487,7 +1498,7 @@ describe('coordinator persistent iOS maintenance drain', () => {
     await engine.startMaintenance('IPHONE-A', maintenanceId)
     const pristine = structuredClone(farm.inventory[0]!)
     const samples: Partial<FarmDevice>[] = [
-      {present: false}, {ready: false}, {owner: {email: 'manual@example.test'}}
+      {present: false}, {ready: false}, {status: 1}, {owner: {email: 'manual@example.test'}}
     , {using: true}, {claimed: true}, {usage: 'automation'}, {automationLeaseId: 'stale'}
     , {ios: {wda: freshWda(initialTime + 360000)}}
     , {ios: {wda: {...freshWda(), profile: 'ambiguous'}}}
@@ -1664,6 +1675,9 @@ describe('operator reconciliation of uncertain captures', () => {
 }
     , (farm: FakeFarm) => {
  farm.inventory[0]!.ready = false
+}
+    , (farm: FakeFarm) => {
+ farm.inventory[0]!.status = 2
 }
     , (farm: FakeFarm) => {
  farm.inventory[0]!.provider = 'different-provider'

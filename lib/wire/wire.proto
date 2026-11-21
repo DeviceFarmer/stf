@@ -502,6 +502,8 @@ message AutomationLeaseMessage {
 message AutoGroupMessage {
   required OwnerMessage owner = 1;
   required string identifier = 2;
+  optional string usage = 3;
+  optional uint32 timeout = 4;
 }
 
 message UngroupMessage {
@@ -515,6 +517,7 @@ message JoinGroupMessage {
   optional string usage = 3;
   optional string leaseId = 4;
   reserved 5;
+  optional uint32 timeout = 6;
 }
 
 message JoinGroupByAdbFingerprintMessage {

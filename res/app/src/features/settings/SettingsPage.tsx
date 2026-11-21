@@ -15,6 +15,7 @@ import {gettext, useTranslation} from '@/core/i18n'
 import {getSetting, setSetting} from '@/core/settings'
 import {Page} from '@/ui/Page'
 import {usePageTitle} from '@/ui/page-title'
+import {useContentFade} from '@/ui/use-content-fade'
 import DevicesSettings from './devices/DevicesSettings'
 import GeneralSettings from './general/GeneralSettings'
 import GroupsSettings from './groups/GroupsSettings'
@@ -52,6 +53,7 @@ export default function SettingsPage() {
   const tabs = settingsTabs.filter((tab) => !tab.adminOnly || isAdmin())
   const requested = (params['*'] || '').split('/')[0]
   const current = tabs.find((tab) => tab.id === requested)
+  const panelRef = useContentFade<HTMLDivElement>(current?.id)
 
   usePageTitle(t('Settings'))
 
@@ -110,7 +112,7 @@ export default function SettingsPage() {
           ))}
         </Tabs.List>
         {tabs.map(({id, component: Panel}) => (
-          <Tabs.Panel key={id} value={id}>
+          <Tabs.Panel key={id} value={id} ref={id === current.id ? panelRef : null}>
             <Panel />
           </Tabs.Panel>
         ))}
