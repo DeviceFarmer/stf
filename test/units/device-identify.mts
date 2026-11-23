@@ -143,7 +143,7 @@ describe('Device service plugin identify', function() {
 
   it('replies fail when the service rejects with undefined', async function() {
     const {plugin, push, identify} = await setup()
-    sinon.stub(plugin, 'identity').callsFake(() => Bluebird.reject())
+    sinon.stub(plugin, 'identity').callsFake(() => Bluebird.reject(undefined)) // eslint-disable-line no-undefined
 
     identify('tx-channel')
     await untilReplies(push)
