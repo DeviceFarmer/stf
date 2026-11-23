@@ -931,11 +931,14 @@ export default syrup.serial()
                 , reply.okay()
                 ])
               })
-              .catch(function(err) {
-                log.error('Identify failed', err.stack)
+              .catch(function(err: unknown) {
+                log.error(
+                  'Identify failed'
+                , err instanceof Error ? err.stack : String(err)
+                )
                 push.send([
                   channel
-                , reply.fail(err.message)
+                , reply.fail(err instanceof Error ? err.message : String(err))
                 ])
               })
           })
