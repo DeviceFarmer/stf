@@ -178,8 +178,9 @@ export default syrup.serial()
                   case 'INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES':
                   case 'INSTALL_FAILED_VERSION_DOWNGRADE':
                     log.info(
-                      'Uninstalling "%s" first due to inconsistent certificates'
+                      'Uninstalling "%s" first due to %s'
                     , pkg
+                    , err.code
                     )
                     return adb.uninstall(options.serial, pkg)
                       .timeout(15000)
