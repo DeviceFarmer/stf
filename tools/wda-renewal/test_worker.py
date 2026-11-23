@@ -12,7 +12,7 @@ import subprocess
 import shutil
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import uuid
 import zipfile
 import warnings
@@ -268,6 +268,18 @@ class WorkerTests(unittest.TestCase):
         self.manifest = manifest(self.path)
         self.farm = FakeFarm(self.root / 'state')
     def tearDown(self):self.tmp.cleanup()
+
+    def test_upload_timeout_has_a_floor_and_grows_with_payload_size(self):
+        installer = worker.Worker(self.farm.config, self.farm.target, self.farm.state_dir)
+        archive_content = MagicMock(spec=bytes)
+        archive_content.__len__.return_value = 32 * 1024 * 1024
+        for path, content, timeout in (('/work/request.json', b'{}', 45),
+                                       ('/work/runner.zip', archive_content, 64)):
+            with self.subTest(path=path), patch.object(installer, 'kubectl') as kubectl:
+                installer.upload('installer-pod', path, content)
+                kubectl.assert_called_once()
+                self.assertIs(kubectl.call_args.kwargs['data'], content)
+                self.assertEqual(kubectl.call_args.kwargs['timeout'], timeout)
 
     def test_full_two_stage_success_and_private_evidence(self):
         result = self.farm.run(self.manifest)

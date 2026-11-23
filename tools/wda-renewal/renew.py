@@ -19,7 +19,7 @@ import threading
 import uuid
 import zipfile
 
-from worker import Worker, RenewalError, date, private_json, require, save_json
+from worker import Worker, RenewalError, date, private_json, require, save_json, wda_status
 
 
 UTC = dt.timezone.utc
@@ -268,7 +268,7 @@ def _cycle(config, worker_factory=Worker, signer=signing, stop_event=None):
             else:
                 worker = worker_factory(workers, target, workers['stateDirectory'])
                 device = worker.device()
-                profile = device.get('ios', {}).get('wda', {})
+                profile = wda_status(device)
                 expiry = profile.get('expiresAt')
                 expired_recovery = (workers.get('allowExpiredWdaRecovery') is True and
                                     profile.get('profile') == 'expired' and expiry and date(expiry) <= now())

@@ -159,6 +159,19 @@ class CycleTests(RenewalCase):
             worker.run.assert_not_called()
         self.assertNotIn("nextCheckAt", status)
 
+    def test_null_ios_or_wda_status_counts_as_offline(self):
+        self.select_devices(1)
+        for ios in (None, {"wda": None}):
+            with self.subTest(ios=ios):
+                worker = self.fake_worker(self.device(ios=ios))
+                signer = mock.Mock()
+                status = renew.cycle(self.config, self.factory({SERIALS[0]: worker}), signer)
+                self.assertEqual(1, status["offline"])
+                self.assertEqual(0, status["failed"])
+                self.assertEqual([], status["errors"])
+                signer.assert_not_called()
+                worker.run.assert_not_called()
+
     def test_missing_device_is_offline_and_constructor_error_does_not_stop_other_devices(self):
         missing = self.fake_worker()
         missing.device.side_effect = worker_module.RenewalError("device_missing")

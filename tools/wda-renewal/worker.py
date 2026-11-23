@@ -32,6 +32,10 @@ def require(condition, code):
         raise RenewalError(code)
 
 
+def wda_status(device):
+    return (device.get('ios') or {}).get('wda') or {}
+
+
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
@@ -490,7 +494,7 @@ class Worker:
 
     def prepare(self, manifest):
         device = self.device()
-        profile = device.get('ios', {}).get('wda', {})
+        profile = wda_status(device)
         require(profile.get('profile') in ('valid', 'expiring', 'expired'), 'current_profile_unknown')
         if profile.get('profile') == 'expired' and not (device.get('present') is True and device.get('ready') is True):
             require(self.config.get('allowExpiredWdaRecovery') is True, 'expired_recovery_disabled')
@@ -539,7 +543,9 @@ class Worker:
 
     def upload(self, pod, path, content):
         code = "import pathlib,sys;p=pathlib.Path(sys.argv[1]);p.write_bytes(sys.stdin.buffer.read());p.chmod(0o600)"
-        self.kubectl('exec', '-i', pod, '-n', self.target['namespace'], '--', 'python3', '-c', code, path, data=content, timeout=45)
+        timeout = max(45, len(content) // (1024 * 1024) * 2)  # Two seconds per MiB for larger uploads.
+        self.kubectl('exec', '-i', pod, '-n', self.target['namespace'], '--', 'python3', '-c', code, path,
+                     data=content, timeout=timeout)
 
     def helper_pod(self, spec):
         result = self.kubectl('get', 'pod', spec['metadata']['name'], '-n', self.target['namespace'],
@@ -656,7 +662,7 @@ class Worker:
     def expired_usb_proof(self, device):
         require(self.config.get('allowExpiredWdaRecovery') is True, 'expired_recovery_disabled')
         self.assert_unowned(device)
-        wda = device.get('ios', {}).get('wda', {})
+        wda = wda_status(device)
         require(wda.get('profile') == 'expired' and wda.get('expiresAt') and
                 date(wda['expiresAt']) <= dt.datetime.now(dt.timezone.utc), 'device_not_ready')
         pods = [p for p in self.pods() if not p['metadata'].get('deletionTimestamp')]
@@ -773,7 +779,7 @@ class Worker:
         require(pod and device.get('present') is True and device.get('ready') is True,
                 'completed_runtime_unhealthy')
         self.assert_selected_pod(pod, self.guard_deployment())
-        profile = device.get('ios', {}).get('wda', {})
+        profile = wda_status(device)
         require(profile.get('profile') in ('valid', 'expiring') and profile.get('expiresAt') and
                 date(profile['expiresAt']) == date(manifest['expiresAt']), 'completed_profile_mismatch')
         health = self.completed_health_probe(pod, manifest)
