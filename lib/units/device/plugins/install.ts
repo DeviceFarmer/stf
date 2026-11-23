@@ -174,6 +174,7 @@ export default syrup.serial()
                 .timeout(60000 * 5)
                 .catch(function(err) {
                   switch (err.code) {
+                  case 'INSTALL_FAILED_UPDATE_INCOMPATIBLE':
                   case 'INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES':
                   case 'INSTALL_FAILED_VERSION_DOWNGRADE':
                     log.info(

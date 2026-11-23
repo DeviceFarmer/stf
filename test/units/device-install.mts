@@ -87,4 +87,56 @@ describe('device APK transfer', function() {
       expect(response.data).to.equal(errorCode || 'INSTALL_SUCCEEDED')
     })
   })
+
+  it('should uninstall and install again when the signature does not match', async function() {
+    var router = createRouter()
+    var calls: string[] = []
+    var installs = 0
+    var adb = {
+      push: sinon.stub().callsFake(function(
+        serial: string
+      , source: Readable
+      ) {
+        var transfer = new EventEmitter()
+        source.resume()
+        source.on('end', function() {
+          transfer.emit('end')
+        })
+        return Promise.resolve(transfer)
+      })
+    , installRemote: sinon.stub().callsFake(function() {
+        calls.push('install')
+        if (installs++ === 0) {
+          return Promise.reject({code: 'INSTALL_FAILED_UPDATE_INCOMPATIBLE'})
+        }
+        return Promise.resolve()
+      })
+    , uninstall: sinon.stub().callsFake(function(serial: string, pkg: string) {
+        calls.push('uninstall ' + pkg)
+        return Promise.resolve()
+      })
+    }
+
+    var result = new Promise<TransactionDone>(function(resolve) {
+      installSyrup.invoke({serial: 'test-device', storageUrl: origin}, adb, router, {
+        send: function(parts: Buffer[]) {
+          var envelope = wire.Envelope.decode(parts[1]!)
+          if (envelope.type === wire.TransactionDoneMessage.$code) {
+            resolve(wire.TransactionDoneMessage.decode(envelope.message))
+          }
+        }
+      })
+    })
+
+    router.emit(wire.InstallMessage.$code, 'test-channel', {
+      href: '/sample.apk'
+    , manifest: JSON.stringify({package: 'test.apk'})
+    , launch: false
+    })
+
+    var response = await result.timeout(1500)
+    expect(calls).to.deep.equal(['install', 'uninstall test.apk', 'install'])
+    expect(response.success).to.equal(true)
+    expect(response.data).to.equal('INSTALL_SUCCEEDED')
+  })
 })
