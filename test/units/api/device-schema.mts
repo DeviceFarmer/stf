@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import {createRequire} from 'node:module'
 import _ from 'lodash'
-import yaml from 'js-yaml'
+import {load as loadYaml} from 'js-yaml'
 import ZSchema from 'z-schema'
 import datautil from '../../../lib/util/datautil.js'
 import type {DeviceDocument} from '../../../lib/types/stf.js'
@@ -16,7 +16,7 @@ const sway = createRequire(import.meta.url)('autodesk-forks-sway') as {
 
 type Schema = Record<string, unknown>
 
-const spec = yaml.load(fs.readFileSync(
+const spec = loadYaml(fs.readFileSync(
   new URL('../../../lib/units/api/swagger/api_v1.yaml', import.meta.url)
 , 'utf8'
 )) as {definitions: Record<string, Schema>}
