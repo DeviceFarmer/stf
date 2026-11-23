@@ -47,10 +47,10 @@ const definitions = nullable(spec.definitions) as Record<string, Schema>
 // assumeAdditional rejects properties the schema does not list, so a field the API returns
 // but the spec does not document fails the test.
 function validate(body: unknown, definition: string) {
-  const validator = new ZSchema({breakOnFirstError: false, assumeAdditional: true})
+  const validator = ZSchema.create({safe: true, breakOnFirstError: false, assumeAdditional: true})
   const schema = {definitions, $ref: `#/definitions/${definition}`}
-  const valid = validator.validate(JSON.parse(JSON.stringify(body)), schema)
-  assert.equal(valid, true, JSON.stringify(validator.getLastErrors(), null, 2))
+  const {valid, err} = validator.validate(JSON.parse(JSON.stringify(body)), schema)
+  assert.equal(valid, true, JSON.stringify(err?.details, null, 2))
 }
 
 const viewer = {email: 'alice@example.com', privilege: 'user'}
