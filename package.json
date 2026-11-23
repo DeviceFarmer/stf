@@ -224,7 +224,7 @@
     "vitest": "^5.0.1",
     "webpack": "^5.97.0",
     "webpack-dev-server": "^6.0.0",
-    "z-schema": "^6.0.2",
+    "z-schema": "^12.7.0",
     "zustand": "^5.0.15"
   },
   "engines": {
