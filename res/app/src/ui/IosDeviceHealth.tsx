@@ -1,5 +1,6 @@
-import {Alert, Badge, Group, Stack, Text, Tooltip} from '@mantine/core'
+import {Alert, Badge, Group, Stack, Text, Tooltip, VisuallyHidden} from '@mantine/core'
 import {IconDeviceMobileCog} from '@tabler/icons-react'
+import {wdaProfileExpiryState} from '../../../../lib/util/ios-device-status'
 import type {Device} from '@/core/devices/types'
 import {gettext, translate, useTranslation} from '@/core/i18n'
 import {WidgetCard} from './WidgetCard'
@@ -21,6 +22,8 @@ const reasons: Record<string, string> = {
   , ready: gettext('Ready')
 }
 
+const ambiguousProfile = gettext('Several WDA profiles match this device. The earliest expiry is shown; verify the installed build.')
+
 export function iosReasonText(reason: string) {
   return translate(reasons[reason] || reasons.recovering!)
 }
@@ -35,6 +38,53 @@ export function IosHealthBadge({device}: {device: Device}) {
       {text}
     </Badge>
   </Tooltip>
+}
+
+export function IosWdaProfileExpiry({device}: {device: Device}) {
+  const {t} = useTranslation()
+  const wda = device.platform === 'iOS' ? device.ios?.wda : null
+  if (!wda?.expiresAt) {
+    return null
+  }
+  const expiresAt = Date.parse(wda.expiresAt)
+  if (!Number.isFinite(expiresAt)) {
+    return null
+  }
+
+  const profile = ['valid', 'expiring', 'expired'].includes(wda.profile) ?
+    wdaProfileExpiryState(expiresAt) : wda.profile
+  let color = 'gray'
+  let warning: string | undefined
+  if (profile === 'expired' || profile === 'expiring') {
+    color = profile === 'expired' ? 'red' : 'yellow'
+    warning = iosReasonText('wda_profile_' + profile)
+  }
+  else if (profile === 'ambiguous') {
+    warning = t(ambiguousProfile)
+  }
+  const date = new Date(expiresAt).toLocaleString(undefined, {
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit'
+  })
+
+  return (
+    <Stack gap={2} mt={4} align='center' maw='100%'>
+      <Text size='xs' c='dimmed'>WDA · {t('Profile expires')}</Text>
+      <Badge
+        size='sm'
+        variant='light'
+        color={color}
+        title={warning}
+        tt='none'
+        h='auto'
+        py={2}
+        maw='100%'
+        styles={{label: {whiteSpace: 'normal'}}}
+      >
+        <time dateTime={wda.expiresAt}>{date}</time>
+      </Badge>
+      {warning && <VisuallyHidden>{warning}</VisuallyHidden>}
+    </Stack>
+  )
 }
 
 export function IosDeviceHealth({device}: {device: Device}) {
@@ -76,7 +126,7 @@ export function IosDeviceHealth({device}: {device: Device}) {
           {iosReasonText('wda_profile_' + status.wda.profile)}
         </Alert>}
       {status.wda.profile === 'ambiguous' && <Alert color='yellow'>
-        {t('Several WDA profiles match this device. The earliest expiry is shown; verify the installed build.')}
+        {t(ambiguousProfile)}
       </Alert>}
       {status.wda.profile !== 'valid' && <Text size='xs' c='dimmed'>
         {t('To renew WDA, rebuild the runner with your Apple Team, reinstall it on this iPhone and confirm developer trust. The Linux provider reconnects automatically.')}
