@@ -303,7 +303,8 @@ property `stf.ios.status`. The processor validates and saves it only on iOS
 records; WebSocket updates the device card and control/info panes. Metadata also
 updates while an already registered phone is disconnected. A phone that has
 never completed WDA preparation has no STF identity yet: inspect its private
-runtime/provider logs during onboarding.
+runtime/provider logs during onboarding. [Device states](device-states.md#ios-devices) lists
+every phase and reason.
 
 Diagnostics distinguish missing USB, trust/unlock, WDA missing or expired,
 tunnel, developer-image and WDA/session startup failures. Recovery retries

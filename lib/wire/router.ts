@@ -63,14 +63,30 @@ Router.prototype.removeListener = function(
 
 Router.prototype.handler = function(this: Router) {
   return function(this: Router, channel: string | Buffer, data: Buffer) {
-    var wrapper = wire.Envelope.decode(data)
-    var type = wire.ReverseMessageType[wrapper.type]
+    var wrapper, type, message
+
+    // A message this unit cannot decode, for example one with an enum value
+    // from a newer version, must not take the unit down. The listeners are
+    // called outside of the try block, so their own errors still surface.
+    try {
+      wrapper = wire.Envelope.decode(data)
+      type = wire.ReverseMessageType[wrapper.type]
+      message = type ? wire[type].decode(wrapper.message) : null
+    }
+    catch (err) {
+      log.error(
+        'Dropping message of type "%s" that could not be decoded: %s'
+      , type || (wrapper ? wrapper.type : 'unknown')
+      , (err as Error).message
+      )
+      return
+    }
 
     if (type) {
       this.emit(
         wrapper.type
       , wrapper.channel || channel
-      , wire[type].decode(wrapper.message)
+      , message
       , data
       )
       this.emit(

@@ -925,10 +925,22 @@ export default syrup.serial()
           .on(wire.PhysicalIdentifyMessage, function(channel) {
             var reply = wireutil.reply(options.serial)
             plugin.identity()
-            push.send([
-              channel
-            , reply.okay()
-            ])
+              .then(function() {
+                push.send([
+                  channel
+                , reply.okay()
+                ])
+              })
+              .catch(function(err: unknown) {
+                log.error(
+                  'Identify failed'
+                , err instanceof Error ? err.stack : String(err)
+                )
+                push.send([
+                  channel
+                , reply.fail(err instanceof Error ? err.message : String(err))
+                ])
+              })
           })
           .on(wire.KeyDownMessage, function(channel, message) {
             try {

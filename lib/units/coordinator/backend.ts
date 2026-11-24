@@ -58,7 +58,8 @@ export class HttpFarmBackend implements FarmBackend {
         serial: device.serial, model: device.model || '', version: device.version || ''
       , platform: device.platform, provider: typeof device.provider === 'string' ?
           device.provider : device.provider?.name || ''
-      , present: device.present, ready: device.ready, using: device.using, claimed: device.claimed
+      , present: device.present, ready: device.ready, status: device.status
+      , using: device.using, claimed: device.claimed
       , owner: device.owner || null, usage: device.usage || null
       , automationLeaseId: device.automationLeaseId || null
       , ...(wda ? {ios: {wda}} : {})

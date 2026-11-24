@@ -118,6 +118,8 @@ export interface DeviceDocument {
   remoteConnectUrl: string | null
   usage: string | null
   automationLeaseId?: string | null
+  // The group timeout (ms) the owner asked for, null for the provider default
+  ownerTimeout?: number | null
   automationRelease?: {email: string, leaseId: string} | null
   pendingOwnerReleases?: Array<{reservationId: string, email: string, leaseId: string | null}>
   lastOwnerRelease?: {email: string, reservationId: string, leaseId: string | null} | null
@@ -179,6 +181,8 @@ export interface AdbKey {
 export interface DeviceRestoreOwner {
   email: string
   usage: string | null
+  // Missing on claims written before it was recorded; both mean the provider default
+  timeout?: number | null
   expiresAt: number
 }
 

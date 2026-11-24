@@ -546,7 +546,7 @@ export class IosRuntime {
       await this.dependencies.power(this.options.goIos, this.args(action), active)
       this.state = 'waiting'
       this.generation++
-      this.telemetry.phase('recovering', 'provider_unavailable')
+      this.telemetry.phase('recovering', 'recovering')
       return {accepted: true}
     }, signal)
   }

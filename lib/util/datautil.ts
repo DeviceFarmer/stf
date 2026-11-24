@@ -40,6 +40,7 @@ interface DeviceView extends deviceutil.Claimable {
   automationRelease?: DeviceDocument['automationRelease']
   pendingOwnerReleases?: DeviceDocument['pendingOwnerReleases']
   lastOwnerRelease?: DeviceDocument['lastOwnerRelease']
+  ownerTimeout?: DeviceDocument['ownerTimeout']
 }
 
 interface DataUtil {
@@ -177,16 +178,18 @@ datautil.applyOwnerOnlyInfo = function(device: DeviceView, user: deviceutil.View
 datautil.normalize = function(device: DeviceView, user: deviceutil.Viewer) {
   datautil.applyData(device)
   datautil.applyBrowsers(device)
-  datautil.applyOwner(device, user)
   datautil.applyOwnerOnlyInfo(device, user)
   if (!device.present) {
     device.owner = null
   }
+  // After the owner is blanked, so that an absent device never reads as being used
+  datautil.applyOwner(device, user)
   // Whether a device is being held is worth knowing; who it is being held for is not anyone
   // else's business, so the name does not leave the server. An expired claim holds nothing, so it
   // must not read as held here either: this is the only place the expiry is judged for readers.
   device.claimed = deviceutil.isClaimLive(device, Date.now())
   delete device.restoreOwner
+  delete device.ownerTimeout
   delete device.automationRelease
   delete device.pendingOwnerReleases
   delete device.lastOwnerRelease

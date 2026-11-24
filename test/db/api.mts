@@ -142,6 +142,7 @@ describe('dbapi owner claim', function() {
       expect(install.owner).to.deep.equal(owner)
       expect(install.usage).to.equal('automation')
       expect(install.automationLeaseId).to.equal('lease-a')
+      expect(install.ownerTimeout).to.equal(null)
       expect(install.restoreOwner).to.equal(null)
       expect(cancelled).to.deep.equal({})
       expect(pending).to.have.keys('pendingOwnerReleases', 'lastOwnerRelease')
@@ -153,11 +154,20 @@ describe('dbapi owner claim', function() {
       dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner)
       const [managed, clear, preserve] = updateBody()[1]
       expect(JSON.stringify(managed)).to.include('automationLeaseId')
-      expect(clear).to.include({automationLeaseId: null, usage: null, restoreOwner: null})
+      expect(clear).to.include({
+        automationLeaseId: null, usage: null, ownerTimeout: null, restoreOwner: null
+      })
       expect(clear.owner.reservationId).to.equal(null)
       expect(preserve).to.include({automationLeaseId: null, restoreOwner: null})
       expect(preserve).not.to.have.property('usage')
       expect(preserve).not.to.have.property('usageChangedAt')
+    })
+
+    it('should record the timeout the reservation asked for', function() {
+      dbapi.setDeviceOwner('serial', {email: 'user@example.com'} as DeviceOwner, 'automation'
+      , null, 180000)
+      const install = updateBody()
+      expect(install).to.include({usage: 'automation', ownerTimeout: 180000})
     })
   })
 
@@ -167,7 +177,9 @@ describe('dbapi owner claim', function() {
     it('should retain an early leave separately from the actual ownership release', function() {
       dbapi.releaseDeviceOwner('serial', owner, 'lease-a')
       const [, release, unmatched] = updateBody()[1]
-      expect(release).to.include({owner: null, automationLeaseId: null, usage: null})
+      expect(release).to.include({
+        owner: null, automationLeaseId: null, usage: null, ownerTimeout: null
+      })
       expect(release).to.have.property('automationRelease')
       expect(release).to.have.property('lastOwnerRelease')
       const [, duplicate, pending] = unmatched[1]
@@ -218,6 +230,23 @@ describe('dbapi owner claim', function() {
       expect(clear).to.deep.equal({restoreOwner: null})
       expect(manual[1][2].restoreOwner).to.have.property('email')
     })
+
+    it('should claim the device with the usage and timeout of its reservation', function() {
+      dbapi.reserveDeviceOwner('serial')
+      const change = evalUpdate(lastUpdate, {
+        owner: {email: 'user@example.com'}, usage: 'automation', ownerTimeout: 180000
+      })
+      expect(change.restoreOwner).to.include({
+        email: 'user@example.com', usage: 'automation', timeout: 180000
+      })
+      expect(change.restoreOwner.expiresAt).to.be.a('number')
+    })
+
+    it('should claim a reservation on the provider default with no timeout', function() {
+      dbapi.reserveDeviceOwner('serial')
+      const change = evalUpdate(lastUpdate, {owner: {email: 'user@example.com'}})
+      expect(change.restoreOwner).to.include({usage: null, timeout: null})
+    })
   })
 
   const manualRestoreClaim = built(r.branch(r.row('automationLeaseId').default(null).eq(null)
@@ -228,7 +257,9 @@ describe('dbapi owner claim', function() {
       dbapi.setDeviceReady('serial', 'channel')
       const update = lastUpdate[1][1]
       expect(update.ready).to.equal(true)
-      expect(update).to.include({owner: null, automationLeaseId: null, usage: null})
+      expect(update).to.include({
+        owner: null, automationLeaseId: null, usage: null, ownerTimeout: null
+      })
     })
 
     it('should preserve a pending manual claim without restoring a managed lease', function() {
@@ -244,6 +275,7 @@ describe('dbapi owner claim', function() {
       } as unknown as InitialState)
       const update = lastUpdate[1][1]
       expect(update.automationLeaseId).to.equal(null)
+      expect(update.ownerTimeout).to.equal(null)
       expect(update.restoreOwner).to.deep.equal(manualRestoreClaim)
     })
   })

@@ -87,10 +87,9 @@ describe('API user controller', function() {
     assert.equal(responseBody.description, 'User Profile')
     assert.equal(responseBody.user, mockUser)
 
-    const validator = new ZSchema({breakOnFirstError: false})
-    const isValid = validator.validate(responseBody, userResponseSchema)
-    const errorMsg = JSON.stringify(validator.getLastErrors())
-    assert.equal(isValid, true, `Schema mismatch: ${errorMsg}`)
+    const validator = ZSchema.create({safe: true, breakOnFirstError: false})
+    const {valid, err} = validator.validate(responseBody, userResponseSchema)
+    assert.equal(valid, true, `Schema mismatch: ${JSON.stringify(err?.details)}`)
   })
 
   it('fails swagger validation without description (regression guard for #302)', function() {
@@ -98,12 +97,12 @@ describe('API user controller', function() {
       success: true
     , user: {email: 'test@example.com'}
     }
-    const validator = new ZSchema({breakOnFirstError: false})
-    const isValid = validator.validate(payloadWithoutDescription, userResponseSchema)
-    assert.equal(isValid, false, 'Payload without description must fail validation')
-    const errors = validator.getLastErrors()
+    const validator = ZSchema.create({safe: true, breakOnFirstError: false})
+    const {valid, err} = validator.validate(payloadWithoutDescription, userResponseSchema)
+    assert.equal(valid, false, 'Payload without description must fail validation')
     assert.ok(
-      errors.some(err => err.params.includes('description'))
+      err?.details?.some(detail => detail.code === 'OBJECT_MISSING_REQUIRED_PROPERTY' &&
+        detail.params.includes('description'))
     , 'Validation error should indicate missing description'
     )
   })

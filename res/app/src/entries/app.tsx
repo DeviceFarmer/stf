@@ -5,7 +5,7 @@ import {RouterProvider} from 'react-router/dom'
 import {Center, Loader} from '@mantine/core'
 import {startSettingsSync} from '@/core/settings'
 import {startUserSync} from '@/core/user'
-import {AppLayout} from '@/ui/AppLayout'
+import {AppLayout, SectionContent} from '@/ui/AppLayout'
 import {Providers} from '@/ui/Providers'
 import {ControlRedirect} from '@/features/control/ControlRedirect'
 
@@ -25,10 +25,10 @@ function Fallback() {
   return <Navigate to={legacy ? `${legacy[1]}${location.search}${location.hash}` : '/devices'} replace />
 }
 
-function page(node: ReactNode) {
+function page(node: ReactNode, section?: string) {
   return (
     <Suspense fallback={<Center className='fill-height'><Loader /></Center>}>
-      {node}
+      <SectionContent name={section}>{node}</SectionContent>
     </Suspense>
   )
 }
@@ -38,12 +38,12 @@ const router = createHashRouter([
     element: <AppLayout />
     , children: [
       {index: true, element: <Navigate to='/devices' replace />}
-      , {path: 'devices', element: page(<DeviceListPage />)}
-      , {path: 'groups', element: page(<GroupListPage />)}
-      , {path: 'settings/*', element: page(<SettingsPage />)}
+      , {path: 'devices', element: page(<DeviceListPage />, 'devices')}
+      , {path: 'groups', element: page(<GroupListPage />, 'groups')}
+      , {path: 'settings/*', element: page(<SettingsPage />, 'settings')}
       , {path: 'control', element: <ControlRedirect />}
-      , {path: 'control/:serial', element: page(<ControlPage />)}
-      , {path: 'c/:serial', element: page(<ControlPage />)}
+      , {path: 'control/:serial', element: page(<ControlPage />, 'control')}
+      , {path: 'c/:serial', element: page(<ControlPage />, 'control')}
       , {path: 'user/*', element: page(<UserPage />)}
       , {path: 'docs/*', element: page(<DocsPage />)}
       , {path: 'help', element: page(<DocsPage />)}

@@ -98,8 +98,7 @@ export default function(options: AppOptions) {
 
   app.use('/static/logo',
     serveStatic(pathutil.resource('common/logo')))
-  app.use(serveFavicon(pathutil.resource(
-    'common/logo/exports/STF-128.png')))
+  app.use(serveFavicon(pathutil.resource('common/logo/exports/favicon.ico')))
 
   app.use(cookieSession(cookieutil.sessionOptions({
     ssid: options.ssid

@@ -2558,6 +2558,405 @@ definitions:
         type: array
         items:
           type: string
+  Device:
+    description: >
+      A device as the API returns it. Which fields are present depends on the platform, on
+      what the provider reported so far and on the fields query parameter, so no field is
+      required. Fields that can be null have x-nullable set. See doc/device-states.md for how
+      present, status, ready, owner, usage, using, claimed and ios relate to each other.
+    type: object
+    properties:
+      serial:
+        description: Device serial, unique in STF
+        type: string
+      present:
+        description: A provider sees the device. Check it before the other state fields
+        type: boolean
+      presenceChangedAt:
+        description: When present last changed
+        type: string
+        format: date-time
+      status:
+        description: >
+          adb state of the device: 1 offline, 2 unauthorized, 3 online, 4 connecting,
+          5 authorizing. An iPhone always has 3
+        type: integer
+      statusChangedAt:
+        description: When status last changed
+        type: string
+        format: date-time
+      statusTimeStamp:
+        description: Provider timestamp of the last status change, used to drop older updates
+        type: number
+      ready:
+        description: The device worker finished its setup. It is not reset when the device goes away
+        type: boolean
+      channel:
+        description: Channel of the current device worker
+        type: string
+      owner:
+        description: The user who holds the device. Null when nobody holds it or when present is false
+        type: object
+        x-nullable: true
+        properties:
+          email:
+            type: string
+          name:
+            type: string
+          group:
+            type: string
+          reservationId:
+            description: Identity of the reservation that took the device
+            type: string
+            x-nullable: true
+      usage:
+        description: '"automation" when the device was reserved through the API, null otherwise'
+        type: string
+        x-nullable: true
+      usageChangedAt:
+        description: When usage last changed
+        type: string
+        format: date-time
+      automationLeaseId:
+        description: Automation lease that holds the device, if any
+        type: string
+        x-nullable: true
+      using:
+        description: The device is held by you. Computed for each request
+        type: boolean
+      claimed:
+        description: The device is kept for its last owner while it reboots. Computed for each request
+        type: boolean
+      group:
+        description: Group the device currently belongs to
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          class:
+            type: string
+          repetitions:
+            type: integer
+          origin:
+            description: Identifier of the origin group of the device
+            type: string
+          originName:
+            description: Name of the origin group of the device
+            type: string
+          lock:
+            type: boolean
+          owner:
+            type: object
+            properties:
+              email:
+                type: string
+              name:
+                type: string
+          lifeTime:
+            type: object
+            properties:
+              start:
+                type: string
+                format: date-time
+              stop:
+                type: string
+                format: date-time
+      provider:
+        description: Provider that sees the device
+        type: object
+        properties:
+          name:
+            type: string
+          channel:
+            type: string
+      createdAt:
+        description: When STF first saw the device
+        type: string
+        format: date-time
+      remoteConnect:
+        description: Remote debugging is enabled. Always false unless you hold the device or are an administrator
+        type: boolean
+      remoteConnectUrl:
+        description: Address to pass to adb connect. Null unless you hold the device or are an administrator
+        type: string
+        x-nullable: true
+      reverseForwards:
+        description: Reverse port forwards set up on the device
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            devicePort:
+              type: integer
+            targetHost:
+              type: string
+            targetPort:
+              type: integer
+      logs_enabled:
+        description: Legacy flag, always false. Device logs are no longer collected
+        type: boolean
+      notes:
+        description: Free text note about the device
+        type: string
+      platform:
+        description: Operating system, for example Android or iOS
+        type: string
+      manufacturer:
+        type: string
+      model:
+        type: string
+      product:
+        type: string
+        x-nullable: true
+      name:
+        description: Device name from the device database
+        type: string
+      marketName:
+        description: Commercial name of the device
+        type: string
+        x-nullable: true
+      releasedAt:
+        description: Release date from the device database
+        type: string
+        x-nullable: true
+      image:
+        description: Device image file name
+        type: string
+      version:
+        description: Operating system version
+        type: string
+      sdk:
+        description: Android API level. On iOS, the same as version
+        type: string
+      abi:
+        description: Primary CPU ABI
+        type: string
+      cpuPlatform:
+        type: string
+        x-nullable: true
+      openGLESVersion:
+        type: string
+        x-nullable: true
+      operator:
+        description: Mobile network operator
+        type: string
+        x-nullable: true
+      cpu:
+        type: object
+        x-nullable: true
+        properties:
+          name:
+            type: string
+            x-nullable: true
+          cores:
+            type: integer
+            x-nullable: true
+          freq:
+            type: number
+            x-nullable: true
+      memory:
+        type: object
+        x-nullable: true
+        properties:
+          ram:
+            type: number
+            x-nullable: true
+          rom:
+            type: number
+            x-nullable: true
+      display:
+        type: object
+        properties:
+          id:
+            type: integer
+          width:
+            type: integer
+          height:
+            type: integer
+          rotation:
+            type: integer
+          xdpi:
+            type: number
+          ydpi:
+            type: number
+          fps:
+            type: number
+          density:
+            type: number
+          secure:
+            type: boolean
+          url:
+            description: Screen streaming address
+            type: string
+          size:
+            description: Diagonal in inches, as reported by the device
+            type: number
+            x-nullable: true
+          inches:
+            description: Diagonal in inches, from size or computed from the resolution and the physical density (xdpi and ydpi)
+            type: number
+      phone:
+        type: object
+        properties:
+          imei:
+            type: string
+            x-nullable: true
+          imsi:
+            type: string
+            x-nullable: true
+          phoneNumber:
+            type: string
+            x-nullable: true
+          iccid:
+            type: string
+            x-nullable: true
+          network:
+            type: string
+            x-nullable: true
+      battery:
+        type: object
+        properties:
+          status:
+            type: string
+          health:
+            type: string
+          source:
+            type: string
+          level:
+            type: number
+          scale:
+            type: number
+          temp:
+            type: number
+          voltage:
+            type: number
+      network:
+        type: object
+        properties:
+          connected:
+            type: boolean
+          type:
+            type: string
+            x-nullable: true
+          subtype:
+            type: string
+            x-nullable: true
+          failover:
+            type: boolean
+          roaming:
+            type: boolean
+          state:
+            type: string
+          manual:
+            type: boolean
+          operator:
+            type: string
+            x-nullable: true
+      airplaneMode:
+        type: boolean
+      browser:
+        type: object
+        x-nullable: true
+        properties:
+          selected:
+            type: boolean
+          apps:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                type:
+                  type: string
+                name:
+                  type: string
+                selected:
+                  type: boolean
+                system:
+                  type: boolean
+                developer:
+                  type: string
+      ios:
+        description: iOS only. Health of the iPhone runtime. See doc/device-states.md
+        type: object
+        x-nullable: true
+        properties:
+          phase:
+            type: string
+          reason:
+            type: string
+          attempts:
+            type: integer
+          lastReadyAt:
+            type: string
+            format: date-time
+            x-nullable: true
+          updatedAt:
+            type: string
+            format: date-time
+          name:
+            type: string
+            x-nullable: true
+          locked:
+            type: boolean
+            x-nullable: true
+          battery:
+            type: object
+            x-nullable: true
+            properties:
+              level:
+                type: number
+              charging:
+                type: boolean
+              externalPower:
+                type: boolean
+              full:
+                type: boolean
+          storage:
+            type: object
+            x-nullable: true
+            properties:
+              total:
+                type: number
+              free:
+                type: number
+          telemetryAt:
+            type: string
+            format: date-time
+            x-nullable: true
+          wda:
+            type: object
+            properties:
+              installed:
+                type: boolean
+                x-nullable: true
+              bundleId:
+                type: string
+              version:
+                type: string
+                x-nullable: true
+              profile:
+                type: string
+                enum:
+                  - valid
+                  - expiring
+                  - expired
+                  - missing
+                  - unknown
+                  - ambiguous
+              expiresAt:
+                type: string
+                format: date-time
+                x-nullable: true
+              checkedAt:
+                type: string
+                format: date-time
+                x-nullable: true
   DeviceListResponse:
     required:
       - success
@@ -2571,7 +2970,7 @@ definitions:
       devices:
         type: array
         items:
-          type: object
+          $ref: '#/definitions/Device'
   DeviceResponse:
     required:
       - success
@@ -2583,7 +2982,7 @@ definitions:
       description:
         type: string
       device:
-        type: object
+        $ref: '#/definitions/Device'
   RemoteConnectUserDeviceResponse:
     required:
       - success

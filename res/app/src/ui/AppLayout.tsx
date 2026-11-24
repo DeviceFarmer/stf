@@ -1,5 +1,5 @@
-import {useEffect, useRef, useState} from 'react'
-import {NavLink, Outlet, useLocation, useNavigate} from 'react-router'
+import {useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode} from 'react'
+import {NavLink, Outlet, useLocation, useNavigate, useOutletContext} from 'react-router'
 import {
   ActionIcon
   , Alert
@@ -13,10 +13,8 @@ import {
   , Text
   , Tooltip
   , UnstyledButton
-  , useComputedColorScheme
-  , useMantineColorScheme
 } from '@mantine/core'
-import {useDisclosure, useWindowEvent} from '@mantine/hooks'
+import {useDisclosure, useReducedMotion, useWindowEvent} from '@mantine/hooks'
 import {notifications} from '@mantine/notifications'
 import {
   IconDeviceMobile
@@ -24,10 +22,8 @@ import {
   , IconLayoutGrid
   , IconLogout
   , IconMail
-  , IconMoon
   , IconSettings
   , IconSitemap
-  , IconSun
 } from '@tabler/icons-react'
 import {alertLevelColors, type AlertMessage} from '@/core/alert-message'
 import {appState, isAdmin} from '@/core/app-state'
@@ -37,13 +33,24 @@ import {getSocket, onSocket, useSocketEvent} from '@/core/socket'
 import {useSetting, useSettingsStore} from '@/core/settings'
 import {acceptAdbKey} from '@/core/user'
 import {usersApi} from '@/core/users-api'
+import {ColorSchemeToggle} from './ColorSchemeToggle'
 import {basicMode, useAdminMode, usePlatform, useStandalone} from './modes'
 import {closeSocketDisconnected, openAddAdbKey, openSocketDisconnected, openVersionUpdate} from './modals'
 import {queryClient} from './Providers'
+import {StfLogo} from './StfLogo'
+import {animateContentFade} from './use-content-fade'
 import classes from './AppLayout.module.css'
 
 const headerHeight = 56
 const alertStripHeight = 36
+
+type SectionReady = (name: string | undefined) => (() => void) | undefined
+
+export function SectionContent({name, children}: {name: string | undefined, children: ReactNode}) {
+  const onReady = useOutletContext<SectionReady | null>()
+  useLayoutEffect(() => onReady?.(name), [name, onReady])
+  return children
+}
 
 const konami = [
   'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown'
@@ -201,11 +208,21 @@ export function AppLayout() {
   const [platform, setPlatform] = usePlatform()
   const contactEmail = useContactEmail()
   const [opened, {toggle, close}] = useDisclosure(false)
-  const {setColorScheme} = useMantineColorScheme()
-  const colorScheme = useComputedColorScheme('light')
   const alertMessage = useAlertMessage()
   const hideMenu = basicMode || standalone
   const isControlRoute = location.pathname.startsWith('/control')
+  const mainRef = useRef<HTMLElement>(null)
+  const previousSection = useRef<string | undefined>(undefined)
+  const reducedMotion = useReducedMotion(undefined, {getInitialValueInEffect: false})
+  const onSectionReady = useCallback<SectionReady>((name) => {
+    const previous = previousSection.current
+    previousSection.current = name
+    if (!previous || !name || previous === name || reducedMotion) {
+      return
+    }
+    const animation = animateContentFade(mainRef.current)
+    return () => animation?.cancel()
+  }, [reducedMotion])
 
   useLanguageSync()
   useKonamiAdminToggle()
@@ -254,11 +271,11 @@ export function AppLayout() {
     >
       <AppShell.Header className='stf-menu'>
         <Group h={headerHeight} px='md' justify='space-between' wrap='nowrap'>
-          <Group gap='lg' wrap='nowrap'>
+          <Group gap='lg' wrap='nowrap' className={classes.navigation}>
             <Burger opened={opened} onClick={toggle} hiddenFrom='sm' size='sm' />
             <UnstyledButton onClick={() => navigate('/devices')} className={classes.logo}>
-              <img src='/static/logo/exports/STF-128.png' alt='' width={28} height={28} />
-              <Text fw={700} size='lg'>STF</Text>
+              <StfLogo size={28} alt='' />
+              <Text component='span' fw={700} size='lg' truncate>DeviceFarmer</Text>
             </UnstyledButton>
             <Group gap={4} visibleFrom='sm' wrap='nowrap'>
               {links.map((link) => <NavItem key={link.to} {...link} />)}
@@ -317,18 +334,7 @@ export function AppLayout() {
                 <IconHelpCircle size={18} />
               </ActionIcon>
             </Tooltip>
-            <Tooltip label={colorScheme === 'dark' ? t('Light') : t('Dark')}>
-              <ActionIcon
-                variant='subtle'
-                color='gray'
-                size='lg'
-                onClick={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
-                aria-label='color scheme'
-                className='stf-color-scheme'
-              >
-                {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-              </ActionIcon>
-            </Tooltip>
+            <ColorSchemeToggle />
             <Tooltip label={t('Logout')}>
               <ActionIcon
                 variant='subtle'
@@ -367,8 +373,8 @@ export function AppLayout() {
         </Stack>
       </AppShell.Navbar>
 
-      <AppShell.Main className={classes.main}>
-        <Outlet />
+      <AppShell.Main ref={mainRef} className={classes.main}>
+        <Outlet context={onSectionReady} />
       </AppShell.Main>
     </AppShell>
   )
