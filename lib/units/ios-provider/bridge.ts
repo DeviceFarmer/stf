@@ -10,6 +10,7 @@ import type {IosOwner} from './access.js'
 import {findCatalogDevice} from '../../util/device-catalog.js'
 import {iosMajorVersion} from '../../util/ios-device-status.js'
 import {CoreDeviceInput} from './coredevice-input.js'
+import logger from '../../util/logger.js'
 
 export interface BridgeOptions {
   serial: string
@@ -23,6 +24,7 @@ export interface BridgeOptions {
 interface Point {x: number, y: number}
 
 const touchSequenceSize = 100
+const log = logger.createLogger('ios-provider')
 
 export class IosBridge {
   readonly channel: string
@@ -197,6 +199,10 @@ export class IosBridge {
       .on(wire.GestureStartMessage, (_channel, message) => {
         if (this.isActiveScreen(message.screenSessionId)) {
           this.gestures.start(message.seq, message.gestureId, message.reservationId)
+        }
+        else {
+          // Late input from a replaced screen is expected; log it once per gesture.
+          log.info('Dropped a touch gesture for an inactive iOS screen session')
         }
       })
       .on(wire.TouchResetMessage, (_channel, message) => {
