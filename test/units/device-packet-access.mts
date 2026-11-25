@@ -1016,6 +1016,34 @@ describe('invite replies ahead of the join notification', function() {
     return {f, owner: {email: f.user.email, reservationId: 'fresh'}}
   }
 
+  // The user held the device as `kicked` and its row caught up; then, unless `kick` is
+  // false, a kick freed the row. Either way the user invites again.
+  async function reinvited(platform: string, clock: ReturnType<typeof sinon.useFakeTimers>
+  , kick = true) {
+    const f = fixture(platform, 5)
+    const kicked = {email: f.user.email, reservationId: 'kicked'}
+    f.access.joined('PHONE', null, kicked)
+    f.update({owner: kicked})
+    assert.equal(await tick(10, f.dispatch('wifi.get', 'tx.held'), clock), undefined)
+    if (kick) {
+      f.update({owner: null})
+    }
+    assert.equal(await tick(10, f.dispatch('group.invite', 'tx.take'), clock), undefined)
+    f.access.invited('tx.take', f.channel)
+    return {f, kicked, owner: {email: f.user.email, reservationId: 'fresh'}}
+  }
+
+  // Why a command failed within 10 ms; a guard still waiting for the row has no answer yet.
+  async function deniedAtOnce(f: ReturnType<typeof fixture>
+  , clock: ReturnType<typeof sinon.useFakeTimers>) {
+    let reason = 'still waiting'
+    f.dispatch('shell.command', 'tx.shell').then(error => {
+      reason = error ? error.message : 'allowed'
+    })
+    await clock.tickAsync(10)
+    return reason
+  }
+
   for (const platform of ['Android', 'iOS']) {
     it(`waits for the ${platform} row when the invite reply comes first`, async function() {
       const clock = sinon.useFakeTimers()
@@ -1072,6 +1100,83 @@ describe('invite replies ahead of the join notification', function() {
         await clock.tickAsync(10)
         assert.equal((await pending)?.message, 'Device access denied')
         assert.equal(f.access.awaitingJoin(f.channel, f.user.email, ['shared']), false)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    // Kick, then invite again: the leave for the kicked reservation can be delivered
+    // after the new invite went out but before its reply.
+    for (const persist of [0, 30]) {
+      it(`takes a ${platform} invite reply seen after a late leave of an older reservation` +
+        (persist ? ` (row written ${persist} ms later)` : ' (row already written)')
+      , async function() {
+        const clock = sinon.useFakeTimers()
+        try {
+          const {f, kicked, owner} = await reinvited(platform, clock)
+          assert.equal(f.access.released('PHONE', kicked), true)
+          f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
+          if (persist) {
+            setTimeout(() => f.update({owner}), persist)
+          }
+          else {
+            f.update({owner})
+          }
+          const pending = f.dispatch('shell.command', 'tx.shell')
+          await clock.tickAsync(100)
+          assert.equal(await pending, undefined)
+          assert.equal(await tick(10, f.dispatch('group.kick', 'tx.kick'), clock), undefined)
+          assert.deepEqual(f.cancelled, [])
+        }
+        finally {
+          clock.restore()
+        }
+      })
+    }
+
+    it(`ignores a ${platform} invite reply naming the reservation that left since`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        // Inviting again while holding the device is answered with the same reservation.
+        const {f, kicked} = await reinvited(platform, clock, false)
+        assert.equal(f.access.released('PHONE', kicked), true)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(kicked))
+        // Even a row read from before the leave is not taken as current.
+        assert.equal(await deniedAtOnce(f, clock), 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`ignores a ${platform} invite reply after a leave of a reservation it never saw join`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await invited(platform, clock)
+        // Nothing says how old this leave is, so it still outdates the reply.
+        assert.equal(f.access.released('PHONE', {email: f.user.email, reservationId: 'unseen'})
+          , true)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
+        assert.equal(await deniedAtOnce(f, clock), 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`ignores a ${platform} invite reply when a join came between the invite and a leave`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await reinvited(platform, clock)
+        const other = {email: 'someone@example.test', reservationId: 'theirs'}
+        f.access.joined('PHONE', null, other)
+        assert.equal(f.access.released('PHONE', other), true)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
+        assert.equal(await deniedAtOnce(f, clock), 'Device access denied')
       }
       finally {
         clock.restore()
