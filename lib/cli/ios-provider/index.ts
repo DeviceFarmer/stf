@@ -15,7 +15,7 @@ export const builder = (yargs: Argv) => yargs.strict().env('STF_IOS_PROVIDER')
   .option('screen-port', {type: 'number', default: 17440})
   .option('group-timeout', {type: 'number', default: 900})
   .option('auto-screen-sleep', {
-    type: 'boolean', default: false, describe: 'Wake on capture and lock the idle screen after release'
+    type: 'boolean', default: false, describe: 'Wake on capture and lock the screen after release'
   })
   .option('name', {type: 'string', default: 'Linux iOS'})
   .option('market-name', {type: 'string', default: ''})

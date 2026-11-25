@@ -378,8 +378,8 @@ describe('Linux iOS integration', function() {
       assert.equal((await release()).success, true)
       clock.tick(30000)
       await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
       assert.deepEqual(f.requests.map(request => request.path), ['/lock'])
-      assert.equal(f.state.ios!.locked, true)
     }
     finally {
       clock.restore()
@@ -394,13 +394,12 @@ describe('Linux iOS integration', function() {
       await f.join()
       await f.bridge.leave('ungroup_request')
       clock.tick(30000)
-      const locking = f.bridge.poll()
+      await f.bridge.poll()
       await until(() => f.requests.some(request => request.path === '/lock'))
       const joining = f.transact(new wire.GroupMessage(owner, 900000, []))
       await new Promise(resolve => setImmediate(resolve))
       assert.equal(f.bridge.owner, null)
       finishLock()
-      await locking
       assert.equal((await joining).success, true)
       assert.equal(f.state.ios!.locked, false)
       assert.deepEqual(f.requests.map(request => request.path), ['/lock', '/unlock'])
@@ -432,6 +431,7 @@ describe('Linux iOS integration', function() {
         assert.equal((await releasing).success, true)
         clock.tick(30000)
         await f.bridge.poll()
+        await until(() => f.state.ios!.locked === true)
         assert.deepEqual(f.requests.map(request => request.path), [
           '/automation', '/automation', '/lock'
         ])
@@ -441,6 +441,7 @@ describe('Linux iOS integration', function() {
           serial, owner, 'wda-maintenance', 'release'))).success, true)
         clock.tick(30000)
         await f.bridge.poll()
+        await f.join()
         assert.deepEqual(f.requests.map(request => request.path), [
           '/automation', '/automation', '/lock', '/unlock', '/automation', '/automation'
         ])

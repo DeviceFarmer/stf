@@ -2,7 +2,10 @@ import wire from '../../wire/index.js'
 import wireutil from '../../wire/util.js'
 import wirerouter from '../../wire/router.js'
 import grouputil from '../../util/grouputil.js'
-import {AutomationLease, isAutomationLeaseTimeout} from '../../util/automation-lease.js'
+import {
+  AutomationLease, iosAutomationCaptureTimeoutMs, iosScreenLifecycleCaptureTimeoutMs
+, isAutomationLeaseTimeout
+} from '../../util/automation-lease.js'
 import {randomUUID} from 'node:crypto'
 import {TouchGesture} from '../../wire/touch-gesture.js'
 import type {IosDeviceState, PrototypeClient} from './client.js'
@@ -86,10 +89,15 @@ export class IosBridge {
         }
       })
       .on(wire.GroupMessage, (channel, message) => {
+        const captureTimeout = message.screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs :
+          iosAutomationCaptureTimeoutMs
+        // Count time spent behind an idle lock against the caller's capture deadline.
+        const deadline = options.autoScreenSleep && message.usage === 'automation' ?
+          AbortSignal.timeout(captureTimeout - 2000) : undefined
         this.transaction(String(channel), () => this.changeReservation(async() => {
           await grouputil.match({serial: options.serial}, message.requirements)
           await this.join(message.owner, message.timeout, message.usage, message.leaseId,
-            message.screenLifecycle)
+            message.screenLifecycle, deadline)
           return {owner: this.owner}
         }))
       })
@@ -493,16 +501,18 @@ export class IosBridge {
   private assertReadyForReservation(epoch: number, current: IosDeviceState) {
     if (!this.registered || epoch !== this.epoch || this.owner ||
         current.udid !== this.options.serial || current.state !== 'ready' ||
-        current.generation !== this.state?.generation || current.instance !== this.state?.instance) {
+        current.generation !== this.state?.generation ||
+        current.instance !== this.state?.instance) {
       throw new Error('Device session changed')
     }
   }
 
-  private async wakeScreen(epoch: number) {
+  private async wakeScreen(epoch: number, deadline?: AbortSignal) {
     this.sleepAt = null
-    // Owned commands are aborted on release. Let their queue settle before checking the screen.
+    // Let aborted commands from the previous owner settle before checking the screen.
     await this.queue
-    const signal = AbortSignal.timeout(15000)
+    const timeout = AbortSignal.timeout(15000)
+    const signal = deadline ? AbortSignal.any([timeout, deadline]) : timeout
     const current = await this.client.device(signal)
     this.assertReadyForReservation(epoch, current)
     if (this.wakeRequired || current.ios?.locked !== false) {
@@ -539,9 +549,10 @@ export class IosBridge {
     }).catch(this.report)
   }
 
-  private async setAppiumMode(active: boolean, lease: string) {
-    const response = await this.client.request('/automation', {active, lease},
-      AbortSignal.timeout(35000))
+  private async setAppiumMode(active: boolean, lease: string, deadline?: AbortSignal) {
+    const timeout = AbortSignal.timeout(35000)
+    const signal = deadline ? AbortSignal.any([timeout, deadline]) : timeout
+    const response = await this.client.request('/automation', {active, lease}, signal)
     await response.body?.cancel()
     if (!active && this.appiumHandoff === lease) {
       this.appiumHandoff = null
@@ -550,8 +561,9 @@ export class IosBridge {
 
   private async join(
     owner: IosOwner, timeout?: number | null, usage?: string | null, leaseId?: string | null,
-    screenLifecycle?: boolean | null
+    screenLifecycle?: boolean | null, deadline?: AbortSignal
   ) {
+    deadline?.throwIfAborted()
     if (!this.registered) {
       throw new Error('Device not ready')
     }
@@ -567,16 +579,17 @@ export class IosBridge {
         throw new Error('Invalid automation lease timeout')
       }
       if (this.appiumHandoff) {
-        await this.setAppiumMode(false, this.appiumHandoff)
+        await this.setAppiumMode(false, this.appiumHandoff, deadline)
       }
       if (this.options.autoScreenSleep) {
-        await this.wakeScreen(epoch)
+        await this.wakeScreen(epoch, deadline)
       }
       const reservationId = randomUUID()
       if (automated) {
         this.appiumHandoff = reservationId
-        await this.setAppiumMode(true, reservationId)
+        await this.setAppiumMode(true, reservationId, deadline)
       }
+      deadline?.throwIfAborted()
       if (!this.registered || this.epoch !== epoch) {
         if (automated) {
           await this.setAppiumMode(false, reservationId)

@@ -840,7 +840,8 @@ export class Coordinator {
 
   private async allocate(lease: Lease, request: AllocationRequest) {
     try {
-      await this.backend.capture(lease.device.serial, lease.id, this.stfTimeoutMs, lease.device.platform)
+      await this.backend.capture(lease.device.serial, lease.id, this.stfTimeoutMs,
+        lease.device.platform)
       const continuing = await this.exclusive(async() => {
         lease.captureConfirmed = true
         delete lease.captureUncertain

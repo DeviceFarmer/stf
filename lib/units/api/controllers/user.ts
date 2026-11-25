@@ -170,7 +170,8 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
     req.swagger.params.timeout.value) ?? null
   const leaseId = req.body?.leaseId ?? null
   const screenLifecycle = req.body?.screenLifecycle
-  if (screenLifecycle !== undefined && (typeof screenLifecycle !== 'boolean' || leaseId === null)) {
+  if (Object.hasOwn(req.body || {}, 'screenLifecycle') &&
+      (typeof screenLifecycle !== 'boolean' || leaseId === null)) {
     apiutil.respond(res, 400, 'Screen lifecycle requires a managed automation lease')
     return
   }

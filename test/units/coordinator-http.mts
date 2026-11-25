@@ -634,7 +634,7 @@ describe('coordinator HTTP and real upstream adapters', function() {
       const lease = await f.allocate()
       const route = '/api/v1/leases/' + lease.id + '/webdriver/session'
       const capture = f.stfCalls.find(call => call.route === '/api/v1/user/devices')!
-      assert.equal(capture.body.screenLifecycle, undefined)
+      assert.equal(Object.hasOwn(capture.body, 'screenLifecycle'), false)
       for (const capability of [
         {udid: 'another-phone'}
       , {'appium:app': 'https://example.test/external.apk'}

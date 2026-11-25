@@ -84,9 +84,11 @@ export class HttpFarmBackend implements FarmBackend {
 
   async capture(serial: string, leaseId: string, timeout: number, platform: Platform) {
     const screenLifecycle = platform === 'iOS'
+    const captureTimeout = screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs :
+      iosAutomationCaptureTimeoutMs
     await this.stf('POST', '/user/devices', {
       serial, leaseId, timeout, ...(screenLifecycle ? {screenLifecycle} : {})
-    }, (screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs : iosAutomationCaptureTimeoutMs) + 5000)
+    }, captureTimeout + 5000)
   }
 
   async renew(serial: string, leaseId: string, timeout: number) {

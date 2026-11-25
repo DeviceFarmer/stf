@@ -22,7 +22,7 @@ const restoreLocks = mockModule(new URL('../../../lib/util/lockutil.js', import.
 })
 
 let getUser: (req: ApiRequest, res: Response) => void
-let addUserDevice: (req: ApiRequest<AddUserDeviceBody>, res: Response) => void
+, addUserDevice: (req: ApiRequest<AddUserDeviceBody>, res: Response) => void
 try {
   const controller = await importFresh(
     new URL('../../../lib/units/api/controllers/user.js', import.meta.url)
@@ -57,8 +57,8 @@ describe('API user controller', function() {
   const userResponseSchema = spec.definitions.UserResponse
 
   it('requires an authorized managed lease for screen lifecycle', function() {
-    for (const [leaseId, expectedStatus] of [[undefined, 400], ['lease-id', 403]] as const) {
-      const req = {body: {serial: 'phone', leaseId, screenLifecycle: true}
+    for (const [lease, expectedStatus] of [[{}, 400], [{leaseId: 'lease-id'}, 403]] as const) {
+      const req = {body: {serial: 'phone', ...lease, screenLifecycle: true}
         , options: {automationLeaseAccounts: ['runner@example.test']}
         , user: {email: 'viewer@example.test'}}
       const res = {statusCode: 200, status(code: number) {
