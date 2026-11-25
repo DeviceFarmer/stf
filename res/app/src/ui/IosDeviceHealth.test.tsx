@@ -1,11 +1,16 @@
 import {renderToStaticMarkup} from 'react-dom/server'
 import {MantineProvider} from '@mantine/core'
+import {act, cleanup, render as mount, screen} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 import {IosDeviceHealth, IosHealthBadge} from './IosDeviceHealth'
 import type {Device} from '@/core/devices/types'
 
-vi.mock('@/core/i18n', () => ({useTranslation: () => ({t: (text: string) => text})
-  , gettext: (text: string) => text, translate: (text: string) => text}))
+vi.mock('@/core/i18n', async(importOriginal) => {
+  const i18n = await importOriginal<typeof import('@/core/i18n')>()
+  const translate = (text: string, params?: Parameters<typeof i18n.translate>[1]) =>
+    i18n.translate(text, params, 'en')
+  return {useTranslation: () => ({t: translate}), gettext: i18n.gettext, translate}
+})
 
 const device = {platform: 'iOS', ready: true, ios: {
   reason: 'ready', name: 'Lab iPhone', battery: {level: 100, charging: false, full: true, externalPower: true}
@@ -58,10 +63,41 @@ describe('iPhone card health badge', () => {
     expect(badge({...lockedPhone, ready: false})).toContain('The iPhone is locked')
   })
 
-  it.each(['expiring', 'expired'] as const)('keeps the %s WDA warning while asleep', (profile) => {
-    const html = badge({...lockedPhone, ios: {...lockedPhone.ios
-      , wda: {...lockedPhone.ios.wda, profile}}})
-    expect(html).toContain(profile === 'expired' ? 'has expired' : 'expires soon')
-    expect(html).not.toContain('The iPhone is locked')
+  const wdaWarning = (profile: 'expiring' | 'expired', expiresAt: string | null) => ({...lockedPhone
+    , ios: {...lockedPhone.ios, wda: {...lockedPhone.ios.wda, profile, expiresAt}}})
+
+  it('keeps the short WDA warning when the server reports an expired profile', () => {
+    expect(badge(wdaWarning('expired', null))).toContain('WDA expired')
+  })
+
+  it('uses a generic warning if the expiry date is unavailable', () => {
+    expect(badge(wdaWarning('expiring', null))).toContain('WDA expiring')
+  })
+
+  it('updates the time left until the profile expires, including while the phone is asleep', () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn()
+    }))
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-21T21:37:26Z'))
+    try {
+      mount(<MantineProvider env='test'>
+        <IosHealthBadge device={wdaWarning('expiring', '2026-10-22T16:07:26Z')} />
+      </MantineProvider>)
+      expect(screen.getByText('WDA · 18h left').parentElement?.style.textTransform).toBe('none')
+      act(() => vi.advanceTimersByTime(30 * 60 * 1000 + 1))
+      expect(screen.getByText('WDA · 17h left')).toBeTruthy()
+      for (let hour = 0; hour < 17; hour++) {
+        act(() => vi.advanceTimersByTime(60 * 60 * 1000))
+      }
+      expect(screen.getByText('WDA · <1h left')).toBeTruthy()
+      act(() => vi.advanceTimersByTime(60 * 60 * 1000 - 1))
+      expect(screen.getByText('WDA expired')).toBeTruthy()
+    }
+    finally {
+      cleanup()
+      vi.unstubAllGlobals()
+      vi.useRealTimers()
+    }
   })
 })

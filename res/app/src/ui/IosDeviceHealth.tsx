@@ -1,5 +1,6 @@
 import {Alert, Badge, Group, Stack, Text, Tooltip} from '@mantine/core'
 import {IconDeviceMobileCog} from '@tabler/icons-react'
+import {useEffect, useState, type ReactNode} from 'react'
 import type {Device} from '@/core/devices/types'
 import {gettext, translate, useTranslation} from '@/core/i18n'
 import {WidgetCard} from './WidgetCard'
@@ -27,6 +28,52 @@ export function iosReasonText(reason: string) {
   return translate(reasons[reason] || reasons.recovering!)
 }
 
+function DiagnosticBadge({text, tooltip = text, ready, tt}: {
+  text: string, tooltip?: ReactNode, ready: boolean, tt?: 'none'
+}) {
+  return <Tooltip label={tooltip} multiline w={280}>
+    <Badge color={ready ? 'yellow' : 'red'} variant='light' size='xs' maw='100%' tt={tt}>
+      {text}
+    </Badge>
+  </Tooltip>
+}
+
+const hourMs = 60 * 60 * 1000
+
+function WdaHealthBadge({expiresAt, reportedExpired, ready}: {
+  expiresAt: string | null, reportedExpired: boolean, ready: boolean
+}) {
+  const {t} = useTranslation()
+  const [now, setNow] = useState(Date.now)
+  const expiry = Date.parse(expiresAt ?? '')
+  const remaining = expiry - now
+  const expired = reportedExpired || remaining <= 0
+
+  useEffect(() => {
+    if (expired || !Number.isFinite(remaining)) {
+      return
+    }
+    const delay = remaining >= hourMs ? remaining % hourMs + 1 : remaining
+    const timer = setTimeout(() => setNow(Date.now()), delay)
+    return () => clearTimeout(timer)
+  }, [expired, remaining])
+
+  let text = t('WDA expiring')
+  if (expired) {
+    text = t('WDA expired')
+  }
+  else if (remaining >= hourMs) {
+    text = t('WDA · {{hours}}h left', {hours: Math.floor(remaining / hourMs)})
+  }
+  else if (Number.isFinite(remaining)) {
+    text = t('WDA · <1h left')
+  }
+  return <DiagnosticBadge text={text} ready={ready} tt='none' tooltip={<>
+    {iosReasonText(expired ? 'wda_profile_expired' : 'wda_profile_expiring')}
+    {Number.isFinite(expiry) && <div>{new Date(expiry).toLocaleString()}</div>}
+  </>} />
+}
+
 export function IosHealthBadge({device}: {device: Device}) {
   if (device.platform !== 'iOS' || !device.ios) {
     return null
@@ -39,12 +86,12 @@ export function IosHealthBadge({device}: {device: Device}) {
   if (reason === 'ready') {
     return null
   }
-  const text = iosReasonText(reason)
-  return <Tooltip label={text} multiline w={280}>
-    <Badge color={device.ready ? 'yellow' : 'red'} variant='light' size='xs' maw='100%'>
-      {text}
-    </Badge>
-  </Tooltip>
+  if (reason === 'wda_profile_expiring' || reason === 'wda_profile_expired') {
+    const {expiresAt} = device.ios.wda
+    return <WdaHealthBadge key={expiresAt} expiresAt={expiresAt}
+      reportedExpired={reason === 'wda_profile_expired'} ready={device.ready} />
+  }
+  return <DiagnosticBadge text={iosReasonText(reason)} ready={device.ready} />
 }
 
 export function IosDeviceHealth({device}: {device: Device}) {
