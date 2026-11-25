@@ -7,7 +7,7 @@ import {controlHref, type DeviceActions} from './device-actions'
 import {StatusButton} from './cells'
 import {DeviceContextMenu} from './DeviceContextMenu'
 import {DeviceImage} from '@/ui/DeviceImage'
-import {IosHealthBadge, IosWdaProfileExpiry} from '@/ui/IosDeviceHealth'
+import {IosHealthBadge} from '@/ui/IosDeviceHealth'
 import classes from './DeviceList.module.css'
 
 function TileMeta({device}: {device: Device}) {
@@ -57,7 +57,6 @@ const DeviceTile = memo(function DeviceTile({device, actions}: {
         {device.enhancedModel}
       </Text>
       <TileMeta device={device} />
-      <IosWdaProfileExpiry device={device} />
       <IosHealthBadge device={device} />
     </>
   )
