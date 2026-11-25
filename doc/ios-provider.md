@@ -311,10 +311,9 @@ tunnel, developer-image and WDA/session startup failures. Recovery retries
 automatically. A screen lock keeps the phone present and owned while WDA remains
 ready. The live screen is available after unlock. The owner can use
 **Lock screen / Unlock screen**;
-iOS 27 tries a short fixed Power IOHID event. If WDA does not confirm the lock,
-the provider uses the standard English/Russian AssistiveTouch Lock Screen
-action and restores its settings. Earlier iOS versions use AssistiveTouch
-directly. An asleep iOS 26 phone may need the system Home command before its
+iOS 27 locks through a short fixed Power IOHID event; earlier versions use the
+standard English/Russian AssistiveTouch Lock Screen action and restore its
+settings. An asleep iOS 26 phone may need the system Home command before its
 AssistiveTouch control is available. Unlock explicitly wakes the system UI
 before WDA's unlock command. Both UI buttons stay available because WDA's cached
 lock flag can lag a sleeping screen. Repeating Lock on a known locked device
@@ -325,8 +324,8 @@ their existing commands. Shaking and app activation require an unlocked phone.
 
 Set `--auto-screen-sleep` on an iOS provider to wake the iPhone when it is
 reserved in STF or by the Coordinator. STF waits for the phone to unlock before
-starting control or handing WDA to Appium. Use this option on phones that can
-unlock without a passcode.
+starting control or handing WDA to Appium. Enable this option after verifying
+that **Lock screen** and **Unlock screen** work on the phone without a passcode.
 
 The provider locks the screen after 30 seconds without a reservation. A new
 reservation cancels the pending lock. After an Appium lease ends, the delay

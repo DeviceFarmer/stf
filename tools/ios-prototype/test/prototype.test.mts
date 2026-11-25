@@ -6,7 +6,6 @@ import path from 'node:path'
 import {afterEach, describe, it} from 'node:test'
 import {setTimeout as delay} from 'node:timers/promises'
 
-import {AssistiveTouch} from '../assistive-touch.mts'
 import {runJson, ManagedProcess} from '../process.mts'
 import {IosRuntime} from '../runtime.mts'
 import type {RuntimeOptions, RuntimeDependencies} from '../runtime.mts'
@@ -229,20 +228,6 @@ describe('iOS prototype HTTP and WDA integration', () => {
     assert.equal(f.runtime.telemetry.status.locked, true)
     f.fail()
     assert.equal((await f.request('/unlock', {})).status, 502)
-  })
-
-  it('uses AssistiveTouch when iOS 27 does not confirm the Power event', async context => {
-    const f = await fixture()
-    f.runtime.info = {ProductVersion: '27.2.1'}
-    f.delayLock(Infinity)
-    const fallback = context.mock.method(AssistiveTouch.prototype, 'perform', async() => {
-      f.delayLock(0)
-    })
-    assert.deepEqual(await (await f.request('/lock', {})).json(), {locked: true})
-    assert.equal(fallback.mock.callCount(), 1)
-    assert.equal(fallback.mock.calls[0]!.arguments[2], 'lock')
-    assert.equal(f.calls.filter(call => call.path.endsWith('/wda/performIoHidEvent')).length, 1)
-    assert.equal(f.calls.some(call => call.path === '/wda/homescreen'), false)
   })
 
   it('wakes an asleep display even if the cached WDA lock flag is false', async() => {
