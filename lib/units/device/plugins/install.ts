@@ -65,7 +65,9 @@ export default syrup.serial()
         ])
       }
 
-      function pushApp() {
+      // The retry after an uninstall pushes the APK again without progress
+      // reports: the installing_app ticks are already running by then.
+      function pushApp(reportProgress = true) {
         var req = request({
           url: url.resolve(options.storageUrl, message.href)
         })
@@ -128,13 +130,15 @@ export default syrup.serial()
             function progressListener(stats: PushTransfer['stats']) {
               if (contentLength) {
                 // Progress 0% to 70%
-                sendProgress(
-                  'pushing_app'
-                , 50 * Math.max(0, Math.min(
-                    50
-                  , stats.bytesTransferred / contentLength
-                  ))
-                )
+                if (reportProgress) {
+                  sendProgress(
+                    'pushing_app'
+                  , 50 * Math.max(0, Math.min(
+                      50
+                    , stats.bytesTransferred / contentLength
+                    ))
+                  )
+                }
                 // 'end' never fires on Node >= 16, and bytesTransferred counts bytes handed to adb, not bytes
                 // written on the device: wait for the file to reach its full size before installing it.
                 if ((stats.bytesTransferred / contentLength) === 1 &&
@@ -182,10 +186,15 @@ export default syrup.serial()
                     , pkg
                     , err.code
                     )
+                    // installRemote() removes the APK from the device even
+                    // when the install fails, so push it again before retrying.
                     return adb.uninstall(options.serial, pkg)
                       .timeout(15000)
                       .then(function() {
-                        return adb.installRemote(options.serial, apk)
+                        return pushApp(false)
+                      })
+                      .then(function(pushed) {
+                        return adb.installRemote(options.serial, pushed)
                           .timeout(60000 * 5)
                       })
                   default:
