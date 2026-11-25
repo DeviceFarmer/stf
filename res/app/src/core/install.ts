@@ -277,6 +277,7 @@ const installErrors: Record<string, string> = {
   , INSTALL_SUCCEEDED: gettext('Installation succeeded.')
   , INSTALL_ERROR_UNKNOWN: gettext('Installation failed due to an unknown error.')
   , INSTALL_ERROR_TIMEOUT: gettext('Installation timed out.')
+  , INSTALL_ERROR_DOWNLOAD: gettext('The device could not download the uploaded file. Upload it again.')
   , INSTALL_CANCELED_BY_USER: gettext('Installation canceled by user.')
   , INSTALL_FAILED_ALREADY_EXISTS: gettext('The package is already installed.')
   , INSTALL_FAILED_INVALID_APK: gettext('The package archive file is invalid.')

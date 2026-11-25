@@ -18,7 +18,10 @@ var APK = '/data/local/tmp/_app.apk'
 interface FakeDeviceOptions {
   // One entry per installRemote() call: an error code to fail with, or null to succeed.
   installErrors: Array<string | null>
-  uninstallError?: string | null
+  // Whether an older copy of the package is installed to begin with.
+  installed?: boolean
+  // What adbkit's uninstall() rejects with, if it does.
+  uninstallError?: Error | null
 }
 
 // Mimics the adbkit calls the plugin makes against a device that keeps pushed files in
@@ -27,7 +30,9 @@ interface FakeDeviceOptions {
 function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
   var files = new Map<string, Buffer>()
   var calls: string[] = []
+  var transfers: Array<EventEmitter & {cancel: sinon.SinonSpy}> = []
   var installs = 0
+  var state = {installed: Boolean(options.installed)}
 
   var adb = {
     push: sinon.stub().callsFake(function(
@@ -37,7 +42,8 @@ function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
     ) {
       expect(serial).to.equal('test-device')
       calls.push('push ' + destination)
-      var transfer = new EventEmitter()
+      var transfer = Object.assign(new EventEmitter(), {cancel: sinon.spy()})
+      transfers.push(transfer)
       var chunks: Buffer[] = []
       source.on('data', function(chunk: Buffer) {
         chunks.push(chunk)
@@ -68,32 +74,47 @@ function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
       }
       expect(data).to.deep.equal(bytes)
       var code = options.installErrors[installs++]
-      return code ? Promise.reject({code: code}) : Promise.resolve(true)
+      if (code) {
+        return Promise.reject({code: code})
+      }
+      state.installed = true
+      return Promise.resolve(true)
     })
   , uninstall: sinon.stub().callsFake(function(serial: string, pkg: string) {
       calls.push('uninstall ' + pkg)
-      return options.uninstallError ?
-        Promise.reject({code: options.uninstallError}) :
-        Promise.resolve(true)
+      if (options.uninstallError) {
+        return Promise.reject(options.uninstallError)
+      }
+      state.installed = false
+      return Promise.resolve(true)
     })
   }
 
-  return {adb, calls, files}
+  return {adb, calls, files, state, transfers}
 }
 
 describe('device APK transfer', function() {
   var server: http.Server, origin: string
   var bytes = Buffer.from([80, 75, 3, 4, 0, 255, 42])
+  // HTTP status for each storage request in a test, 200 once they run out.
+  var statuses: number[] = []
 
   before(function(done) {
     server = http.createServer(function(req, res) {
-      res.setHeader('Content-Length', bytes.length)
-      res.end(bytes)
+      var status = statuses.shift() || 200
+      var body = status === 200 ? bytes : Buffer.from('Not Found')
+      res.statusCode = status
+      res.setHeader('Content-Length', body.length)
+      res.end(body)
     })
     server.listen(0, function() {
       origin = 'http://127.0.0.1:' + (server.address() as AddressInfo).port + '/'
       done()
     })
+  })
+
+  beforeEach(function() {
+    statuses = []
   })
 
   after(function(done) {
@@ -128,6 +149,13 @@ describe('device APK transfer', function() {
     })
   }
 
+  // Drops the device path so call lists stay readable.
+  function steps(calls: string[]) {
+    return calls.map(function(call) {
+      return call.replace(' ' + APK, '')
+    })
+  }
+
   [null, 'INSTALL_FAILED_INVALID_APK'].forEach(function(errorCode) {
     it('should stream the APK and report ' + (errorCode || 'success'), async function() {
       var device = createFakeDevice(bytes, {installErrors: [errorCode]})
@@ -141,54 +169,90 @@ describe('device APK transfer', function() {
     })
   })
 
+  it('should not push an error page from storage as the APK', async function() {
+    statuses = [404]
+    var device = createFakeDevice(bytes, {installErrors: [null]})
+
+    var {response} = await install(device.adb)
+    expect(steps(device.calls)).to.deep.equal(['push'])
+    expect(device.adb.installRemote.called).to.equal(false)
+    expect(device.transfers[0]!.cancel.called).to.equal(true)
+    expect(response.success).to.equal(false)
+    expect(response.data).to.equal('INSTALL_ERROR_DOWNLOAD')
+  })
+
   ;[
     'INSTALL_FAILED_UPDATE_INCOMPATIBLE'
   , 'INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES'
   , 'INSTALL_FAILED_VERSION_DOWNGRADE'
   ].forEach(function(errorCode) {
-    it('should uninstall, push the APK again and install again on ' + errorCode, async function() {
-      var device = createFakeDevice(bytes, {installErrors: [errorCode, null]})
+    it('should push the APK again, uninstall and install again on ' + errorCode, async function() {
+      var device = createFakeDevice(bytes, {installErrors: [errorCode, null], installed: true})
 
       var {response, progress} = await install(device.adb)
-      expect(device.calls).to.deep.equal([
-        'push ' + APK
-      , 'install ' + APK
-      , 'uninstall test.apk'
-      , 'push ' + APK
-      , 'install ' + APK
+      expect(steps(device.calls)).to.deep.equal([
+        'push', 'install', 'push', 'uninstall test.apk', 'install'
       ])
       expect(device.files.size).to.equal(0)
+      expect(device.state.installed).to.equal(true)
       expect(response.success).to.equal(true)
       expect(response.data).to.equal('INSTALL_SUCCEEDED')
       // The second push must not send the progress back to pushing_app.
-      expect(progress.slice(progress.indexOf('installing_app'))).to.not.include('pushing_app')
+      var installing = progress.indexOf('installing_app')
+      expect(installing).to.be.at.least(0)
+      expect(progress.slice(installing)).to.not.include('pushing_app')
     })
+  })
+
+  it('should keep the old app when the second push fails', async function() {
+    statuses = [200, 500]
+    var device = createFakeDevice(bytes, {
+      installErrors: ['INSTALL_FAILED_UPDATE_INCOMPATIBLE', null]
+    , installed: true
+    })
+
+    var {response} = await install(device.adb)
+    expect(steps(device.calls)).to.deep.equal(['push', 'install', 'push'])
+    expect(device.adb.uninstall.called).to.equal(false)
+    expect(device.state.installed).to.equal(true)
+    expect(response.success).to.equal(false)
+    expect(response.data).to.equal('INSTALL_ERROR_DOWNLOAD')
   })
 
   ;[
     {
       name: 'the retry install fails again'
+    , retryError: 'INSTALL_FAILED_INVALID_APK'
     , uninstallError: null
     , data: 'INSTALL_FAILED_INVALID_APK'
-    , calls: ['push', 'install', 'uninstall test.apk', 'push', 'install']
+    , calls: ['push', 'install', 'push', 'uninstall test.apk', 'install']
+    }
+  , {
+      name: 'the retry install is refused for the same reason'
+    , retryError: 'INSTALL_FAILED_UPDATE_INCOMPATIBLE'
+    , uninstallError: null
+    , data: 'INSTALL_FAILED_UPDATE_INCOMPATIBLE'
+    , calls: ['push', 'install', 'push', 'uninstall test.apk', 'install']
     }
   , {
       name: 'the uninstall fails'
-    , uninstallError: 'DELETE_FAILED_INTERNAL_ERROR'
+    , retryError: null
+      // The only uninstall failure adbkit rejects with; other failures resolve.
+    , uninstallError: new Error(
+        'test.apk could not be uninstalled [DELETE_FAILED_DEVICE_POLICY_MANAGER]')
     , data: 'INSTALL_ERROR_UNKNOWN'
-    , calls: ['push', 'install', 'uninstall test.apk']
+    , calls: ['push', 'install', 'push', 'uninstall test.apk']
     }
   ].forEach(function(scenario) {
     it('should report failure when ' + scenario.name, async function() {
       var device = createFakeDevice(bytes, {
-        installErrors: ['INSTALL_FAILED_UPDATE_INCOMPATIBLE', 'INSTALL_FAILED_INVALID_APK']
+        installErrors: ['INSTALL_FAILED_UPDATE_INCOMPATIBLE', scenario.retryError]
+      , installed: true
       , uninstallError: scenario.uninstallError
       })
 
       var {response} = await install(device.adb)
-      expect(device.calls.map(function(call) {
-        return call.replace(' ' + APK, '')
-      })).to.deep.equal(scenario.calls)
+      expect(steps(device.calls)).to.deep.equal(scenario.calls)
       expect(response.success).to.equal(false)
       expect(response.data).to.equal(scenario.data)
     })
