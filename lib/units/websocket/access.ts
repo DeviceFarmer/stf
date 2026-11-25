@@ -8,6 +8,8 @@ export interface DeviceAccess {
   automationLeaseId?: string | null
   group?: {id?: string | null}
   owner?: {email?: string, group?: string, reservationId?: string | null} | null
+  // Who a device that rebooted in use is kept for, and until when
+  restoreOwner?: {email?: string, expiresAt: number} | null
 }
 
 export type LoadDevice = (serial: string) => PromiseLike<DeviceAccess | null | undefined>

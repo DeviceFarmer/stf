@@ -34,12 +34,16 @@ const releaseDeviceOwner = sinon.stub()
 const setDeviceReady = sinon.stub()
 const loadUser = sinon.stub()
 const clearDeviceRestoreOwner = sinon.stub()
+const loadDeviceBySerial = sinon.stub()
+const lookupUserByAdbFingerprint = sinon.stub()
+const lookupUserByVncAuthResponse = sinon.stub()
 const mocks = [
   mockModule(new URL('../../lib/db/index.js', import.meta.url), {default: {
     ensureConnectivity: (start: unknown) => start
   }})
 , mockModule(new URL('../../lib/db/api.js', import.meta.url), {default: {
     setDeviceOwner, releaseDeviceOwner, setDeviceReady, loadUser, clearDeviceRestoreOwner
+  , loadDeviceBySerial, lookupUserByAdbFingerprint, lookupUserByVncAuthResponse
   }})
 , mockModule(new URL('../../lib/util/adbutil.js', import.meta.url), {default: () => ({})})
 , mockModule(new URL('../../lib/util/lifecycle.js', import.meta.url), {default: {observe() {}}})
@@ -79,6 +83,9 @@ describe('processor ownership', function() {
     setDeviceReady.reset()
     loadUser.reset()
     clearDeviceRestoreOwner.reset()
+    loadDeviceBySerial.reset()
+    lookupUserByAdbFingerprint.reset()
+    lookupUserByVncAuthResponse.reset()
   })
 
   it('publishes a capture with the owner, lease and usage persisted together', async function() {
@@ -262,6 +269,45 @@ describe('processor ownership', function() {
       assert.deepEqual(await restore(), [])
       assert.equal(clearDeviceRestoreOwner.callCount, 1)
       assert.equal(loadUser.callCount, 0)
+    })
+  })
+  // An ADB key or VNC password names a user, but a device kept for someone else after a reboot
+  // must not be handed to them on the strength of it
+  describe('joining by credential while a device is kept for someone', function() {
+    const keyOwner = {email: 'key@example.test', name: 'Key', group: 'key-group'}
+
+    function claimFor(email: string) {
+      loadDeviceBySerial.resolves({serial: 'phone', owner: null, group: {id: 'origin-group'}
+        , restoreOwner: {email, expiresAt: Date.now() + 60000}})
+    }
+
+    async function joinBy(message: Parameters<typeof wireutil.envelope>[0]) {
+      const processor = fixture()
+      processor.device.emit('message', 'worker-channel', wireutil.envelope(message))
+      await new Promise(resolve => setTimeout(resolve, 10))
+      return processor.device.packets
+        .map(([, data]) => wire.Envelope.decode(data))
+        .filter(envelope => envelope.type === wire.AutoGroupMessage.$code)
+        .map(envelope => wire.AutoGroupMessage.decode(envelope.message))
+    }
+
+    const byKey = () => new wire.JoinGroupByAdbFingerprintMessage('phone', 'fp', 'comment')
+    const byVnc = () => new wire.JoinGroupByVncAuthResponseMessage('phone', 'response')
+
+    it('refuses a credential join by anyone but the claimant', async function() {
+      lookupUserByAdbFingerprint.resolves(keyOwner)
+      lookupUserByVncAuthResponse.resolves(keyOwner)
+      claimFor('previous@example.test')
+      assert.deepEqual(await joinBy(byKey()), [])
+      assert.deepEqual(await joinBy(byVnc()), [])
+    })
+
+    it('lets the claimant, or anyone once the claim is gone, join by credential', async() => {
+      lookupUserByAdbFingerprint.resolves(keyOwner)
+      claimFor(keyOwner.email)
+      assert.equal((await joinBy(byKey()))[0]!.owner.email, keyOwner.email)
+      loadDeviceBySerial.resolves({serial: 'phone', owner: null, restoreOwner: null})
+      assert.equal((await joinBy(byKey()))[0]!.owner.email, keyOwner.email)
     })
   })
 })

@@ -114,6 +114,12 @@ export function canViewDevice(device: Device): boolean {
     (device.using || isAutomated(device)))
 }
 
+/** Kept for someone else after a reboot: nobody else may take it until the claim expires. */
+export function isClaimedForOther(device: Device, now = Date.now()): boolean {
+  return Boolean(device.claimed && !device.claimedByYou &&
+    typeof device.claimExpiresAt === 'number' && device.claimExpiresAt > now)
+}
+
 export function computeState(device: Device): DeviceState {
   if (!device.present) {
     return 'absent'
@@ -133,7 +139,7 @@ export function computeState(device: Device): DeviceState {
       if (device.using) {
         return 'using'
       }
-      return device.owner ? 'busy' : 'available'
+      return device.owner || isClaimedForOther(device) ? 'busy' : 'available'
     default:
       return 'present'
   }
@@ -162,7 +168,7 @@ export function setDeviceImage(device: Device): void {
 
 export function enhanceDevice(device: Device): Device {
   device.usable = Boolean(device.present && device.status === 3 && device.ready &&
-    (!device.owner || device.using))
+    (device.owner ? device.using : !isClaimedForOther(device)))
 
   if (!device.usable || !device.owner) {
     device.using = false

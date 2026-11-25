@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import sinon from 'sinon'
-import {createDevicePacketGuard} from '../../lib/units/websocket/ios-access.js'
+import {CLAIMED_FOR_OTHER, createDevicePacketGuard}
+  from '../../lib/units/websocket/ios-access.js'
 import {DevicePacketAccess, isDeviceCommand, requiresOwner}
   from '../../lib/units/websocket/device-access.js'
 import {isValidSerial} from '../../lib/units/websocket/access.js'
@@ -514,6 +515,36 @@ describe('manual device packet authorization', function() {
       for (const event of ['group.invite', 'input.keyPress', 'shell.command']) {
         assert.equal((await f.dispatch(event, 'tx.private'))?.message, 'Device access denied')
       }
+    })
+  }
+
+  for (const platform of ['Android', 'iOS']) {
+    // A device coming back from a reboot is unowned and ready before the processor's restore lands,
+    // and the device itself accepts any invite, so only this check keeps it for its previous user
+    it(`keeps a claimed ${platform} device from everyone but the claimant`, async function() {
+      const f = fixture(platform)
+      f.update({owner: null
+        , restoreOwner: {email: 'previous@example.test', expiresAt: Date.now() + 60000}})
+      f.access.released('PHONE')
+      assert.equal((await f.dispatch('group.invite', 'tx.claimed'))?.message, CLAIMED_FOR_OTHER)
+      assert.deepEqual(f.cancelled.at(-1), ['tx.claimed', {
+        source: 'PHONE', seq: 0, success: false, data: CLAIMED_FOR_OTHER
+      }])
+
+      Object.assign(f.user, {privilege: 'admin'})
+      assert.equal((await f.dispatch('group.invite', 'tx.admin'))?.message, CLAIMED_FOR_OTHER
+        , 'Not even an administrator takes a claimed device')
+
+      Object.assign(f.user, {email: 'previous@example.test', privilege: 'user'})
+      assert.equal(await f.dispatch('group.invite', 'tx.claimant'), undefined)
+    })
+
+    it(`lets anyone invite a ${platform} device once its claim expires`, async function() {
+      const f = fixture(platform)
+      f.update({owner: null
+        , restoreOwner: {email: 'previous@example.test', expiresAt: Date.now() - 1}})
+      f.access.released('PHONE')
+      assert.equal(await f.dispatch('group.invite', 'tx.expired'), undefined)
     })
   }
 

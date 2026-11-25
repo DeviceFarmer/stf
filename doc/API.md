@@ -552,12 +552,12 @@ var serial = process.argv.slice(2)[0]
 client.then(function(api) {
   return api.devices.getDeviceBySerial({
     serial: serial
-  , fields: 'serial,present,status,ready,using,owner,claimed'
+  , fields: 'serial,present,status,ready,using,owner,claimed,claimedByYou'
   }).then(function(res) {
       // check if device can be added or not
       var device = res.obj.device
       if (!device.present || device.status !== 3 || !device.ready || device.using ||
-          device.owner || device.claimed) {
+          device.owner || (device.claimed && !device.claimedByYou)) {
         console.log('Device is not available')
         return
       }

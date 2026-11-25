@@ -81,6 +81,10 @@ export interface Device {
   status: number
   statusTimeStamp?: string
   using?: boolean
+  // Kept for its previous user after a reboot, until claimExpiresAt (ms since the epoch)
+  claimed?: boolean
+  claimExpiresAt?: number | null
+  claimedByYou?: boolean
   usage?: string | null
   automationLeaseId?: string | null
   usable?: boolean

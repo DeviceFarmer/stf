@@ -230,3 +230,36 @@ describe('shared device trackers', () => {
     single.unmount()
   })
 })
+
+describe('devices kept for someone else', () => {
+  beforeEach(() => {
+    // Date too, since the claim expiry is compared with the wall clock
+    vi.useFakeTimers()
+    requests.length = 0
+    failNextLoad = false
+    failAllLoads = false
+  })
+
+  afterEach(async() => {
+    await advance(releaseGracePeriod)
+    vi.useRealTimers()
+  })
+
+  it('turns available on its own when the claim expires', async() => {
+    const view = renderHook(() => useDevices())
+    await advance(50)
+    act(() => fire('device.change', {important: true, data: {serial: 'a', present: true
+      , ready: true, status: 3, claimed: true, claimExpiresAt: Date.now() + 2000
+      , claimedByYou: false}}))
+    await advance(20)
+    const kept = view.result.current.devices.find((device) => device.serial === 'a')!
+    expect(kept.state).toBe('busy')
+    expect(kept.usable).toBe(false)
+
+    await advance(2100)
+    const freed = view.result.current.devices.find((device) => device.serial === 'a')!
+    expect(freed.state).toBe('available')
+    expect(freed.usable).toBe(true)
+    view.unmount()
+  })
+})

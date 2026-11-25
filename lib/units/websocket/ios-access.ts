@@ -1,6 +1,10 @@
 import {randomUUID} from 'node:crypto'
 import {isValidSerial} from './access.js'
+import deviceutil from '../../util/deviceutil.js'
 import type {DeviceAccess, LoadDevice} from './access.js'
+
+/** Why an invite was refused; the web UI matches it to explain the refusal. */
+export const CLAIMED_FOR_OTHER = 'Device is kept for its previous user'
 
 interface IosUser {
   email: string
@@ -195,6 +199,15 @@ export function createDevicePacketGuard(
               channel, user.groups.subscribed, loadOnce)) ||
                 !await allowIosPacket(event, channel, user, loadOnce)) {
               return 'Device access denied'
+            }
+            if (event === 'group.invite') {
+              // Nobody but the user it is kept for may take a device that is coming back from a
+              // reboot, not even an administrator; the API and the coordinator refuse it too.
+              const serial = devicePolicy?.source(channel) ||
+                (channel.startsWith('ios:') ? channel.slice(4) : channel)
+              if (deviceutil.isClaimedForOther(await loadOnce(serial), user.email, Date.now())) {
+                return CLAIMED_FOR_OTHER
+              }
             }
             if (input || devicePolicy?.requiresOwner?.(event)) {
               const serial = devicePolicy?.source(channel) ||

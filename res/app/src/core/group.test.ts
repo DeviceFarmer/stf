@@ -4,8 +4,16 @@ import type {Device} from './devices/types'
 const calls = vi.hoisted(() => ({remove: vi.fn(), emit: vi.fn(), transaction: vi.fn()}))
 vi.mock('./api', () => ({api: {delete: calls.remove}}))
 vi.mock('./socket', () => ({emit: calls.emit}))
-vi.mock('./transaction', () => ({createTransaction: calls.transaction, TransactionError: class extends Error {}}))
+vi.mock('./transaction', () => ({createTransaction: calls.transaction
+  , TransactionError: class extends Error {
+    code: unknown
+    constructor(code: unknown) {
+      super(String(code))
+      this.code = code
+    }
+  }}))
 import {inviteDevice, releaseDevice} from './group'
+import {TransactionError} from './transaction'
 
 beforeEach(() => {
   calls.remove.mockReset().mockResolvedValue(undefined)
@@ -52,5 +60,21 @@ describe('confirmed ownership acknowledgement', () => {
     const device = {serial: 'phone', channel: 'channel', usable: true, owner: null} as Device
     calls.transaction.mockReturnValue({channel: 'tx.test', promise: Promise.resolve({device})})
     expect(await inviteDevice(device)).toBe(device)
+  })
+})
+
+describe('refused invitations', () => {
+  const device = {serial: 'phone', channel: 'channel', usable: true, owner: null} as Device
+
+  it('explains that a device is kept for its previous user', async() => {
+    calls.transaction.mockReturnValue({channel: 'tx.test'
+      , promise: Promise.reject(new (TransactionError as any)('Device is kept for its previous user'))})
+    await expect(inviteDevice(device)).rejects.toThrow('kept for its previous user while it restarts')
+  })
+
+  it('keeps the generic message for other refusals', async() => {
+    calls.transaction.mockReturnValue({channel: 'tx.test'
+      , promise: Promise.reject(new (TransactionError as any)('Device access denied'))})
+    await expect(inviteDevice(device)).rejects.toThrow('Device refused to join the group')
   })
 })

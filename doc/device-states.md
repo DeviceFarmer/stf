@@ -15,6 +15,8 @@ This page explains both: what each value means, what causes it and what to do ab
 | `usage` | string or `null` | `"automation"` when the device was reserved through the API. `null` otherwise, for example when it was reserved in the web UI. |
 | `using` | boolean | The device is held by you. It is computed for each request and not stored. |
 | `claimed` | boolean | The device is kept for its last owner while it reboots. It is computed for each request. |
+| `claimExpiresAt` | number or `null` | When the claim ends, in milliseconds since the epoch. `null` when `claimed` is `false`. |
+| `claimedByYou` | boolean | The device is kept for you. Only the user it is kept for sees `true`. |
 | `ios` | object | iOS only. The health of the iPhone runtime. See [iOS devices](#ios-devices). |
 
 Notes:
@@ -34,9 +36,10 @@ Notes:
   `--auto-restore-owner`. The 2 minutes start when the reboot is requested, or when the device
   goes away. A device with an automation lease is never claimed. The owner gets the device
   back with the same `usage` and timeout that the reservation had before. While `claimed` is
-  `true`, `POST /api/v1/user/devices` and the coordinator refuse the device for everyone,
-  including the owner it is kept for. The web UI does not check `claimed`. See
-  [Available](#available-available).
+  `true`, only the user it is kept for can take the device: **Use** in the web UI,
+  `POST /api/v1/user/devices`, and a join by ADB key or VNC password all refuse everyone else,
+  administrators included. The coordinator refuses the device for everyone, including the
+  owner it is kept for. See [Busy](#busy-busy).
 * `bookable` is not a device field. It is a group class. `GET /api/v1/devices?target=bookable`
   lists the devices whose origin group is a group you subscribe to and whose current group is not
   of class `standard`. It does not check the class of the origin group.
@@ -151,16 +154,18 @@ and `automation`.
   A device is released when its owner stops using it, or when it is inactive for longer than its
   timeout. The default timeout is the provider `--group-timeout`, 900 seconds.
 
+A `claimed` device kept for another user also shows as Busy, with no owner, for up to 2 minutes
+after it restarts. It stays Busy once its owner gets it back, and turns Available if the claim
+expires first.
+
 ### Available (`available`)
 
 * **Cause:** the device is ready and nobody holds it.
 * **What to do:** select **Use**.
 
-A `claimed` device also shows as Available, and its **Use** button works. The web UI does not
-check the claim, so any user can take the device there, and that ends the claim. Only
-`POST /api/v1/user/devices` and the coordinator respect the claim. They refuse the device for
-everyone, including the owner it is kept for. When the device is ready again, the processor gives
-it back to its owner, and the claim ends. If that fails, the claim stays until it expires.
+The user a `claimed` device is kept for sees it as Available and can select **Use**, for
+example when the automatic restore did not happen. When the device is ready again, the processor
+gives it back to its owner, and the claim ends. If that fails, the claim stays until it expires.
 
 ## Why a device was taken from you
 
@@ -187,11 +192,11 @@ web UI has no message for it, so it shows "Unknown reason."
 * `status` is 3
 * `owner` is `null`
 * `using` is `false`
-* `claimed` is `false`
+* `claimed` is `false`, or `claimedByYou` is `true`
 
 Otherwise the API answers `403` with "Device is being used or not available". Ask for the
 fields you need, for example
-`GET /api/v1/devices/{serial}?fields=serial,present,status,ready,owner,using,claimed`.
+`GET /api/v1/devices/{serial}?fields=serial,present,status,ready,owner,using,claimed,claimedByYou`.
 
 After a reboot through `POST /api/v1/user/devices/{serial}/reboot`, poll the device until
 `present` and `ready` are `true` again.

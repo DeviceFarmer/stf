@@ -30,7 +30,10 @@ const restoreZmq = mockModule(new URL('../../lib/util/zmqutil.js', import.meta.u
     return transport
   }}
 })
-const restoreDb = mockModule(new URL('../../lib/db/api.js', import.meta.url), {default: {}})
+const loadDeviceBySerial = sinon.stub().resolves(null)
+const restoreDb = mockModule(new URL('../../lib/db/api.js', import.meta.url), {
+  default: {loadDeviceBySerial}
+})
 const restoreAdb = mockModule(new URL('../../lib/util/adbutil.js', import.meta.url), {
   default: () => ({})
 })
@@ -83,6 +86,7 @@ function fixture() {
       return emitted.filter(item => item.event === 'device.change').at(-1)!.data.data
     }
     , changes: () => emitted.filter(item => item.event === 'device.change').length
+    , lastChange: () => emitted.filter(item => item.event === 'device.change').at(-1)!.data.data
     , close: async() => {
       listeners.get('disconnect')!()
       await new Promise<void>(resolve => setImmediate(resolve))
@@ -143,6 +147,30 @@ describe('websocket ownership events', function() {
       assert.equal(released.automationLeaseId, null)
     }
     finally {
+      await f.close()
+    }
+  })
+
+  // The ready message cannot say whether the device is kept for its previous user, and without
+  // that every other viewer would be offered Use until the restore lands, or for the full claim
+  it('tells viewers a device that becomes ready is kept for its previous user', async function() {
+    const expiresAt = Date.now() + 60000
+    loadDeviceBySerial.resolves({serial: 'device', owner: null, group: {id: 'visible-group'}
+      , restoreOwner: {email: 'runner@example.test', expiresAt}})
+    const f = fixture()
+    try {
+      f.send(new wire.DeviceReadyMessage('device', 'replacement-runtime'))
+      await new Promise<void>(resolve => setImmediate(resolve))
+      assert.deepEqual(f.lastChange(), {serial: 'device', claimed: true
+        , claimExpiresAt: expiresAt, claimedByYou: false})
+
+      // The restore's join ends the claim in the same write, so viewers drop it with the owner
+      const joined = f.send(new wire.JoinGroupMessage('device', owner, null, null))
+      assert.equal(joined.claimed, false)
+      assert.equal(joined.claimExpiresAt, null)
+    }
+    finally {
+      loadDeviceBySerial.resolves(null)
       await f.close()
     }
   })

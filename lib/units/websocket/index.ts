@@ -466,6 +466,21 @@ export default function(options: WebsocketOptions) {
           , reverseForwards: [] // @todo Get rid of need to reset this here.
           }
         })
+        // A device coming back from a reboot may be kept for its previous user. The wire message
+        // does not say, so read the row, or every other viewer would see it as free to take.
+        dbapi.loadDeviceBySerial(message.serial)
+          .then(function(device) {
+            if (device && device.restoreOwner) {
+              var claim = datautil.claimFor(device, user)
+              socket.emit('device.change', {
+                important: true
+              , data: {serial: message.serial, ...claim}
+              })
+            }
+          })
+          .catch(function(err) {
+            log.warn('Unable to read the claim on device "%s"', message.serial, err.message)
+          })
       })
       .on(wire.DevicePresentMessage, function(channel, message) {
         deviceAccess.update(message.serial, {present: true})
@@ -499,6 +514,8 @@ export default function(options: WebsocketOptions) {
             , likelyLeaveReason: 'owner_change'
             , usage: message.usage
             , automationLeaseId: message.leaseId || null
+              // Any join ends a claim, in the same write that records the owner
+            , ...datautil.claimFor({}, user)
             }
           , user
           )

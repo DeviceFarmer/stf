@@ -2627,6 +2627,13 @@ definitions:
       claimed:
         description: The device is kept for its last owner while it reboots. Computed for each request
         type: boolean
+      claimExpiresAt:
+        description: When the claim ends, in milliseconds since the epoch. Null when not claimed
+        type: number
+        x-nullable: true
+      claimedByYou:
+        description: The device is kept for you. Only the user it is kept for sees true
+        type: boolean
       group:
         description: Group the device currently belongs to
         type: object

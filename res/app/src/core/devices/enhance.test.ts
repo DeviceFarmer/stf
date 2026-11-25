@@ -26,6 +26,22 @@ describe('enhanceDevice', () => {
     expect(computeState(device({owner: {email: 'x'}, using: true, usage: 'automation'}))).toBe('automation')
   })
 
+  // A device back from a reboot is ready and unowned before its previous user gets it back
+  it('shows a device kept for someone else as busy, and as usable to the one it is kept for', () => {
+    const claim = {claimed: true, claimExpiresAt: Date.now() + 60000}
+    const kept = enhanceDevice(device({...claim, claimedByYou: false}))
+    expect(kept.state).toBe('busy')
+    expect(kept.usable).toBe(false)
+
+    const own = enhanceDevice(device({...claim, claimedByYou: true}))
+    expect(own.state).toBe('available')
+    expect(own.usable).toBe(true)
+
+    const expired = enhanceDevice(device({claimed: true, claimExpiresAt: Date.now() - 1}))
+    expect(expired.state).toBe('available')
+    expect(expired.usable).toBe(true)
+  })
+
   it('derives usability and display fields', () => {
     const busy = enhanceDevice(device({owner: {email: 'other@example.com'}, using: true, model: 'Pixel'}))
     expect(busy.usable).toBe(true)
