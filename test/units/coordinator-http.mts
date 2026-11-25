@@ -4,6 +4,7 @@ import {once} from 'node:events'
 import {createHash} from 'node:crypto'
 import {getSystemErrorMap} from 'node:util'
 import logger from '../../lib/util/logger.js'
+import {iosScreenWakeFailed} from '../../lib/util/automation-lease.js'
 import {Coordinator} from '../../lib/units/coordinator/engine.js'
 import {HttpFarmBackend} from '../../lib/units/coordinator/backend.js'
 import {createCoordinatorApp} from '../../lib/units/coordinator/http.js'
@@ -95,6 +96,7 @@ describe('coordinator HTTP and real upstream adapters', function() {
       , release: ReturnType<typeof deferred>} | null = null
     let capturePause: {entered: ReturnType<typeof deferred>
       , release: ReturnType<typeof deferred>} | null = null
+    let captureFailure: {status: number, code: string} | null = null
     let renewalPause: {serial: string, entered: ReturnType<typeof deferred>
       , release: ReturnType<typeof deferred>} | null = null
     const reply = (res: http.ServerResponse, value: unknown, status = 200) => {
@@ -124,6 +126,11 @@ describe('coordinator HTTP and real upstream adapters', function() {
         if (capturePause) {
           capturePause.entered.resolve()
           await capturePause.release.promise
+        }
+        if (captureFailure) {
+          const {status, code} = captureFailure
+          captureFailure = null
+          return reply(res, {success: false, code}, status)
         }
         const device = devices.find(item => item.serial === body.serial)!
         device.owner = {email: owner}
@@ -232,6 +239,19 @@ describe('coordinator HTTP and real upstream adapters', function() {
       return lease.body.lease
     }
     return {engine, backend, store, devices, grid, stfCalls, gridCalls, url, call, allocate
+      , configureIPhone() {
+        const serial = 'IPHONE-A'
+        const version = '27.2'
+        devices[0] = {...devices[0]!, serial, platform: 'iOS', version
+          , ios: {wda: {profile: 'valid', checkedAt: new Date(time).toISOString()
+            , expiresAt: new Date(time + 86400000).toISOString()}}}
+        grid.nodes[0]!.slots[0]!.stereotype = {platformName: 'iOS', 'appium:udid': serial
+          , 'appium:platformVersion': version}
+        return serial
+      }
+      , failNextCapture(status: number, code: string) {
+        captureFailure = {status, code}
+      }
       , lagSessionDeletion() {
         grid.ready = false
         lagNextSessionDeletion = true
@@ -669,16 +689,60 @@ describe('coordinator HTTP and real upstream adapters', function() {
       assert.equal(sent['appium:appWaitForLaunch'], false)
     })
 
+  it('fails a confirmed iPhone wake refusal without quarantining or retrying the capture',
+    async() => {
+      const f = await fixture()
+      const serial = f.configureIPhone()
+      const submit = (runId: string) => f.call('/api/v1/requests', 'POST',
+        {runId, platform: 'iOS', serial}, bearer, {'Idempotency-Key': runId})
+      const request = await submit('wake-refused')
+      assert.equal(request.status, 202)
+      f.failNextCapture(409, 'device_unavailable')
+      await f.engine.tick()
+      assert.equal(f.engine.requestView(request.body.request.id).state, 'queued')
+
+      f.failNextCapture(409, iosScreenWakeFailed)
+      await f.engine.tick()
+      const failed = f.engine.requestView(request.body.request.id)
+      assert.equal(failed.state, 'failed')
+      assert.equal(failed.error, iosScreenWakeFailed)
+      assert.ok(failed.leaseId)
+      assert.equal(f.engine.leaseView(failed.leaseId).state, 'released')
+      const refusedLease = f.store.state.leases.find(lease => lease.id === failed.leaseId)
+      assert.ok(refusedLease)
+      assert.equal(Object.hasOwn(refusedLease, 'captureUncertain'), false)
+      await f.engine.tick()
+      assert.deepEqual(f.stfCalls.filter(call => call.route.startsWith('/api/v1/user/devices'))
+        .map(call => call.route), ['/api/v1/user/devices', '/api/v1/user/devices'])
+
+      const retry = await submit('device-now-awake')
+      assert.equal(retry.status, 202)
+      await f.engine.tick()
+      assert.equal(f.engine.requestView(retry.body.request.id).state, 'allocated')
+    })
+
+  it('keeps an ambiguous iPhone capture timeout in quarantine', async() => {
+    const f = await fixture()
+    const serial = f.configureIPhone()
+    f.failNextCapture(504, iosScreenWakeFailed)
+    const request = await f.call('/api/v1/requests', 'POST',
+      {runId: 'wake-timed-out', platform: 'iOS', serial}, bearer,
+      {'Idempotency-Key': 'wake-timed-out'})
+    assert.equal(request.status, 202)
+    await f.engine.tick()
+    const failed = f.engine.requestView(request.body.request.id)
+    assert.equal(failed.state, 'failed')
+    assert.equal(failed.error, 'allocation_failed')
+    assert.ok(failed.leaseId)
+    assert.equal(f.engine.leaseView(failed.leaseId).state, 'quarantined')
+    assert.equal(f.store.state.leases[0]?.captureUncertain, true)
+  })
+
   it('accepts typed device-scoped iOS startup options and rejects nonscalar values', async() => {
     const f = await fixture()
-    const now = Date.parse('2026-10-18T00:00:00Z')
-    f.devices[0] = {...f.devices[0]!, serial: 'IPHONE-A', platform: 'iOS', version: '27.2'
-    , ios: {wda: {profile: 'valid', checkedAt: new Date(now).toISOString()
-        , expiresAt: new Date(now + 86400000).toISOString()}}}
-    f.grid.nodes[0]!.slots[0]!.stereotype = {platformName: 'iOS', 'appium:udid': 'IPHONE-A'
-      , 'appium:platformVersion': '27.2'}
+    const serial = f.configureIPhone()
     const request = await f.call('/api/v1/requests', 'POST',
-      {runId: 'ios-options', platform: 'iOS', serial: 'IPHONE-A'}, bearer,
+      {runId: 'ios-options', platform: 'iOS', serial}, bearer,
       {'Idempotency-Key': 'ios-options'})
     assert.equal(request.status, 202)
     await f.engine.tick()

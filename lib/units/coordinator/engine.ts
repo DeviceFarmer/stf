@@ -2,7 +2,8 @@ import {createHash, randomUUID} from 'node:crypto'
 import {setTimeout as wait} from 'node:timers/promises'
 import {getSystemErrorMap} from 'node:util'
 import logger from '../../util/logger.js'
-import {BackendError} from './backend.js'
+import {BackendError, IosScreenWakeError} from './backend.js'
+import {iosScreenWakeFailed} from '../../util/automation-lease.js'
 import {CoordinatorError, endpoint} from './config.js'
 import {validMaintenanceId, validMaintenanceSerial} from './maintenance.js'
 import {wdaProfileCovers} from './wda-profile.js'
@@ -886,7 +887,13 @@ export class Coordinator {
           lease.state = 'released'
           delete lease.captureUncertain
           if (request.state === 'queued') {
-            delete request.leaseId
+            if (error instanceof IosScreenWakeError) {
+              request.state = 'failed'
+              request.error = iosScreenWakeFailed
+            }
+            else {
+              delete request.leaseId
+            }
           }
         }
         else {

@@ -63,9 +63,11 @@ describe('Linux iOS integration', function() {
     }
     const requests: {path: string, body: any}[] = []
     let cancelled = false
+    let failDevice = false
     let failKeepalive = false
     let appiumResponse = Promise.resolve(200)
     let lockResponse = Promise.resolve()
+    let idleLockCancelled = false
     let protectedLock = false
     const errors: unknown[] = []
     const screens: http.ServerResponse[] = []
@@ -78,7 +80,13 @@ describe('Linux iOS integration', function() {
     const backend = http.createServer(async(req, res) => {
       assert.equal(req.headers.authorization, 'Bearer ' + 'a'.repeat(32))
       if (req.url === '/device') {
-        res.end(JSON.stringify(state))
+        if (failDevice) {
+          failDevice = false
+          res.writeHead(503).end('{}')
+        }
+        else {
+          res.end(JSON.stringify(state))
+        }
       }
       else if (req.url === '/screenshot') {
         res.setHeader('Content-Type', 'image/png')
@@ -142,7 +150,13 @@ describe('Linux iOS integration', function() {
             return
           }
           if (req.url === '/lock') {
+            res.once('close', () => {
+              idleLockCancelled = !res.writableEnded
+            })
             await lockResponse
+            if (res.destroyed) {
+              return
+            }
           }
           const locked = req.url === '/lock' || protectedLock
           state.ios!.locked = locked
@@ -244,6 +258,10 @@ describe('Linux iOS integration', function() {
         protectedLock = true
         state.ios!.locked = true
       }
+      , failDevice: () => {
+        failDevice = true
+      }
+      , idleLockCancelled: () => idleLockCancelled
       , failKeepalive: () => {
  failKeepalive = true
 }
@@ -369,24 +387,86 @@ describe('Linux iOS integration', function() {
       assert.equal((await release()).success, true)
       clock.tick(29999)
       await f.bridge.poll()
-      assert.equal(f.requests.length, 0)
+      assert.equal(f.requests.length, 1)
       await f.join()
       clock.tick(1)
       await f.bridge.poll()
-      assert.equal(f.requests.length, 0)
+      assert.equal(f.requests.length, 1)
 
       assert.equal((await release()).success, true)
       clock.tick(30000)
       await f.bridge.poll()
       await until(() => f.state.ios!.locked === true)
-      assert.deepEqual(f.requests.map(request => request.path), ['/lock'])
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock'])
     }
     finally {
       clock.restore()
     }
   })
 
-  it('finishes an in-flight screen lock before waking for the next owner', async() => {
+  it('preserves the scheduled lock when reacquiring a free phone fails', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      await f.join()
+      await f.bridge.leave('ungroup_request')
+      clock.tick(29999)
+      f.failDevice()
+      const capture = await f.transact(new wire.GroupMessage(owner, 900000, []))
+      assert.equal(capture.success, false)
+      assert.equal(f.bridge.owner, null)
+      clock.tick(1)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock'])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('wakes each new runtime once even when WDA reports an unlocked screen', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    assert.equal(f.state.ios!.locked, false)
+    await f.join()
+    await f.bridge.leave('ungroup_request')
+    await f.join()
+    assert.deepEqual(f.requests.map(request => request.path), ['/unlock'])
+    await f.bridge.leave('ungroup_request')
+    f.state.instance = 'fresh-runtime-on-an-asleep-iphone'
+    await f.join()
+    assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/unlock'])
+  })
+
+  it('allows a full lock timeout and cancels a pending lock when a new owner arrives', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    const timeouts = sinon.spy(AbortSignal, 'timeout')
+    const finishLock = f.holdLock()
+    try {
+      await f.join()
+      await f.bridge.leave('ungroup_request')
+      clock.tick(30000)
+      await f.bridge.poll()
+      await until(() => f.requests.some(request => request.path === '/lock'))
+      assert.equal(f.bridge.owner, null)
+      assert.ok(timeouts.calledWith(50000))
+      const joining = await f.transact(new wire.GroupMessage(owner, 900000, []))
+      assert.equal(joining.success, true)
+      await until(f.idleLockCancelled)
+      finishLock()
+      assert.equal(f.state.ios!.locked, false)
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock', '/unlock'])
+      assert.deepEqual(f.errors, [])
+    }
+    finally {
+      finishLock()
+      timeouts.restore()
+      clock.restore()
+    }
+  })
+
+  it('retries an overdue lock when the capture that cancelled it fails', async() => {
     const f = await fixture({autoScreenSleep: true})
     const clock = sinon.useFakeTimers({toFake: ['Date']})
     const finishLock = f.holdLock()
@@ -396,13 +476,15 @@ describe('Linux iOS integration', function() {
       clock.tick(30000)
       await f.bridge.poll()
       await until(() => f.requests.some(request => request.path === '/lock'))
-      const joining = f.transact(new wire.GroupMessage(owner, 900000, []))
-      await new Promise(resolve => setImmediate(resolve))
-      assert.equal(f.bridge.owner, null)
+      f.failDevice()
+      const capture = await f.transact(new wire.GroupMessage(owner, 900000, []))
+      assert.equal(capture.success, false)
+      await until(f.idleLockCancelled)
       finishLock()
-      assert.equal((await joining).success, true)
-      assert.equal(f.state.ios!.locked, false)
-      assert.deepEqual(f.requests.map(request => request.path), ['/lock', '/unlock'])
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock', '/lock'])
+      assert.equal(f.bridge.owner, null)
     }
     finally {
       finishLock()
@@ -420,10 +502,10 @@ describe('Linux iOS integration', function() {
         const releasing = f.transact(new wire.AutomationLeaseMessage(
           serial, owner, 'coordinator-lease', 'release'))
         try {
-          await until(() => f.requests.length === 2)
+          await until(() => f.requests.length === 3)
           clock.tick(30000)
           await f.bridge.poll()
-          assert.equal(f.requests.length, 2)
+          assert.equal(f.requests.length, 3)
         }
         finally {
           finishHandback()
@@ -433,7 +515,7 @@ describe('Linux iOS integration', function() {
         await f.bridge.poll()
         await until(() => f.state.ios!.locked === true)
         assert.deepEqual(f.requests.map(request => request.path), [
-          '/automation', '/automation', '/lock'
+          '/unlock', '/automation', '/automation', '/lock'
         ])
 
         await f.join(900000, 'automation', 'wda-maintenance')
@@ -443,7 +525,7 @@ describe('Linux iOS integration', function() {
         await f.bridge.poll()
         await f.join()
         assert.deepEqual(f.requests.map(request => request.path), [
-          '/automation', '/automation', '/lock', '/unlock', '/automation', '/automation'
+          '/unlock', '/automation', '/automation', '/lock', '/unlock', '/automation', '/automation'
         ])
         assert.equal(f.state.ios!.locked, false)
       }
@@ -452,7 +534,7 @@ describe('Linux iOS integration', function() {
       }
     })
 
-  it('keeps a passcode-locked iPhone out of a new Coordinator lease', async() => {
+  it('returns a definite refusal when a passcode blocks a managed capture', async() => {
     const f = await fixture({autoScreenSleep: true})
     f.requirePasscode()
     await f.bridge.poll()
@@ -460,8 +542,33 @@ describe('Linux iOS integration', function() {
     const reply = await f.transact(new wire.GroupMessage(owner, 900000, [],
       'automation', 'coordinator-lease', true))
     assert.equal(reply.success, false)
+    assert.equal(reply.data, 'ios_screen_wake_failed')
     assert.equal(f.bridge.owner, null)
-    assert.deepEqual(f.requests.map(request => request.path), ['/unlock'])
+    const manual = await f.transact(new wire.GroupMessage(owner, 900000, []))
+    assert.equal(manual.success, false)
+    assert.equal(manual.data, 'iPhone requires a physical unlock')
+    assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/unlock'])
+    assert.ok(f.sent.every(item => item.envelope.type !== wire.JoinGroupMessage.$code))
+  })
+
+  it('keeps unsuccessful Appium handoff separate from a definite wake refusal', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    await f.bridge.poll()
+    f.send(new wire.DeviceRegisteredMessage(serial), false, f.bridge.solo)
+    const finishHandoff = f.holdAutomation()
+    try {
+      const joining = f.transact(new wire.GroupMessage(owner, 900000, [],
+        'automation', 'coordinator-lease', true))
+      await until(() => f.requests.some(request => request.path === '/automation'))
+      finishHandoff(502)
+      const reply = await joining
+      assert.equal(reply.success, false)
+      assert.equal(reply.data, 'iOS backend returned HTTP 502')
+      assert.equal(f.bridge.owner, null)
+    }
+    finally {
+      finishHandoff()
+    }
   })
 
   it('restores an iPhone after a reboot with its automation usage and timeout', async function() {

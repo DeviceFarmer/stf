@@ -28,6 +28,13 @@ interface Point {x: number, y: number}
 
 const touchSequenceSize = 100
 const screenSleepDelayMs = 30000
+const screenLockRequestTimeoutMs = 50000
+
+class ScreenWakeError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), {cause})
+  }
+}
 
 export class IosBridge {
   readonly channel: string
@@ -48,7 +55,8 @@ export class IosBridge {
   private reservationQueue = Promise.resolve()
   private sleepOnRelease = false
   private sleepAt: number | null = null
-  private wakeRequired = false
+  private idleLockAbort: AbortController | null = null
+  private wakeRequired = true
   private queue = Promise.resolve()
   private touch: {sessionId: string, position: Point, pendingSeq: number | null} | null = null
   private wdaTouch: {from: Point, to: Point, started: number} | null = null
@@ -89,17 +97,22 @@ export class IosBridge {
         }
       })
       .on(wire.GroupMessage, (channel, message) => {
+        const managed = message.usage === 'automation' && Boolean(message.leaseId) &&
+          channel !== this.channel
         const captureTimeout = message.screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs :
           iosAutomationCaptureTimeoutMs
         // Count time spent behind an idle lock against the caller's capture deadline.
         const deadline = options.autoScreenSleep && message.usage === 'automation' ?
           AbortSignal.timeout(captureTimeout - 2000) : undefined
-        this.transaction(String(channel), () => this.changeReservation(async() => {
+        this.transaction(String(channel), async() => {
           await grouputil.match({serial: options.serial}, message.requirements)
-          await this.join(message.owner, message.timeout, message.usage, message.leaseId,
-            message.screenLifecycle, deadline)
-          return {owner: this.owner}
-        }))
+          this.idleLockAbort?.abort()
+          return this.changeReservation(async() => {
+            await this.join(message.owner, message.timeout, message.usage, message.leaseId,
+              message.screenLifecycle, deadline)
+            return {owner: this.owner}
+          })
+        }, managed)
       })
       .on(wire.AutomationLeaseMessage, (channel, message) => {
         this.transaction(String(channel), async() => {
@@ -121,6 +134,7 @@ export class IosBridge {
       })
       .on(wire.AutoGroupMessage, (_channel, message) => {
         if (this.registered && !this.owner) {
+          this.idleLockAbort?.abort()
           this.changeReservation(() => this.join(
             message.owner, message.timeout, message.usage
           )).catch(this.report)
@@ -290,6 +304,7 @@ export class IosBridge {
           const result = await (await this.ownedRequest('/unlock', {}, signal)).json() as {
             locked: boolean
           }
+          signal.throwIfAborted()
           this.wakeRequired = result.locked !== false
           return result
         }, true))
@@ -484,11 +499,12 @@ export class IosBridge {
     return result
   }
 
-  private transaction(channel: string, operation: () => Promise<unknown>) {
+  private transaction(channel: string, operation: () => Promise<unknown>, managedCapture = false) {
     const reply = wireutil.reply(this.options.serial)
     operation().then(
       body => this.send(channel, reply.okay('success', body))
-    , error => this.send(channel, reply.fail((error as Error).message))
+    , error => this.send(channel, reply.fail(managedCapture && error instanceof ScreenWakeError ?
+      'ios_screen_wake_failed' : (error as Error).message))
     )
   }
 
@@ -508,7 +524,6 @@ export class IosBridge {
   }
 
   private async wakeScreen(epoch: number, deadline?: AbortSignal) {
-    this.sleepAt = null
     // Let aborted commands from the previous owner settle before checking the screen.
     await this.queue
     const timeout = AbortSignal.timeout(15000)
@@ -527,26 +542,42 @@ export class IosBridge {
   }
 
   private sleepIfIdle() {
-    if (this.sleepAt === null || Date.now() < this.sleepAt) {
+    if (this.sleepAt === null || Date.now() < this.sleepAt || this.idleLockAbort) {
       return
     }
     const epoch = this.epoch
-    this.sleepAt = null
+    const controller = new AbortController()
+    this.idleLockAbort = controller
     // Keep polling and sending heartbeats while the lock operation holds the reservation queue.
     this.changeReservation(async() => {
-      if (!this.registered || this.owner || this.appiumHandoff || epoch !== this.epoch) {
-        return
+      try {
+        if (controller.signal.aborted || !this.registered || this.owner || this.appiumHandoff ||
+            epoch !== this.epoch) {
+          return
+        }
+        const checkSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)])
+        this.assertReadyForReservation(epoch, await this.client.device(checkSignal))
+        // The phone may have locked even if the response is lost.
+        this.wakeRequired = true
+        const lockSignal = AbortSignal.any([controller.signal,
+          AbortSignal.timeout(screenLockRequestTimeoutMs)])
+        const response = await this.client.request('/lock', {}, lockSignal)
+        const result = await response.json() as {locked?: boolean}
+        if (result.locked !== true) {
+          throw new Error('iPhone screen did not lock')
+        }
       }
-      const signal = AbortSignal.timeout(15000)
-      this.assertReadyForReservation(epoch, await this.client.device(signal))
-      // The phone may have locked even if the response is lost.
-      this.wakeRequired = true
-      const response = await this.client.request('/lock', {}, signal)
-      const result = await response.json() as {locked?: boolean}
-      if (result.locked !== true) {
-        throw new Error('iPhone screen did not lock')
+      finally {
+        if (!controller.signal.aborted && epoch === this.epoch && !this.appiumHandoff) {
+          this.sleepAt = null
+        }
+        this.idleLockAbort = null
       }
-    }).catch(this.report)
+    }).catch(error => {
+      if (!controller.signal.aborted) {
+        this.report(error)
+      }
+    })
   }
 
   private async setAppiumMode(active: boolean, lease: string, deadline?: AbortSignal) {
@@ -582,7 +613,12 @@ export class IosBridge {
         await this.setAppiumMode(false, this.appiumHandoff, deadline)
       }
       if (this.options.autoScreenSleep) {
-        await this.wakeScreen(epoch, deadline)
+        try {
+          await this.wakeScreen(epoch, deadline)
+        }
+        catch (error) {
+          throw new ScreenWakeError(error)
+        }
       }
       const reservationId = randomUUID()
       if (automated) {
@@ -602,6 +638,7 @@ export class IosBridge {
       this.automationLeaseId = automationLeaseId
       this.ownerAbort = new AbortController()
       this.owner = {...owner, reservationId}
+      this.sleepAt = null
       this.automated = automated
       // An unmarked automation capture may be holding the device for WDA maintenance.
       this.sleepOnRelease = Boolean(this.options.autoScreenSleep && (!automated || screenLifecycle))
@@ -818,6 +855,9 @@ export class IosBridge {
 
   absent() {
     this.sleepAt = null
+    this.idleLockAbort?.abort()
+    // WDA can report an unlocked cached state after restarting on an asleep iPhone.
+    this.wakeRequired = true
     this.leaveNow('device_absent')
     if (this.identity) {
       this.broadcast(new wire.DeviceAbsentMessage(this.options.serial))

@@ -1414,6 +1414,17 @@ paths:
           description: Add User Device Status
           schema:
             $ref: "#/definitions/AddUserDeviceResponse"
+        "409":
+          description: A released lease ID or a confirmed iPhone screen unlock refusal
+          schema:
+            allOf:
+              - $ref: "#/definitions/UnexpectedErrorResponse"
+              - type: object
+                properties:
+                  code:
+                    description: Present when the provider refuses a capture before acquiring the device
+                    type: string
+                    enum: [ios_screen_wake_failed]
         default:
           description: >
             Unexpected Error:
