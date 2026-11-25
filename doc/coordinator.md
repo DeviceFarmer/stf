@@ -90,11 +90,13 @@ and a `projects` array. Each project has a unique `id`, a lowercase SHA-256
 `tokenSha256` and a positive integer `maxParallel`. Give the client the
 original project token. Generate project tokens randomly, like the operator
 token. The coordinator stores only a fast SHA-256 digest, which is safe only for
-random tokens, not for chosen passwords:
+random tokens, not for chosen passwords. Save the token to give the client and
+print the digest for `tokenSha256`:
 
 ```sh
-token=$(openssl rand -hex 32)
-printf %s "$token" | openssl dgst -sha256 -r | cut -d' ' -f1
+umask 077
+openssl rand -hex 32 | tr -d '\n' > "$COORDINATOR_DIR/project-a-token"
+openssl dgst -sha256 -r "$COORDINATOR_DIR/project-a-token" | cut -d' ' -f1
 ```
 
 Each project has its own idempotency keys, requests,
