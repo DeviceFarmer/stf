@@ -84,7 +84,9 @@ describe('iPhone card health badge', () => {
       mount(<MantineProvider env='test'>
         <IosHealthBadge device={wdaWarning('expiring', '2026-10-22T16:07:26Z')} />
       </MantineProvider>)
-      expect(screen.getByText('WDA · 18h left').parentElement?.style.textTransform).toBe('none')
+      const warning = screen.getByRole('button', {name: 'WDA · 18h left'})
+      expect(warning.style.textTransform).toBe('none')
+      expect(warning.style.getPropertyValue('--badge-color')).toContain('--mantine-color-yellow-light')
       act(() => vi.advanceTimersByTime(30 * 60 * 1000 + 1))
       expect(screen.getByText('WDA · 17h left')).toBeTruthy()
       for (let hour = 0; hour < 17; hour++) {
@@ -92,7 +94,8 @@ describe('iPhone card health badge', () => {
       }
       expect(screen.getByText('WDA · <1h left')).toBeTruthy()
       act(() => vi.advanceTimersByTime(60 * 60 * 1000 - 1))
-      expect(screen.getByText('WDA expired')).toBeTruthy()
+      expect(screen.getByRole('button', {name: 'WDA expired'}).style.getPropertyValue('--badge-color'))
+        .toContain('--mantine-color-red-light')
     }
     finally {
       cleanup()

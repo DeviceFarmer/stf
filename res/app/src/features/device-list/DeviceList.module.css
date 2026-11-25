@@ -137,16 +137,24 @@
   color: var(--mantine-color-dimmed);
 }
 
+.tileBody,
 .tileLink {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  min-width: 0;
+}
+
+.tileBody {
   padding: var(--mantine-spacing-sm) var(--mantine-spacing-sm) 6px;
+}
+
+.tileLink {
+  align-self: stretch;
   color: inherit;
   text-decoration: none;
   text-align: center;
-  min-width: 0;
 }
 
 .photo {

@@ -1,6 +1,6 @@
-import {Alert, Badge, Group, Stack, Text, Tooltip} from '@mantine/core'
+import {Alert, Badge, Group, Popover, Stack, Text, Tooltip, VisuallyHidden} from '@mantine/core'
 import {IconDeviceMobileCog} from '@tabler/icons-react'
-import {useEffect, useState, type ReactNode} from 'react'
+import {useEffect, useId, useState} from 'react'
 import type {Device} from '@/core/devices/types'
 import {gettext, translate, useTranslation} from '@/core/i18n'
 import {WidgetCard} from './WidgetCard'
@@ -28,11 +28,9 @@ export function iosReasonText(reason: string) {
   return translate(reasons[reason] || reasons.recovering!)
 }
 
-function DiagnosticBadge({text, tooltip = text, ready, tt}: {
-  text: string, tooltip?: ReactNode, ready: boolean, tt?: 'none'
-}) {
-  return <Tooltip label={tooltip} multiline w={280}>
-    <Badge color={ready ? 'yellow' : 'red'} variant='light' size='xs' maw='100%' tt={tt}>
+function DiagnosticBadge({text, ready}: {text: string, ready: boolean}) {
+  return <Tooltip label={text} multiline w={280}>
+    <Badge color={ready ? 'yellow' : 'red'} variant='light' size='xs' maw='100%'>
       {text}
     </Badge>
   </Tooltip>
@@ -40,11 +38,13 @@ function DiagnosticBadge({text, tooltip = text, ready, tt}: {
 
 const hourMs = 60 * 60 * 1000
 
-function WdaHealthBadge({expiresAt, reportedExpired, ready}: {
-  expiresAt: string | null, reportedExpired: boolean, ready: boolean
+function WdaHealthBadge({expiresAt, reportedExpired}: {
+  expiresAt: string | null, reportedExpired: boolean
 }) {
   const {t} = useTranslation()
   const [now, setNow] = useState(Date.now)
+  const [opened, setOpened] = useState(false)
+  const descriptionId = useId()
   const expiry = Date.parse(expiresAt ?? '')
   const remaining = expiry - now
   const expired = reportedExpired || remaining <= 0
@@ -68,10 +68,35 @@ function WdaHealthBadge({expiresAt, reportedExpired, ready}: {
   else if (Number.isFinite(remaining)) {
     text = t('WDA · <1h left')
   }
-  return <DiagnosticBadge text={text} ready={ready} tt='none' tooltip={<>
-    {iosReasonText(expired ? 'wda_profile_expired' : 'wda_profile_expiring')}
-    {Number.isFinite(expiry) && <div>{new Date(expiry).toLocaleString()}</div>}
-  </>} />
+  const warning = iosReasonText(expired ? 'wda_profile_expired' : 'wda_profile_expiring')
+  const localExpiry = Number.isFinite(expiry) ? new Date(expiry).toLocaleString() : null
+  const description = localExpiry ? `${warning} ${localExpiry}` : warning
+  return <>
+    <VisuallyHidden id={descriptionId}>{description}</VisuallyHidden>
+    <Popover opened={opened} onChange={setOpened} width='min(280px, calc(100vw - 24px))' shadow='md'>
+      <Popover.Target>
+        <Badge component='button' type='button' aria-describedby={descriptionId} title={opened ? '' : description}
+          color={expired ? 'red' : 'yellow'} variant='light' size='xs' maw='100%' tt='none'
+          style={{cursor: 'pointer'}} onClick={() => setOpened((value) => !value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && opened) {
+              event.stopPropagation()
+              setOpened(false)
+            }
+          }}>
+          {text}
+        </Badge>
+      </Popover.Target>
+      <Popover.Dropdown>
+        <Stack gap={4}>
+          <Text size='sm'>{warning}</Text>
+          {expiresAt && localExpiry && <Text size='xs' c='dimmed' component='time' dateTime={expiresAt}>
+            {localExpiry}
+          </Text>}
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  </>
 }
 
 export function IosHealthBadge({device}: {device: Device}) {
@@ -89,7 +114,7 @@ export function IosHealthBadge({device}: {device: Device}) {
   if (reason === 'wda_profile_expiring' || reason === 'wda_profile_expired') {
     const {expiresAt} = device.ios.wda
     return <WdaHealthBadge key={expiresAt} expiresAt={expiresAt}
-      reportedExpired={reason === 'wda_profile_expired'} ready={device.ready} />
+      reportedExpired={reason === 'wda_profile_expired'} />
   }
   return <DiagnosticBadge text={iosReasonText(reason)} ready={device.ready} />
 }
