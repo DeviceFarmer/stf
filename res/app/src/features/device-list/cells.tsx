@@ -21,7 +21,7 @@ export const StatusButton = memo(function StatusButton({device, actions}: {
   const [pending, setPending] = useState(false)
   const {t} = useTranslation()
   const stopAutomation = canStopAutomation(device)
-  const actionable = Boolean(device.usable || device.state === 'automation') || (actions.adminMode && device.state === 'busy')
+  const actionable = Boolean(device.usable || device.state === 'automation') || (actions.adminMode && device.state === 'busy' && Boolean(device.owner))
 
   return (
     <Button

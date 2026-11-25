@@ -152,6 +152,31 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     ])
   }
 
+  // Not an unknown credential, so it must not be offered to the current group to confirm either
+  const KEPT = Symbol('kept for its previous user')
+
+  // A credential join must not hand a device that is kept for someone else to another user. Resolves
+  // to the user when they may have it, or to KEPT when the device is kept for someone else.
+  function unlessKeptForOther<T extends {email: string}>(
+    serial: string
+  , user: T | null | undefined
+  ) {
+    if (!user) {
+      return Promise.resolve(user)
+    }
+    return dbapi.loadDeviceBySerial(serial)
+      .then(function(device) {
+        if (deviceutil.isClaimedForOther(device, user.email, Date.now())) {
+          log.info('Not giving device "%s" to "%s": it is kept for its previous user'
+          , serial
+          , user.email
+          )
+          return KEPT
+        }
+        return user
+      })
+  }
+
   // Hands a device that only left to reboot back to whoever was using it, by replaying the join
   // its dead worker can no longer do. Settles the claim either way, so it never outlives one boot.
   function restoreDeviceOwner(device: DeviceDocument | null, deviceChannel: string) {
@@ -320,6 +345,12 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     .on(wire.JoinGroupByAdbFingerprintMessage, function(channel, message) {
       dbapi.lookupUserByAdbFingerprint(message.fingerprint)
         .then(function(user) {
+          return unlessKeptForOther(message.serial, user)
+        })
+        .then(function(user) {
+          if (user === KEPT) {
+            return
+          }
           if (user) {
             sendAutoGroup(channel, user, message.fingerprint)
             if (message.publicKey) {
@@ -348,6 +379,12 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     .on(wire.JoinGroupByVncAuthResponseMessage, function(channel, message) {
       dbapi.lookupUserByVncAuthResponse(message.response, message.serial)
         .then(function(user) {
+          return unlessKeptForOther(message.serial, user)
+        })
+        .then(function(user) {
+          if (user === KEPT) {
+            return
+          }
           if (user) {
             sendAutoGroup(channel, user, message.response)
           }
@@ -388,7 +425,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
       // A recorded early Leave does not change the current owner.
       return persistOwnership(message.serial, () =>
-        dbapi.releaseDeviceOwner(message.serial, message.owner, message.leaseId)
+        dbapi.releaseDeviceOwner(message.serial, message.owner, message.leaseId, message.reason)
       , () => appDealer.send([channel, data]))
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {

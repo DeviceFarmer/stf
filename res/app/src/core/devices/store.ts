@@ -2,7 +2,7 @@ import {useEffect, useEffectEvent, useState, useSyncExternalStore} from 'react'
 import {api} from '../api'
 import {mergeObject} from '../collection'
 import {emit, onSocket} from '../socket'
-import {enhanceDevice} from './enhance'
+import {enhanceDevice, isClaimedForOther} from './enhance'
 import type {Device} from './types'
 
 type Filter = (device: Device) => boolean
@@ -55,6 +55,8 @@ export class DeviceTracker {
   private listeners = new Set<() => void>()
   private unsubscribers: Array<() => void> = []
   private timer: ReturnType<typeof setTimeout> | null = null
+  // Devices kept for someone else turn available on their own when the claim expires
+  private claimTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private frame: number | null = null
   private lastFlush = 0
 
@@ -98,6 +100,7 @@ export class DeviceTracker {
       cancelAnimationFrame(this.frame)
       this.frame = null
     }
+    this.clearClaimTimers()
     this.devices = []
     this.bySerial.clear()
     devices.forEach((device) => {
@@ -112,6 +115,7 @@ export class DeviceTracker {
   destroy(): void {
     this.unsubscribers.forEach((unsubscribe) => unsubscribe())
     this.unsubscribers = []
+    this.clearClaimTimers()
     if (this.timer) {
       clearTimeout(this.timer)
     }
@@ -150,6 +154,31 @@ export class DeviceTracker {
 
   private insert(device: Device) {
     this.bySerial.set(device.serial, this.devices.push(device) - 1)
+    this.watchClaim(device)
+  }
+
+  private watchClaim(device: Device) {
+    const pending = this.claimTimers.get(device.serial)
+    if (pending) {
+      clearTimeout(pending)
+      this.claimTimers.delete(device.serial)
+    }
+    if (!isClaimedForOther(device)) {
+      return
+    }
+    this.claimTimers.set(device.serial, setTimeout(() => {
+      this.claimTimers.delete(device.serial)
+      const current = this.get(device.serial)
+      if (current) {
+        this.replace(current, {})
+        this.notify(true)
+      }
+    }, Math.max(0, device.claimExpiresAt! - Date.now()) + 50))
+  }
+
+  private clearClaimTimers() {
+    this.claimTimers.forEach((timer) => clearTimeout(timer))
+    this.claimTimers.clear()
   }
 
   private build(data: Partial<Device>): Device {
@@ -161,6 +190,7 @@ export class DeviceTracker {
     const index = this.bySerial.get(device.serial)
     if (index !== undefined) {
       this.devices[index] = next
+      this.watchClaim(next)
     }
     return next
   }
@@ -172,6 +202,11 @@ export class DeviceTracker {
     }
     this.devices.splice(index, 1)
     this.bySerial.delete(serial)
+    const claimTimer = this.claimTimers.get(serial)
+    if (claimTimer) {
+      clearTimeout(claimTimer)
+      this.claimTimers.delete(serial)
+    }
     for (const [key, value] of this.bySerial) {
       if (value > index) {
         this.bySerial.set(key, value - 1)

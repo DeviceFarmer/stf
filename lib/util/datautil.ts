@@ -19,10 +19,18 @@ interface BrowserView {
   apps: Array<{type: string, developer?: string, id?: string}>
 }
 
+interface DeviceClaim {
+  claimed: boolean
+  claimExpiresAt: number | null
+  claimedByYou: boolean
+}
+
 interface DeviceView extends deviceutil.Claimable {
   present?: boolean
   using?: boolean
   claimed?: boolean
+  claimExpiresAt?: number | null
+  claimedByYou?: boolean
   model?: string | null
   product?: string | null
   platform?: string | null
@@ -48,6 +56,7 @@ interface DataUtil {
   applyBrowsers<D extends DeviceView>(device: D): D
   applyOwner<D extends DeviceView>(device: D, user: deviceutil.Viewer): D
   applyOwnerOnlyInfo(device: DeviceView, user: deviceutil.Viewer): void
+  claimFor(device: deviceutil.Claimable, user: {email: string}): DeviceClaim
   normalize(device: DeviceView, user: deviceutil.Viewer): void
 }
 
@@ -175,6 +184,20 @@ datautil.applyOwnerOnlyInfo = function(device: DeviceView, user: deviceutil.View
   }
 }
 
+// Whether a device is being held is worth knowing; who it is being held for is not anyone else's
+// business, so the name does not leave the server. An expired claim holds nothing, so it must not
+// read as held either: this is the only place the expiry is judged for readers. The expiry lets a
+// reader stop treating the device as held on time, and claimedByYou tells only the viewer the
+// claim is for that they may take the device back themselves.
+datautil.claimFor = function(device: deviceutil.Claimable, user: {email: string}) {
+  var claimed = deviceutil.isClaimLive(device, Date.now())
+  return {
+    claimed
+  , claimExpiresAt: claimed ? device.restoreOwner!.expiresAt : null
+  , claimedByYou: claimed && device.restoreOwner!.email === user.email
+  }
+}
+
 datautil.normalize = function(device: DeviceView, user: deviceutil.Viewer) {
   datautil.applyData(device)
   datautil.applyBrowsers(device)
@@ -184,10 +207,7 @@ datautil.normalize = function(device: DeviceView, user: deviceutil.Viewer) {
   }
   // After the owner is blanked, so that an absent device never reads as being used
   datautil.applyOwner(device, user)
-  // Whether a device is being held is worth knowing; who it is being held for is not anyone
-  // else's business, so the name does not leave the server. An expired claim holds nothing, so it
-  // must not read as held here either: this is the only place the expiry is judged for readers.
-  device.claimed = deviceutil.isClaimLive(device, Date.now())
+  Object.assign(device, datautil.claimFor(device, user))
   delete device.restoreOwner
   delete device.ownerTimeout
   delete device.automationRelease

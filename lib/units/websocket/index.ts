@@ -238,6 +238,25 @@ export default function(options: WebsocketOptions) {
 
   io.use(auth)
 
+  // Every socket reads a device's row when it becomes ready, to learn whether it is kept for its
+  // previous user. A provider restart makes all of its devices ready at once, so share the read
+  // between sockets instead of issuing one per socket and device.
+  var claimReads = new Map<string, ReturnType<typeof dbapi.loadDeviceBySerial>>()
+  function readClaim(serial: string) {
+    var pending = claimReads.get(serial)
+    if (!pending) {
+      pending = dbapi.loadDeviceBySerial(serial)
+      claimReads.set(serial, pending)
+      var forget = function() {
+        if (claimReads.get(serial) === pending) {
+          claimReads.delete(serial)
+        }
+      }
+      pending.then(forget, forget)
+    }
+    return pending
+  }
+
   io.on('connection', function(socket) {
     var req = socket.request as WebsocketRequest
     var user = req.user
@@ -309,6 +328,32 @@ export default function(options: WebsocketOptions) {
 
     user.ip = socket.handshake.query.uip as string | undefined || req.ip
     socket.emit('socket.ip', user.ip)
+
+    // Claim reads still in flight, by serial. A join or leave seen meanwhile is newer than the
+    // row being read, so it drops the entry and the read's result is discarded.
+    var claimTokens = new Map<string, object>()
+    function sendClaim(serial: string) {
+      var token = {}
+      claimTokens.set(serial, token)
+      readClaim(serial)
+        .then(function(device) {
+          if (device && claimTokens.get(serial) === token) {
+            // Sent even when there is no claim, so that one this viewer saw earlier is cleared
+            socket.emit('device.change', {
+              important: true
+            , data: {serial, ...datautil.claimFor(device, user)}
+            })
+          }
+        })
+        .catch(function(err) {
+          log.warn('Unable to read the claim on device "%s"', serial, err.message)
+        })
+        .finally(function() {
+          if (claimTokens.get(serial) === token) {
+            claimTokens.delete(serial)
+          }
+        })
+    }
 
     function joinChannel(channel: string) {
       if (channel && channel !== wireutil.global && !channels.has(channel)) {
@@ -466,6 +511,9 @@ export default function(options: WebsocketOptions) {
           , reverseForwards: [] // @todo Get rid of need to reset this here.
           }
         })
+        // A device coming back from a reboot may be kept for its previous user. The wire message
+        // does not say, so read the row, or every other viewer would see it as free to take.
+        sendClaim(message.serial)
       })
       .on(wire.DevicePresentMessage, function(channel, message) {
         deviceAccess.update(message.serial, {present: true})
@@ -490,6 +538,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.JoinGroupMessage, function(channel, message) {
+        claimTokens.delete(message.serial)
         deviceAccess.joined(message.serial, message.usage, message.owner, message.leaseId)
         socket.emit('device.change', {
           important: true
@@ -499,6 +548,8 @@ export default function(options: WebsocketOptions) {
             , likelyLeaveReason: 'owner_change'
             , usage: message.usage
             , automationLeaseId: message.leaseId || null
+              // Any join ends a claim, in the same write that records the owner
+            , ...datautil.claimFor({}, user)
             }
           , user
           )
@@ -514,6 +565,7 @@ export default function(options: WebsocketOptions) {
         if (!deviceAccess.released(message.serial, message.owner)) {
           return
         }
+        claimTokens.delete(message.serial)
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({
@@ -526,6 +578,10 @@ export default function(options: WebsocketOptions) {
           , user
           )
         })
+        // A device leaving because it went away may be kept for this owner while it reboots
+        if (message.reason === 'device_absent') {
+          sendClaim(message.serial)
+        }
       })
       .on(wire.DeviceStatusMessage, function(channel, message: LabelledStatusMessage) {
         deviceAccess.invalidate(message.serial)

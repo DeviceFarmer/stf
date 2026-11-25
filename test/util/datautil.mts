@@ -42,6 +42,31 @@ describe('datautil', function() {
       var free = device(null)
       datautil.normalize(free, user)
       expect(free.claimed).to.be.false
+      expect(free.claimExpiresAt).to.equal(null)
+      expect(free.claimedByYou).to.be.false
+    })
+
+    // The web UI needs the expiry to show the device as free again on time, and only the
+    // claimant is told the claim is theirs, so only they are offered Use
+    it('should tell a reader when the claim ends and only the claimant that it is theirs',
+      function() {
+        var expiresAt = Date.now() + 60000
+        var other = device({email: 'someone@example.com', expiresAt})
+        datautil.normalize(other, user)
+        expect(other.claimExpiresAt).to.equal(expiresAt)
+        expect(other.claimedByYou).to.be.false
+
+        var own = device({email: user.email, expiresAt})
+        datautil.normalize(own, user)
+        expect(own.claimed).to.be.true
+        expect(own.claimedByYou).to.be.true
+      })
+
+    it('should give no expiry for a claim that has already expired', function() {
+      var stale = device({email: user.email, expiresAt: Date.now() - 1})
+      datautil.normalize(stale, user)
+      expect(stale.claimExpiresAt).to.equal(null)
+      expect(stale.claimedByYou).to.be.false
     })
 
     it('should report a present device held by the viewer as used', function() {

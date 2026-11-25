@@ -20,6 +20,12 @@ describe('deviceutil', function() {
       expect(deviceutil.isAddable(free({claimed: true}))).to.be.false
     })
 
+    // The API reserves for whoever asks, so a claimant whose restore was lost can take the device
+    // back themselves instead of waiting for the claim to expire
+    it('should allow the user a device is being held for to take it', function() {
+      expect(deviceutil.isAddable(free({claimed: true, claimedByYou: true}))).to.be.true
+    })
+
     // `ready` stays set while adb reports the device offline or unauthorized, until the provider
     // stops the worker, so `status` is what tells whether the device can be used
     it('should refuse a device that adb does not report as online', function() {
@@ -75,6 +81,30 @@ describe('deviceutil', function() {
 
     it('should refuse a missing device', function() {
       expect(deviceutil.isClaimLive(null, NOW)).to.be.false
+    })
+  })
+
+  describe('isClaimedForOther', function() {
+    var NOW = 1000
+
+    function device(extra?: object): deviceutil.Claimable {
+      return Object.assign({
+        owner: null
+      , group: {id: 'group1'}
+      , restoreOwner: {email: 'user@example.com', expiresAt: NOW + 1}
+      }, extra)
+    }
+
+    it('should keep a claimed device from everyone but the claimant', function() {
+      expect(deviceutil.isClaimedForOther(device(), 'other@example.com', NOW)).to.be.true
+      expect(deviceutil.isClaimedForOther(device(), 'user@example.com', NOW)).to.be.false
+    })
+
+    it('should keep nothing once the claim expires or the device is unclaimed', function() {
+      expect(deviceutil.isClaimedForOther(device(), 'other@example.com', NOW + 1)).to.be.false
+      expect(deviceutil.isClaimedForOther(device({restoreOwner: null}), 'other@example.com', NOW))
+        .to.be.false
+      expect(deviceutil.isClaimedForOther(null, 'other@example.com', NOW)).to.be.false
     })
   })
 

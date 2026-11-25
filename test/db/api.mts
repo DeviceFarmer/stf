@@ -210,6 +210,25 @@ describe('dbapi owner claim', function() {
         }
       })
 
+    // A claim is taken when a reboot that keeps ownership is requested. If the owner lets go
+    // instead, the claim must end too, or nobody else can take the device for 2 minutes
+    it('should end a reboot claim on a release that is not the device going away', function() {
+      // An owner with no reservation keeps the update to the terms evalUpdate understands
+      const legacy = {email: owner.email} as DeviceOwner
+      const claim = {email: owner.email, expiresAt: 1}
+      const row = {owner: {email: owner.email}, restoreOwner: claim}
+      for (const reason of ['ungroup_request', 'automatic_timeout']) {
+        lastUpdate = null
+        dbapi.releaseDeviceOwner('serial', legacy, null, reason)
+        expect(evalUpdate(lastUpdate, row)).to.include({owner: null, restoreOwner: null})
+      }
+      for (const reason of ['device_absent', undefined]) {
+        lastUpdate = null
+        dbapi.releaseDeviceOwner('serial', legacy, null, reason)
+        expect(evalUpdate(lastUpdate, row).restoreOwner).to.deep.equal(claim)
+      }
+    })
+
     it('should find exact receipts in the latest and outstanding ownership records', function() {
       dbapi.hasDeviceAutomationRelease('serial', owner.email, 'lease-a')
       const query = JSON.stringify(lastQuery)

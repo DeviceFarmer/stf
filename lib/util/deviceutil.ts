@@ -3,9 +3,9 @@
 **/
 
 interface ClaimableDevice {
-  owner?: {email: string} | null
-  restoreOwner?: {expiresAt: number} | null
-  group?: {id: string} | null
+  owner?: {email?: string} | null
+  restoreOwner?: {email?: string, expiresAt: number} | null
+  group?: {id?: string | null} | null
 }
 
 interface HoldableDevice extends ClaimableDevice {
@@ -14,6 +14,7 @@ interface HoldableDevice extends ClaimableDevice {
   status: number
   using?: boolean
   claimed?: boolean
+  claimedByYou?: boolean
 }
 
 interface DeviceViewer {
@@ -27,6 +28,7 @@ interface DeviceUtil {
   isOwnedByUser(device: HoldableDevice, user: DeviceViewer): boolean | null | undefined
   isAddable(device: HoldableDevice, user?: DeviceViewer): boolean
   isClaimLive(device: ClaimableDevice | null | undefined, now: number): boolean
+  isClaimedForOther(device: ClaimableDevice | null | undefined, email: string, now: number): boolean
   isRestorable(
     device: ClaimableDevice
   , user: DeviceViewer | null | undefined
@@ -55,8 +57,8 @@ deviceutil.isAddable = function(device: HoldableDevice) {
          device.status === 3 &&
          !device.using &&
          !device.owner &&
-         // Held for whoever is coming back to it: ready and unowned, but not free
-         !device.claimed
+         // Held for whoever is coming back to it: ready and unowned, but not free, except to them
+         (!device.claimed || Boolean(device.claimedByYou))
 }
 
 // The half of a claim that can be judged from the device row alone, without loading the user it
@@ -82,6 +84,15 @@ deviceutil.isClaimLive = function(device: ClaimableDevice | null | undefined, no
   return Boolean(device!.group && device!.group.id)
 }
 
+// A live claim for anyone but `email` keeps the device from them, whoever they are.
+deviceutil.isClaimedForOther = function(
+  device: ClaimableDevice | null | undefined
+, email: string
+, now: number
+) {
+  return deviceutil.isClaimLive(device, now) && device!.restoreOwner!.email !== email
+}
+
 // A device that leaves while someone is using it is usually rebooting, so the processor records a
 // claim on the row. The claim is only honoured if it would still be allowed as a fresh request.
 deviceutil.isRestorable = function(
@@ -95,7 +106,7 @@ deviceutil.isRestorable = function(
 
   var subscribed = user.groups && user.groups.subscribed || []
 
-  return subscribed.indexOf(device.group!.id) >= 0
+  return subscribed.indexOf(device.group!.id!) >= 0
 }
 
 namespace deviceutil {

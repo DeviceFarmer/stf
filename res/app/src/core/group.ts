@@ -4,6 +4,9 @@ import {createTransaction, TransactionError} from './transaction'
 import type {Device} from './devices/types'
 import {isAutomated} from './devices/enhance'
 
+// The websocket's refusal of an invite for a device kept for someone else (CLAIMED_FOR_OTHER)
+const claimedForOther = 'Device is kept for its previous user'
+
 function request(action: 'group.invite' | 'group.kick', device: Device): Promise<Device> {
   const tx = createTransaction(device)
   emit(action, device.channel, tx.channel, {
@@ -19,7 +22,9 @@ function request(action: 'group.invite' | 'group.kick', device: Device): Promise
       {...result.device, owner: result.body.owner} : result.device)
     .catch((error) => {
       if (error instanceof TransactionError) {
-        throw new Error('Device refused to join the group')
+        throw new Error(error.code === claimedForOther ?
+          'Device is kept for its previous user while it restarts. Try again in two minutes.' :
+          'Device refused to join the group')
       }
       throw error
     })
