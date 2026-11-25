@@ -639,7 +639,9 @@ export class Coordinator {
       (!input.serial || input.serial === device.serial) &&
       (!input.model || input.model === device.model) &&
       (!input.provider || input.provider === device.provider) &&
-      !this.state.leases.some(lease => this.held(lease) && lease.device.serial === device.serial)
+      !this.state.leases.some(lease => lease.device.serial === device.serial &&
+        (this.held(lease) || (lease.requestId === request.id && lease.state === 'released' &&
+          lease.error === iosScreenWakeFailed)))
   }
 
   private connection(device: FarmDevice, grid: GridStatus): Record<string, unknown> | null {
@@ -886,8 +888,13 @@ export class Coordinator {
             [403, 409].includes(error.status)) {
           lease.state = 'released'
           delete lease.captureUncertain
+          const wakeRefused = error instanceof IosScreenWakeError
+          if (wakeRefused) {
+            // Remember the rejected device for this request, including across restarts.
+            lease.error = iosScreenWakeFailed
+          }
           if (request.state === 'queued') {
-            if (error instanceof IosScreenWakeError) {
+            if (wakeRefused && request.input.serial) {
               request.state = 'failed'
               request.error = iosScreenWakeFailed
             }

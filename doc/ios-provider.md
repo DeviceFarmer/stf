@@ -328,8 +328,9 @@ starting control or handing WDA to Appium. Enable this option after verifying
 that **Lock screen** and **Unlock screen** work on the phone without a passcode.
 The first reservation after the provider or iOS runtime reconnects explicitly
 wakes the phone because WDA can report a stale lock state. If wake fails before
-capture, the Coordinator reports `ios_screen_wake_failed` and releases the
-allocation.
+capture, the Coordinator releases the allocation. An exact-serial request
+reports `ios_screen_wake_failed`. A pool request can try other matching devices
+until its original queue deadline.
 
 The provider locks the screen after 30 seconds without a reservation. A new
 reservation cancels the pending lock. After an Appium lease ends, the delay

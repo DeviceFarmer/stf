@@ -207,8 +207,9 @@ describe('coordinator HTTP and real upstream adapters', function() {
       , maxDurationSeconds: 21600, maxParallel: 2, upstreamTimeoutSeconds: 1
     }
     const backend = new HttpFarmBackend(stfUrl, gridUrl, stfToken, 1000)
-    const engine = new Coordinator(options, [{provider: 'android-pool', host: 'adb.test', port: 5037
-      , systemPorts: [8200, 8201]}], backend, store, () => time)
+    const createEngine = () => new Coordinator(options, [{provider: 'android-pool', host: 'adb.test'
+      , port: 5037, systemPorts: [8200, 8201]}], backend, store, () => time)
+    const engine = createEngine()
     if (start) {
       await engine.start()
     }
@@ -238,14 +239,14 @@ describe('coordinator HTTP and real upstream adapters', function() {
       const lease = await call('/api/v1/leases/' + request.body.request.leaseId)
       return lease.body.lease
     }
-    return {engine, backend, store, devices, grid, stfCalls, gridCalls, url, call, allocate
-      , configureIPhone() {
-        const serial = 'IPHONE-A'
+    return {engine, createEngine, backend, store, devices, grid, stfCalls, gridCalls, url, call
+      , allocate, configureIPhone(index = 0) {
+        const serial = 'IPHONE-' + (index === 0 ? 'A' : 'B')
         const version = '27.2'
-        devices[0] = {...devices[0]!, serial, platform: 'iOS', version
+        devices[index] = {...devices[index]!, serial, platform: 'iOS', version
           , ios: {wda: {profile: 'valid', checkedAt: new Date(time).toISOString()
             , expiresAt: new Date(time + 86400000).toISOString()}}}
-        grid.nodes[0]!.slots[0]!.stereotype = {platformName: 'iOS', 'appium:udid': serial
+        grid.nodes[index]!.slots[0]!.stereotype = {platformName: 'iOS', 'appium:udid': serial
           , 'appium:platformVersion': version}
         return serial
       }
@@ -721,12 +722,71 @@ describe('coordinator HTTP and real upstream adapters', function() {
       assert.equal(f.engine.requestView(retry.body.request.id).state, 'allocated')
     })
 
+  it('tries the next iPhone after a confirmed wake refusal, even after a restart', async() => {
+    const f = await fixture()
+    const first = f.configureIPhone()
+    const second = f.configureIPhone(1)
+    const request = await f.call('/api/v1/requests', 'POST',
+      {runId: 'wake-fallback', platform: 'iOS'}, bearer, {'Idempotency-Key': 'wake-fallback'})
+    assert.equal(request.status, 202)
+    const id = request.body.request.id
+    f.failNextCapture(409, iosScreenWakeFailed)
+    await f.engine.tick()
+    const queued = f.engine.requestView(id)
+    assert.equal(queued.state, 'queued')
+    assert.equal(Object.hasOwn(queued, 'leaseId'), false)
+    assert.equal(Object.hasOwn(queued, 'error'), false)
+    const [refusedLease] = f.store.state.leases
+    assert.ok(refusedLease)
+    assert.equal(refusedLease.state, 'released')
+    assert.equal(refusedLease.error, iosScreenWakeFailed)
+    assert.equal(Object.hasOwn(refusedLease, 'captureUncertain'), false)
+
+    const restarted = f.createEngine()
+    await restarted.start()
+    await restarted.tick()
+    const allocated = restarted.requestView(id)
+    assert.equal(allocated.state, 'allocated')
+    assert.ok(allocated.leaseId)
+    assert.equal(restarted.leaseView(allocated.leaseId).device.serial, second)
+    assert.deepEqual(f.stfCalls.filter(call => call.route === '/api/v1/user/devices')
+      .map(call => call.body.serial), [first, second])
+  })
+
+  it('keeps the original queue timeout after all iPhones refuse to wake', async() => {
+    const f = await fixture()
+    const first = f.configureIPhone()
+    const second = f.configureIPhone(1)
+    const request = await f.call('/api/v1/requests', 'POST',
+      {runId: 'no-wake', platform: 'iOS', queueTimeoutSeconds: 10}, bearer,
+      {'Idempotency-Key': 'no-wake'})
+    assert.equal(request.status, 202)
+    const id = request.body.request.id
+    f.failNextCapture(409, iosScreenWakeFailed)
+    await f.engine.tick()
+    f.advance(5000)
+    f.failNextCapture(409, iosScreenWakeFailed)
+    await f.engine.tick()
+    await f.engine.tick()
+    assert.equal(f.engine.requestView(id).state, 'queued')
+
+    f.advance(5000)
+    await f.engine.tick()
+    const expired = f.engine.requestView(id)
+    assert.equal(expired.state, 'expired')
+    assert.equal(expired.error, 'queue_timeout')
+    assert.equal(Object.hasOwn(expired, 'leaseId'), false)
+    assert.deepEqual(f.stfCalls.filter(call => call.route === '/api/v1/user/devices')
+      .map(call => call.body.serial), [first, second])
+  })
+
   it('keeps an ambiguous iPhone capture timeout in quarantine', async() => {
     const f = await fixture()
     const serial = f.configureIPhone()
+    f.configureIPhone(1)
     f.failNextCapture(504, iosScreenWakeFailed)
     const request = await f.call('/api/v1/requests', 'POST',
-      {runId: 'wake-timed-out', platform: 'iOS', serial}, bearer,
+      {runId: 'wake-timed-out', platform: 'iOS'}, bearer,
       {'Idempotency-Key': 'wake-timed-out'})
     assert.equal(request.status, 202)
     await f.engine.tick()
@@ -736,6 +796,9 @@ describe('coordinator HTTP and real upstream adapters', function() {
     assert.ok(failed.leaseId)
     assert.equal(f.engine.leaseView(failed.leaseId).state, 'quarantined')
     assert.equal(f.store.state.leases[0]?.captureUncertain, true)
+    await f.engine.tick()
+    assert.deepEqual(f.stfCalls.filter(call => call.route === '/api/v1/user/devices')
+      .map(call => call.body.serial), [serial])
   })
 
   it('accepts typed device-scoped iOS startup options and rejects nonscalar values', async() => {
