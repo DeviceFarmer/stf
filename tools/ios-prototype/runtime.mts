@@ -498,36 +498,43 @@ export class IosRuntime {
       }
       const reportedVersion = (this.info as {ProductVersion?: string})?.ProductVersion || '27'
       const version = Number.parseInt(reportedVersion, 10)
-      if (version < 27) {
-        try {
-          await this.assistiveTouch.perform(wda, active, 'lock')
-        }
-        catch (error) {
-          if ((error as Error).message !== 'IOS_LOCK_UNAVAILABLE') {
-            throw error
-          }
-          // WDA's cached lock flag can be false after restarting on an asleep
-          // iOS 26 phone. Wake its system UI before looking for AssistiveTouch.
-          active.throwIfAborted()
-          await wda.request('POST', '/wda/homescreen', {}, active)
-          await this.assistiveTouch.perform(wda, active, 'lock')
-        }
-      }
-      else {
+      if (version >= 27) {
         await wda.call('POST', '/wda/performIoHidEvent', {
           page: 12, usage: 48, duration: 0.5
         }, active)
-      }
-      const deadline = Date.now() + 5000
-      while (Date.now() < deadline) {
-        const result = await this.lockState(active)
-        if (result.locked) {
-          return result
+        if (await this.waitForLock(active)) {
+          return {locked: true}
         }
-        await delay(200, undefined, {signal: active})
+      }
+      try {
+        await this.assistiveTouch.perform(wda, active, 'lock')
+      }
+      catch (error) {
+        if (!(version < 27 && (error as Error).message === 'IOS_LOCK_UNAVAILABLE')) {
+          throw error
+        }
+        // WDA's cached lock flag can be false after restarting on an asleep
+        // iOS 26 phone. Wake its system UI before looking for AssistiveTouch.
+        active.throwIfAborted()
+        await wda.request('POST', '/wda/homescreen', {}, active)
+        await this.assistiveTouch.perform(wda, active, 'lock')
+      }
+      if (await this.waitForLock(active)) {
+        return {locked: true}
       }
       throw new Error('IOS_LOCK_FAILED')
     }, AbortSignal.any([signal, AbortSignal.timeout(45000)]))
+  }
+
+  private async waitForLock(signal: AbortSignal): Promise<boolean> {
+    const deadline = Date.now() + 5000
+    do {
+      if ((await this.lockState(signal)).locked) {
+        return true
+      }
+      await delay(200, undefined, {signal})
+    } while (Date.now() < deadline)
+    return false
   }
 
   private async lockState(signal: AbortSignal): Promise<{locked: boolean}> {

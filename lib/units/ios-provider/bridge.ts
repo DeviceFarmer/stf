@@ -537,7 +537,7 @@ export class IosBridge {
       if (!this.registered || this.owner || this.appiumHandoff || epoch !== this.epoch) {
         return
       }
-      const signal = AbortSignal.timeout(15000)
+      const signal = AbortSignal.timeout(25000)
       this.assertReadyForReservation(epoch, await this.client.device(signal))
       // The phone may have locked even if the response is lost.
       this.wakeRequired = true
