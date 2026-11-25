@@ -39,7 +39,8 @@ Notes:
   `true`, only the user it is kept for can take the device: **Use** in the web UI,
   `POST /api/v1/user/devices`, and a join by ADB key or VNC password all refuse everyone else,
   administrators included. The coordinator refuses the device for everyone, including the
-  owner it is kept for. See [Busy](#busy-busy).
+  owner it is kept for. If the owner releases the device before it goes away, for example
+  when a requested reboot never happens, the claim ends. See [Busy](#busy-busy).
 * `bookable` is not a device field. It is a group class. `GET /api/v1/devices?target=bookable`
   lists the devices whose origin group is a group you subscribe to and whose current group is not
   of class `standard`. It does not check the class of the origin group.

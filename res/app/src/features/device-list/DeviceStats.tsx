@@ -2,6 +2,7 @@ import {useMemo, type ReactNode} from 'react'
 import {Group, Text, ThemeIcon} from '@mantine/core'
 import {IconCircleCheck, IconDevices, IconTrophy, IconUser, IconUsers} from '@tabler/icons-react'
 import type {Device} from '@/core/devices/types'
+import {isClaimedForOther} from '@/core/devices/enhance'
 import {useTranslation} from '@/core/i18n'
 import {currentUser} from '@/core/user'
 import classes from './DeviceList.module.css'
@@ -30,7 +31,7 @@ export function DeviceStats({devices, adminMode}: {devices: Device[], adminMode:
   const {t} = useTranslation()
   const counter = useMemo(() => devices.reduce((total, device) => ({
     usable: total.usable + (device.usable ? 1 : 0)
-    , busy: total.busy + (device.owner ? 1 : 0)
+    , busy: total.busy + (device.owner || isClaimedForOther(device) ? 1 : 0)
     , using: total.using + (device.using ? 1 : 0)
   }), {usable: 0, busy: 0, using: 0}), [devices])
 

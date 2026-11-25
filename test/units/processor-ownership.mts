@@ -167,7 +167,8 @@ describe('processor ownership', function() {
     await nextTurn()
     leaving.device.emit('message', wireutil.global, leave)
     await nextTurn()
-    assert.deepEqual(releaseDeviceOwner.firstCall.args.slice(1), [owner, 'lease'])
+    assert.deepEqual(releaseDeviceOwner.firstCall.args.slice(1)
+      , [owner, 'lease', 'automation_release'])
     finishJoin()
     await nextTurn()
     assert.deepEqual(joining.app.packets, [])
@@ -293,6 +294,17 @@ describe('processor ownership', function() {
 
     const byKey = () => new wire.JoinGroupByAdbFingerprintMessage('phone', 'fp', 'comment')
     const byVnc = () => new wire.JoinGroupByVncAuthResponseMessage('phone', 'response')
+
+    it('does not offer a refused key to the current group as an unknown one', async function() {
+      lookupUserByAdbFingerprint.resolves(keyOwner)
+      claimFor('previous@example.test')
+      const processor = fixture()
+      processor.device.emit('message', 'worker-channel', wireutil.envelope(
+        new wire.JoinGroupByAdbFingerprintMessage('phone', 'fp', 'comment', 'current-group')))
+      await new Promise(resolve => setTimeout(resolve, 10))
+      assert.deepEqual(processor.app.packets.filter(([channel]) =>
+        channel.toString() === 'current-group'), [])
+    })
 
     it('refuses a credential join by anyone but the claimant', async function() {
       lookupUserByAdbFingerprint.resolves(keyOwner)

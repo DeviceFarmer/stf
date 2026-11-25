@@ -152,8 +152,11 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     ])
   }
 
+  // Not an unknown credential, so it must not be offered to the current group to confirm either
+  const KEPT = Symbol('kept for its previous user')
+
   // A credential join must not hand a device that is kept for someone else to another user. Resolves
-  // to the user when they may have it, or to undefined when the device is kept for someone else.
+  // to the user when they may have it, or to KEPT when the device is kept for someone else.
   function unlessKeptForOther<T extends {email: string}>(
     serial: string
   , user: T | null | undefined
@@ -168,7 +171,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
           , serial
           , user.email
           )
-          return null
+          return KEPT
         }
         return user
       })
@@ -345,6 +348,9 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
           return unlessKeptForOther(message.serial, user)
         })
         .then(function(user) {
+          if (user === KEPT) {
+            return
+          }
           if (user) {
             sendAutoGroup(channel, user, message.fingerprint)
             if (message.publicKey) {
@@ -376,6 +382,9 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
           return unlessKeptForOther(message.serial, user)
         })
         .then(function(user) {
+          if (user === KEPT) {
+            return
+          }
           if (user) {
             sendAutoGroup(channel, user, message.response)
           }
@@ -416,7 +425,7 @@ export default db.ensureConnectivity(function(options: ProcessorOptions) {
     .on(wire.LeaveGroupMessage, function(channel, message, data) {
       // A recorded early Leave does not change the current owner.
       return persistOwnership(message.serial, () =>
-        dbapi.releaseDeviceOwner(message.serial, message.owner, message.leaseId)
+        dbapi.releaseDeviceOwner(message.serial, message.owner, message.leaseId, message.reason)
       , () => appDealer.send([channel, data]))
     })
     .on(wire.DeviceLogMessage, function(channel, message, data) {

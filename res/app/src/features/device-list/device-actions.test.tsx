@@ -179,3 +179,23 @@ describe('administrator Stop Automation action', () => {
     expect(actions.release).not.toHaveBeenCalled()
   })
 })
+
+describe('administrator kick', () => {
+  // A device kept for its previous user is Busy but has no owner, so there is nothing to kick
+  it('does not force-kick a device that is only kept for someone', () => {
+    actions.user.privilege = 'admin'
+    actions.adminMode = true
+    setup(phone({owner: null, usage: null, claimed: true, claimedByYou: false
+      , claimExpiresAt: Date.now() + 60000}))
+    fireEvent.click(screen.getByText('Busy'))
+    expect(actions.kick).not.toHaveBeenCalled()
+  })
+
+  it('still force-kicks a device another user holds', () => {
+    actions.user.privilege = 'admin'
+    actions.adminMode = true
+    setup(phone({owner: {email: 'other@example.test', reservationId: 'r'}, usage: null}))
+    fireEvent.click(screen.getByText('Busy'))
+    expect(actions.kick).toHaveBeenCalledWith(expect.objectContaining({serial: 'phone'}), true)
+  })
+})

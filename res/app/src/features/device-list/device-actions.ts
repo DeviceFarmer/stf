@@ -133,7 +133,8 @@ export function useDeviceActions(): DeviceActions {
         if (handled) {
           return handled
         }
-        if (adminMode && device.state === 'busy') {
+        // A device kept for someone after a reboot is Busy with no owner: nothing to kick
+        if (adminMode && device.state === 'busy' && device.owner) {
           return kick(device, true)
         }
         if (device.using) {

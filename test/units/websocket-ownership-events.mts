@@ -210,6 +210,70 @@ describe('websocket ownership events', function() {
     }
   })
 
+  // A viewer who loaded the list while the device was away holds claimed: true; a boot that finds
+  // the claim gone must clear it, or the device reads Busy until the old expiry
+  it('clears a claim the viewer saw when the device comes back without one', async function() {
+    loadDeviceBySerial.resolves({serial: 'device', owner: null, group: {id: 'visible-group'}
+      , restoreOwner: null})
+    const f = fixture()
+    try {
+      f.send(new wire.DeviceReadyMessage('device', 'replacement-runtime'))
+      await new Promise<void>(resolve => setImmediate(resolve))
+      assert.deepEqual(f.lastChange(), {serial: 'device', claimed: false, claimExpiresAt: null
+        , claimedByYou: false})
+    }
+    finally {
+      loadDeviceBySerial.resolves(null)
+      await f.close()
+    }
+  })
+
+  // Per-device bookkeeping elsewhere is capped at 128 entries; a big farm's provider restart must
+  // not make the claim of an early device look overtaken
+  it('keeps the claim of a device while many others become ready', async function() {
+    let resolveRead!: (row: unknown) => void
+    loadDeviceBySerial.callsFake((serial: string) => serial === 'device' ?
+      new Promise(resolve => {
+        resolveRead = resolve
+      }) : Promise.resolve(null))
+    const f = fixture()
+    try {
+      f.send(new wire.DeviceReadyMessage('device', 'replacement-runtime'))
+      for (let index = 0; index < 300; index++) {
+        f.send(new wire.DeviceReadyMessage(`other-${index}`, `channel-${index}`))
+      }
+      resolveRead({serial: 'device', owner: null, group: {id: 'visible-group'}
+        , restoreOwner: {email: 'runner@example.test', expiresAt: Date.now() + 60000}})
+      await new Promise<void>(resolve => setImmediate(resolve))
+      assert.equal(f.lastChange().serial, 'device')
+      assert.equal(f.lastChange().claimed, true)
+    }
+    finally {
+      loadDeviceBySerial.reset()
+      loadDeviceBySerial.resolves(null)
+      await f.close()
+    }
+  })
+
+  // The owner's device leaves when it goes away to reboot; it is kept for them from then on
+  it('tells viewers a device that left by going away is kept for its owner', async function() {
+    const expiresAt = Date.now() + 60000
+    const f = fixture()
+    try {
+      f.send(new wire.JoinGroupMessage('device', owner, null, null))
+      loadDeviceBySerial.resolves({serial: 'device', owner: null, group: {id: 'visible-group'}
+        , restoreOwner: {email: owner.email, expiresAt}})
+      f.send(new wire.LeaveGroupMessage('device', owner, 'device_absent', null))
+      await new Promise<void>(resolve => setImmediate(resolve))
+      assert.deepEqual(f.lastChange(), {serial: 'device', claimed: true, claimExpiresAt: expiresAt
+        , claimedByYou: false})
+    }
+    finally {
+      loadDeviceBySerial.resolves(null)
+      await f.close()
+    }
+  })
+
   // A provider restart makes all its devices ready at once, for every connected socket
   it('reads the row once for all sockets when a device becomes ready', async function() {
     loadDeviceBySerial.resetHistory()

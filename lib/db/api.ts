@@ -183,7 +183,7 @@ interface DbApi {
   , timeout?: number | null
   ): Promise<DeviceOwnershipWriteResult>
   releaseDeviceOwner(
-    serial: string, owner: DeviceOwner, automationLeaseId?: string | null
+    serial: string, owner: DeviceOwner, automationLeaseId?: string | null, reason?: string | null
   ): Promise<DeviceOwnershipWriteResult>
   hasDeviceAutomationRelease(serial: string, email: string, leaseId: string): Promise<boolean>
   reserveDeviceOwner(serial: string): Promise<r.WriteResult>
@@ -1705,7 +1705,7 @@ dbapi.setDeviceOwner = function(serial, owner, usage, automationLeaseId, timeout
 
 // Only a matching reservation may clear owner and usage. An early Leave from another
 // processor records its reservation so it cannot be reinstated by a delayed Join.
-dbapi.releaseDeviceOwner = function(serial, owner, automationLeaseId) {
+dbapi.releaseDeviceOwner = function(serial, owner, automationLeaseId, reason) {
   const reservationId = owner.reservationId || null
   return db.run(r.table('devices').get<DeviceDocument>(serial).update(function(
     device: r.Expression<DeviceDocument>
@@ -1717,6 +1717,10 @@ dbapi.releaseDeviceOwner = function(serial, owner, automationLeaseId) {
     const release = {
       owner: null, automationLeaseId: null, usage: null, ownerTimeout: null
     , usageChangedAt: r.now(), logs_enabled: false
+      // A device that leaves because it went away keeps its reboot claim. Any other release is
+      // the owner or a timeout letting go, so a claim taken for a reboot that never came ends too.
+    , restoreOwner: reason && reason !== 'device_absent' ? null :
+        device('restoreOwner').default(null)
     , automationRelease: r.branch(leaseId.ne(null)
       , {email: owner.email, leaseId}, device('automationRelease').default(null))
     }

@@ -329,6 +329,32 @@ export default function(options: WebsocketOptions) {
     user.ip = socket.handshake.query.uip as string | undefined || req.ip
     socket.emit('socket.ip', user.ip)
 
+    // Claim reads still in flight, by serial. A join or leave seen meanwhile is newer than the
+    // row being read, so it drops the entry and the read's result is discarded.
+    var claimTokens = new Map<string, object>()
+    function sendClaim(serial: string) {
+      var token = {}
+      claimTokens.set(serial, token)
+      readClaim(serial)
+        .then(function(device) {
+          if (device && claimTokens.get(serial) === token) {
+            // Sent even when there is no claim, so that one this viewer saw earlier is cleared
+            socket.emit('device.change', {
+              important: true
+            , data: {serial, ...datautil.claimFor(device, user)}
+            })
+          }
+        })
+        .catch(function(err) {
+          log.warn('Unable to read the claim on device "%s"', serial, err.message)
+        })
+        .finally(function() {
+          if (claimTokens.get(serial) === token) {
+            claimTokens.delete(serial)
+          }
+        })
+    }
+
     function joinChannel(channel: string) {
       if (channel && channel !== wireutil.global && !channels.has(channel)) {
         channels.add(channel)
@@ -487,22 +513,7 @@ export default function(options: WebsocketOptions) {
         })
         // A device coming back from a reboot may be kept for its previous user. The wire message
         // does not say, so read the row, or every other viewer would see it as free to take.
-        // A join or leave seen before the read returns is newer than the row it read
-        var session = deviceAccess.session(message.serial)
-        readClaim(message.serial)
-          .then(function(device) {
-            if (device && device.restoreOwner &&
-                deviceAccess.session(message.serial) === session) {
-              var claim = datautil.claimFor(device, user)
-              socket.emit('device.change', {
-                important: true
-              , data: {serial: message.serial, ...claim}
-              })
-            }
-          })
-          .catch(function(err) {
-            log.warn('Unable to read the claim on device "%s"', message.serial, err.message)
-          })
+        sendClaim(message.serial)
       })
       .on(wire.DevicePresentMessage, function(channel, message) {
         deviceAccess.update(message.serial, {present: true})
@@ -527,6 +538,7 @@ export default function(options: WebsocketOptions) {
         })
       })
       .on(wire.JoinGroupMessage, function(channel, message) {
+        claimTokens.delete(message.serial)
         deviceAccess.joined(message.serial, message.usage, message.owner, message.leaseId)
         socket.emit('device.change', {
           important: true
@@ -553,6 +565,7 @@ export default function(options: WebsocketOptions) {
         if (!deviceAccess.released(message.serial, message.owner)) {
           return
         }
+        claimTokens.delete(message.serial)
         socket.emit('device.change', {
           important: true
         , data: datautil.applyOwner({
@@ -565,6 +578,10 @@ export default function(options: WebsocketOptions) {
           , user
           )
         })
+        // A device leaving because it went away may be kept for this owner while it reboots
+        if (message.reason === 'device_absent') {
+          sendClaim(message.serial)
+        }
       })
       .on(wire.DeviceStatusMessage, function(channel, message: LabelledStatusMessage) {
         deviceAccess.invalidate(message.serial)
