@@ -52,6 +52,19 @@ finally {
   restoreIo()
 }
 
+function socketTemplate() {
+  return {
+    request: {user: {email: 'admin@example.test', name: 'Admin', group: 'admin-private'
+      , privilege: 'admin', groups: {subscribed: ['visible-group']}}, ip: '127.0.0.1'}
+    , handshake: {query: {}}
+    , use() {}
+    , on() {
+      return this
+    }
+    , disconnect() {}
+  }
+}
+
 function fixture() {
   transports.length = 0
   const listen = sinon.spy()
@@ -66,10 +79,7 @@ function fixture() {
   const emitted: {event: string, data: any}[] = []
   const listeners = new Map<string, DisconnectHandler>()
   const socket = {
-    request: {user: {email: 'admin@example.test', name: 'Admin', group: 'admin-private'
-      , privilege: 'admin', groups: {subscribed: ['visible-group']}}, ip: '127.0.0.1'}
-    , handshake: {query: {}}
-    , use() {}
+    ...socketTemplate()
     , emit(event: string, data: unknown) {
       emitted.push({event, data: JSON.parse(JSON.stringify(data))})
     }
@@ -171,6 +181,47 @@ describe('websocket ownership events', function() {
     }
     finally {
       loadDeviceBySerial.resolves(null)
+      await f.close()
+    }
+  })
+
+  // The read can return after the restore's join, with the row from before it; replaying that
+  // claim would show the device as kept until it expires, even once its owner has released it
+  it('drops a claim read that a join overtook', async function() {
+    let resolveRead!: (row: unknown) => void
+    loadDeviceBySerial.returns(new Promise(resolve => {
+      resolveRead = resolve
+    }))
+    const f = fixture()
+    try {
+      f.send(new wire.DeviceReadyMessage('device', 'replacement-runtime'))
+      f.send(new wire.JoinGroupMessage('device', owner, null, null))
+      const before = f.changes()
+      resolveRead({serial: 'device', owner: null, group: {id: 'visible-group'}
+        , restoreOwner: {email: 'runner@example.test', expiresAt: Date.now() + 60000}})
+      await new Promise<void>(resolve => setImmediate(resolve))
+      assert.equal(f.changes(), before)
+      assert.equal(f.lastChange().claimed, false)
+    }
+    finally {
+      loadDeviceBySerial.reset()
+      loadDeviceBySerial.resolves(null)
+      await f.close()
+    }
+  })
+
+  // A provider restart makes all its devices ready at once, for every connected socket
+  it('reads the row once for all sockets when a device becomes ready', async function() {
+    loadDeviceBySerial.resetHistory()
+    const f = fixture()
+    const second = {...socketTemplate(), emit() {}}
+    connect(second)
+    try {
+      f.send(new wire.DeviceReadyMessage('device', 'replacement-runtime'))
+      await new Promise<void>(resolve => setImmediate(resolve))
+      assert.equal(loadDeviceBySerial.callCount, 1)
+    }
+    finally {
       await f.close()
     }
   })

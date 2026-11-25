@@ -238,6 +238,25 @@ export default function(options: WebsocketOptions) {
 
   io.use(auth)
 
+  // Every socket reads a device's row when it becomes ready, to learn whether it is kept for its
+  // previous user. A provider restart makes all of its devices ready at once, so share the read
+  // between sockets instead of issuing one per socket and device.
+  var claimReads = new Map<string, ReturnType<typeof dbapi.loadDeviceBySerial>>()
+  function readClaim(serial: string) {
+    var pending = claimReads.get(serial)
+    if (!pending) {
+      pending = dbapi.loadDeviceBySerial(serial)
+      claimReads.set(serial, pending)
+      var forget = function() {
+        if (claimReads.get(serial) === pending) {
+          claimReads.delete(serial)
+        }
+      }
+      pending.then(forget, forget)
+    }
+    return pending
+  }
+
   io.on('connection', function(socket) {
     var req = socket.request as WebsocketRequest
     var user = req.user
@@ -468,9 +487,12 @@ export default function(options: WebsocketOptions) {
         })
         // A device coming back from a reboot may be kept for its previous user. The wire message
         // does not say, so read the row, or every other viewer would see it as free to take.
-        dbapi.loadDeviceBySerial(message.serial)
+        // A join or leave seen before the read returns is newer than the row it read
+        var session = deviceAccess.session(message.serial)
+        readClaim(message.serial)
           .then(function(device) {
-            if (device && device.restoreOwner) {
+            if (device && device.restoreOwner &&
+                deviceAccess.session(message.serial) === session) {
               var claim = datautil.claimFor(device, user)
               socket.emit('device.change', {
                 important: true
