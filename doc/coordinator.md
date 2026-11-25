@@ -88,7 +88,16 @@ The STF token stays with the coordinator. For shared use, pass
 `--project-tokens-file` with a private JSON document containing `version: 1`
 and a `projects` array. Each project has a unique `id`, a lowercase SHA-256
 `tokenSha256` and a positive integer `maxParallel`. Give the client the
-original project token. Each project has its own idempotency keys, requests,
+original project token. Generate project tokens randomly, like the operator
+token. The coordinator stores only a fast SHA-256 digest, which is safe only for
+random tokens, not for chosen passwords:
+
+```sh
+token=$(openssl rand -hex 32)
+printf %s "$token" | openssl dgst -sha256 -r | cut -d' ' -f1
+```
+
+Each project has its own idempotency keys, requests,
 leases and concurrency limit. The operator token can inspect all projects,
 revoke their leases and run recovery. Keep it separate from project credentials.
 
