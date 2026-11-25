@@ -369,11 +369,11 @@ describe('Linux iOS integration', function() {
       assert.equal((await release()).success, true)
       clock.tick(29999)
       await f.bridge.poll()
-      assert.deepEqual(f.requests, [])
+      assert.equal(f.requests.length, 0)
       await f.join()
       clock.tick(1)
       await f.bridge.poll()
-      assert.deepEqual(f.requests, [])
+      assert.equal(f.requests.length, 0)
 
       assert.equal((await release()).success, true)
       clock.tick(30000)
