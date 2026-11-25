@@ -58,7 +58,7 @@ export class DevicePacketAccess {
 
   joined(serial: string, usage?: string | null, owner?: DeviceAccess['owner'],
     automationLeaseId?: string | null) {
-    this.sessions.set(serial, this.revision + 1)
+    this.bump(serial)
     this.update(serial, {usage: usage || null, automationLeaseId: automationLeaseId || null
       , ...(owner ? {owner} : {})})
   }
@@ -66,21 +66,28 @@ export class DevicePacketAccess {
   released(serial: string, owner?: DeviceAccess['owner']): boolean {
     if (owner && (this.owners.has(serial) ?
       !sameOwner(this.owners.get(serial), owner) : this.overflowed)) {
+      // This leave may be newer than an invite that a late leave let through, and
+      // could be for the very reservation that invite's reply names.
+      for (const [responseChannel, invite] of this.invites) {
+        if (invite.left && this.source(invite.channel) === serial) {
+          this.invites.delete(responseChannel)
+        }
+      }
       return false
     }
-    const previous = this.sessions.get(serial) || 0
-    const session = this.revision + 1
+    const previous = this.sessions.get(serial)
     // A leave of the reservation this socket last saw join predates any reservation the
-    // device grants after it, so it does not make a pending invite's reply stale.
-    if (owner?.reservationId && this.owners.has(serial)) {
+    // device grants after it, so it does not make a pending invite's reply stale. An
+    // evicted session cannot tell whether anything else happened since the invite.
+    if (owner?.reservationId && this.owners.has(serial) && previous) {
       for (const invite of this.invites.values()) {
         if (invite.session === previous && this.source(invite.channel) === serial) {
-          invite.session = session
+          invite.session = this.revision + 1
           invite.left = owner.reservationId
         }
       }
     }
-    this.sessions.set(serial, session)
+    this.bump(serial)
     this.update(serial, {owner: null, usage: null, automationLeaseId: null})
     return true
   }
@@ -128,7 +135,7 @@ export class DevicePacketAccess {
     if (owner?.email && owner.email === email && this.source(invite.channel) === serial &&
         this.session(invite.channel) === invite.session &&
         (!invite.left || (owner.reservationId && owner.reservationId !== invite.left))) {
-      this.sessions.set(serial, this.revision + 1)
+      this.bump(serial)
       this.update(serial, {owner})
     }
   }
@@ -261,6 +268,12 @@ export class DevicePacketAccess {
 
   source(channel: string): string {
     return channel.startsWith('ios:') ? channel.slice(4) : this.channels.get(channel) || channel
+  }
+
+  // Starts a new session for the device, kept last so eviction drops the stalest one.
+  private bump(serial: string) {
+    this.sessions.delete(serial)
+    this.sessions.set(serial, this.revision + 1)
   }
 
   private remember(channel: string, serial: string) {

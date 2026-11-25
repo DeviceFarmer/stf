@@ -1183,6 +1183,78 @@ describe('invite replies ahead of the join notification', function() {
       }
     })
 
+    it(`ignores a ${platform} invite reply after a late leave and then an unseen leave`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, kicked} = await reinvited(platform, clock)
+        assert.equal(f.access.released('PHONE', kicked), true)
+        // The invite was granted as `taken` and kicked again before its join was seen.
+        const taken = {email: f.user.email, reservationId: 'taken'}
+        assert.equal(f.access.released('PHONE', taken), false)
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(taken))
+        // A row read from before the second leave is not taken as current, nor waited for.
+        f.update({owner: taken})
+        assert.equal(await deniedAtOnce(f, clock), 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`ignores a ${platform} invite reply when the device's session was evicted after a join`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const {f, owner} = await reinvited(platform, clock)
+        // Enough other devices changing to evict this one's session.
+        const crowd = (prefix: string) => {
+          for (let index = 0; index <= 128; index++) {
+            f.access.joined(`${prefix}${index}`, null, {email: 'x@example.test'})
+          }
+        }
+        crowd('BEFORE')
+        f.access.invited('tx.evicted', f.channel)
+        const other = {email: 'someone@example.test', reservationId: 'theirs'}
+        f.access.joined('PHONE', null, other)
+        crowd('AFTER')
+        assert.equal(f.access.released('PHONE', other), true)
+        f.access.inviteReplied('tx.evicted', 'PHONE', f.user.email, true, reply(owner))
+        f.update({owner})
+        assert.equal(await deniedAtOnce(f, clock), 'Device access denied')
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+    it(`keeps a ${platform} invite pending while other devices fill the session cache`
+      , async function() {
+      const clock = sinon.useFakeTimers()
+      try {
+        const f = fixture(platform, 5)
+        f.update({owner: null})
+        // The first device seen is the oldest entry, but the newest one to change.
+        f.access.joined('PHONE', null, {email: 'someone@example.test', reservationId: 'theirs'})
+        for (let index = 0; index < 127; index++) {
+          f.access.joined(`OTHER${index}`, null, {email: 'x@example.test', reservationId: 'x'})
+        }
+        f.access.released('PHONE')
+        assert.equal(await tick(10, f.dispatch('group.invite', 'tx.take'), clock), undefined)
+        f.access.invited('tx.take', f.channel)
+        f.access.joined('OTHER127', null, {email: 'x@example.test', reservationId: 'x'})
+        const owner = {email: f.user.email, reservationId: 'fresh'}
+        f.access.inviteReplied('tx.take', 'PHONE', f.user.email, true, reply(owner))
+        setTimeout(() => f.update({owner}), 30)
+        const pending = f.dispatch('shell.command', 'tx.shell')
+        await clock.tickAsync(100)
+        assert.equal(await pending, undefined)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
     it(`ignores ${platform} invite replies naming someone else or another device`
       , async function() {
       const clock = sinon.useFakeTimers()
