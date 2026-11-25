@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import {createRequire} from 'node:module'
 import type {Response} from 'express'
 import ZSchema from 'z-schema'
-import type {ApiRequest} from '../../../lib/types/units-api.js'
+import type {AddUserDeviceBody, ApiRequest} from '../../../lib/types/units-api.js'
 import {importFresh, mockModule} from '../../helpers/module-mock.mts'
 
 const require = createRequire(import.meta.url)
@@ -22,11 +22,13 @@ const restoreLocks = mockModule(new URL('../../../lib/util/lockutil.js', import.
 })
 
 let getUser: (req: ApiRequest, res: Response) => void
+let addUserDevice: (req: ApiRequest<AddUserDeviceBody>, res: Response) => void
 try {
   const controller = await importFresh(
     new URL('../../../lib/units/api/controllers/user.js', import.meta.url)
   )
   getUser = controller.getUser
+  addUserDevice = controller.addUserDevice
 }
 finally {
   restoreLocks()
@@ -53,6 +55,20 @@ describe('API user controller', function() {
   )
   const spec = yaml.load(swaggerYaml) as SwaggerSpec
   const userResponseSchema = spec.definitions.UserResponse
+
+  it('requires an authorized managed lease for screen lifecycle', function() {
+    for (const [leaseId, expectedStatus] of [[undefined, 400], ['lease-id', 403]] as const) {
+      const req = {body: {serial: 'phone', leaseId, screenLifecycle: true}
+        , options: {automationLeaseAccounts: ['runner@example.test']}
+        , user: {email: 'viewer@example.test'}}
+      const res = {statusCode: 200, status(code: number) {
+        this.statusCode = code
+        return this
+      }, json() {}}
+      addUserDevice(req as unknown as ApiRequest<AddUserDeviceBody>, res as unknown as Response)
+      assert.equal(res.statusCode, expectedStatus)
+    }
+  })
 
   it('responds with description matching UserResponse schema (#302)', function() {
     const mockUser = {

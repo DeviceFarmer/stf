@@ -14,7 +14,8 @@ import logger from '../../../util/logger.js'
 import datautil from '../../../util/datautil.js'
 import deviceutil from '../../../util/deviceutil.js'
 import {
-  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, isAutomationLeaseTimeout
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, iosScreenLifecycleCaptureTimeoutMs
+, isAutomationLeaseTimeout
 } from '../../../util/automation-lease.js'
 import wire from '../../../wire/index.js'
 import wireutil from '../../../wire/util.js'
@@ -37,9 +38,12 @@ var adb = adbutil()
 
 var log = logger.createLogger('api:controllers:user')
 
-function reservationTimeout(device: DeviceDocument) {
+function reservationTimeout(device: DeviceDocument, screenLifecycle = false) {
   // The iOS provider drains CoreDevice and hands WDA over before acknowledging.
-  return device.platform === 'iOS' ? iosAutomationCaptureTimeoutMs : 5000
+  if (device.platform === 'iOS') {
+    return screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs : iosAutomationCaptureTimeoutMs
+  }
+  return 5000
 }
 
 function getUser(req: ApiRequest, res: Response) {
@@ -165,6 +169,11 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   const requestedTimeout = (req.hasOwnProperty('body') ? req.body.timeout :
     req.swagger.params.timeout.value) ?? null
   const leaseId = req.body?.leaseId ?? null
+  const screenLifecycle = req.body?.screenLifecycle
+  if (screenLifecycle !== undefined && (typeof screenLifecycle !== 'boolean' || leaseId === null)) {
+    apiutil.respond(res, 400, 'Screen lifecycle requires a managed automation lease')
+    return
+  }
   if (leaseId !== null) {
     if (!authorizeAutomationLease(req, res)) {
       return
@@ -208,7 +217,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               success: false
             , description: 'Device is not responding'
           })
-        }, reservationTimeout(device))
+        }, reservationTimeout(device, screenLifecycle))
 
         messageListener = wirerouter()
           .on(wire.JoinGroupMessage, function(channel, message) {
@@ -250,6 +259,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
             })
             , usage
             , leaseId
+            , device.platform === 'iOS' && screenLifecycle === true ? true : null
             )
           )
         ])

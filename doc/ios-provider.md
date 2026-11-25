@@ -322,6 +322,17 @@ without a passcode. If iOS requires a passcode, unlock the phone in person befor
 starting the live screen. WDA Home, text and screenshots remain available through
 their existing commands. Shaking and app activation require an unlocked phone.
 
+Set `--auto-screen-sleep` on an iOS provider to wake the iPhone when it is
+reserved in STF or by the Coordinator. STF waits for the phone to unlock before
+starting control or handing WDA to Appium. Use this option on phones that can
+unlock without a passcode.
+
+The provider locks the screen after 30 seconds without a reservation. A new
+reservation cancels the pending lock. After an Appium lease ends, the delay
+starts once WDA has returned to STF. Existing API automation captures, including
+WDA renewal, leave the screen available after release. Coordinator-managed sleep
+requires the updated STF API and Coordinator to mark their captures.
+
 **Restart iPhone** and **Power off iPhone** require an in-product confirmation
 and the current owner. They use go-ios diagnostics for the selected UDID, not a
 simulated side/volume chord. The UI reports command acceptance, not completed

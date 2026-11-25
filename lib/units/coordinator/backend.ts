@@ -1,9 +1,9 @@
 import {CoordinatorError, endpoint} from './config.js'
 import {
-  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, iosScreenLifecycleCaptureTimeoutMs
 } from '../../util/automation-lease.js'
 import {readWdaProfile} from './wda-profile.js'
-import type {FarmBackend, FarmDevice, GridStatus, UpstreamResponse} from './types.js'
+import type {FarmBackend, FarmDevice, GridStatus, Platform, UpstreamResponse} from './types.js'
 
 type StfDevice = Omit<FarmDevice, 'provider'> & {provider: string | {name: string}}
 
@@ -82,9 +82,11 @@ export class HttpFarmBackend implements FarmBackend {
     return grid
   }
 
-  async capture(serial: string, leaseId: string, timeout: number) {
-    await this.stf('POST', '/user/devices', {serial, leaseId, timeout},
-      iosAutomationCaptureTimeoutMs + 5000)
+  async capture(serial: string, leaseId: string, timeout: number, platform: Platform) {
+    const screenLifecycle = platform === 'iOS'
+    await this.stf('POST', '/user/devices', {
+      serial, leaseId, timeout, ...(screenLifecycle ? {screenLifecycle} : {})
+    }, (screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs : iosAutomationCaptureTimeoutMs) + 5000)
   }
 
   async renew(serial: string, leaseId: string, timeout: number) {

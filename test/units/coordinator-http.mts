@@ -633,6 +633,8 @@ describe('coordinator HTTP and real upstream adapters', function() {
       const f = await fixture()
       const lease = await f.allocate()
       const route = '/api/v1/leases/' + lease.id + '/webdriver/session'
+      const capture = f.stfCalls.find(call => call.route === '/api/v1/user/devices')!
+      assert.equal(capture.body.screenLifecycle, undefined)
       for (const capability of [
         {udid: 'another-phone'}
       , {'appium:app': 'https://example.test/external.apk'}
@@ -682,6 +684,8 @@ describe('coordinator HTTP and real upstream adapters', function() {
     await f.engine.tick()
     const allocated = f.engine.requestView(request.body.request.id)
     assert.ok(allocated.leaseId)
+    const capture = f.stfCalls.find(call => call.route === '/api/v1/user/devices')!
+    assert.equal(capture.body.screenLifecycle, true)
     const route = '/api/v1/leases/' + allocated.leaseId + '/webdriver/session'
     for (const capability of [
       {'appium:deviceName': ['iPhone']}

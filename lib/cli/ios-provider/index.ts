@@ -14,6 +14,9 @@ export const builder = (yargs: Argv) => yargs.strict().env('STF_IOS_PROVIDER')
   .option('screen-url', {type: 'string', demandOption: true})
   .option('screen-port', {type: 'number', default: 17440})
   .option('group-timeout', {type: 'number', default: 900})
+  .option('auto-screen-sleep', {
+    type: 'boolean', default: false, describe: 'Wake on capture and lock the idle screen after release'
+  })
   .option('name', {type: 'string', default: 'Linux iOS'})
   .option('market-name', {type: 'string', default: ''})
   .option('connect-push', {type: 'array', demandOption: true})
@@ -24,6 +27,7 @@ export async function handler(argv: CommandArgv<typeof builder>) {
     serial: argv.serial, tokenFile: argv.tokenFile, prototypeUrl: argv.prototypeUrl
   , apiUrl: argv.apiUrl, publicOrigin: argv.publicOrigin, storageUrl: argv.storageUrl
   , screenUrl: argv.screenUrl, screenPort: argv.screenPort, groupTimeout: argv.groupTimeout
+  , autoScreenSleep: argv.autoScreenSleep
   , name: argv.name, marketName: argv.marketName
   , endpoints: {push: argv.connectPush.map(String), sub: argv.connectSub.map(String)}
   })
