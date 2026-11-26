@@ -150,8 +150,11 @@
   padding: var(--mantine-spacing-sm) var(--mantine-spacing-sm) 6px;
 }
 
+/* Extend the hit area into the tile padding without moving the content. */
 .tileLink {
   align-self: stretch;
+  margin: calc(-1 * var(--mantine-spacing-sm)) calc(-1 * var(--mantine-spacing-sm)) 0;
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-sm) 0;
   color: inherit;
   text-decoration: none;
   text-align: center;
