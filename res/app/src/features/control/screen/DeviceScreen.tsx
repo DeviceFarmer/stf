@@ -93,7 +93,7 @@ export function DeviceScreen({
   })
 
   useImperativeHandle(foldSwitchRef, () => ({
-    prepareFoldSwitch: () => streamRef.current?.prepareFoldSwitch() ?? false
+    prepareFoldSwitch: mode => streamRef.current?.prepareFoldSwitch(mode) ?? false
   , acceptFoldSwitch: revision => streamRef.current?.acceptFoldSwitch(revision)
   , cancelFoldSwitch: () => streamRef.current?.cancelFoldSwitch()
   }), [])

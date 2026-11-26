@@ -98,6 +98,20 @@ describe('Device group plugin', function() {
     })
   })
 
+  it('reports a failed autojoin when device preparation rejects', async function() {
+    const context = setup()
+    const autojoins: Array<[string, boolean]> = []
+    context.plugin.on('autojoin', (identifier, joined) => autojoins.push([identifier, joined]))
+    context.plugin.beforeManualJoin(async() => {
+      throw new Error('Unable to confirm the hinge state')
+    })
+
+    await autoGroup(context.handlers, 'fingerprint', 'manual')
+
+    expect(autojoins).to.eql([['fingerprint', false]])
+    expect(messages(context.push, wire.JoinGroupMessage.$code)).to.have.length(0)
+  })
+
   it('should not send the autojoin identifier as the usage', function() {
     var context = setup()
 

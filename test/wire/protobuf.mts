@@ -784,7 +784,7 @@ describe('wire protobuf', function() {
         , IosInstallStatusMessage: 97, IosInstallCancelMessage: 98
         , IosShakeMessage: 99, IosUnlockMessage: 100
         , IosLockMessage: 101, IosPowerMessage: 102
-        , Fold4PostureMessage: 104, AutomationLeaseMessage: 1300})
+        , FoldablePostureMessage: 104, AutomationLeaseMessage: 1300})
     })
 
     it('should keep the DeviceStatus values protobufjs 5 exposed', function() {

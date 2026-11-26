@@ -6,4 +6,4 @@ export interface AndroidDisplayTarget {
   readonly revision: string
 }
 
-export type Fold4PostureMode = 'folded' | 'unfolded' | 'sensor'
+export type FoldablePostureMode = 'folded' | 'unfolded' | 'sensor'

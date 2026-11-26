@@ -4,7 +4,7 @@ import {createTransaction, type ProgressPromise, type TransactionResult} from '.
 import keycodesMapped from './keycodes-mapped.json'
 import type {Device} from './devices/types'
 import {isAutomated} from './devices/enhance'
-import type {Fold4PostureMode} from '../../../../lib/types/android-display'
+import type {FoldablePostureMode} from '../../../../lib/types/android-display'
 
 const mappedKeys = keycodesMapped as Record<string, string>
 
@@ -109,8 +109,8 @@ export function createControl(target: Device, channel: string, isReadOnly = () =
         api.post(`/api/v1/user/devices/${target.serial}/reboot?keepOwnership=true`)
     , rotate: (rotation: number, lock?: boolean) =>
       sendOneWay('display.rotate', {rotation, lock})
-    , setFold4Posture: (mode: Fold4PostureMode, revision: string) =>
-      sendTwoWay('display.fold4Posture', {mode, revision}, 20000, 'Fold4 posture request timed out')
+    , setFoldablePosture: (mode: FoldablePostureMode, revision: string) =>
+      sendTwoWay('display.foldablePosture', {mode, revision}, 20000, 'Foldable posture request timed out')
     , testForward: (forward: ForwardSpec) => sendTwoWay('forward.test', {
       targetHost: forward.targetHost
       , targetPort: Number(forward.targetPort)

@@ -8,7 +8,7 @@ import {
 } from '@tabler/icons-react'
 import {useTranslation} from '@/core/i18n'
 import {notifyFailure} from '@/ui/notify'
-import type {Fold4PostureMode} from '../../../../../../lib/types/android-display'
+import type {FoldablePostureMode} from '../../../../../../lib/types/android-display'
 import {DeviceScreen} from '../screen/DeviceScreen'
 import type {AndroidDisplayState, FoldSwitchScreen} from '../screen/screen-stream'
 import type {PaneProps} from '../types'
@@ -28,7 +28,7 @@ const FOLD_FRAME_TIMEOUT_MS = 5000
 
 interface PostureRequest {
   control: PaneProps['control']
-  mode: Fold4PostureMode
+  mode: FoldablePostureMode
   expectedRevision?: string
   timer?: ReturnType<typeof setTimeout>
 }
@@ -48,6 +48,7 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
   const postureReady = androidInputRevision === androidDisplay?.selected.revision
   const actions = useDeviceActions(device, control, !ios && streamRotationSupported ? {
     angle: androidDisplay?.selected.rotation ?? null
+  , revision: androidInputRevision
   , ready: showScreen && postureReady && !posturePending
   } : undefined)
   const finishPostureRequest = useCallback(() => {
@@ -67,7 +68,9 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
   }, [finishPostureRequest])
   const updateAndroidInput = useCallback((revision: string | null) => {
     setAndroidInputRevision(revision)
-    if (revision && activeRequest.current?.expectedRevision === revision) {
+    const request = activeRequest.current
+    if (revision && request?.expectedRevision &&
+      (request.expectedRevision === revision || request.mode === 'sensor')) {
       finishPostureRequest()
     }
   }, [finishPostureRequest])
@@ -98,10 +101,10 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
     }
   }
 
-  async function setFold4Posture(mode: Fold4PostureMode) {
+  async function setFoldablePosture(mode: FoldablePostureMode) {
     const posture = androidDisplay?.posture
     if (!posture || posture === mode || !postureReady || activeRequest.current ||
-      control.readOnly || !foldSwitchRef.current?.prepareFoldSwitch()) {
+      control.readOnly || actions.rotationDisabled || !foldSwitchRef.current?.prepareFoldSwitch(mode)) {
       return
     }
     const request: PostureRequest = {control, mode}
@@ -109,20 +112,20 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
     activeRequest.current = request
     setPostureRequest(request)
     try {
-      const result = await control.setFold4Posture(mode, revision)
+      const result = await control.setFoldablePosture(mode, revision)
       if (activeRequest.current !== request) {
         return
       }
       const expected = result.body?.revision
       if (result.body?.mode !== mode || typeof expected !== 'string' || !/^[a-z0-9-]{1,64}$/i.test(expected)) {
-        throw new Error('Fold4 posture response did not confirm the screen revision')
+        throw new Error('Foldable posture response did not confirm the screen revision')
       }
       request.expectedRevision = expected
       request.timer = setTimeout(() => {
         if (activeRequest.current === request) {
           finishPostureRequest()
           foldSwitchRef.current?.cancelFoldSwitch()
-          notifyFailure(new Error('Fold4 screen did not become ready'), t('Foldable posture'))
+          notifyFailure(new Error('Foldable screen did not become ready'), t('Foldable posture'))
         }
       }, FOLD_FRAME_TIMEOUT_MS)
       foldSwitchRef.current?.acceptFoldSwitch(expected)
@@ -136,7 +139,7 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
     }
   }
 
-  const postureOptions: {mode: Fold4PostureMode, label: string}[] = [
+  const postureOptions: {mode: FoldablePostureMode, label: string}[] = [
     {mode: 'folded', label: t('Fold')}
     , {mode: 'unfolded', label: t('Unfold')}
     , {mode: 'sensor', label: t('Follow hinge')}
@@ -154,8 +157,8 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
               variant={selected ? 'filled' : 'default'}
               aria-pressed={selected}
               data-pending={posturePending && !selected && postureRequest?.mode === mode ? true : undefined}
-              disabled={control.readOnly || posturePending || !postureReady}
-              onClick={() => setFold4Posture(mode)}
+              disabled={control.readOnly || posturePending || !postureReady || actions.rotationDisabled}
+              onClick={() => setFoldablePosture(mode)}
             >
               {label}
             </Button>

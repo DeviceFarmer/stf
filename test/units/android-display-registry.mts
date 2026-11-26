@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {AndroidDisplayRegistry, parsePrimaryDisplay} from
+import {AndroidDisplayRegistry, parsePrimaryDisplay, parsePrimaryDisplayLayout} from
   '../../lib/units/device/plugins/util/display.js'
 
 const primary = {id: 0, width: 1080, height: 2400, rotation: 0}
@@ -49,6 +49,42 @@ describe('Android display registry', function() {
     })
     assert.equal(parsePrimaryDisplay(doze.replace('committedState DOZE', 'committedState ON'),
       true), null)
+  })
+
+  it('uses the enabled primary panel address declared by Android for a state', function() {
+    const dump = [
+      'DeviceStateToLayoutMap:'
+      , '  state(7): [{dispId: 0(ON), displayGroupName: , addr: {port=12, model=0xaa}}, ' +
+        '{dispId: 1(ON), addr: {port=14}}]'
+      , '  state(19): [{dispId: 0(OFF), addr: {port=12}}, {dispId: 1(ON), addr: {port=14}}]'
+    ].join('\n')
+    assert.deepEqual(parsePrimaryDisplayLayout(dump, 7), {port: 12, model: '0xaa'})
+    assert.equal(parsePrimaryDisplayLayout(dump, 19), null)
+    assert.equal(parsePrimaryDisplayLayout(dump, 9), null)
+    assert.equal(parsePrimaryDisplayLayout(dump + '\n' + dump, 7), null)
+  })
+
+  it('waits for the mapped panel when its predecessor has the same size', async() => {
+    const first = displayLine(0, 'First physical panel', 'INTERNAL')
+      .replace('layerStack 0', 'address {port=12, model=0xaa}, layerStack 0')
+    const next = first.replace('port=12', 'port=14').replace('model=0xaa', 'model=0xbb')
+    const samples = [first, first, first, next, next]
+    const display = new AndroidDisplayRegistry(primaryProperties(), async() =>
+      parsePrimaryDisplay(samples.shift() ?? ''), async state => {
+      assert.equal(state, 19)
+      return {port: 14, model: '0xbb'}
+    })
+    await display.refresh()
+    const old = display.target
+
+    display.beginTransition()
+    const active = await display.refreshAfterPosture(19, false)
+    display.endTransition()
+
+    assert.equal(samples.length, 0)
+    assert.equal(active.width, old.width)
+    assert.equal(active.height, old.height)
+    assert.notEqual(active.revision, old.revision)
   })
 
   it('updates the stream when the active panel or its geometry changes', async() => {
@@ -170,7 +206,7 @@ describe('Android display registry', function() {
     assert.equal(display.target, original)
   })
 
-  it('keeps waiting for an active sample on forced Fold4 posture changes', async() => {
+  it('keeps waiting for an active sample on forced foldable posture changes', async() => {
     const inner = displayLine(0, 'Built-in Screen', 'INTERNAL')
     const doze = inner.replace('state ON', 'state DOZE, committedState DOZE')
     const samples = [inner, doze, doze, inner, inner]

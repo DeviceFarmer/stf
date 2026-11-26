@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import type {Control} from '@/core/control'
 import type {Device} from '@/core/devices/types'
 import {AuthProviders} from '@/ui/AuthProviders'
-import type {Fold4PostureMode} from '../../../../../../lib/types/android-display'
+import type {FoldablePostureMode} from '../../../../../../lib/types/android-display'
 import type {Ref} from 'react'
 import type {AndroidDisplayState, FoldSwitchScreen} from '../screen/screen-stream'
 import DeviceControlPanel from './DeviceControlPanel'
@@ -51,14 +51,14 @@ vi.mock('../screen/DeviceScreen', async() => {
 const main = {id: 0, width: 1812, height: 2176, rotation: 0, revision: 'unfolded-frame'}
 const cover = {id: 0, width: 904, height: 2316, rotation: 0, revision: 'folded-frame'}
 
-function accepted(mode: Fold4PostureMode, revision: string) {
+function accepted(mode: FoldablePostureMode, revision: string) {
   return {body: {mode, revision}}
 }
 
 type PostureConfirmation = ReturnType<typeof accepted>
 
-describe('Fold4 posture controls', () => {
-  const setFold4Posture = vi.fn<(mode: Fold4PostureMode, revision: string) => Promise<PostureConfirmation>>()
+describe('Foldable posture controls', () => {
+  const setFoldablePosture = vi.fn<(mode: FoldablePostureMode, revision: string) => Promise<PostureConfirmation>>()
   const rotate = vi.fn<(rotation: number) => void>()
   let host: HTMLDivElement
   let root: ReturnType<typeof createRoot>
@@ -68,7 +68,7 @@ describe('Fold4 posture controls', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn()
     }))
-    setFold4Posture.mockReset()
+    setFoldablePosture.mockReset()
     rotate.mockReset()
     stream.prepare.mockReset().mockImplementation(() => {
       stream.ready?.(null)
@@ -97,7 +97,7 @@ describe('Fold4 posture controls', () => {
       , enhancedName: 'Foldable', enhancedModel: 'Foldable', enhancedImage120: '', enhancedImage24: ''
       , enhancedStateAction: '', enhancedStatePassive: ''
     }
-    const control = {readOnly, setFold4Posture, rotate} as unknown as Control
+    const control = {readOnly, setFoldablePosture, rotate} as unknown as Control
     await act(async() => root.render(<AuthProviders><MemoryRouter>
       <DeviceControlPanel device={device} control={control} standalone={standalone} />
     </MemoryRouter></AuthProviders>))
@@ -109,7 +109,7 @@ describe('Fold4 posture controls', () => {
   const toolbarButton = (label: string) =>
     host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!
 
-  async function publish(posture?: Fold4PostureMode, selected = main, ready = true) {
+  async function publish(posture?: FoldablePostureMode, selected = main, ready = true) {
     await act(async() => {
       stream.publish!({selected, singleTouch: selected === cover, ...(posture ? {posture} : {})})
       if (ready) {
@@ -131,7 +131,7 @@ describe('Fold4 posture controls', () => {
     expect(postureButton('Follow hinge').getAttribute('aria-pressed')).toBe('true')
     expect(host.querySelector('[role="group"][aria-label="Display"]')).toBeNull()
     await act(async() => postureButton('Follow hinge').click())
-    expect(setFold4Posture).not.toHaveBeenCalled()
+    expect(setFoldablePosture).not.toHaveBeenCalled()
 
     await render(false, 'Android', true)
     await publish('sensor')
@@ -143,14 +143,14 @@ describe('Fold4 posture controls', () => {
 
   it('locks the posture controls until the confirmed panel finishes drawing', async() => {
     let complete!: (result: PostureConfirmation) => void
-    setFold4Posture.mockImplementationOnce(() => new Promise(resolve => {
+    setFoldablePosture.mockImplementationOnce(() => new Promise(resolve => {
       complete = resolve
     }))
     await render()
     await publish('sensor')
     await act(async() => postureButton('Fold').click())
-    expect(stream.prepare).toHaveBeenCalledExactlyOnceWith()
-    expect(setFold4Posture).toHaveBeenCalledExactlyOnceWith('folded', main.revision)
+    expect(stream.prepare).toHaveBeenCalledExactlyOnceWith('folded')
+    expect(setFoldablePosture).toHaveBeenCalledExactlyOnceWith('folded', main.revision)
     expect(postureGroup()?.getAttribute('aria-busy')).toBe('true')
     expect(postureButton('Follow hinge').getAttribute('aria-pressed')).toBe('true')
     expect(postureButton('Fold').getAttribute('aria-pressed')).toBe('false')
@@ -176,7 +176,7 @@ describe('Fold4 posture controls', () => {
     expect(toolbarButton('Landscape').disabled).toBe(false)
   })
 
-  it('rotates from the streamed Fold4 angle and waits for a matching frame', async() => {
+  it('rotates from the streamed Foldable angle and waits for a matching frame', async() => {
     vi.useFakeTimers()
     await render()
     const landscape = {...main, rotation: 90, revision: 'landscape-frame'}
@@ -186,8 +186,10 @@ describe('Fold4 posture controls', () => {
     await act(async() => toolbarButton('Rotate Left').click())
     expect(rotate).toHaveBeenLastCalledWith(180)
 
+    expect(toolbarButton('Portrait').disabled).toBe(true)
+    expect(postureButton('Fold').disabled).toBe(true)
     await act(async() => toolbarButton('Portrait').click())
-    expect(rotate).toHaveBeenLastCalledWith(0)
+    expect(rotate).toHaveBeenCalledExactlyOnceWith(180)
     await act(async() => vi.advanceTimersByTimeAsync(400))
     expect(toolbarButton('Landscape').getAttribute('aria-pressed')).toBe('true')
 
@@ -206,10 +208,38 @@ describe('Fold4 posture controls', () => {
     expect(toolbarButton('Rotate Right').disabled).toBe(false)
   })
 
+  it('lets the operator retry a rotation when no new frame arrives', async() => {
+    vi.useFakeTimers()
+    await render()
+    await publish('sensor')
+    await act(async() => toolbarButton('Landscape').click())
+    expect(rotate).toHaveBeenCalledExactlyOnceWith(90)
+    expect(toolbarButton('Rotate Right').disabled).toBe(true)
+    await act(async() => vi.advanceTimersByTimeAsync(5000))
+    expect(toolbarButton('Rotate Right').disabled).toBe(false)
+    await act(async() => toolbarButton('Rotate Right').click())
+    expect(rotate).toHaveBeenLastCalledWith(270)
+  })
+
+  it('finishes Follow hinge when a newer verified revision is ready', async() => {
+    setFoldablePosture.mockResolvedValue(accepted('sensor', cover.revision))
+    await render()
+    await publish('folded', cover)
+    await act(async() => postureButton('Follow hinge').click())
+    expect(stream.prepare).toHaveBeenCalledExactlyOnceWith('sensor')
+    expect(stream.accept).toHaveBeenCalledExactlyOnceWith(cover.revision)
+    expect(postureGroup()?.getAttribute('aria-busy')).toBe('true')
+
+    await publish('sensor', main)
+    expect(postureGroup()?.getAttribute('aria-busy')).toBe('false')
+    expect(postureButton('Follow hinge').getAttribute('aria-pressed')).toBe('true')
+    expect(postureButton('Fold').disabled).toBe(false)
+  })
+
   it('drops pending state on disconnect and ignores a stale transaction failure', async() => {
     let rejectOld!: (error: Error) => void
     let completeNew!: (result: PostureConfirmation) => void
-    setFold4Posture.mockImplementationOnce(() => new Promise((_, reject) => {
+    setFoldablePosture.mockImplementationOnce(() => new Promise((_, reject) => {
       rejectOld = reject
     })).mockImplementationOnce(() => new Promise(resolve => {
       completeNew = resolve
@@ -224,7 +254,7 @@ describe('Fold4 posture controls', () => {
     await publish('sensor', cover)
     expect(postureButton('Unfold').disabled).toBe(false)
     await act(async() => postureButton('Unfold').click())
-    expect(setFold4Posture).toHaveBeenLastCalledWith('unfolded', cover.revision)
+    expect(setFoldablePosture).toHaveBeenLastCalledWith('unfolded', cover.revision)
     await act(async() => rejectOld(new Error('Disconnected request')))
     expect(notifyFailure).not.toHaveBeenCalled()
     expect(postureButton('Unfold').disabled).toBe(true)
@@ -235,14 +265,14 @@ describe('Fold4 posture controls', () => {
 
   it('reports a missing frame and ends the loading state without enabling screen input', async() => {
     vi.useFakeTimers()
-    setFold4Posture.mockResolvedValue(accepted('folded', cover.revision))
+    setFoldablePosture.mockResolvedValue(accepted('folded', cover.revision))
     await render()
     await publish('sensor')
     await act(async() => postureButton('Fold').click())
     expect(postureGroup()?.getAttribute('aria-busy')).toBe('true')
     await act(async() => vi.advanceTimersByTimeAsync(5000))
     expect(stream.cancel).toHaveBeenCalledExactlyOnceWith()
-    expect(notifyFailure).toHaveBeenCalledExactlyOnceWith(new Error('Fold4 screen did not become ready'),
+    expect(notifyFailure).toHaveBeenCalledExactlyOnceWith(new Error('Foldable screen did not become ready'),
       'Foldable posture')
     expect(postureGroup()?.getAttribute('aria-busy')).toBe('false')
     expect(postureButton('Unfold').disabled).toBe(true)
@@ -253,6 +283,6 @@ describe('Fold4 posture controls', () => {
     await publish('sensor')
     expect(postureButton('Fold').disabled).toBe(true)
     await act(async() => postureButton('Fold').click())
-    expect(setFold4Posture).not.toHaveBeenCalled()
+    expect(setFoldablePosture).not.toHaveBeenCalled()
   })
 })

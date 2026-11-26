@@ -92,7 +92,7 @@ enum MessageType {
   IosUnlockMessage            = 100;
   IosLockMessage              = 101;
   IosPowerMessage             = 102;
-  Fold4PostureMessage         = 104;
+  FoldablePostureMessage         = 104;
   GroupUserChangeMessage     = 1200;
   DeviceGroupChangeMessage   = 1201;
   DeviceOriginGroupMessage   = 1202;
@@ -723,6 +723,8 @@ message LaunchActivityMessage {
 
 message RotateMessage {
   required int32 rotation = 1;
+  optional string requester = 2;
+  optional string reservationId = 3;
 }
 
 message ForwardTestMessage {
@@ -768,7 +770,7 @@ message StoreOpenMessage {
 message ScreenCaptureMessage {
 }
 
-message Fold4PostureMessage {
+message FoldablePostureMessage {
   required string mode = 1;
   required string revision = 2;
   required string requester = 3;

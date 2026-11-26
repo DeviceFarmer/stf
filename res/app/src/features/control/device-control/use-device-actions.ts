@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useRef, useState} from 'react'
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router'
 import type {Control} from '@/core/control'
 import {useUserDevices} from '@/core/devices/store'
@@ -13,10 +13,18 @@ export type Orientation = 'portrait' | 'landscape'
 
 interface StreamRotation {
   angle: number | null
+  revision: string | null
   ready: boolean
 }
 
+interface RotationRequest {
+  control: Control
+  revision: string
+  timer: ReturnType<typeof setTimeout>
+}
+
 const ROTATION_SETTLE_MS = 400
+const ROTATION_FRAME_TIMEOUT_MS = 5000
 
 function isPortrait(rotation: number | null): boolean {
   return rotation === 0 || rotation === 180
@@ -42,9 +50,13 @@ export function useDeviceActions(device: Device, control: Control, streamRotatio
   const {devices: groupDevices} = useUserDevices()
   const deviceRef = useRef(device)
   const [currentRotation, setCurrentRotation] = useState<Orientation>('portrait')
+  const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
+  const activeRotation = useRef<RotationRequest | null>(null)
   const deviceRotation = rotationOf(device)
   const rotation = streamRotation ? streamRotation.angle : deviceRotation
-  const rotationDisabled = Boolean(streamRotation && !streamRotation.ready)
+  const streamReady = streamRotation?.ready
+  const streamRevision = streamRotation?.revision
+  const rotationDisabled = Boolean(streamRotation && (!streamReady || rotationRequest?.control === control))
 
   useLayoutEffect(() => {
     deviceRef.current = device
@@ -57,10 +69,45 @@ export function useDeviceActions(device: Device, control: Control, streamRotatio
     }
   }, [deviceRotation])
 
+  const finishRotation = useCallback(() => {
+    clearTimeout(activeRotation.current?.timer)
+    activeRotation.current = null
+    setRotationRequest(null)
+  }, [])
+
+  useEffect(() => {
+    const request = activeRotation.current
+    if (request && (request.control !== control ||
+      (streamReady && streamRevision && streamRevision !== request.revision))) {
+      finishRotation()
+    }
+  }, [control, finishRotation, streamReady, streamRevision])
+
+  useEffect(() => () => {
+    clearTimeout(activeRotation.current?.timer)
+  }, [])
+
+  function beginRotation(changesAngle: boolean) {
+    if (!streamRotation) {
+      return true
+    }
+    if (rotationDisabled || activeRotation.current || !streamRevision) {
+      return false
+    }
+    if (changesAngle) {
+      const timer = setTimeout(finishRotation, ROTATION_FRAME_TIMEOUT_MS)
+      const request = {control, revision: streamRevision, timer}
+      activeRotation.current = request
+      setRotationRequest(request)
+    }
+    return true
+  }
+
   function tryToRotate(orientation: Orientation) {
     if (streamRotation) {
-      if (!rotationDisabled) {
-        control.rotate(orientation === 'portrait' ? 0 : 90)
+      const angle = orientation === 'portrait' ? 0 : 90
+      if (beginRotation(angle !== streamRotation.angle)) {
+        control.rotate(angle)
       }
       return
     }
@@ -121,7 +168,7 @@ export function useDeviceActions(device: Device, control: Control, streamRotatio
     , currentRotation: streamRotation ? orientationOf(rotation) : currentRotation
     , rotateBy: (delta: number) => {
       const source = streamRotation ? streamRotation.angle : rotationOf(deviceRef.current)
-      if (!rotationDisabled && source !== null) {
+      if (source !== null && beginRotation(delta % 360 !== 0)) {
         rotateBy(control, source, delta, standalone)
       }
     }

@@ -38,6 +38,10 @@
   border-radius: 14px;
 }
 
+.device-screen.revisioned-rotation canvas.screen {
+  transition: box-shadow 200ms ease;
+}
+
 .device-screen.has-frame canvas.screen,
 .device-screen .fold-transition-frame {
   background: #000;

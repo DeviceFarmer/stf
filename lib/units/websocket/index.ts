@@ -27,7 +27,7 @@ import {createDevicePacketGuard} from './ios-access.js'
 import type {AuthorizedInput} from './ios-access.js'
 import {DevicePacketAccess, isDeviceCommand, requiresOwner} from './device-access.js'
 import {readIosProperties} from '../../util/ios-device-status.js'
-import {isFold4PostureMode} from '../../util/displayutil.js'
+import {isFoldablePostureMode} from '../../util/displayutil.js'
 import jwtutil from '../../util/jwtutil.js'
 
 import apiutil from '../../util/apiutil.js'
@@ -127,7 +127,7 @@ interface WebsocketClientEvents {
   'input.keyPress': ChannelEvent<KeyEventData>
   'input.type': ChannelEvent<TypeMessageFields>
   'display.rotate': ChannelEvent<RotateMessageFields>
-  'display.fold4Posture': TransactionDataEvent<{mode: unknown, revision: unknown}>
+  'display.foldablePosture': TransactionDataEvent<{mode: unknown, revision: unknown}>
   'clipboard.paste': TransactionDataEvent<PasteMessageFields>
   'clipboard.copy': TransactionEvent
   'device.identify': TransactionEvent
@@ -267,6 +267,7 @@ export default function(options: WebsocketOptions) {
 
     const cleanupFences = new Map<string, {channel: string, identity: AuthorizedInput}>()
     const authorizedInput = new WeakMap<object, AuthorizedInput>()
+    const authorizedRotations = new WeakMap<object, string>()
     const inputIdentity = (data: object): AuthorizedInput =>
       authorizedInput.get(data) || {gestureId: null, reservationId: null}
     const fenceKey = (channel: string, identity: AuthorizedInput) =>
@@ -309,7 +310,11 @@ export default function(options: WebsocketOptions) {
     , current: (channel, checkpoint) => deviceAccess.current(channel, checkpoint)
     , awaitingJoin: (channel, email, groups) =>
         deviceAccess.awaitingJoin(channel, email, groups)
-    }, {resetGesture, onAuthorizedInput(packet, identity) {
+    }, {resetGesture, onAuthorizedRotation(data, reservationId) {
+      if (data && typeof data === 'object' && reservationId) {
+        authorizedRotations.set(data, reservationId)
+      }
+    }, onAuthorizedInput(packet, identity) {
       const data = packet[2]
       if (data && typeof data === 'object') {
         authorizedInput.set(data, identity)
@@ -942,27 +947,27 @@ export default function(options: WebsocketOptions) {
           ])
         })
         .on('display.rotate', function(channel, data) {
+          const reservationId = authorizedRotations.get(data)
           push.send([
             channel
-          , wireutil.envelope(new wire.RotateMessage(
-              data.rotation
-            ))
+          , wireutil.envelope(new wire.RotateMessage({rotation: data.rotation
+            , ...(reservationId ? {requester: user.email, reservationId} : {})}))
           ])
         })
-        .on('display.fold4Posture', function(channel, responseChannel, data) {
-          if (!data || !isFold4PostureMode(data.mode) ||
+        .on('display.foldablePosture', function(channel, responseChannel, data) {
+          if (!data || !isFoldablePostureMode(data.mode) ||
             typeof data.revision !== 'string' ||
             !/^[a-z0-9-]{1,64}$/i.test(data.revision) || channel.startsWith('ios:')) {
             socket.emit('tx.cancel', responseChannel, {
               success: false
-            , data: 'Invalid Fold4 posture request'
+            , data: 'Invalid Foldable posture request'
             })
             return
           }
           joinChannel(responseChannel)
           push.send([
             channel
-          , wireutil.transaction(responseChannel, new wire.Fold4PostureMessage({
+          , wireutil.transaction(responseChannel, new wire.FoldablePostureMessage({
               mode: data.mode, revision: data.revision, requester: user.email
             }))
           ])

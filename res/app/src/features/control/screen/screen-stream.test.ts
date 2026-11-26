@@ -177,7 +177,7 @@ afterEach(() => {
 })
 
 describe('Android display stream', () => {
-  it('publishes only valid Fold4 posture metadata and clears it on disconnect', () => {
+  it('publishes only valid Foldable posture metadata and clears it on disconnect', () => {
     const {stream, onAndroidDisplay} = fixture('Android')
     const socket = Socket.instances[0]!
     socket.open()
@@ -275,15 +275,15 @@ describe('Android display stream', () => {
   })
 })
 
-describe('Fold4 panel transition', () => {
+describe('Foldable panel transition', () => {
   it('freezes before the command and buffers a matching frame until the provider confirms it', async() => {
     const view = foldFixture()
     view.announce(view.unfolded, 'sensor')
     view.start(view.unfolded)
     await view.frame()
     expect(view.socket.sent.filter(message => message.startsWith('size inner '))).toHaveLength(1)
-    expect(view.stream.prepareFoldSwitch()).toBe(true)
-    expect(view.stream.prepareFoldSwitch()).toBe(false)
+    expect(view.stream.prepareFoldSwitch('folded')).toBe(true)
+    expect(view.stream.prepareFoldSwitch('folded')).toBe(false)
     await view.frame()
     expect(view.decode).toHaveBeenCalledOnce()
     expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
@@ -310,13 +310,76 @@ describe('Fold4 panel transition', () => {
     view.announce(view.unfolded, 'unfolded')
     view.start(view.unfolded)
     await view.frame()
-    expect(view.stream.prepareFoldSwitch()).toBe(true)
+    expect(view.stream.prepareFoldSwitch('sensor')).toBe(true)
     view.announce(view.unfolded, 'sensor')
     view.stream.acceptFoldSwitch(view.unfolded.revision)
     expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(view.unfolded.revision)
     expect(view.animate).not.toHaveBeenCalled()
     expect(view.decode).toHaveBeenCalledOnce()
     view.stream.stop()
+  })
+
+  it.each(['before', 'after'])('uses a newer hinge frame announced %s the acknowledgement', async(order) => {
+    const view = foldFixture()
+    view.announce(view.unfolded, 'unfolded')
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.stream.prepareFoldSwitch('sensor')).toBe(true)
+
+    const confirmed = {...view.unfolded, revision: 'hinge-confirmed'}
+    view.announce(confirmed, 'sensor')
+    if (order === 'after') {
+      view.stream.acceptFoldSwitch(confirmed.revision)
+    }
+    view.announce(view.folded, 'sensor')
+    view.start(view.folded)
+    await view.frame()
+    if (order === 'before') {
+      expect(view.animate).not.toHaveBeenCalled()
+      view.stream.acceptFoldSwitch(confirmed.revision)
+      await vi.advanceTimersByTimeAsync(0)
+    }
+
+    expect(view.animate).toHaveBeenCalledTimes(2)
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    view.animate.mock.results[1]!.value.onfinish?.()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(view.folded.revision)
+    view.stream.stop()
+  })
+
+  it('keeps waiting when the acknowledged hinge revision has not appeared on this stream', async() => {
+    const view = foldFixture()
+    view.announce(view.unfolded, 'unfolded')
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.stream.prepareFoldSwitch('sensor')).toBe(true)
+    view.stream.acceptFoldSwitch('missing-revision')
+    view.announce(view.folded, 'sensor')
+    view.start(view.folded)
+    await view.frame()
+
+    expect(view.decode).toHaveBeenCalledOnce()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    view.stream.stop()
+  })
+
+  it('uses the final canvas angle immediately for revisioned rotation', async() => {
+    const view = foldFixture()
+    expect(view.root.classList.contains('revisioned-rotation')).toBe(false)
+    view.announce(view.unfolded, 'sensor')
+    expect(view.root.classList.contains('revisioned-rotation')).toBe(true)
+    view.start(view.unfolded)
+    await view.frame()
+
+    const landscape = {...view.unfolded, rotation: 90, revision: 'landscape'}
+    view.announce(landscape, 'sensor')
+    view.start(landscape)
+    await view.frame()
+    expect(view.canvas.style.transform).toBe('rotate(-90deg)')
+    expect(view.screen.rotation).toBe(90)
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(landscape.revision)
+    view.stream.stop()
+    expect(view.root.classList.contains('revisioned-rotation')).toBe(false)
   })
 
   it('holds the old frame until the new panel draws, then crossfades before enabling input', async() => {

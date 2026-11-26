@@ -20,20 +20,20 @@ import BroadcastSet from './util/broadcastset.js'
 import StateQueue from '../../../../util/statequeue.js'
 import RiskyStream from '../../../../util/riskystream.js'
 import FailCounter from '../../../../util/failcounter.js'
-import {isFold4PostureMode} from '../../../../util/displayutil.js'
+import {isFoldablePostureMode} from '../../../../util/displayutil.js'
 import wire from '../../../../wire/index.js'
 import wireutil from '../../../../wire/util.js'
 import type {Duplex} from 'stream'
 import type {ScreenGrabber} from '../../../../types/device.js'
 import type {GroupPlugin} from '../../../../types/device-plugins.js'
-import type {AndroidDisplayTarget, Fold4PostureMode} from '../../../../types/android-display.js'
+import type {AndroidDisplayTarget, FoldablePostureMode} from '../../../../types/android-display.js'
 import adbSyrup from '../../support/adb.js'
 import routerSyrup from '../../support/router.js'
 import pushSyrup from '../../support/push.js'
 import minicapSyrup from '../../resources/minicap.js'
 import displaySyrup from '../util/display.js'
 import groupSyrup from '../group.js'
-import fold4PostureSyrup from '../fold4-posture.js'
+import foldablePostureSyrup from '../foldable-posture.js'
 import serviceSyrup from '../service.js'
 import {requiresDisplayInput} from '../touch/display-geometry.js'
 import optionsSyrup from './options.js'
@@ -78,7 +78,7 @@ export interface ScreenFrameProducer {
   displayState?: () => {
     selected: AndroidDisplayTarget
     singleTouch: boolean
-    posture?: Fold4PostureMode
+    posture?: FoldablePostureMode
     projection?: true
   } | null
 }
@@ -209,7 +209,7 @@ export default syrup.serial()
   .dependency(groupSyrup)
   .dependency(routerSyrup)
   .dependency(pushSyrup)
-  .dependency(fold4PostureSyrup)
+  .dependency(foldablePostureSyrup)
   .dependency(serviceSyrup)
   .define(function(
     options: ScreenStreamOptions
@@ -220,12 +220,12 @@ export default syrup.serial()
   , group: GroupPlugin
   , router: SyrupValue<typeof routerSyrup>
   , push: SyrupValue<typeof pushSyrup>
-  , fold4Posture: SyrupValue<typeof fold4PostureSyrup>
+  , foldablePosture: SyrupValue<typeof foldablePostureSyrup>
   , service: SyrupValue<typeof serviceSyrup>
   ) {
     log.info('ScreenGrabber set to %s', minicap.grabber)
     log.info('ScreenFrameRate option set to %d', options.screenFrameRate)
-    const trackPosture = fold4Posture.supported
+    const trackPosture = foldablePosture.supported
     const initialPrimary = {width: display.properties.width, height: display.properties.height}
 
     class FrameProducer extends EventEmitter.EventEmitter<FrameProducerEvents> {
@@ -324,7 +324,7 @@ export default syrup.serial()
               .then(function(this: FrameProducer, banner) {
                 if (trackPosture && !matchesDisplayBanner(banner, this.runningDisplay)) {
                   const {revision, width, height, rotation} = this.runningDisplay
-                  log.warn('Fold4 capture %dx%d/%d did not match the display %dx%d/%d',
+                  log.warn('Foldable capture %dx%d/%d did not match the display %dx%d/%d',
                     banner.realWidth, banner.realHeight, banner.orientation,
                     width, height, rotation)
                   return this._stop(true).then(async() => {
@@ -445,7 +445,7 @@ export default syrup.serial()
 
       beginPostureTransition() {
         if (this.postureHeld || this.awaitingProjection) {
-          throw new Error('The Fold4 display is already preparing')
+          throw new Error('The Foldable display is already preparing')
         }
         this.postureHeld = true
       }
@@ -473,7 +473,7 @@ export default syrup.serial()
         if (!trackPosture) {
           return null
         }
-        const posture = fold4Posture.mode
+        const posture = foldablePosture.mode
         return {
           selected: display.target
         , singleTouch: requiresDisplayInput(display.target, initialPrimary)
@@ -580,7 +580,7 @@ export default syrup.serial()
 
           if (/ERROR/.test(line)) {
             if (this.postureHeld || this.awaitingProjection) {
-              log.warn('Minicap error while Fold4 display is preparing: "%s"', line)
+              log.warn('Minicap error while Foldable display is preparing: "%s"', line)
               return
             }
             log.fatal('minicap error: "%s"', line)
@@ -650,7 +650,7 @@ export default syrup.serial()
             // stopped anyway for now.
             this.runningState = FrameProducer.STATE_STOPPED
             if (recoverable) {
-              log.warn('Failed to stop previous Fold4 capture: %s', err.message)
+              log.warn('Failed to stop previous Foldable capture: %s', err.message)
             }
             else {
               this.emit('error', err)
@@ -837,7 +837,7 @@ export default syrup.serial()
           frameProducer.updateDisplay(target)
           notifyDisplays()
         })
-        fold4Posture.on('change', notifyDisplays)
+        foldablePosture.on('change', notifyDisplays)
 
         frameProducer.on('start', function() {
           if (frameProducer.displaysCurrentFrame()) {
@@ -896,46 +896,55 @@ export default syrup.serial()
         }
 
         if (trackPosture) {
-          service.setRotationHandler(rotation => {
-            if (![0, 90, 180, 270].includes(rotation)) {
+          service.setRotationHandler((rotation, requester, reservationId) => {
+            if (!requester || !reservationId || !group.isManualOwner(requester, reservationId) ||
+              ![0, 90, 180, 270].includes(rotation)) {
               return
             }
-            group.get().then(async({email, reservationId}) => {
-              if (reservationId && group.isManualOwner(email, reservationId)) {
-                const id: string = reservationId
-                async function applyRotation() {
-                  await fold4Posture.rotate(rotation, email, id)
-                  await display.refreshAfterTransition(geometry => geometry.rotation === rotation)
-                }
-                await prepareDisplay(applyRotation)
-              }
-            }).catch(error => log.warn('Fold4 rotation failed: %s', error))
+            prepareDisplay(async() => {
+              await foldablePosture.rotate(rotation, requester, reservationId)
+              await display.refreshAfterTransition(geometry => geometry.rotation === rotation)
+            }).catch(error => log.warn('Foldable rotation failed: %s', error))
           })
         }
 
-        router.on(wire.Fold4PostureMessage, (channel, message) => {
+        router.on(wire.FoldablePostureMessage, (channel, message) => {
           const reply = wireutil.reply(options.serial)
           const {mode, revision, requester} = message
           group.get().then(async({reservationId}) => {
             if (!trackPosture || !reservationId ||
               !group.isManualOwner(requester, reservationId) ||
-              revision !== display.target.revision || !isFold4PostureMode(mode)) {
-              throw new Error('Fold4 posture request no longer belongs to this session')
+              revision !== display.target.revision || !isFoldablePostureMode(mode)) {
+              throw new Error('Foldable posture request no longer belongs to this session')
             }
             const id: string = reservationId
-            const requestedMode: Fold4PostureMode = mode
+            const requestedMode: FoldablePostureMode = mode
+            function refreshPanel(
+              panel: Exclude<FoldablePostureMode, 'sensor'> | null, allowDoze: boolean
+            ) {
+              const state = panel ? foldablePosture.stateIdentifiers?.[panel] ?? null : null
+              return display.refreshAfterPosture(state, allowDoze)
+            }
             async function applyPosture() {
-              const panel = await fold4Posture.set(requestedMode, requester, id)
-              return display.refreshAfterTransition(geometry => {
-                // On the Fold4 the cover is more than twice as tall as it is wide.
-                const cover = Math.max(geometry.width, geometry.height) >
-                  2 * Math.min(geometry.width, geometry.height)
-                return !panel || cover === (panel === 'folded')
-              }, requestedMode === 'sensor')
+              const panel = await foldablePosture.set(requestedMode, requester, id)
+              try {
+                return await refreshPanel(panel, requestedMode === 'sensor')
+              }
+              catch (error) {
+                if (requestedMode !== 'sensor' && group.isManualOwner(requester, id)) {
+                  try {
+                    await refreshPanel(await foldablePosture.set('sensor', requester, id), true)
+                  }
+                  catch (restoreError) {
+                    log.warn('Hinge restore after display timeout failed: %s', restoreError)
+                  }
+                }
+                throw error
+              }
             }
             const ready = await prepareDisplay(applyPosture)
             if (!group.isManualOwner(requester, reservationId)) {
-              throw new Error('Fold4 posture request no longer belongs to this session')
+              throw new Error('Foldable posture request no longer belongs to this session')
             }
             push.send([channel, reply.okay('success', {mode, revision: ready.revision})])
           }).catch(err => {

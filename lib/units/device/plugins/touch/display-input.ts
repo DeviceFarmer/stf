@@ -241,7 +241,7 @@ export class AndroidDisplayTouch {
     this.runInput(command.map(String), signal)
       .then(output => {
         if (output.trim()) {
-          throw new Error('Fold4 input failed: ' + output.trim().slice(0, 200))
+          throw new Error('Foldable input failed: ' + output.trim().slice(0, 200))
         }
       })
       .catch((err: Error) => {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {Readable} from 'node:stream'
-import plugin, {Fold4Posture} from '../../lib/units/device/plugins/fold4-posture.js'
-import type {Fold4PostureMode} from '../../lib/types/android-display.js'
+import plugin, {FoldablePosture} from '../../lib/units/device/plugins/foldable-posture.js'
+import type {FoldablePostureMode} from '../../lib/types/android-display.js'
 
 const manualOwner = 'operator@example.test'
 const reservation = 'current-reservation'
@@ -11,6 +11,7 @@ function fakeDevice() {
   const commands: string[][] = []
   const hardware = {
     marker: null as string | null
+    , rotationMarker: null as string | null
     , override: null as number | null
     , base: 3
     , committed: 3
@@ -19,8 +20,10 @@ function fakeDevice() {
     , fixedRotation: 'default'
     , confirmOverride: true
     , stateNames: names
+    , resources: {folded: '', unfolded: ''}
     , beforeOverride: () => Promise.resolve()
     , beforeDump: (_signal?: AbortSignal): void | Promise<void> => {}
+    , beforeRotationWrite: (_args: string[]): void | Promise<void> => {}
   }
   const record = (id: number) =>
     `DeviceState{identifier=${id}, name='${names[id]}', app_accessible=true}`
@@ -33,18 +36,21 @@ function fakeDevice() {
       if (args.length === 2) {
         return `${hardware[setting]}\n`
       }
+      await hardware.beforeRotationWrite(args)
       hardware[setting] = args.slice(2).join(' ')
       return ''
     }
     if (args[0] === 'sh') {
+      const marker = args[4]?.includes('foldable-rotation') ? 'rotationMarker' : 'marker'
       if (args.length === 6) {
-        hardware.marker = args[5]!
+        hardware[marker] = args[5]!
         return ''
       }
-      return hardware.marker ?? 'absent\n'
+      return hardware[marker] ?? 'absent\n'
     }
     if (args[0] === 'rm') {
-      hardware.marker = null
+      const marker = args[2]?.includes('foldable-rotation') ? 'rotationMarker' : 'marker'
+      hardware[marker] = null
       return ''
     }
     if (args[0] === 'dumpsys') {
@@ -53,6 +59,11 @@ function fakeDevice() {
       const override = hardware.override === null ? 'Optional.empty' :
         `Optional[${record(hardware.override)}]`
       return `  ${base}\n  mOverrideState=${override}\n`
+    }
+    if (args[0] === 'cmd' && args[1] === 'overlay') {
+      assert.deepEqual(args.slice(0, 4), ['cmd', 'overlay', 'lookup', 'android'])
+      return args[4] === 'android:array/config_foldedDeviceStates' ?
+        hardware.resources.folded : hardware.resources.unfolded
     }
     assert.deepEqual(args.slice(0, 2), ['cmd', 'device_state'])
     switch (args[2]) {
@@ -88,16 +99,16 @@ function fakeDevice() {
     leaving = true
   }
   const errors: unknown[] = []
-  const changes: Array<Fold4PostureMode | null> = []
-  const posture = new Fold4Posture(shell, (email, id) =>
+  const changes: Array<FoldablePostureMode | null> = []
+  const posture = new FoldablePosture(shell, (email, id) =>
     email === manualOwner && id === reservation && !leaving, error => errors.push(error))
   posture.on('change', mode => changes.push(mode))
-  const set = (mode: Fold4PostureMode) => posture.set(mode, manualOwner, reservation)
+  const set = (mode: FoldablePostureMode) => posture.set(mode, manualOwner, reservation)
   const overrideCommands = () => commands.filter(args => args[2] === 'state').map(args => args[3])
   return {commands, hardware, changes, errors, posture, set, releaseOwner, overrideCommands, shell}
 }
 
-describe('Galaxy Z Fold4 provider posture', function() {
+describe('Android foldable provider posture', function() {
   it('uses the tested commands and verifies sensor control on leave', async function() {
     const f = fakeDevice()
     await f.posture.initialize()
@@ -148,7 +159,51 @@ describe('Galaxy Z Fold4 provider posture', function() {
     await f.posture.release()
     assert.equal(f.hardware.rotationMode, 'lock 2')
     assert.equal(f.hardware.fixedRotation, 'disabled')
+    assert.equal(f.hardware.rotationMarker, null)
     await assert.rejects(f.posture.rotate(0, manualOwner, reservation), /manual reservation/)
+  })
+
+  it('restores the original rotation after a failed second command', async function() {
+    const f = fakeDevice()
+    await f.posture.initialize()
+    await f.posture.rotate(90, manualOwner, reservation)
+    f.hardware.beforeRotationWrite = args => {
+      if (args.join(' ') === 'wm user-rotation lock 2') {
+        throw new Error('ADB transport closed')
+      }
+    }
+    await assert.rejects(f.posture.rotate(180, manualOwner, reservation), /ADB transport closed/)
+    assert.equal(f.hardware.rotationMode, 'lock 1')
+    await f.posture.release()
+    assert.equal(f.hardware.rotationMode, 'free')
+    assert.equal(f.hardware.fixedRotation, 'default')
+    assert.equal(f.hardware.rotationMarker, null)
+  })
+
+  it('recovers an STF rotation after restarting the worker', async function() {
+    const f = fakeDevice()
+    await f.posture.initialize()
+    await f.posture.rotate(90, manualOwner, reservation)
+    assert.notEqual(f.hardware.rotationMarker, null)
+
+    const restarted = new FoldablePosture(f.shell, () => true, error => f.errors.push(error))
+    await restarted.initialize()
+    assert.equal(restarted.mode, 'sensor')
+    assert.equal(f.hardware.rotationMode, 'free')
+    assert.equal(f.hardware.fixedRotation, 'default')
+    assert.equal(f.hardware.rotationMarker, null)
+  })
+
+  it('preserves an external angle after a confirmed STF change', async function() {
+    const f = fakeDevice()
+    await f.posture.initialize()
+    await f.posture.rotate(90, manualOwner, reservation)
+    await f.posture.rotate(180, manualOwner, reservation)
+    f.hardware.rotationMode = 'lock 1'
+    await f.posture.release()
+    assert.equal(f.hardware.rotationMode, 'lock 1', 'the earlier STF lock was superseded')
+    assert.equal(f.hardware.fixedRotation, 'default')
+    assert.equal(f.hardware.rotationMarker, null)
   })
 
   it('cleans up an override Android accepted but never committed', async function() {
@@ -246,9 +301,23 @@ describe('Galaxy Z Fold4 provider posture', function() {
     assert.equal(f.hardware.override, 0)
   })
 
-  it('does not force an unverified firmware mapping', async function() {
+  it('uses the platform state identifiers instead of a model-specific mapping', async function() {
     const f = fakeDevice()
-    f.hardware.stateNames = ['OPENED', 'TENT', 'HALF_OPENED', 'CLOSED']
+    f.hardware.stateNames = ['DEFAULT', 'TENT', 'FOLDED_CUSTOM', 'HALF_OPENED', 'OPEN_CUSTOM']
+    f.hardware.resources = {folded: '2\n', unfolded: '4\n'}
+    f.hardware.base = f.hardware.committed = 4
+    await f.posture.initialize()
+    assert.deepEqual(f.posture.stateIdentifiers, {folded: 2, unfolded: 4})
+    assert.equal(await f.set('folded'), 'folded')
+    assert.equal(f.hardware.marker, '2')
+    assert.equal(await f.set('unfolded'), 'unfolded')
+    await f.posture.release()
+    assert.deepEqual(f.overrideCommands(), ['2', '4', 'reset'])
+  })
+
+  it('does not force an ambiguous firmware mapping', async function() {
+    const f = fakeDevice()
+    f.hardware.stateNames = ['CLOSED', 'TENT', 'OPENED', 'OPENED']
     await f.posture.initialize()
     await assert.rejects(f.set('folded'), /unavailable/)
     const before = f.commands.length
@@ -328,7 +397,7 @@ describe('Galaxy Z Fold4 provider posture', function() {
     assert.deepEqual(f.overrideCommands(), [])
   })
 
-  it('uses a transport abort signal on each Fold4 ADB command', async function() {
+  it('uses a transport abort signal on each ADB command without model identity', async function() {
     const f = fakeDevice()
     const signals: AbortSignal[] = []
     const adb = {client: {getDevice: () => ({
@@ -338,12 +407,42 @@ describe('Galaxy Z Fold4 provider posture', function() {
       }
     })}}
     const group = {isManualOwner: () => true, beforeManualJoin: () => {}, beforeLeave: () => {}}
-    const identity = {manufacturer: 'SAMSUNG', model: 'SM-F936B'}
-    const posture = await plugin.invoke({serial: 'fixture'}, adb, group, identity) as Fold4Posture
+    const posture = await plugin.invoke({serial: 'fixture'}, adb, group) as FoldablePosture
     await posture.set('folded', manualOwner, reservation)
     await posture.release()
     assert.deepEqual(f.overrideCommands(), ['0', 'reset'])
     assert.equal(signals.length, f.commands.length)
     assert.ok(signals.every(signal => signal instanceof AbortSignal))
+  })
+
+  it('does not manage reservations on an ordinary single-state phone', async function() {
+    const f = fakeDevice()
+    f.hardware.stateNames = ['DEFAULT']
+    let hooks = 0
+    const adb = {client: {getDevice: () => ({
+      shell: async(args: string[]) => Readable.from([Buffer.from(await f.shell(args))])
+    })}}
+    const group = {isManualOwner: () => true
+      , beforeManualJoin: () => hooks++, beforeLeave: () => hooks++}
+    const posture = await plugin.invoke({serial: 'fixture'}, adb, group) as FoldablePosture
+    assert.equal(posture.supported, false)
+    assert.equal(hooks, 0)
+    assert.ok(!f.commands.some(args => args[1] === 'overlay' || args[0] === 'dumpsys'))
+    assert.deepEqual(f.overrideCommands(), [])
+  })
+
+  it('keeps ordinary Android ready when foldable probes fail', async function() {
+    const errors: unknown[] = []
+    const commands: string[][] = []
+    const posture = new FoldablePosture(async(args) => {
+      commands.push(args)
+      throw new Error('ADB probe failed')
+    }, () => true, error => errors.push(error))
+    await posture.initialize()
+    assert.equal(posture.supported, false)
+    assert.equal(posture.mode, null)
+    const probes = commands.map(args => args.slice(0, 2))
+    assert.deepEqual(probes, [['cmd', 'device_state'], ['sh', '-c']])
+    assert.equal(errors.length, 2)
   })
 })

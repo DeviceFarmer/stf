@@ -267,7 +267,10 @@ export default syrup.serial()
           .then(function() {
             plugin.emit('autojoin', message.identifier, true)
           })
-          .catch(grouputil.AlreadyGroupedError, function() {
+          .catch(function(error) {
+            if (!(error instanceof grouputil.AlreadyGroupedError)) {
+              log.warn('Device preparation for autojoin failed: %s', error)
+            }
             plugin.emit('autojoin', message.identifier, false)
           })
       })

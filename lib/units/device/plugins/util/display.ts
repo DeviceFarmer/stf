@@ -30,8 +30,14 @@ const displaySettleTimeoutMs = 2500
 
 type DozeState = 'DOZE' | 'DOZE_SUSPEND'
 
+interface PhysicalDisplayAddress {
+  port: number
+  model?: string | undefined
+}
+
 interface DisplayGeometry extends Omit<AndroidDisplayTarget, 'revision'> {
   readonly uniqueId?: string | undefined
+  readonly address?: PhysicalDisplayAddress
   readonly doze?: {
     readonly state: DozeState
     readonly committed: DozeState | 'UNKNOWN'
@@ -51,6 +57,25 @@ function naturalGeometry(id: number, width: number, height: number, quarterTurns
   , height: sideways ? width : height
   , rotation: quarterTurns * 90
   }
+}
+
+function parsePhysicalAddress(value: string): PhysicalDisplayAddress | null {
+  const address = /^\{port=(\d{1,3})(?:, model=(0x[\da-f]+))?\}$/i.exec(value)
+  const port = Number(address?.[1])
+  return address && port <= 255 ? {port, model: address[2]?.toLowerCase()} : null
+}
+
+export function parsePrimaryDisplayLayout(
+  output: string, state: number
+): PhysicalDisplayAddress | null {
+  const prefix = `state(${state}):`
+  const rows = output.split('\n').filter(line => line.trimStart().startsWith(prefix))
+  if (rows.length !== 1) {
+    return null
+  }
+  const primaryAddress = /\bdispId:\s*0\(ON\),[^{}]*?\baddr:\s*(\{[^{}]*\})/
+  const display = primaryAddress.exec(rows[0]!)
+  return display ? parsePhysicalAddress(display[1]!) : null
 }
 
 export function parsePrimaryDisplay(output: string, allowDoze = false): DisplayGeometry | null {
@@ -76,16 +101,20 @@ export function parsePrimaryDisplay(output: string, allowDoze = false): DisplayG
     return null
   }
   const uniqueId = /, uniqueId "([^"]*)"/.exec(line)?.[1]
+  const addressText = /, address (\{[^{}]*\})/.exec(line)?.[1]
+  const address = addressText ? parsePhysicalAddress(addressText) : null
   const geometry = {
     ...naturalGeometry(primaryDisplayId, width, height, Number(orientation[1]))
   , uniqueId
+  , ...(address ? {address} : {})
   }
   return dozing ? {...geometry, doze: {state, committed}} : geometry
 }
 
 function sameGeometry(left: DisplayGeometry, right: DisplayGeometry): boolean {
   return left.width === right.width && left.height === right.height &&
-    left.rotation === right.rotation && left.uniqueId === right.uniqueId
+    left.rotation === right.rotation && left.uniqueId === right.uniqueId &&
+    left.address?.port === right.address?.port && left.address?.model === right.address?.model
 }
 
 export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDisplayEvents> {
@@ -100,6 +129,7 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
     readonly properties: DisplayProperties
   , private readonly readPrimary:
       (signal?: AbortSignal, allowDoze?: boolean) => Promise<DisplayGeometry | null>
+  , private readonly readLayout?: (state: number) => Promise<PhysicalDisplayAddress | null>
   ) {
     super()
     const {width, height, rotation} = properties
@@ -130,6 +160,21 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
     this.transitioning = false
   }
 
+  async refreshAfterPosture(
+    state: number | null, allowSamePanelDoze: boolean
+  ): Promise<AndroidDisplayTarget> {
+    let expected: PhysicalDisplayAddress | null = null
+    if (state !== null && this.readLayout) {
+      expected = await this.readLayout(state).catch((error: unknown) => {
+        log.debug('Unable to read the Android device-state display layout: %s', error)
+        return null
+      })
+    }
+    return this.refreshAfterTransition(({address}) => !expected ||
+      (address?.port === expected.port && (!expected.model || address.model === expected.model)),
+      allowSamePanelDoze)
+  }
+
   async refreshAfterTransition(
     accepts: (geometry: DisplayGeometry) => boolean = () => true
   , allowSamePanelDoze = false
@@ -143,7 +188,7 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
         deadline.throwIfAborted()
         const sample = await this.readPrimary(deadline, allowSamePanelDoze)
           .catch((error: unknown) => {
-            log.debug('Unable to read Fold4 display during transition: %s', error)
+            log.debug('Unable to read foldable display during transition: %s', error)
             return null
           })
         deadline.throwIfAborted()
@@ -164,7 +209,7 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
       if (!deadline.aborted) {
         throw error
       }
-      throw new Error('Fold4 posture changed, but the active display did not settle', {
+      throw new Error('The foldable device state changed, but the active display did not settle', {
         cause: error
       })
     }
@@ -178,7 +223,7 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
       const generation = this.rotationGeneration
       this.refreshing = Promise.resolve().then(() => this.readPrimary())
         .catch((error: unknown) => {
-          log.debug('Unable to refresh the Fold4 display: %s', error)
+          log.debug('Unable to refresh the foldable display: %s', error)
           return null
         })
         .then(geometry => {
@@ -280,17 +325,25 @@ export default syrup.serial()
         })
     }
 
-    async function readPrimary(deadline?: AbortSignal, allowDoze = false) {
+    async function readDisplayOutput(args: string[], deadline?: AbortSignal) {
       const timeout = AbortSignal.timeout(2000)
       const signal = deadline ? AbortSignal.any([timeout, deadline]) : timeout
-      const stream = await adb.client.getDevice(options.serial)
-        .shell(['cmd', 'display', 'get-displays'], {signal})
+      const stream = await adb.client.getDevice(options.serial).shell(args, {signal})
       try {
-        return parsePrimaryDisplay((await streamutil.readAll(stream)).toString(), allowDoze)
+        return (await streamutil.readAll(stream)).toString()
       }
       finally {
         stream.destroy()
       }
+    }
+
+    async function readPrimary(deadline?: AbortSignal, allowDoze = false) {
+      const output = await readDisplayOutput(['cmd', 'display', 'get-displays'], deadline)
+      return parsePrimaryDisplay(output, allowDoze)
+    }
+
+    async function readLayout(state: number) {
+      return parsePrimaryDisplayLayout(await readDisplayOutput(['dumpsys', 'display']), state)
     }
 
     log.info('Reading display info')
@@ -299,7 +352,7 @@ export default syrup.serial()
       .then(properties => {
         properties.url = screenOptions.publicUrl
         const normalized = normalizeDisplayProperties(properties)
-        const display = new AndroidDisplayRegistry(normalized, readPrimary)
+        const display = new AndroidDisplayRegistry(normalized, readPrimary, readLayout)
         service.on('rotationChange', data => display.updateRotation(data.rotation))
         return display
       })
