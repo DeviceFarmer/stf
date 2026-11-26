@@ -535,6 +535,8 @@ message JoinGroupByVncAuthResponseMessage {
 }
 
 message AdbKeysUpdatedMessage {
+  // Set when a key was removed, so devices stop accepting it
+  optional string removedFingerprint = 1;
 }
 
 message VncAuthResponsesUpdatedMessage {

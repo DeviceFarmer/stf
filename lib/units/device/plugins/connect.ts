@@ -77,6 +77,20 @@ export default syrup.serial()
       }
     }
 
+    function forgetKnownKey(fingerprint?: string | null) {
+      if (!fingerprint) {
+        return
+      }
+      // In place, the bridge holds on to this array
+      var index = knownKeys.findIndex(function(knownKey) {
+        return knownKey.fingerprint === fingerprint
+      })
+      if (index !== -1) {
+        knownKeys.splice(index, 1)
+        log.info('Forgot removed ADB key "%s"', fingerprint)
+      }
+    }
+
     // Keys only count when they come for the current owner, so a stale or foreign request can not
     // let anybody else in without going through the auth handler.
     function setKnownKeys(message: ConnectStartMessageFields | null) {
@@ -248,6 +262,11 @@ export default syrup.serial()
     group.on('leave', plugin.stop)
 
     router
+      // A removed key must not keep getting in through knownKeys. Without it, a later connection
+      // with that key goes to the auth handler, and the processor no longer finds its owner.
+      .on(wire.AdbKeysUpdatedMessage, function(channel, message) {
+        forgetKnownKey(message.removedFingerprint)
+      })
       .on(wire.ConnectStartMessage, function(channel, message) {
         var reply = wireutil.reply(options.serial)
         plugin.start(message)
