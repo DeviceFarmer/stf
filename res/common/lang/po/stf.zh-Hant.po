@@ -2050,6 +2050,10 @@ msgstr ""
 msgid "The current view is marked secure and cannot be viewed remotely."
 msgstr "目前的畫面已被保護，無法從遠端監看"
 
+#: res/app/src/core/install.ts:280
+msgid "The device could not download the uploaded file. Upload it again."
+msgstr ""
+
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
 msgstr "此裝置暫時無法使用"
