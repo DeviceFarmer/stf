@@ -19,6 +19,7 @@ declare module '@cypress/request' {
     class Request extends stream.Stream {
       pipe<T extends NodeJS.WritableStream>(destination: T, options?: {end?: boolean}): T
       form(): FormData
+      abort(): void
       on(event: 'response', listener: (response: http.IncomingMessage) => void): this
       on(event: 'error', listener: (error: Error) => void): this
       on(event: string | symbol, listener: (...args: any[]) => void): this

@@ -65,30 +65,49 @@ export default syrup.serial()
         ])
       }
 
-      function pushApp() {
+      // The retry after an uninstall pushes the APK again without progress
+      // reports: the installing_app ticks are already running by then.
+      function pushApp(reportProgress = true) {
+        var resolve_!: (value: string) => void, reject_!: (err: Error) => void
+        var promise = new Promise<string>(function(resolve, reject) {
+          resolve_ = resolve
+          reject_ = reject
+        })
+        // The download can fail before adb.push() hands over the transfer.
+        promise.catch(function() {})
+
+        function downloadFailed(err: InstallError) {
+          log.error('Downloading "%s" for the device failed: %s', message.href, err.message)
+          err.code = err.code && /^INSTALL_/.test(err.code) ? err.code : 'INSTALL_ERROR_DOWNLOAD'
+          reject_(err)
+        }
+
+        var href = url.resolve(options.storageUrl, message.href)
         var req = request({
-          url: url.resolve(options.storageUrl, message.href)
+          url: href
         })
 
         // We need to catch the Content-Length on the fly or we risk
         // losing some of the initial chunks.
         var contentLength: number | null = null
         req.on('response', function(res) {
+          var status = res.statusCode || 0
+          if (status < 200 || status >= 300) {
+            // Don't push an error page to the device as the APK.
+            req.abort()
+            downloadFailed(new Error(util.format('Storage responded %d to %s', status, href)))
+            return
+          }
           contentLength = parseInt(res.headers['content-length'] as string, 10)
         })
 
         var source = new stream.Readable().wrap(req as unknown as NodeJS.ReadableStream)
+        source.on('error', downloadFailed)
         var target = '/data/local/tmp/_app.apk'
 
         return adb.push(options.serial, source, target)
           .timeout(10000)
           .then(function(transfer) {
-            var resolve_!: (value: string) => void, reject_!: (err: Error) => void
-            var promise = new Promise<string>(function(resolve, reject) {
-              resolve_ = resolve
-              reject_ = reject
-            })
-
             function endListener() {
               resolve_(target)
             }
@@ -127,14 +146,16 @@ export default syrup.serial()
 
             function progressListener(stats: PushTransfer['stats']) {
               if (contentLength) {
-                // Progress 0% to 70%
-                sendProgress(
-                  'pushing_app'
-                , 50 * Math.max(0, Math.min(
-                    50
-                  , stats.bytesTransferred / contentLength
-                  ))
-                )
+                // Progress 0% to 50%
+                if (reportProgress) {
+                  sendProgress(
+                    'pushing_app'
+                  , 50 * Math.max(0, Math.min(
+                      1
+                    , stats.bytesTransferred / contentLength
+                    ))
+                  )
+                }
                 // 'end' never fires on Node >= 16, and bytesTransferred counts bytes handed to adb, not bytes
                 // written on the device: wait for the file to reach its full size before installing it.
                 if ((stats.bytesTransferred / contentLength) === 1 &&
@@ -152,11 +173,27 @@ export default syrup.serial()
             transfer.on('error', errorListener)
             transfer.on('end', endListener)
 
-            return promise.finally(function() {
-              transfer.removeListener('progress', progressListener)
-              transfer.removeListener('error', errorListener)
-              transfer.removeListener('end', endListener)
-            })
+            return promise
+              .catch(function(err) {
+                // Stop feeding the device, or the push waits for the aborted download forever.
+                transfer.cancel()
+                throw err
+              })
+              .finally(function() {
+                transfer.removeListener('progress', progressListener)
+                transfer.removeListener('end', endListener)
+                // Keep the 'error' listener: a late error from the aborted
+                // download would otherwise be emitted with no listener and throw.
+              })
+          })
+      }
+
+      function reinstall(apk: string) {
+        return adb.uninstall(options.serial, pkg)
+          .timeout(15000)
+          .then(function() {
+            return adb.installRemote(options.serial, apk)
+              .timeout(60000 * 5)
           })
       }
 
@@ -182,12 +219,10 @@ export default syrup.serial()
                     , pkg
                     , err.code
                     )
-                    return adb.uninstall(options.serial, pkg)
-                      .timeout(15000)
-                      .then(function() {
-                        return adb.installRemote(options.serial, apk)
-                          .timeout(60000 * 5)
-                      })
+                    // installRemote() removes the APK from the device even
+                    // when the install fails, so push it again. Push before
+                    // uninstalling: if the push fails, the old app stays.
+                    return pushApp(false).then(reinstall)
                   default:
                     return Promise.reject(err)
                   }
