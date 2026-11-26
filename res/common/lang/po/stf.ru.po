@@ -2057,6 +2057,10 @@ msgstr ""
 "Текущий просмотр отмечен как безопасный и к нему нельзя получить доступ "
 "удалённо."
 
+#: res/app/src/core/install.ts:280
+msgid "The device could not download the uploaded file. Upload it again."
+msgstr ""
+
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
 msgstr "Устройство будет временно недоступно."

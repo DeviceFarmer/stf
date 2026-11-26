@@ -2058,6 +2058,10 @@ msgstr ""
 "Поточний перегляд відмічений як безпечний і до нього не можна отримати "
 "доступ віддалено."
 
+#: res/app/src/core/install.ts:280
+msgid "The device could not download the uploaded file. Upload it again."
+msgstr ""
+
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
 msgstr "Пристрій буде тимчасово недоступний."

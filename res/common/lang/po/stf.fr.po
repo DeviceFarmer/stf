@@ -2065,6 +2065,10 @@ msgstr ""
 "La vue actuelle est marquée comme sécurisée et ne peut pas être consultée à "
 "distance."
 
+#: res/app/src/core/install.ts:280
+msgid "The device could not download the uploaded file. Upload it again."
+msgstr ""
+
 #: res/app/src/features/control/panes/advanced/MaintenanceCard.tsx:11
 msgid "The device will be unavailable for a moment."
 msgstr "Le terminal ne sera pas disponible pour un moment"
