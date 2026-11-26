@@ -201,6 +201,10 @@ msgstr "Autoprzewijanie"
 msgid "Automated"
 msgstr ""
 
+#: res/app/src/ui/IosDeviceHealth.tsx:22
+msgid "Automatic screen lock failed after three attempts."
+msgstr ""
+
 #: res/app/src/features/control/ControlPage.tsx:73
 msgid "Automation"
 msgstr "Automatyzacja"
