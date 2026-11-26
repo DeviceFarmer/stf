@@ -733,11 +733,16 @@ describe('wire protobuf', function() {
     it('should preserve the coordinator fence through capture and join', function() {
       const owner = new wire.OwnerMessage('runner@example.test', 'Runner', 'runner-group')
       const capture = wire.GroupMessage.decode(new wire.GroupMessage(
-        owner, 420000, [], 'automation', 'lease-test'
+        owner, 420000, [], 'automation', 'lease-test', true
       ).encodeNB())
       expect(capture.leaseId).to.equal('lease-test')
+      expect(capture.screenLifecycle).to.equal(true)
       expect(capture.timeout).to.equal(420000)
       expect(capture.owner.email).to.equal(owner.email)
+      const legacyCapture = wire.GroupMessage.decode(new wire.GroupMessage(
+        owner, 420000, [], 'automation', 'lease-test'
+      ).encodeNB())
+      expect(legacyCapture.screenLifecycle).to.equal(null)
       const join = wire.JoinGroupMessage.decode(new wire.JoinGroupMessage(
         'test-device', owner, 'automation', capture.leaseId
       ).encodeNB())

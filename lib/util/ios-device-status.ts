@@ -19,6 +19,8 @@ export interface IosDeviceStatus {
   }
 }
 
+export const wdaProfileWarningWindowMs = 48 * 3600000
+
 export function wdaProfileExpiryState(
   expiresAt: number, now = Date.now()
 ): 'valid' | 'expiring' | 'expired' {
@@ -26,7 +28,7 @@ export function wdaProfileExpiryState(
   if (remaining <= 0) {
     return 'expired'
   }
-  return remaining <= 48 * 3600000 ? 'expiring' : 'valid'
+  return remaining <= wdaProfileWarningWindowMs ? 'expiring' : 'valid'
 }
 
 export function iosMajorVersion(version: unknown): number | null {

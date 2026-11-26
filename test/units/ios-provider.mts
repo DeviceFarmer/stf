@@ -5,7 +5,7 @@ import sinon from 'sinon'
 import {WebSocket} from 'ws'
 import wire from '../../lib/wire/index.js'
 import wireutil from '../../lib/wire/util.js'
-import {IosBridge} from '../../lib/units/ios-provider/bridge.js'
+import {IosBridge, type BridgeOptions} from '../../lib/units/ios-provider/bridge.js'
 import {PrototypeClient, type IosDeviceState} from '../../lib/units/ios-provider/client.js'
 import type {IosDeviceStatus} from '../../lib/util/ios-device-status.js'
 import {authorizeScreen} from '../../lib/units/ios-provider/access.js'
@@ -25,6 +25,9 @@ const jpegPart = Buffer.concat([
   Buffer.from('--frame\r\nContent-Length: 6\r\n\r\n'), jpegFrame, Buffer.from('\r\n\r\n')
 ])
 type TouchSample = [type: 'contact' | 'release', x: number, y: number]
+type FixtureOptions = Partial<Pick<BridgeOptions, 'marketName' | 'autoScreenSleep'>> & {
+  holdFirstText?: boolean
+}
 
 async function listen(server: http.Server) {
   server.listen(0, '127.0.0.1')
@@ -34,9 +37,9 @@ async function listen(server: http.Server) {
 }
 
 async function until(check: () => boolean) {
-  const deadline = Date.now() + 2000
+  const deadline = performance.now() + 2000
   while (!check()) {
-    assert.ok(Date.now() < deadline, 'Timed out waiting for the expected operation')
+    assert.ok(performance.now() < deadline, 'Timed out waiting for the expected operation')
     await new Promise(resolve => setTimeout(resolve, 10))
   }
 }
@@ -50,7 +53,9 @@ describe('Linux iOS integration', function() {
     }
   })
 
-  async function fixture(marketName = 'iPhone 16 Plus', holdFirstText = false) {
+  async function fixture(
+    {marketName = 'iPhone 16 Plus', holdFirstText = false, ...options}: FixtureOptions = {}
+  ) {
     const state: IosDeviceState = {
       udid: serial, state: 'ready', generation: 1, instance: 'backend-instance'
     , coreDevice: true, ios: {reason: 'ready', locked: false} as IosDeviceStatus
@@ -58,8 +63,13 @@ describe('Linux iOS integration', function() {
     }
     const requests: {path: string, body: any}[] = []
     let cancelled = false
+    let failDevice = false
     let failKeepalive = false
     let appiumResponse = Promise.resolve(200)
+    let lockResponse = Promise.resolve()
+    const lockFailures: Array<'http' | 'unlocked'> = []
+    let idleLockCancelled = false
+    let protectedLock = false
     const errors: unknown[] = []
     const screens: http.ServerResponse[] = []
     const wdaScreens: http.ServerResponse[] = []
@@ -71,7 +81,13 @@ describe('Linux iOS integration', function() {
     const backend = http.createServer(async(req, res) => {
       assert.equal(req.headers.authorization, 'Bearer ' + 'a'.repeat(32))
       if (req.url === '/device') {
-        res.end(JSON.stringify(state))
+        if (failDevice) {
+          failDevice = false
+          res.writeHead(503).end('{}')
+        }
+        else {
+          res.end(JSON.stringify(state))
+        }
       }
       else if (req.url === '/screenshot') {
         res.setHeader('Content-Type', 'image/png')
@@ -129,6 +145,34 @@ describe('Linux iOS integration', function() {
           })
           return
         }
+        if (options.autoScreenSleep && (req.url === '/lock' || req.url === '/unlock')) {
+          if (state.automationLease) {
+            res.writeHead(409).end('{}')
+            return
+          }
+          if (req.url === '/lock') {
+            res.once('close', () => {
+              idleLockCancelled = !res.writableEnded
+            })
+            await lockResponse
+            if (res.destroyed) {
+              return
+            }
+            const failure = lockFailures.shift()
+            if (failure === 'http') {
+              res.writeHead(502).end('{"error":"IOS_LOCK_FAILED"}')
+              return
+            }
+            if (failure === 'unlocked') {
+              res.end('{"locked":false}')
+              return
+            }
+          }
+          const locked = req.url === '/lock' || protectedLock
+          state.ios!.locked = locked
+          res.end(JSON.stringify({locked}))
+          return
+        }
         let response = {success: true} as object
         if (req.url?.startsWith('/installations/')) {
           response = {id: requests.at(-1)!.body.id || 'job', settled: false}
@@ -144,7 +188,7 @@ describe('Linux iOS integration', function() {
     let disconnects = 0
     const bridge = new IosBridge({
       serial, name: 'Linux', marketName, screenUrl: 'wss://stf/screen'
-    , storageUrl: 'http://127.0.0.1:1', groupTimeout: 900
+    , storageUrl: 'http://127.0.0.1:1', groupTimeout: 900, ...options
     }, client, (channel, data) => sent.push({channel, envelope: wire.Envelope.decode(data)}),
     () => {
  disconnects++
@@ -153,15 +197,28 @@ describe('Linux iOS integration', function() {
       bridge.handle(channel, transaction ?
         wireutil.transaction('reply', message) : wireutil.envelope(message))
     }
-    const requestGroup = (timeout: number, usage?: string, leaseId?: string) => {
+    async function transact(message: wireutil.Message) {
+      const before = sent.length
+      send(message, true)
+      const reply = () => sent.slice(before).find(item => item.channel === 'reply' &&
+        item.envelope.type === wire.TransactionDoneMessage.$code)
+      await until(() => Boolean(reply()))
+      return wire.TransactionDoneMessage.decode(reply()!.envelope.message)
+    }
+    const requestGroup = (timeout: number, usage?: string, leaseId?: string,
+      screenLifecycle?: boolean) => {
       send(new wire.GroupMessage(owner, timeout, [
         new wire.DeviceRequirement('serial', serial, wire.RequirementType.EXACT)
-      ], usage, leaseId), true)
+      ], usage, leaseId, screenLifecycle), true)
     }
-    const join = async(timeout = 900000, usage?: string, leaseId?: string) => {
+    const register = async() => {
       await bridge.poll()
       send(new wire.DeviceRegisteredMessage(serial), false, bridge.solo)
-      requestGroup(timeout, usage, leaseId)
+    }
+    const join = async(timeout = 900000, usage?: string, leaseId?: string,
+      screenLifecycle?: boolean) => {
+      await register()
+      requestGroup(timeout, usage, leaseId, screenLifecycle)
       await until(() => bridge.owner !== null)
     }
     const gestures = new Map<number, string>()
@@ -191,8 +248,8 @@ describe('Linux iOS integration', function() {
     , mode: () => bridge.screenMode()
     , connectInput: (id, signal, fail) => bridge.connectCoreDeviceInput(id, signal, fail)
     })
-    return {bridge, state, requests, sent, send, join, requestGroup, gesture, errors, activateInput
-      , expectTouches, screenServer, screens, wdaScreens
+    return {bridge, state, requests, sent, send, transact, register, join, requestGroup, gesture
+      , errors, activateInput, expectTouches, screenServer, screens, wdaScreens
       , holdAutomation: () => {
         let finish!: (status: number) => void
         appiumResponse = new Promise(resolve => {
@@ -203,6 +260,24 @@ describe('Linux iOS integration', function() {
           appiumResponse = Promise.resolve(200)
         }
       }
+      , holdLock: () => {
+        let finish!: () => void
+        lockResponse = new Promise(resolve => {
+          finish = resolve
+        })
+        return finish
+      }
+      , requirePasscode: () => {
+        protectedLock = true
+        state.ios!.locked = true
+      }
+      , failDevice: () => {
+        failDevice = true
+      }
+      , failLocks: (...failures: typeof lockFailures) => {
+        lockFailures.push(...failures)
+      }
+      , idleLockCancelled: () => idleLockCancelled
       , failKeepalive: () => {
  failKeepalive = true
 }
@@ -302,6 +377,311 @@ describe('Linux iOS integration', function() {
     ])
   })
 
+  it('leaves automatic power management disabled by default', async() => {
+    const f = await fixture()
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      f.state.ios!.locked = true
+      await f.join()
+      assert.equal((await f.transact(new wire.UngroupMessage([], f.bridge.owner!.reservationId)))
+        .success, true)
+      clock.tick(30000)
+      await f.bridge.poll()
+      assert.deepEqual(f.requests, [])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('locks an idle phone that registered on startup without a reservation', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      await f.bridge.poll()
+      clock.tick(30000)
+      await f.bridge.poll()
+      assert.equal(f.requests.length, 0)
+      await f.register()
+      clock.tick(29999)
+      await f.bridge.poll()
+      assert.equal(f.requests.length, 0)
+      clock.tick(1)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), ['/lock'])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('starts a fresh idle grace period after the runtime reconnects', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      await f.join(900000, 'automation', 'coordinator-lease', true)
+      const release = await f.transact(new wire.AutomationLeaseMessage(
+        serial, owner, 'coordinator-lease', 'release'))
+      assert.equal(release.success, true)
+      clock.tick(10000)
+      f.state.instance = 'replacement-runtime'
+      await f.register()
+      clock.tick(29999)
+      await f.bridge.poll()
+      assert.ok(!f.requests.some(request => request.path === '/lock'))
+      clock.tick(1)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), [
+        '/unlock', '/automation', '/automation', '/lock'
+      ])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('backs off failed locks, reports exhaustion and retries in the next idle period', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    const locks = () => f.requests.filter(request => request.path === '/lock').length
+    const healthReason = () => {
+      const property = f.sent.filter(item =>
+        item.envelope.type === wire.DevicePropertiesMessage.$code).at(-1)!
+      const message = wire.DevicePropertiesMessage.decode(property.envelope.message)
+      return JSON.parse(message.properties[0]!.value).reason
+    }
+    try {
+      f.failLocks('http', 'unlocked', 'http')
+      await f.register()
+      clock.tick(30000)
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await f.bridge.poll()
+        await until(() => f.errors.length === attempt)
+        clock.tick(59999)
+        await f.bridge.poll()
+        assert.equal(locks(), attempt)
+        assert.equal(healthReason(), attempt === 3 ? 'screen_lock_failed' : 'ready')
+        clock.tick(1)
+      }
+      await f.bridge.poll()
+      assert.equal(locks(), 3)
+      assert.equal(f.state.ios!.locked, false)
+
+      await f.join()
+      await f.bridge.poll()
+      assert.equal(healthReason(), 'ready')
+      await f.bridge.leave('ungroup_request')
+      f.failLocks('http')
+      clock.tick(30000)
+      await f.bridge.poll()
+      await until(() => f.errors.length === 4)
+      clock.tick(60000)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      clock.tick(60000)
+      await f.bridge.poll()
+      assert.equal(locks(), 5)
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('cancels idle screen lock when manual ownership resumes within the grace period', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      await f.join()
+      const release = () => f.transact(new wire.UngroupMessage([], f.bridge.owner!.reservationId))
+      assert.equal((await release()).success, true)
+      clock.tick(29999)
+      await f.bridge.poll()
+      assert.equal(f.requests.length, 1)
+      await f.join()
+      clock.tick(1)
+      await f.bridge.poll()
+      assert.equal(f.requests.length, 1)
+
+      assert.equal((await release()).success, true)
+      clock.tick(30000)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock'])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('preserves the scheduled lock when reacquiring a free phone fails', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      await f.join()
+      await f.bridge.leave('ungroup_request')
+      clock.tick(29999)
+      f.failDevice()
+      const capture = await f.transact(new wire.GroupMessage(owner, 900000, []))
+      assert.equal(capture.success, false)
+      assert.equal(f.bridge.owner, null)
+      clock.tick(1)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock'])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('wakes each new runtime once even when WDA reports an unlocked screen', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    assert.equal(f.state.ios!.locked, false)
+    await f.join()
+    await f.bridge.leave('ungroup_request')
+    await f.join()
+    assert.deepEqual(f.requests.map(request => request.path), ['/unlock'])
+    await f.bridge.leave('ungroup_request')
+    f.state.instance = 'fresh-runtime-on-an-asleep-iphone'
+    await f.join()
+    assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/unlock'])
+  })
+
+  it('allows a full lock timeout and cancels a pending lock when a new owner arrives', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    const timeouts = sinon.spy(AbortSignal, 'timeout')
+    const finishLock = f.holdLock()
+    try {
+      await f.join()
+      await f.bridge.leave('ungroup_request')
+      clock.tick(30000)
+      await f.bridge.poll()
+      await until(() => f.requests.some(request => request.path === '/lock'))
+      assert.equal(f.bridge.owner, null)
+      assert.ok(timeouts.calledWith(50000))
+      const joining = await f.transact(new wire.GroupMessage(owner, 900000, []))
+      assert.equal(joining.success, true)
+      await until(f.idleLockCancelled)
+      finishLock()
+      assert.equal(f.state.ios!.locked, false)
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock', '/unlock'])
+      assert.deepEqual(f.errors, [])
+    }
+    finally {
+      finishLock()
+      timeouts.restore()
+      clock.restore()
+    }
+  })
+
+  it('retries an overdue lock when the capture that cancelled it fails', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    const finishLock = f.holdLock()
+    try {
+      await f.join()
+      await f.bridge.leave('ungroup_request')
+      clock.tick(30000)
+      await f.bridge.poll()
+      await until(() => f.requests.some(request => request.path === '/lock'))
+      f.failDevice()
+      const capture = await f.transact(new wire.GroupMessage(owner, 900000, []))
+      assert.equal(capture.success, false)
+      await until(f.idleLockCancelled)
+      finishLock()
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/lock', '/lock'])
+      assert.equal(f.bridge.owner, null)
+    }
+    finally {
+      finishLock()
+      clock.restore()
+    }
+  })
+
+  it('locks after Coordinator handback and preserves WDA screen access after maintenance',
+    async() => {
+      const f = await fixture({autoScreenSleep: true})
+      const clock = sinon.useFakeTimers({toFake: ['Date']})
+      try {
+        await f.join(900000, 'automation', 'coordinator-lease', true)
+        const finishHandback = f.holdAutomation()
+        const releasing = f.transact(new wire.AutomationLeaseMessage(
+          serial, owner, 'coordinator-lease', 'release'))
+        try {
+          await until(() => f.requests.length === 3)
+          clock.tick(30000)
+          await f.bridge.poll()
+          assert.equal(f.requests.length, 3)
+        }
+        finally {
+          finishHandback()
+        }
+        assert.equal((await releasing).success, true)
+        clock.tick(30000)
+        await f.bridge.poll()
+        await until(() => f.state.ios!.locked === true)
+        assert.deepEqual(f.requests.map(request => request.path), [
+          '/unlock', '/automation', '/automation', '/lock'
+        ])
+
+        await f.join(900000, 'automation', 'wda-maintenance')
+        assert.equal((await f.transact(new wire.AutomationLeaseMessage(
+          serial, owner, 'wda-maintenance', 'release'))).success, true)
+        clock.tick(30000)
+        await f.bridge.poll()
+        await f.join()
+        assert.deepEqual(f.requests.map(request => request.path), [
+          '/unlock', '/automation', '/automation', '/lock', '/unlock', '/automation', '/automation'
+        ])
+        assert.equal(f.state.ios!.locked, false)
+      }
+      finally {
+        clock.restore()
+      }
+    })
+
+  it('returns a definite refusal when a passcode blocks a managed capture', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    f.requirePasscode()
+    await f.bridge.poll()
+    f.send(new wire.DeviceRegisteredMessage(serial), false, f.bridge.solo)
+    const reply = await f.transact(new wire.GroupMessage(owner, 900000, [],
+      'automation', 'coordinator-lease', true))
+    assert.equal(reply.success, false)
+    assert.equal(reply.data, 'ios_screen_wake_failed')
+    assert.equal(f.bridge.owner, null)
+    const manual = await f.transact(new wire.GroupMessage(owner, 900000, []))
+    assert.equal(manual.success, false)
+    assert.equal(manual.data, 'iPhone requires a physical unlock')
+    assert.deepEqual(f.requests.map(request => request.path), ['/unlock', '/unlock'])
+    assert.ok(f.sent.every(item => item.envelope.type !== wire.JoinGroupMessage.$code))
+  })
+
+  it('keeps unsuccessful Appium handoff separate from a definite wake refusal', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    await f.bridge.poll()
+    f.send(new wire.DeviceRegisteredMessage(serial), false, f.bridge.solo)
+    const finishHandoff = f.holdAutomation()
+    try {
+      const joining = f.transact(new wire.GroupMessage(owner, 900000, [],
+        'automation', 'coordinator-lease', true))
+      await until(() => f.requests.some(request => request.path === '/automation'))
+      finishHandoff(502)
+      const reply = await joining
+      assert.equal(reply.success, false)
+      assert.equal(reply.data, 'iOS backend returned HTTP 502')
+      assert.equal(f.bridge.owner, null)
+    }
+    finally {
+      finishHandoff()
+    }
+  })
+
   it('restores an iPhone after a reboot with its automation usage and timeout', async function() {
     const f = await fixture()
     await f.bridge.poll()
@@ -380,14 +760,7 @@ describe('Linux iOS integration', function() {
 
   it('fences replacement automation by reservation and coordinator lease IDs', async function() {
     const f = await fixture()
-    const transact = async(message: wireutil.Message) => {
-      const before = f.sent.length
-      f.send(message, true)
-      const reply = () => f.sent.slice(before).find(item => item.channel === 'reply' &&
-        item.envelope.type === wire.TransactionDoneMessage.$code)
-      await until(() => Boolean(reply()))
-      return wire.TransactionDoneMessage.decode(reply()!.envelope.message)
-    }
+    const {transact} = f
     await f.join(900000, 'automation', 'lease-a')
     const joined = wire.JoinGroupMessage.decode(f.sent.find(item =>
       item.envelope.type === wire.JoinGroupMessage.$code)!.envelope.message)
@@ -632,7 +1005,7 @@ describe('Linux iOS integration', function() {
   }
 
   it('aborts forwarded input on release and permits a new session', async function() {
-    const f = await fixture('iPhone 16 Plus', true)
+    const f = await fixture({holdFirstText: true})
     await f.join()
     f.send(new wire.PasteMessage('previous owner'), true)
     await until(() => f.requests.length === 1)
@@ -666,7 +1039,7 @@ describe('Linux iOS integration', function() {
   })
 
   it('resolves a known iPhone model without a manual market-name override', async function() {
-    const f = await fixture('')
+    const f = await fixture({marketName: ''})
     f.state.info!.ProductType = 'iPhone14,2'
     await f.join()
     f.send(new wire.ProbeMessage())

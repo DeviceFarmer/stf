@@ -1,5 +1,7 @@
 export const iosAutomationCaptureTimeoutMs = 40000
+export const iosScreenLifecycleCaptureTimeoutMs = 70000
 export const automationReleaseTimeoutMs = 90000
+export const iosScreenWakeFailed = 'ios_screen_wake_failed'
 
 // The longest renewal is 3600 s of lease TTL plus 180 s and two 300 s upstream timeouts.
 export const automationLeaseMaxTimeoutMs = 4_380_000

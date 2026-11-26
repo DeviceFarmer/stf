@@ -490,6 +490,7 @@ message GroupMessage {
   optional string usage = 4;
   optional string leaseId = 5;
   reserved 6;
+  optional bool screenLifecycle = 7;
 }
 
 message AutomationLeaseMessage {
@@ -536,6 +537,8 @@ message JoinGroupByVncAuthResponseMessage {
 }
 
 message AdbKeysUpdatedMessage {
+  // Set when a key was removed, so devices stop accepting it
+  optional string removedFingerprint = 1;
 }
 
 message VncAuthResponsesUpdatedMessage {

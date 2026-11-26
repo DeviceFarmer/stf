@@ -445,6 +445,34 @@ clientWithPromise.then(function(api) {
 })
 ```
 
+#### Adb public keys
+
+An adb client gets into the devices you control through remote connect when its key is registered
+to you. These endpoints manage those keys, so automation that only has an access token can clean
+up after itself.
+
+| Method | Path | Body | Result |
+| --- | --- | --- | --- |
+| GET | `/api/v1/user/adbPublicKeys` | | Title and fingerprint of each of your keys |
+| POST | `/api/v1/user/adbPublicKeys` | `{"publickey":"<contents of adbkey.pub>","title":"ci-runner"}` | `200` with the key's title and fingerprint when it is yours (also when it already was), `409` when it belongs to another user, `400` when it can not be parsed |
+| DELETE | `/api/v1/user/adbPublicKeys/{fingerprint}` | | `200` when removed, `404` when you have no such key |
+
+```bash
+curl -X POST -H "Authorization: Bearer YOUR-TOKEN-HERE" -H "Content-Type: application/json" \
+  --data "{\"publickey\": \"$(cat ~/.android/adbkey.pub)\", \"title\": \"ci-runner\"}" \
+  https://stf.example.org/api/v1/user/adbPublicKeys
+
+curl -H "Authorization: Bearer YOUR-TOKEN-HERE" https://stf.example.org/api/v1/user/adbPublicKeys
+# {"success":true,"description":"Adb Public Keys Information",
+#  "adbPublicKeys":[{"title":"ci-runner","fingerprint":"8e:4f:...:1d"}]}
+
+curl -X DELETE -H "Authorization: Bearer YOUR-TOKEN-HERE" \
+  https://stf.example.org/api/v1/user/adbPublicKeys/8e:4f:...:1d
+```
+
+A removed key stops working for new adb connections right away. Connections that are already open
+stay open until they close or the device is released.
+
 ## Examples
 
 ### Using Shell

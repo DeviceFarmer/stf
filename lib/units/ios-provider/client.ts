@@ -44,7 +44,7 @@ export class PrototypeClient {
     return response
   }
 
-  async device(): Promise<IosDeviceState> {
-    return (await this.request('/device')).json() as Promise<IosDeviceState>
+  async device(signal?: AbortSignal): Promise<IosDeviceState> {
+    return (await this.request('/device', undefined, signal)).json() as Promise<IosDeviceState>
   }
 }

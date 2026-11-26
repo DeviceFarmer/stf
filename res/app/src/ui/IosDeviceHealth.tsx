@@ -1,8 +1,11 @@
-import {Alert, Badge, Group, Stack, Text, Tooltip, VisuallyHidden} from '@mantine/core'
+import {Alert, Badge, Group, Popover, Stack, Text, Tooltip} from '@mantine/core'
 import {IconDeviceMobileCog} from '@tabler/icons-react'
-import {wdaProfileExpiryState} from '../../../../lib/util/ios-device-status'
+import {useEffect, useId, useState} from 'react'
 import type {Device} from '@/core/devices/types'
 import {gettext, translate, useTranslation} from '@/core/i18n'
+import {
+  wdaProfileExpiryState, wdaProfileWarningWindowMs, type IosDeviceStatus
+} from '../../../../lib/util/ios-device-status'
 import {WidgetCard} from './WidgetCard'
 
 const reasons: Record<string, string> = {
@@ -19,6 +22,7 @@ const reasons: Record<string, string> = {
   , wda_unavailable: gettext('WebDriverAgent is restarting. Check device unlock and developer trust.')
   , recovering: gettext('Preparing the iPhone...')
   , provider_unavailable: gettext('The iPhone provider is unavailable.')
+  , screen_lock_failed: gettext('Automatic screen lock failed after three attempts.')
   , ready: gettext('Ready')
 }
 
@@ -28,63 +32,129 @@ export function iosReasonText(reason: string) {
   return translate(reasons[reason] || reasons.recovering!)
 }
 
-export function IosHealthBadge({device}: {device: Device}) {
-  if (device.platform !== 'iOS' || !device.ios || device.ios.reason === 'ready') {
-    return null
-  }
-  const text = iosReasonText(device.ios.reason)
+function DiagnosticBadge({text, ready}: {text: string, ready: boolean}) {
   return <Tooltip label={text} multiline w={280}>
-    <Badge color={device.ready ? 'yellow' : 'red'} variant='light' size='xs' maw='100%'>
+    <Badge color={ready ? 'yellow' : 'red'} variant='light' size='xs' maw='100%'>
       {text}
     </Badge>
   </Tooltip>
 }
 
-export function IosWdaProfileExpiry({device}: {device: Device}) {
+const hourMs = 60 * 60 * 1000
+
+function WdaHealthBadge({expiresAt, remaining, expired, ambiguous}: {
+  expiresAt: string | null, remaining: number, expired: boolean, ambiguous: boolean
+}) {
   const {t} = useTranslation()
-  const wda = device.platform === 'iOS' ? device.ios?.wda : null
-  if (!wda?.expiresAt) {
-    return null
+  const [opened, setOpened] = useState(false)
+  const descriptionId = useId()
+
+  let text = t('WDA expiring')
+  if (expired) {
+    text = t('WDA expired')
   }
-  const expiresAt = Date.parse(wda.expiresAt)
-  if (!Number.isFinite(expiresAt)) {
-    return null
+  else if (remaining >= hourMs) {
+    text = t('WDA · {{hours}}h left', {hours: Math.floor(remaining / hourMs)})
+  }
+  else if (remaining > 0) {
+    text = t('WDA · <1h left')
+  }
+  const warning = ambiguous ? t(ambiguousProfile) :
+    iosReasonText(expired ? 'wda_profile_expired' : 'wda_profile_expiring')
+  const localExpiry = expiresAt && Number.isFinite(remaining) ? new Date(expiresAt).toLocaleString() : null
+  const description = localExpiry ? `${warning} ${localExpiry}` : warning
+  return <>
+    <span id={descriptionId} hidden>{description}</span>
+    <Popover opened={opened} onChange={setOpened} width='min(280px, calc(100vw - 24px))' shadow='md'>
+      <Popover.Target>
+        <Badge component='button' type='button' aria-describedby={descriptionId} title={opened ? '' : description}
+          color={expired ? 'red' : 'yellow'} variant='light' size='xs' maw='100%' tt='none'
+          style={{cursor: 'pointer'}} onClick={() => setOpened((value) => !value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && opened) {
+              event.stopPropagation()
+              setOpened(false)
+            }
+          }}>
+          {text}
+        </Badge>
+      </Popover.Target>
+      <Popover.Dropdown>
+        <Stack gap={4}>
+          <Text size='sm'>{warning}</Text>
+          {expiresAt && localExpiry && <Text size='xs' c='dimmed' component='time' dateTime={expiresAt}>
+            {localExpiry}
+          </Text>}
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
+  </>
+}
+
+function IosStatusBadges({status, ready}: {status: IosDeviceStatus, ready: boolean}) {
+  const [, refreshClock] = useState(0)
+  const {reason, wda: {profile, expiresAt}} = status
+  const expiry = Date.parse(expiresAt ?? '')
+  const now = Date.now()
+  const remaining = expiry - now
+  const datedStatus = Number.isFinite(expiry) ? wdaProfileExpiryState(expiry, now) : null
+  const reasonWarns = reason === 'wda_profile_expiring' || reason === 'wda_profile_expired'
+  const ambiguous = profile === 'ambiguous'
+  const knownProfile = profile === 'valid' || profile === 'expiring' || profile === 'expired'
+  const reportedExpired = profile === 'expired' || (!knownProfile && reason === 'wda_profile_expired')
+  const expiresSoon = datedStatus === 'expiring' || datedStatus === 'expired'
+  const showWda = (ambiguous && expiresSoon) ||
+    (knownProfile && (profile !== 'valid' || expiresSoon)) ||
+    (!ambiguous && !knownProfile && reasonWarns)
+  const showDiagnostic = reason !== 'ready' && !(ready && reason === 'locked') &&
+    (!reasonWarns || (ambiguous && !showWda)) && !(reason === 'wda_profile_unknown' && showWda)
+  const diagnostic = ambiguous && reasonWarns ? 'wda_profile_unknown' : reason
+
+  const trackClock = Number.isFinite(expiry) && (knownProfile || ambiguous || reasonWarns)
+  const expired = !ambiguous && (reportedExpired || remaining <= 0)
+  let refreshIn: number | null = null
+  if (trackClock && !expired && remaining > 0) {
+    if (showWda) {
+      refreshIn = remaining >= hourMs ? remaining % hourMs + 1 : remaining
+    }
+    else {
+      refreshIn = remaining - wdaProfileWarningWindowMs
+    }
   }
 
-  const profile = ['valid', 'expiring', 'expired'].includes(wda.profile) ?
-    wdaProfileExpiryState(expiresAt) : wda.profile
-  let color = 'gray'
-  let warning: string | undefined
-  if (profile === 'expired' || profile === 'expiring') {
-    color = profile === 'expired' ? 'red' : 'yellow'
-    warning = iosReasonText('wda_profile_' + profile)
-  }
-  else if (profile === 'ambiguous') {
-    warning = t(ambiguousProfile)
-  }
-  const date = new Date(expiresAt).toLocaleString(undefined, {
-    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit'
-  })
+  useEffect(() => {
+    if (refreshIn === null || refreshIn <= 0) {
+      return
+    }
+    const timer = setTimeout(() => refreshClock((tick) => tick + 1), Math.min(refreshIn, 2_147_483_647))
+    return () => clearTimeout(timer)
+  }, [now, refreshIn])
 
-  return (
-    <Stack gap={2} mt={4} align='center' maw='100%'>
-      <Text size='xs' c='dimmed'>WDA · {t('Profile expires')}</Text>
-      <Badge
-        size='sm'
-        variant='light'
-        color={color}
-        title={warning}
-        tt='none'
-        h='auto'
-        py={2}
-        maw='100%'
-        styles={{label: {whiteSpace: 'normal'}}}
-      >
-        <time dateTime={wda.expiresAt}>{date}</time>
-      </Badge>
-      {warning && <VisuallyHidden>{warning}</VisuallyHidden>}
-    </Stack>
-  )
+  useEffect(() => {
+    if (!trackClock) {
+      return
+    }
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        refreshClock((tick) => tick + 1)
+      }
+    }
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
+  }, [trackClock])
+
+  return <>
+    {showWda && <WdaHealthBadge key={expiresAt} expiresAt={expiresAt}
+      remaining={remaining} expired={expired} ambiguous={ambiguous} />}
+    {showDiagnostic && <DiagnosticBadge text={iosReasonText(diagnostic)} ready={ready} />}
+  </>
+}
+
+export function IosHealthBadge({device}: {device: Device}) {
+  if (device.platform !== 'iOS' || !device.ios) {
+    return null
+  }
+  return <IosStatusBadges status={device.ios} ready={device.ready} />
 }
 
 export function IosDeviceHealth({device}: {device: Device}) {

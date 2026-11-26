@@ -44,6 +44,32 @@ describe('iPhone diagnostics and WDA profiles', () => {
     assert.equal(ambiguous.expiresAt, '2026-10-17T12:00:00.000Z')
   })
 
+  it('falls back to a wildcard profile only when no explicit App ID matches', () => {
+    const wildcard = (id: string, expires: string, devices = [selected]) => ({
+      Entitlements: {'application-identifier': id}, ExpirationDate: expires
+      , ProvisionedDevices: devices
+    })
+    assert.deepEqual(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z')], bundle, selected,
+      now), {profile: 'valid', expiresAt: '2026-11-16T12:00:00.000Z'})
+    assert.equal(profileStatus([wildcard('TEAM.test.*', '2026-10-17T12:00:00Z')], bundle, selected,
+      now).profile, 'expiring')
+    assert.equal(profileStatus([wildcard('TEAM.other.*', '2026-11-16T12:00:00Z')], bundle,
+      selected, now).profile, 'missing')
+    assert.equal(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z', ['different-iphone'])],
+      bundle, selected, now).profile, 'missing')
+    // The explicit profile signs the runner, so the wildcard one neither counts nor makes it ambiguous
+    assert.deepEqual(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z')
+      , profile('2026-10-22T12:00:00Z')], bundle, selected, now),
+    {profile: 'valid', expiresAt: '2026-10-22T12:00:00.000Z'})
+    // The most specific wildcard signs the runner
+    assert.deepEqual(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z')
+      , wildcard('TEAM.test.*', '2026-10-17T12:00:00Z')], bundle, selected, now),
+    {profile: 'expiring', expiresAt: '2026-10-17T12:00:00.000Z'})
+    // Two teams' equally specific wildcards: which one signed the runner is unknown
+    assert.equal(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z')
+      , wildcard('OTHER.*', '2026-11-20T12:00:00Z')], bundle, selected, now).profile, 'ambiguous')
+  })
+
   it('reports actionable failure reasons without exposing raw subprocess messages', () => {
     assert.equal(diagnosticReason('checking_usb', 'iPhone is not connected'), 'disconnected')
     assert.equal(diagnosticReason('pairing', 'InvalidHostID'), 'trust_required')

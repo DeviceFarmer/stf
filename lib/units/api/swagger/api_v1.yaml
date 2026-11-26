@@ -1414,6 +1414,17 @@ paths:
           description: Add User Device Status
           schema:
             $ref: "#/definitions/AddUserDeviceResponse"
+        "409":
+          description: A released lease ID or a confirmed iPhone screen unlock refusal
+          schema:
+            allOf:
+              - $ref: "#/definitions/UnexpectedErrorResponse"
+              - type: object
+                properties:
+                  code:
+                    description: Present when the provider refuses a capture before acquiring the device
+                    type: string
+                    enum: [ios_screen_wake_failed]
         default:
           description: >
             Unexpected Error:
@@ -1843,9 +1854,32 @@ paths:
         - accessTokenAuth: []
   /user/adbPublicKeys:
     x-swagger-router-controller: user
+    get:
+      summary: Gets your adb public keys
+      description: Lists the title and fingerprint of each adb public key registered to you
+      operationId: getAdbPublicKeys
+      tags:
+        - user
+      responses:
+        "200":
+          description: Adb public keys information
+          schema:
+            $ref: "#/definitions/AdbPublicKeysResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
     post:
-      summary: Adb public keys
-      description: Add adb public key for current user
+      summary: Adds an adb public key
+      description: >
+        Registers an adb public key to you, so that an adb client holding its private key is let
+        into the devices you control through remote connect. Adding a key that is already yours
+        changes nothing and still succeeds.
       operationId: addAdbPublicKey
       consumes:
       - application/json
@@ -1863,19 +1897,59 @@ paths:
             properties:
               publickey:
                 type: string
-                description: adb public key (~/.android/id_rsa.pub)
+                description: adb public key (~/.android/adbkey.pub)
               title:
                 type: string
                 description: By default will be extracted from public key
       responses:
         "200":
-          description: Add adb key response
-        default:
-          description: Unexpected Error
+          description: >
+            The key is registered to you (newly added, or it already was). Its title and fingerprint
+            come back, the fingerprint is what DELETE takes.
           schema:
-            $ref: "#/definitions/ErrorResponse"
+            $ref: "#/definitions/AdbPublicKeyResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 400: Bad Request => the public key can not be parsed
+              * 401: Unauthorized => bad credentials
+              * 409: Conflict => the key is registered to another user
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
       security:
-        - accessTokenAuth: []        
+        - accessTokenAuth: []
+  /user/adbPublicKeys/{fingerprint}:
+    x-swagger-router-controller: user
+    delete:
+      summary: Removes an adb public key
+      description: >
+        Removes one of your adb public keys. Devices you control stop accepting it for new adb
+        connections.
+      operationId: deleteAdbPublicKey
+      tags:
+        - user
+      parameters:
+        - name: fingerprint
+          in: path
+          description: Key fingerprint as listed by GET /user/adbPublicKeys
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Adb public key removing is OK
+          schema:
+            $ref: "#/definitions/Response"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 404: Not Found => you have no key with this fingerprint
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
   /devices:
     x-swagger-router-controller: devices 
     get:
@@ -2544,6 +2618,39 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Token'
+  AdbPublicKey:
+    type: object
+    properties:
+      title:
+        type: string
+      fingerprint:
+        type: string
+  AdbPublicKeyResponse:
+    required:
+      - success
+      - description
+      - adbPublicKey
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      adbPublicKey:
+        $ref: '#/definitions/AdbPublicKey'
+  AdbPublicKeysResponse:
+    required:
+      - success
+      - description
+      - adbPublicKeys
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      adbPublicKeys:
+        type: array
+        items:
+          $ref: '#/definitions/AdbPublicKey'
   AccessTokensResponse:
     required:
       - success
@@ -3040,6 +3147,9 @@ definitions:
         description: Optional coordinator lease ID. Requires a configured service account. Renew and release require this exact ID.
         type: string
         pattern: '^[A-Za-z0-9_-]{1,128}$'
+      screenLifecycle:
+        description: Enable reservation-based screen management for this iOS lease when configured on the provider. Requires a managed lease ID.
+        type: boolean
       timeout:
         description: Device timeout in ms. If device is kept idle for this period, it will be automatically disconnected. Default is provider group timeout
         type: integer

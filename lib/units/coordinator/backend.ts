@@ -1,15 +1,22 @@
 import {CoordinatorError, endpoint} from './config.js'
 import {
-  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, iosScreenLifecycleCaptureTimeoutMs
+, iosScreenWakeFailed
 } from '../../util/automation-lease.js'
 import {readWdaProfile} from './wda-profile.js'
-import type {FarmBackend, FarmDevice, GridStatus, UpstreamResponse} from './types.js'
+import type {FarmBackend, FarmDevice, GridStatus, Platform, UpstreamResponse} from './types.js'
 
 type StfDevice = Omit<FarmDevice, 'provider'> & {provider: string | {name: string}}
 
 export class BackendError extends Error {
   constructor(readonly status: number, readonly operation: string) {
     super(`${operation} returned HTTP ${status}`)
+  }
+}
+
+export class IosScreenWakeError extends BackendError {
+  constructor(operation: string) {
+    super(409, operation)
   }
 }
 
@@ -33,7 +40,16 @@ export class HttpFarmBackend implements FarmBackend {
     , ...(body === undefined ? {} : {body: JSON.stringify(body)})
     })
     if (!response.ok) {
-      throw new BackendError(response.status, 'STF ' + method + ' ' + route.split('/')[1])
+      const operation = 'STF ' + method + ' ' + route.split('/')[1]
+      if (response.status === 409 && method === 'POST' && route === '/user/devices') {
+        const failure = await response.json().catch(() => null) as {
+          success?: unknown, code?: unknown
+        } | null
+        if (failure?.success === false && failure.code === iosScreenWakeFailed) {
+          throw new IosScreenWakeError(operation)
+        }
+      }
+      throw new BackendError(response.status, operation)
     }
     const value = await response.json() as any
     if (value.success === false) {
@@ -82,9 +98,13 @@ export class HttpFarmBackend implements FarmBackend {
     return grid
   }
 
-  async capture(serial: string, leaseId: string, timeout: number) {
-    await this.stf('POST', '/user/devices', {serial, leaseId, timeout},
-      iosAutomationCaptureTimeoutMs + 5000)
+  async capture(serial: string, leaseId: string, timeout: number, platform: Platform) {
+    const screenLifecycle = platform === 'iOS'
+    const captureTimeout = screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs :
+      iosAutomationCaptureTimeoutMs
+    await this.stf('POST', '/user/devices', {
+      serial, leaseId, timeout, ...(screenLifecycle ? {screenLifecycle} : {})
+    }, captureTimeout + 5000)
   }
 
   async renew(serial: string, leaseId: string, timeout: number) {

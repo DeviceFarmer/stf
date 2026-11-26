@@ -2629,6 +2629,22 @@ msgstr "Avertissement"
 msgid "Warning:"
 msgstr "Avertissement:"
 
+#: res/app/src/ui/IosDeviceHealth.tsx:66
+msgid "WDA · {{hours}}h left"
+msgstr ""
+
+#: res/app/src/ui/IosDeviceHealth.tsx:69
+msgid "WDA · <1h left"
+msgstr ""
+
+#: res/app/src/ui/IosDeviceHealth.tsx:63
+msgid "WDA expired"
+msgstr ""
+
+#: res/app/src/ui/IosDeviceHealth.tsx:61
+msgid "WDA expiring"
+msgstr ""
+
 #: res/app/src/ui/AppLayout.tsx:269
 msgid "Web"
 msgstr "Web"

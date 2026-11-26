@@ -22,3 +22,4 @@ yarn.lock
 /lib/types/wire.d.ts
 /lib/types/stfservice-wire.d.ts
 /res/common/lang/translations/
+__pycache__/
