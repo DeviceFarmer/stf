@@ -1892,9 +1892,11 @@ paths:
                 description: By default will be extracted from public key
       responses:
         "200":
-          description: The key is registered to you (newly added, or it already was)
+          description: >
+            The key is registered to you (newly added, or it already was). Its title and fingerprint
+            come back, the fingerprint is what DELETE takes.
           schema:
-            $ref: "#/definitions/Response"
+            $ref: "#/definitions/AdbPublicKeyResponse"
         default:
           description: >
             Unexpected Error:
@@ -2612,6 +2614,18 @@ definitions:
         type: string
       fingerprint:
         type: string
+  AdbPublicKeyResponse:
+    required:
+      - success
+      - description
+      - adbPublicKey
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      adbPublicKey:
+        $ref: '#/definitions/AdbPublicKey'
   AdbPublicKeysResponse:
     required:
       - success

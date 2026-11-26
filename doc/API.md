@@ -454,7 +454,7 @@ up after itself.
 | Method | Path | Body | Result |
 | --- | --- | --- | --- |
 | GET | `/api/v1/user/adbPublicKeys` | | Title and fingerprint of each of your keys |
-| POST | `/api/v1/user/adbPublicKeys` | `{"publickey":"<contents of adbkey.pub>","title":"ci-runner"}` | `200` when the key is yours (also when it already was), `409` when it belongs to another user, `400` when it can not be parsed |
+| POST | `/api/v1/user/adbPublicKeys` | `{"publickey":"<contents of adbkey.pub>","title":"ci-runner"}` | `200` with the key's title and fingerprint when it is yours (also when it already was), `409` when it belongs to another user, `400` when it can not be parsed |
 | DELETE | `/api/v1/user/adbPublicKeys/{fingerprint}` | | `200` when removed, `404` when you have no such key |
 
 ```bash
