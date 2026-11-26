@@ -1843,6 +1843,26 @@ paths:
         - accessTokenAuth: []
   /user/adbPublicKeys:
     x-swagger-router-controller: user
+    get:
+      summary: Gets your adb public keys
+      description: Lists the title and fingerprint of each adb public key registered to you
+      operationId: getAdbPublicKeys
+      tags:
+        - user
+      responses:
+        "200":
+          description: Adb public keys information
+          schema:
+            $ref: "#/definitions/AdbPublicKeysResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
     post:
       summary: Adds an adb public key
       description: >
@@ -1881,6 +1901,37 @@ paths:
               * 400: Bad Request => the public key can not be parsed
               * 401: Unauthorized => bad credentials
               * 409: Conflict => the key is registered to another user
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
+  /user/adbPublicKeys/{fingerprint}:
+    x-swagger-router-controller: user
+    delete:
+      summary: Removes an adb public key
+      description: >
+        Removes one of your adb public keys. Devices you control stop accepting it for new adb
+        connections.
+      operationId: deleteAdbPublicKey
+      tags:
+        - user
+      parameters:
+        - name: fingerprint
+          in: path
+          description: Key fingerprint as listed by GET /user/adbPublicKeys
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Adb public key removing is OK
+          schema:
+            $ref: "#/definitions/Response"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 404: Not Found => you have no key with this fingerprint
               * 500: Internal Server Error
           schema:
             $ref: "#/definitions/UnexpectedErrorResponse"
@@ -2554,6 +2605,27 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Token'
+  AdbPublicKey:
+    type: object
+    properties:
+      title:
+        type: string
+      fingerprint:
+        type: string
+  AdbPublicKeysResponse:
+    required:
+      - success
+      - description
+      - adbPublicKeys
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      adbPublicKeys:
+        type: array
+        items:
+          $ref: '#/definitions/AdbPublicKey'
   AccessTokensResponse:
     required:
       - success

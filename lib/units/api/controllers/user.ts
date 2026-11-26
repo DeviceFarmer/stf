@@ -587,10 +587,10 @@ function getUserAccessTokens(req: ApiRequest, res: Response) {
 
 class InvalidAdbKeyError extends Error {}
 
-function adbKeysUpdated(req: ApiRequest) {
+function adbKeysUpdated(req: ApiRequest, removedFingerprint?: string) {
   req.options.push.send([
     req.user.group
-  , wireutil.envelope(new wire.AdbKeysUpdatedMessage())
+  , wireutil.envelope(new wire.AdbKeysUpdatedMessage(removedFingerprint))
   ])
 }
 
@@ -647,6 +647,35 @@ function addAdbPublicKey(req: ApiRequest, res: Response) {
     })
     .catch(function(err) {
       apiutil.internalError(res, 'Failed to insert new adb key fingerprint: ', err.stack)
+    })
+}
+
+function getAdbPublicKeys(req: ApiRequest, res: Response) {
+  dbapi.loadUserAdbKeys(req.user.email)
+    .then(function(keys) {
+      apiutil.respond(res, 200, 'Adb Public Keys Information', {adbPublicKeys: keys})
+    })
+    .catch(function(err) {
+      apiutil.internalError(res, 'Failed to load adb public keys: ', err.stack)
+    })
+}
+
+function deleteAdbPublicKey(req: ApiRequest, res: Response) {
+  var fingerprint = req.swagger.params.fingerprint.value
+
+  // The update only touches the user's own document, so a key that belongs to somebody else
+  // looks exactly like an unknown one
+  dbapi.deleteUserAdbKey(req.user.email, fingerprint)
+    .then(function(stats) {
+      if (!stats.replaced) {
+        apiutil.respond(res, 404, 'Not Found (adb public key)')
+        return
+      }
+      adbKeysUpdated(req, fingerprint)
+      apiutil.respond(res, 200, 'Deleted (adb public key)')
+    })
+    .catch(function(err) {
+      apiutil.internalError(res, 'Failed to delete adb public key "%s": ', fingerprint, err.stack)
     })
 }
 
@@ -773,6 +802,8 @@ export {
 , remoteDisconnectUserDeviceBySerial
 , getUserAccessTokens
 , addAdbPublicKey
+, getAdbPublicKeys
+, deleteAdbPublicKey
 , addUserDevice as addUserDeviceV2
 , getAccessTokens
 , getAccessToken

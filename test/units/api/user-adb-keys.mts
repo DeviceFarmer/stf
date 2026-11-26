@@ -25,12 +25,14 @@ const restoreLocks = mockModule(new URL('../../../lib/util/lockutil.js', import.
   default: {}
 })
 
-let addAdbPublicKey: Handler
+let addAdbPublicKey: Handler, getAdbPublicKeys: Handler, deleteAdbPublicKey: Handler
 try {
   const controller = await importFresh(
     new URL('../../../lib/units/api/controllers/user.js', import.meta.url)
   )
   addAdbPublicKey = controller.addAdbPublicKey
+  getAdbPublicKeys = controller.getAdbPublicKeys
+  deleteAdbPublicKey = controller.deleteAdbPublicKey
 }
 finally {
   restoreLocks()
@@ -81,9 +83,10 @@ function owners(...emails: string[]) {
   })
 }
 
-function isAdbKeysUpdated(message: unknown[]) {
+function adbKeysUpdated(message: unknown[]) {
   const envelope = wire.Envelope.decode(message[1] as Uint8Array)
-  return envelope.type === wire.MessageType.AdbKeysUpdatedMessage
+  assert.equal(envelope.type, wire.MessageType.AdbKeysUpdatedMessage)
+  return wire.AdbKeysUpdatedMessage.decode(envelope.message)
 }
 
 describe('API user adb public keys', function() {
@@ -113,7 +116,8 @@ describe('API user adb public keys', function() {
       }]])
       assert.equal(sent.length, 1)
       assert.equal(sent[0]![0], user.group)
-      assert.ok(isAdbKeysUpdated(sent[0]!))
+      // Nothing was removed, so devices keep the keys they know
+      assert.ok(!adbKeysUpdated(sent[0]!).removedFingerprint)
     })
 
     it('prefers the given title over the key comment', async function() {
@@ -168,6 +172,50 @@ describe('API user adb public keys', function() {
       const {reply, sent} = await call(addAdbPublicKey, {adb: {publickey: publicKey}})
 
       assert.equal(reply.status, 500)
+      assert.deepEqual(sent, [])
+    })
+  })
+
+  describe('GET', function() {
+    it('lists the user\'s own keys', async function() {
+      const keys = [{title: 'ci-runner', fingerprint}]
+      let asked: string | undefined
+      dbapi.loadUserAdbKeys = (email: string) => {
+        asked = email
+        return Promise.resolve(keys)
+      }
+      const {reply} = await call(getAdbPublicKeys, {})
+
+      assert.equal(asked, user.email)
+      assert.equal(reply.status, 200)
+      assert.equal(reply.body.success, true)
+      assert.equal(typeof reply.body.description, 'string')
+      assert.deepEqual(reply.body.adbPublicKeys, keys)
+    })
+  })
+
+  describe('DELETE', function() {
+    it('removes the user\'s key and tells the user\'s devices', async function() {
+      let asked: unknown[] | undefined
+      dbapi.deleteUserAdbKey = (...args: unknown[]) => {
+        asked = args
+        return Promise.resolve({replaced: 1})
+      }
+      const {reply, sent} = await call(deleteAdbPublicKey, {fingerprint})
+
+      assert.deepEqual(asked, [user.email, fingerprint])
+      assert.equal(reply.status, 200)
+      assert.equal(sent.length, 1)
+      assert.equal(sent[0]![0], user.group)
+      assert.equal(adbKeysUpdated(sent[0]!).removedFingerprint, fingerprint)
+    })
+
+    it('answers 404 when the user has no such key', async function() {
+      dbapi.deleteUserAdbKey = () => Promise.resolve({replaced: 0, unchanged: 1})
+      const {reply, sent} = await call(deleteAdbPublicKey, {fingerprint})
+
+      assert.equal(reply.status, 404)
+      assert.equal(reply.body.success, false)
       assert.deepEqual(sent, [])
     })
   })
