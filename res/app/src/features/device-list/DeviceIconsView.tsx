@@ -7,7 +7,7 @@ import {controlHref, type DeviceActions} from './device-actions'
 import {StatusButton} from './cells'
 import {DeviceContextMenu} from './DeviceContextMenu'
 import {DeviceImage} from '@/ui/DeviceImage'
-import {IosHealthBadge, IosWdaProfileExpiry} from '@/ui/IosDeviceHealth'
+import {IosHealthBadge} from '@/ui/IosDeviceHealth'
 import classes from './DeviceList.module.css'
 
 function TileMeta({device}: {device: Device}) {
@@ -57,8 +57,6 @@ const DeviceTile = memo(function DeviceTile({device, actions}: {
         {device.enhancedModel}
       </Text>
       <TileMeta device={device} />
-      <IosWdaProfileExpiry device={device} />
-      <IosHealthBadge device={device} />
     </>
   )
 
@@ -70,11 +68,14 @@ const DeviceTile = memo(function DeviceTile({device, actions}: {
 
   const tile = (
     <li className={tileClasses} title={device.provider?.name}>
-      {(device.usable || device.state === 'automation') ?
-        <a href={controlHref(device)} className={classes.tileLink} onClick={open}>
-          {content}
-        </a> :
-        <div className={classes.tileLink}>{content}</div>}
+      <div className={classes.tileBody}>
+        {(device.usable || device.state === 'automation') ?
+          <a href={controlHref(device)} className={classes.tileLink} onClick={open}>
+            {content}
+          </a> :
+          <div className={classes.tileLink}>{content}</div>}
+        <IosHealthBadge device={device} />
+      </div>
       <div className={classes.tileFooter}>
         <StatusButton device={device} actions={actions} />
         {device.owner && (
