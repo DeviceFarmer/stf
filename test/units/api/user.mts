@@ -3,6 +3,7 @@ import {EventEmitter} from 'node:events'
 import fs from 'node:fs'
 import {createRequire} from 'node:module'
 import type {Response} from 'express'
+import sinon from 'sinon'
 import ZSchema from 'z-schema'
 import type {AddUserDeviceBody, ApiRequest} from '../../../lib/types/units-api.js'
 import {iosScreenWakeFailed} from '../../../lib/util/automation-lease.js'
@@ -18,24 +19,28 @@ const yaml = require('js-yaml') as {
 const captureDevice = {serial: 'phone', platform: 'iOS', channel: 'ios:phone'}
 const captureOwner = new wire.OwnerMessage('runner@example.test', 'Runner', 'runner')
 let unlocks = 0
+let waitForLock = () => Promise.resolve()
+let lookupReceipt = () => Promise.resolve(false)
+let lockRefused = false
 
 const restoreDb = mockModule(new URL('../../../lib/db/api.js', import.meta.url), {
-  default: {hasDeviceAutomationRelease: async() => false}
-})
-const restoreAdb = mockModule(new URL('../../../lib/util/adbutil.js', import.meta.url), {
-  default: () => ({})
-})
-const restoreLocks = mockModule(new URL('../../../lib/util/lockutil.js', import.meta.url), {
   default: {
-    async lockGenericDevice(_req: unknown, _res: unknown, lock: {device?: typeof captureDevice}) {
-      lock.device = {...captureDevice}
-      return true
+    hasDeviceAutomationRelease: () => lookupReceipt()
+  , async lockDeviceByCurrent() {
+      await waitForLock()
+      return lockRefused ? {replaced: 0, locked: true} :
+        {replaced: 1, changes: [{new_val: {...captureDevice}}]}
     }
   , unlockDevice() {
       unlocks++
     }
   }
 })
+const restoreAdb = mockModule(new URL('../../../lib/util/adbutil.js', import.meta.url), {
+  default: () => ({})
+})
+const locks = new URL('../../../lib/util/lockutil.js', import.meta.url)
+const restoreLocks = mockModule(locks, {default: (await importFresh(locks)).default})
 const restoreData = mockModule(new URL('../../../lib/util/datautil.js', import.meta.url), {
   default: {normalize() {}}
 })
@@ -72,10 +77,19 @@ interface UserResponseBody {
   user: unknown
 }
 
-async function startCapture(leaseId: string, screenLifecycle?: boolean) {
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>(done => {
+    resolve = done
+  })
+  return {promise, resolve}
+}
+
+function beginCapture(leaseId: string, screenLifecycle?: boolean) {
   const channelRouter = new EventEmitter()
   const subscriptions = new Set<string>()
   const responses: {status: number, body: unknown}[] = []
+  const dispatched: [string, Buffer][] = []
   let dispatch!: (message: [string, Buffer]) => void
   const sent = new Promise<[string, Buffer]>(resolve => {
     dispatch = resolve
@@ -83,14 +97,17 @@ async function startCapture(leaseId: string, screenLifecycle?: boolean) {
   const req = {
     body: {serial: captureDevice.serial, leaseId
       , ...(typeof screenLifecycle === 'boolean' ? {screenLifecycle} : {})}
-  , user: captureOwner
+  , user: {...captureOwner, groups: {subscribed: ['devices']}}
   , options: {channelRouter, automationLeaseAccounts: [captureOwner.email]
     , sub: {subscribe: (channel: string) => subscriptions.add(channel)
       , unsubscribe: (channel: string) => subscriptions.delete(channel)}
-    , push: {send: dispatch}}
+    , push: {send(message: [string, Buffer]) {
+      dispatched.push(message)
+      dispatch(message)
+    }}}
   }
-  const res = {
-    statusCode: 200
+  const res = Object.assign(new EventEmitter(), {
+    destroyed: false, statusCode: 200
   , status(code: number) {
       this.statusCode = code
       return this
@@ -98,24 +115,37 @@ async function startCapture(leaseId: string, screenLifecycle?: boolean) {
   , json(body: unknown) {
       responses.push({status: this.statusCode, body})
     }
-  }
+  })
   const before = unlocks
   addUserDevice(req as unknown as ApiRequest<AddUserDeviceBody>, res as unknown as Response)
-  const [deviceChannel, message] = await sent
+  const assertDetached = () => {
+    assert.equal(subscriptions.size, 0)
+    assert.equal(channelRouter.eventNames().length, 0)
+    assert.equal(res.listenerCount('close'), 0)
+  }
+  return {sent, responses, subscriptions, dispatched, assertDetached, close() {
+    res.destroyed = true
+    res.emit('close')
+  }
+    , reply(name: string, message: wireutil.Message) {
+      channelRouter.emit(name, Buffer.from(name), wireutil.envelope(message))
+    }, assertClean() {
+      assert.equal(unlocks, before + 1)
+      assertDetached()
+    }}
+}
+
+async function startCapture(leaseId: string, screenLifecycle?: boolean) {
+  const capture = beginCapture(leaseId, screenLifecycle)
+  const [deviceChannel, message] = await capture.sent
   assert.equal(deviceChannel, captureDevice.channel)
   const envelope = wire.Envelope.decode(message)
   const group = wire.GroupMessage.decode(envelope.message)
   assert.equal(group.leaseId, leaseId)
   assert.equal(group.screenLifecycle === true, screenLifecycle === true)
   const channel = envelope.channel!
-  assert.ok(subscriptions.has(channel))
-  return {responses, channel, reply(name: string, message: wireutil.Message) {
-    channelRouter.emit(name, Buffer.from(name), wireutil.envelope(message))
-  }, assertClean() {
-    assert.equal(unlocks, before + 1)
-    assert.equal(subscriptions.size, 0)
-    assert.equal(channelRouter.eventNames().length, 0)
-  }}
+  assert.ok(capture.subscriptions.has(channel))
+  return {...capture, channel}
 }
 
 describe('API user controller', function() {
@@ -125,6 +155,12 @@ describe('API user controller', function() {
   )
   const spec = yaml.load(swaggerYaml) as SwaggerSpec
   const userResponseSchema = spec.definitions.UserResponse
+
+  afterEach(() => {
+    waitForLock = () => Promise.resolve()
+    lookupReceipt = () => Promise.resolve(false)
+    lockRefused = false
+  })
 
   it('requires an authorized managed lease for screen lifecycle', function() {
     for (const [lease, expectedStatus] of [[{}, 400], [{leaseId: 'lease-id'}, 403]] as const) {
@@ -167,6 +203,87 @@ describe('API user controller', function() {
     capture.reply(wireutil.global, joined)
     assert.equal(capture.responses[0]?.status, 200)
     capture.assertClean()
+  })
+
+  it('cleans up a disconnected capture and ignores its late ownership acknowledgement', async() => {
+    const clock = sinon.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+    try {
+      const capture = await startCapture('closed-lease', true)
+      assert.equal(clock.countTimers(), 1)
+      capture.close()
+      capture.assertClean()
+      assert.equal(clock.countTimers(), 0)
+
+      const retry = await startCapture('new-lease', true)
+      const late = new wire.JoinGroupMessage('phone', captureOwner, 'automation', 'closed-lease')
+      capture.reply(wireutil.global, late)
+      retry.reply(wireutil.global, late)
+      assert.equal(capture.responses.length, 0)
+      assert.equal(retry.responses.length, 0)
+
+      retry.reply(wireutil.global,
+        new wire.JoinGroupMessage('phone', captureOwner, 'automation', 'new-lease'))
+      assert.equal(retry.responses[0]?.status, 200)
+      retry.assertClean()
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('releases the DB lock acquired after the capture disconnected', async() => {
+    const lock = deferred()
+    waitForLock = () => lock.promise
+    const capture = beginCapture('closed-lease', true)
+    const before = unlocks
+    capture.close()
+    assert.equal(unlocks, before)
+    lock.resolve()
+    await new Promise<void>(resolve => setImmediate(resolve))
+
+    capture.assertClean()
+    assert.deepEqual(capture.responses, [])
+    assert.deepEqual(capture.dispatched, [])
+  })
+
+  it('suppresses the failed DB lock response if the capture already disconnected', async() => {
+    lockRefused = true
+    const lock = deferred()
+    waitForLock = () => lock.promise
+    const before = unlocks
+    const disconnected = beginCapture('closed-lease', true)
+    disconnected.close()
+    const connected = beginCapture('live-lease', true)
+    lock.resolve()
+    await new Promise<void>(resolve => setImmediate(resolve))
+
+    assert.equal(unlocks, before)
+    assert.equal(disconnected.responses.length, 0)
+    assert.equal(connected.responses[0]?.status, 503)
+    assert.equal(disconnected.dispatched.length, 0)
+    assert.equal(connected.dispatched.length, 0)
+    disconnected.assertDetached()
+    connected.assertDetached()
+  })
+
+  it('unlocks immediately on close while checking the automation release receipt', async() => {
+    const checking = deferred()
+    const lookup = deferred()
+    lookupReceipt = async() => {
+      checking.resolve()
+      await lookup.promise
+      return true
+    }
+    const capture = beginCapture('closed-lease', true)
+    await checking.promise
+    capture.close()
+    capture.assertClean()
+    lookup.resolve()
+    await new Promise<void>(resolve => setImmediate(resolve))
+
+    capture.assertClean()
+    assert.deepEqual(capture.responses, [])
+    assert.deepEqual(capture.dispatched, [])
   })
 
   it('responds with description matching UserResponse schema (#302)', function() {

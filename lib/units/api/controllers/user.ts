@@ -187,48 +187,61 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   }
   const timeout = requestedTimeout || null
   const lock: ApiLock = {}
-  let cleanupCapture = () => lockutil.unlockDevice(lock)
+  let settled = false
+  let cleanupWait: (() => void) | undefined
+  const cleanup = () => {
+    const pending = !settled
+    if (pending) {
+      settled = true
+      res.off('close', cleanup)
+      cleanupWait?.()
+    }
+    // A pending DB call can acquire the lock after the response has closed.
+    const device = lock.device
+    if (device) {
+      delete lock.device
+      lockutil.unlockDevice({device})
+    }
+    return pending
+  }
+  if (res.destroyed) {
+    return
+  }
+  res.once('close', cleanup)
 
   lockutil.lockGenericDevice(req, res, lock, dbapi.lockDeviceByCurrent)
     .then(async function(lockingSuccessed) {
-      if (lockingSuccessed) {
+      if (!lockingSuccessed || settled || res.destroyed) {
+        cleanup()
+      }
+      else {
         const device = lock.device!
 
         datautil.normalize(device, req.user)
         if (!deviceutil.isAddable(device, req.user)) {
-          lockutil.unlockDevice(lock)
+          cleanup()
           res.status(403).json({
             success: false
           , description: 'Device is being used or not available'
           })
           return
         }
-        if (leaseId && await dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)) {
-          lockutil.unlockDevice(lock)
+        const released = leaseId &&
+          await dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)
+        if (settled || res.destroyed) {
+          cleanup()
+          return
+        }
+        if (released) {
+          cleanup()
           apiutil.respond(res, 409, 'Automation lease ID was already released')
           return
         }
 
         const responseChannel = device.platform === 'iOS' && leaseId ? 'txn_' + uuid.v4() : null
-        let settled = false
-        let responseTimer: NodeJS.Timeout, messageListener: MessageListener
-        const cleanup = () => {
-          if (settled) {
-            return false
-          }
-          settled = true
-          clearTimeout(responseTimer)
-          req.options.channelRouter.removeListener(wireutil.global, messageListener)
-          if (responseChannel) {
-            req.options.channelRouter.removeListener(responseChannel, messageListener)
-            req.options.sub.unsubscribe(responseChannel)
-          }
-          lockutil.unlockDevice(lock)
-          return true
-        }
 
         // Stop waiting if the provider has not acknowledged the reservation.
-        responseTimer = setTimeout(function() {
+        const responseTimer = setTimeout(function() {
           if (cleanup() && !res.destroyed) {
             res.status(504).json({
               success: false
@@ -237,7 +250,7 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
           }
         }, reservationTimeout(device, screenLifecycle))
 
-        messageListener = wirerouter()
+        const messageListener = wirerouter()
           .on(wire.JoinGroupMessage, function(channel, message) {
             if (String(channel) === wireutil.global && message.serial === serial &&
                 message.owner.email === req.user.email && (message.leaseId || null) === leaseId &&
@@ -262,7 +275,14 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
           })
           .handler()
 
-        cleanupCapture = cleanup
+        cleanupWait = () => {
+          clearTimeout(responseTimer)
+          req.options.channelRouter.removeListener(wireutil.global, messageListener)
+          if (responseChannel) {
+            req.options.channelRouter.removeListener(responseChannel, messageListener)
+            req.options.sub.unsubscribe(responseChannel)
+          }
+        }
         req.options.channelRouter.on(wireutil.global, messageListener)
         if (responseChannel) {
           req.options.channelRouter.on(responseChannel, messageListener)
@@ -285,8 +305,9 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
       }
     })
     .catch(function(err) {
-      cleanupCapture()
-      apiutil.internalError(res, `Failed to take control of ${serial} device: `, err.stack)
+      if (cleanup() && !res.destroyed) {
+        apiutil.internalError(res, `Failed to take control of ${serial} device: `, err.stack)
+      }
     })
 }
 

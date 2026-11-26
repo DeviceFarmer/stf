@@ -1100,6 +1100,8 @@ http {
 
     location /api/ {
       proxy_pass http://stf_api/api/;
+      # Automation captures and releases can wait up to 90 s for a provider.
+      proxy_read_timeout 120s;
     }
 
     location /s/image/ {
