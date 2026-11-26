@@ -161,6 +161,78 @@ describe('Device group plugin', function() {
     expect(second.reservationId).to.not.equal(first.reservationId)
   })
 
+  it('prepares only fresh manual reservations before publishing ownership', async function() {
+    const {plugin, push, channels} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    let started!: () => void
+      , finish!: () => void
+    const entered = new Promise<void>(resolve => {
+      started = resolve
+    })
+    const prepare = sinon.stub<[], Promise<void>>().resolves()
+    prepare.onFirstCall().callsFake(() => new Promise<void>(resolve => {
+      finish = resolve
+      started()
+    }))
+    plugin.beforeManualJoin(prepare)
+    const acquiring = plugin.join(owner)
+    await entered
+    expect(await plugin.join(owner).then(() => true, () => false)).to.equal(false)
+    expect(await plugin.get().then(() => true, () => false)).to.equal(false)
+    expect(channels.register.callCount).to.equal(0)
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(0)
+    finish()
+    const acquired = await acquiring
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(1)
+    expect(await plugin.join(owner)).to.equal(acquired)
+    expect(prepare.callCount).to.equal(1)
+    await plugin.leave('test')
+
+    await plugin.join(owner, 10000, 'automation', 'job', 'lease')
+    expect(prepare.callCount).to.equal(1)
+    await plugin.leave('test')
+
+    await plugin.join(owner)
+    expect(prepare.callCount).to.equal(2)
+  })
+
+  it('does not publish ownership on failed preparation and allows a retry', async function() {
+    const {plugin, push} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    let ready = false
+    plugin.beforeManualJoin(async() => {
+      if (!ready) {
+        throw new Error('Sensor state not confirmed')
+      }
+    })
+    expect(await plugin.join(owner).then(() => true, () => false)).to.equal(false)
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(0)
+    ready = true
+    await plugin.join(owner, 10000, 'manual')
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(1)
+  })
+
+  it('aborts manual preparation on worker shutdown before announcing ownership', async function() {
+    const {plugin, push} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    let started!: () => void
+    const entered = new Promise<void>(resolve => {
+      started = resolve
+    })
+    plugin.beforeManualJoin(signal => new Promise<void>(resolve => {
+      // A command that settles concurrently with shutdown must still not acquire the device.
+      signal.addEventListener('abort', () => resolve(), {once: true})
+      started()
+    }))
+    const joined = plugin.join(owner).then(() => true, () => false)
+    await entered
+    const stop = (lifecycle.observe as sinon.SinonStub).lastCall.args[0] as () => Promise<unknown>
+    await stop()
+    expect(await joined).to.equal(false)
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(0)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+  })
+
   it('fences manual commands and competing reservations until awaited cleanup completes',
     async function() {
       const {plugin, push} = setup()

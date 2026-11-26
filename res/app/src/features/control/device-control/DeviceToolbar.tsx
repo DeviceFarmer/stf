@@ -81,7 +81,9 @@ export function DeviceToolbar({
   postureButtons?: ReactNode
 }) {
   const {t} = useTranslation()
-  const rotationSuffix = `(${t('Current rotation:')} ${actions.rotation}°)`
+  const rotationSuffix = actions.rotation === null ? '' :
+    ` (${t('Current rotation:')} ${actions.rotation}°)`
+  const rotationDisabled = readOnly || actions.rotationDisabled
   const rightButtons = postureButtons ? classes.rightButtonsWithPosture : classes.rightButtons
 
   return (
@@ -91,11 +93,11 @@ export function DeviceToolbar({
         className={`${rightButtons} stf-vnc-right-buttons`}>
         {device.platform !== 'iOS' && <>
         <ActionIcon.Group>
-          <Tooltip label={`${t('Portrait')} ${rotationSuffix}`} position='bottom'>
+          <Tooltip label={`${t('Portrait')}${rotationSuffix}`} position='bottom'>
             <ActionIcon
               size='md'
               variant={actions.currentRotation === 'portrait' ? 'filled' : 'default'}
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Portrait')}
               aria-pressed={actions.currentRotation === 'portrait'}
               onClick={() => actions.tryToRotate('portrait')}
@@ -103,11 +105,11 @@ export function DeviceToolbar({
               <IconDeviceMobile size={16} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label={`${t('Landscape')} ${rotationSuffix}`} position='bottom'>
+          <Tooltip label={`${t('Landscape')}${rotationSuffix}`} position='bottom'>
             <ActionIcon
               size='md'
               variant={actions.currentRotation === 'landscape' ? 'filled' : 'default'}
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Landscape')}
               aria-pressed={actions.currentRotation === 'landscape'}
               onClick={() => actions.tryToRotate('landscape')}
@@ -121,7 +123,7 @@ export function DeviceToolbar({
             <ActionIcon
               size='md'
               variant='default'
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Rotate Left')}
               onClick={() => actions.rotateBy(90)}
             >
@@ -132,7 +134,7 @@ export function DeviceToolbar({
             <ActionIcon
               size='md'
               variant='default'
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Rotate Right')}
               onClick={() => actions.rotateBy(-90)}
             >

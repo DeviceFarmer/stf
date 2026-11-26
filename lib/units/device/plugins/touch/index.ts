@@ -604,7 +604,8 @@ export default syrup.serial()
     const {width, height} = display.properties
     return startConsumer()
       .then(function(touchConsumer) {
-        const input = new AndroidDisplayTouch(touchConsumer, {width, height}, () => display.target,
+        const input = new AndroidDisplayTouch(touchConsumer, {width, height},
+          () => display.isTransitioning ? null : display.target,
           async(args, signal) => {
             const commandSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)])
             const stream = await adb.client.getDevice(options.serial)
@@ -620,6 +621,7 @@ export default syrup.serial()
         group.on('join', owner => input.setOwner(owner.reservationId || null))
         group.on('leave', () => input.setOwner(null))
         display.on('change', () => input.displayChanged())
+        display.on('transition', () => input.displayChanged())
 
         touchConsumer.on('error', function(err) {
           log.fatal('Touch consumer had an error', err.stack)

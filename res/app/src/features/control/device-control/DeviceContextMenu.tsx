@@ -3,6 +3,7 @@ import {Menu} from '@mantine/core'
 import type {Control} from '@/core/control'
 import type {Device} from '@/core/devices/types'
 import {DeviceMenuItems} from './DeviceMenuItems'
+import type {DeviceActions} from './use-device-actions'
 import classes from './DeviceControlPanel.module.css'
 
 interface MenuPosition {
@@ -10,11 +11,12 @@ interface MenuPosition {
   y: number
 }
 
-export function DeviceContextMenu({device, control, onStopUsing, children}: {
+export function DeviceContextMenu({device, control, onStopUsing, children, rotationActions}: {
   device: Device
   control: Control
   onStopUsing: () => void
   children: ReactNode
+  rotationActions: Pick<DeviceActions, 'rotateBy' | 'rotationDisabled'>
 }) {
   const [position, setPosition] = useState<MenuPosition | null>(null)
 
@@ -46,7 +48,8 @@ export function DeviceContextMenu({device, control, onStopUsing, children}: {
           />
         </Menu.Target>
         <Menu.Dropdown className='context-menu'>
-          <DeviceMenuItems device={device} control={control} onStopUsing={onStopUsing} />
+          <DeviceMenuItems device={device} control={control} onStopUsing={onStopUsing}
+            rotationActions={rotationActions} />
         </Menu.Dropdown>
       </Menu>
     </div>

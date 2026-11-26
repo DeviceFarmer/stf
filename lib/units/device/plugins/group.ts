@@ -54,7 +54,10 @@ export default syrup.serial()
     let joining: Promise<OwnerMessage> | null = null
     let leaving: Promise<OwnerMessage> | null = null
     let stopping = false
+    const shutdown = new AbortController()
+    const beforeManualJoin: Array<(signal: AbortSignal) => PromiseLike<void>> = []
     const beforeLeave: Array<(owner: OwnerMessage) => PromiseLike<void>> = []
+    const isManualUsage = (usage?: string | null) => (usage ?? 'manual') === 'manual'
 
     var plugin = new events.EventEmitter() as GroupPlugin
     const automationLease = new AutomationLease(() => {
@@ -70,9 +73,12 @@ export default syrup.serial()
     })
 
     plugin.isManualOwner = (requester, reservationId) => !!reservationId &&
-      !joining && !leaving && !stopping && currentLeaseId === null &&
-      (currentUsage === null || currentUsage === 'manual') &&
+      !joining && !leaving && !stopping && currentLeaseId === null && isManualUsage(currentUsage) &&
       currentGroup?.email === requester && currentGroup.reservationId === reservationId
+
+    plugin.beforeManualJoin = handler => {
+      beforeManualJoin.push(handler)
+    }
 
     plugin.beforeLeave = handler => {
       beforeLeave.push(handler)
@@ -91,9 +97,13 @@ export default syrup.serial()
           }
           return currentGroup!
         })
-        .catch(grouputil.NoGroupError, function() {
+        .catch(grouputil.NoGroupError, async function() {
           if (stopping) {
             throw new Error('Device worker is stopping')
+          }
+          if (!leaseId && isManualUsage(usage) && beforeManualJoin.length) {
+            await Promise.each(beforeManualJoin, prepare => prepare(shutdown.signal))
+            shutdown.signal.throwIfAborted()
           }
           const group = new wire.OwnerMessage({...newGroup, reservationId: randomUUID()})
           const automationLeaseId = usage === 'automation' ? leaseId || null : null
@@ -304,6 +314,7 @@ export default syrup.serial()
 
     lifecycle.observe(function() {
       stopping = true
+      shutdown.abort(new Error('Device worker is stopping'))
       return plugin.leave('device_absent')
         .catch(grouputil.NoGroupError, function() {
           return true

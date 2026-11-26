@@ -1,5 +1,6 @@
 import Promise from 'bluebird'
 import type {Duplex} from 'stream'
+import type {AndroidDisplayTarget} from '../../../../../types/android-display.js'
 
 interface MinicapBanner {
   version: number
@@ -18,6 +19,20 @@ interface MinicapBanner {
 }
 
 type BannerStream = Duplex & {banner?: MinicapBanner}
+
+export function matchesDisplayBanner(
+  banner: MinicapBanner, display: AndroidDisplayTarget
+): boolean {
+  const {rotation} = display
+  const sideways = banner.quirks.alwaysUpright && (rotation === 90 || rotation === 270)
+  const width = sideways ? display.height : display.width
+  const height = sideways ? display.width : display.height
+  // minicap-apk rounds its projection to the nearest whole pixel.
+  const aspectError = Math.abs(banner.virtualWidth * height - banner.virtualHeight * width)
+  return banner.orientation === display.rotation && banner.realWidth === width &&
+    banner.realHeight === height && banner.virtualWidth > 0 && banner.virtualHeight > 0 &&
+    aspectError <= Math.max(width, height)
+}
 
 var read = function parseBanner(out: BannerStream) {
   var tryRead: () => void

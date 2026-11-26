@@ -15,15 +15,27 @@ function fakeDevice() {
     , base: 3
     , committed: 3
     , refuseReset: false
+    , rotationMode: 'free'
+    , fixedRotation: 'default'
     , confirmOverride: true
     , stateNames: names
     , beforeOverride: () => Promise.resolve()
-    , beforeDump: () => {}
+    , beforeDump: (_signal?: AbortSignal): void | Promise<void> => {}
   }
   const record = (id: number) =>
     `DeviceState{identifier=${id}, name='${names[id]}', app_accessible=true}`
-  const shell = async(args: string[]) => {
+  const shell = async(args: string[], signal?: AbortSignal) => {
+    signal?.throwIfAborted()
     commands.push(args)
+    if (args[0] === 'wm') {
+      assert.ok(args[1] === 'user-rotation' || args[1] === 'fixed-to-user-rotation')
+      const setting = args[1] === 'user-rotation' ? 'rotationMode' : 'fixedRotation'
+      if (args.length === 2) {
+        return `${hardware[setting]}\n`
+      }
+      hardware[setting] = args.slice(2).join(' ')
+      return ''
+    }
     if (args[0] === 'sh') {
       if (args.length === 6) {
         hardware.marker = args[5]!
@@ -36,7 +48,7 @@ function fakeDevice() {
       return ''
     }
     if (args[0] === 'dumpsys') {
-      hardware.beforeDump()
+      await hardware.beforeDump(signal)
       const base = `mBaseState=Optional[${record(hardware.base)}]`
       const override = hardware.override === null ? 'Optional.empty' :
         `Optional[${record(hardware.override)}]`
@@ -89,9 +101,9 @@ describe('Galaxy Z Fold4 provider posture', function() {
   it('uses the tested commands and verifies sensor control on leave', async function() {
     const f = fakeDevice()
     await f.posture.initialize()
-    await f.set('folded')
+    assert.equal(await f.set('folded'), 'folded')
     assert.equal(f.hardware.marker, '0')
-    await f.set('unfolded')
+    assert.equal(await f.set('unfolded'), 'unfolded')
     assert.equal(f.hardware.marker, '3')
     f.releaseOwner()
     await f.posture.release()
@@ -99,6 +111,44 @@ describe('Galaxy Z Fold4 provider posture', function() {
     assert.deepEqual(f.changes, ['sensor', 'folded', 'unfolded', 'sensor'])
     assert.equal(f.hardware.override, null)
     assert.equal(f.hardware.marker, null)
+  })
+
+  it('returns the verified physical panel when changing back to the hinge', async function() {
+    const f = fakeDevice()
+    await f.posture.initialize()
+    await f.set('folded')
+    assert.equal(await f.set('sensor'), 'unfolded')
+    f.hardware.base = f.hardware.committed = 2
+    assert.equal(await f.set('sensor'), null, 'intermediate hinge state does not identify a panel')
+  })
+
+  it('holds a manual angle and restores the previous lock on release', async function() {
+    const f = fakeDevice()
+    f.hardware.rotationMode = 'lock 3'
+    await f.posture.initialize()
+    await f.posture.rotate(0, manualOwner, reservation)
+    assert.equal(f.hardware.rotationMode, 'lock 0')
+    await f.posture.rotate(90, manualOwner, reservation)
+    assert.equal(f.hardware.rotationMode, 'lock 1')
+    assert.equal(f.hardware.fixedRotation, 'enabled')
+    f.releaseOwner()
+    await f.posture.release()
+    assert.equal(f.hardware.rotationMode, 'lock 3')
+    assert.equal(f.hardware.fixedRotation, 'default')
+  })
+
+  it('preserves a rotation preference changed outside STF during the session', async function() {
+    const f = fakeDevice()
+    await f.posture.initialize()
+    await f.posture.rotate(90, manualOwner, reservation)
+    assert.equal(f.hardware.rotationMode, 'lock 1')
+    f.hardware.rotationMode = 'lock 2'
+    f.hardware.fixedRotation = 'disabled'
+    f.releaseOwner()
+    await f.posture.release()
+    assert.equal(f.hardware.rotationMode, 'lock 2')
+    assert.equal(f.hardware.fixedRotation, 'disabled')
+    await assert.rejects(f.posture.rotate(0, manualOwner, reservation), /manual reservation/)
   })
 
   it('cleans up an override Android accepted but never committed', async function() {
@@ -201,7 +251,66 @@ describe('Galaxy Z Fold4 provider posture', function() {
     f.hardware.stateNames = ['OPENED', 'TENT', 'HALF_OPENED', 'CLOSED']
     await f.posture.initialize()
     await assert.rejects(f.set('folded'), /unavailable/)
+    const before = f.commands.length
+    await f.posture.prepare(new AbortController().signal)
+    assert.equal(f.commands.length, before)
     assert.deepEqual(f.overrideCommands(), [])
+  })
+
+  it('rechecks and restores sensor mode before a fresh manual reservation', async function() {
+    const f = fakeDevice()
+    const {signal} = new AbortController()
+    await f.posture.initialize()
+    const probes = () => f.commands.filter(args => args[0] === 'dumpsys').length
+    const before = probes()
+    await f.posture.prepare(signal)
+    assert.equal(probes(), before + 1)
+    assert.deepEqual(f.overrideCommands(), [])
+
+    await f.set('folded')
+    f.releaseOwner()
+    await f.posture.prepare(signal)
+    assert.equal(f.posture.mode, 'sensor')
+    assert.deepEqual(f.overrideCommands(), ['0', 'reset'])
+    assert.equal(f.hardware.marker, null)
+  })
+
+  it('rejects preparation for an external override without resetting it', async function() {
+    const f = fakeDevice()
+    const {signal} = new AbortController()
+    f.hardware.override = f.hardware.committed = 0
+    await f.posture.initialize()
+    await assert.rejects(f.posture.prepare(signal), /Unable to confirm Follow hinge/)
+    assert.deepEqual(f.overrideCommands(), [])
+    assert.equal(f.hardware.override, 0)
+    assert.equal(f.posture.mode, null)
+
+    f.hardware.override = null
+    f.hardware.committed = f.hardware.base
+    await f.posture.prepare(signal)
+    assert.equal(f.posture.mode, 'sensor')
+    assert.deepEqual(f.overrideCommands(), [])
+  })
+
+  it('cancels the preparation probe on shutdown', async function() {
+    const f = fakeDevice()
+    const shutdown = new AbortController()
+    await f.posture.initialize()
+    let readStarted!: () => void
+    const entered = new Promise<void>(resolve => {
+      readStarted = resolve
+    })
+    f.hardware.beforeDump = signal => new Promise<void>((_resolve, reject) => {
+      signal!.addEventListener('abort', () => reject(signal!.reason), {once: true})
+      readStarted()
+    })
+    const preparation = f.posture.prepare(shutdown.signal)
+    const preparing = assert.rejects(preparation, /Unable to confirm Follow hinge/)
+    await entered
+    shutdown.abort()
+    await preparing
+    assert.deepEqual(f.overrideCommands(), [])
+    assert.equal(f.posture.mode, null)
   })
 
   it('waits for a physical fold already in progress at worker startup', async function() {
@@ -228,7 +337,7 @@ describe('Galaxy Z Fold4 provider posture', function() {
         return Readable.from([Buffer.from(await f.shell(args))])
       }
     })}}
-    const group = {isManualOwner: () => true, beforeLeave: () => {}}
+    const group = {isManualOwner: () => true, beforeManualJoin: () => {}, beforeLeave: () => {}}
     const identity = {manufacturer: 'SAMSUNG', model: 'SM-F936B'}
     const posture = await plugin.invoke({serial: 'fixture'}, adb, group, identity) as Fold4Posture
     await posture.set('folded', manualOwner, reservation)

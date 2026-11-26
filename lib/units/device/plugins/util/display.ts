@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto'
+import {setTimeout as delay} from 'node:timers/promises'
 
 import syrup from '@devicefarmer/stf-syrup'
 import EventEmitter from 'eventemitter3'
@@ -24,13 +25,22 @@ import optionsSyrup from '../screen/options.js'
 
 const log = logger.createLogger('device:plugins:display')
 const primaryDisplayId = 0
+const displaySampleIntervalMs = 120
+const displaySettleTimeoutMs = 2500
+
+type DozeState = 'DOZE' | 'DOZE_SUSPEND'
 
 interface DisplayGeometry extends Omit<AndroidDisplayTarget, 'revision'> {
   readonly uniqueId?: string | undefined
+  readonly doze?: {
+    readonly state: DozeState
+    readonly committed: DozeState | 'UNKNOWN'
+  }
 }
 
 interface AndroidDisplayEvents extends DisplayEvents {
   change: [target: AndroidDisplayTarget]
+  transition: []
 }
 
 function naturalGeometry(id: number, width: number, height: number, quarterTurns: number) {
@@ -43,7 +53,7 @@ function naturalGeometry(id: number, width: number, height: number, quarterTurns
   }
 }
 
-export function parsePrimaryDisplay(output: string): DisplayGeometry | null {
+export function parsePrimaryDisplay(output: string, allowDoze = false): DisplayGeometry | null {
   const line = output.split('\n').find(row =>
     /^\s*Display id 0: DisplayInfo\{.*?, displayId 0,/.test(row) &&
     row.includes(', type INTERNAL,') && row.trimEnd().endsWith('isValid=true'))
@@ -52,13 +62,30 @@ export function parsePrimaryDisplay(output: string): DisplayGeometry | null {
   if (!line || !dimensions || !orientation) {
     return null
   }
+  const state = /, state (\w+),/.exec(line)?.[1]
+  const committed = /, committedState (\w+),/.exec(line)?.[1]
+  const active = state === 'ON' && (!committed || committed === 'ON' || committed === 'UNKNOWN')
+  const dozing = allowDoze && (state === 'DOZE' || state === 'DOZE_SUSPEND') &&
+    (committed === state || committed === 'UNKNOWN')
+  if (!active && !dozing) {
+    return null
+  }
   const width = Number(dimensions[1])
   const height = Number(dimensions[2])
   if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
     return null
   }
   const uniqueId = /, uniqueId "([^"]*)"/.exec(line)?.[1]
-  return {...naturalGeometry(primaryDisplayId, width, height, Number(orientation[1])), uniqueId}
+  const geometry = {
+    ...naturalGeometry(primaryDisplayId, width, height, Number(orientation[1]))
+  , uniqueId
+  }
+  return dozing ? {...geometry, doze: {state, committed}} : geometry
+}
+
+function sameGeometry(left: DisplayGeometry, right: DisplayGeometry): boolean {
+  return left.width === right.width && left.height === right.height &&
+    left.rotation === right.rotation && left.uniqueId === right.uniqueId
 }
 
 export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDisplayEvents> {
@@ -67,10 +94,12 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
   private active: AndroidDisplayTarget
   private refreshing: Promise<void> | null = null
   private rotationGeneration = 0
+  private transitioning = false
 
   constructor(
     readonly properties: DisplayProperties
-  , private readonly readPrimary: () => Promise<DisplayGeometry | null>
+  , private readonly readPrimary:
+      (signal?: AbortSignal, allowDoze?: boolean) => Promise<DisplayGeometry | null>
   ) {
     super()
     const {width, height, rotation} = properties
@@ -82,17 +111,69 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
     return this.active
   }
 
+  get isTransitioning(): boolean {
+    return this.transitioning
+  }
+
   invalidate(): void {
     this.active = this.snapshot()
     this.emit('change', this.active)
   }
 
-  async refreshAfterTransition(): Promise<void> {
+  beginTransition(): void {
+    this.transitioning = true
+    this.rotationGeneration += 1
+    this.emit('transition')
+  }
+
+  endTransition(): void {
+    this.transitioning = false
+  }
+
+  async refreshAfterTransition(
+    accepts: (geometry: DisplayGeometry) => boolean = () => true
+  , allowSamePanelDoze = false
+  ): Promise<AndroidDisplayTarget> {
     await this.refreshing
-    await this.refresh()
+    const prior = this.geometry
+    const deadline = AbortSignal.timeout(displaySettleTimeoutMs)
+    let previous: DisplayGeometry | null = null
+    try {
+      for (;;) {
+        deadline.throwIfAborted()
+        const sample = await this.readPrimary(deadline, allowSamePanelDoze)
+          .catch((error: unknown) => {
+            log.debug('Unable to read Fold4 display during transition: %s', error)
+            return null
+          })
+        deadline.throwIfAborted()
+        const samePanel = sample?.uniqueId && sameGeometry(prior, sample)
+        const powerReady = !sample?.doze || (allowSamePanelDoze && samePanel)
+        const candidate = sample && accepts(sample) && powerReady ? sample : null
+        if (candidate && previous && sameGeometry(previous, candidate) &&
+          candidate.doze?.state === previous.doze?.state &&
+          candidate.doze?.committed === previous.doze?.committed) {
+          this.update(candidate)
+          return this.active
+        }
+        previous = candidate
+        await delay(displaySampleIntervalMs, null, {signal: deadline})
+      }
+    }
+    catch (error) {
+      if (!deadline.aborted) {
+        throw error
+      }
+      throw new Error('Fold4 posture changed, but the active display did not settle', {
+        cause: error
+      })
+    }
   }
 
   refresh(): Promise<void> {
+    if (this.transitioning) {
+      return Promise.resolve()
+    }
     if (!this.refreshing) {
       const generation = this.rotationGeneration
       this.refreshing = Promise.resolve().then(() => this.readPrimary())
@@ -114,7 +195,7 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
   }
 
   updateRotation(rotation: number): void {
-    if (rotation === this.properties.rotation) {
+    if (this.transitioning || rotation === this.properties.rotation) {
       return
     }
     this.rotationGeneration += 1
@@ -123,9 +204,8 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
 
   private update(geometry: DisplayGeometry): void {
     const previous = this.geometry
-    const {width, height, rotation, uniqueId} = geometry
-    if (width === previous.width && height === previous.height &&
-      rotation === previous.rotation && uniqueId === previous.uniqueId) {
+    const {width, height, rotation} = geometry
+    if (sameGeometry(previous, geometry)) {
       return
     }
     this.geometry = geometry
@@ -200,12 +280,13 @@ export default syrup.serial()
         })
     }
 
-    async function readPrimary() {
-      const signal = AbortSignal.timeout(2000)
+    async function readPrimary(deadline?: AbortSignal, allowDoze = false) {
+      const timeout = AbortSignal.timeout(2000)
+      const signal = deadline ? AbortSignal.any([timeout, deadline]) : timeout
       const stream = await adb.client.getDevice(options.serial)
         .shell(['cmd', 'display', 'get-displays'], {signal})
       try {
-        return parsePrimaryDisplay((await streamutil.readAll(stream)).toString())
+        return parsePrimaryDisplay((await streamutil.readAll(stream)).toString(), allowDoze)
       }
       finally {
         stream.destroy()

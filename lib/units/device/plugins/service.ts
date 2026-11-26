@@ -87,6 +87,11 @@ export default syrup.serial()
     var log = logger.createLogger('device:plugins:service')
     var messageResolver = new MessageResolver()
     var plugin = new events.EventEmitter() as ServicePlugin
+    let rotationHandler: ((rotation: number) => void) | null = null
+
+    plugin.setRotationHandler = handler => {
+      rotationHandler = handler
+    }
 
     var agent = {
       socket: null as LocalSocket | null
@@ -979,7 +984,8 @@ export default syrup.serial()
             plugin.type(message.text)
           })
           .on(wire.RotateMessage, function(channel, message) {
-            plugin.rotate(message.rotation)
+            const rotate = rotationHandler ?? plugin.rotate
+            rotate(message.rotation)
           })
       })
       .return(plugin)

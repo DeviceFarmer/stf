@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
+import {useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type Ref} from 'react'
 import {Button, Loader} from '@mantine/core'
 import {IconEyeOff, IconRefresh} from '@tabler/icons-react'
 import debounce from 'lodash/debounce'
@@ -10,8 +10,8 @@ import {scalingCoordinator} from '@/core/scaling'
 import {NothingToShow} from '@/ui/NothingToShow'
 import {iosUsesWdaScreen} from '../../../../../../lib/util/ios-device-status'
 import {bindScreenKeyboard} from './screen-keyboard'
-import {startScreenStream, type AndroidDisplayState, type DisplayError, type ScreenGeometry, type ScreenStream,
-  type ScreenStreamStatus} from './screen-stream'
+import {startScreenStream, type AndroidDisplayState, type DisplayError, type FoldSwitchScreen,
+  type ScreenGeometry, type ScreenStream, type ScreenStreamStatus} from './screen-stream'
 import {bindScreenTouch} from './screen-touch'
 import {useGuestOrientation} from './use-guest-orientation'
 import './DeviceScreen.css'
@@ -27,10 +27,14 @@ export interface DeviceScreenProps {
   androidDisplay?: AndroidDisplayState | null
   posturePending?: boolean
   onAndroidDisplayChange?: (state: AndroidDisplayState | null) => void
+  onAndroidInputReady?: (revision: string | null) => void
+  onFoldSwitchInterrupted?: () => void
+  foldSwitchRef?: Ref<FoldSwitchScreen>
 }
 
 export function DeviceScreen({
   device, control, showScreen, androidDisplay = null, posturePending = false, onAndroidDisplayChange
+  , onAndroidInputReady, onFoldSwitchInterrupted, foldSwitchRef
 }: DeviceScreenProps) {
   const {t} = useTranslation()
   const streamStatusMessages = {
@@ -69,11 +73,11 @@ export function DeviceScreen({
   const wdaScreen = iphone && iosUsesWdaScreen(device.version)
   const singleTouch = iphone || androidDisplay?.singleTouch === true
   const androidReady = streamStatus === null &&
-    (!androidDisplay || androidInputRevision === androidDisplay.selected.revision)
+    (androidDisplay ? androidInputRevision === androidDisplay.selected.revision : hasFrame)
   const iosInputReady = wdaScreen ? wdaInputReady : iosScreenSessionId !== null && device.ios?.locked !== true
   const touchEnabled = !readOnly && (iphone ?
     showScreen && iosInputReady && device.using && canViewDevice(device) && !isAutomated(device) :
-    androidReady && !posturePending)
+    showScreen && androidReady && !posturePending)
   const url = device.display?.url
   const displayWidth = device.display?.width || 0
   const displayHeight = device.display?.height || 0
@@ -87,6 +91,12 @@ export function DeviceScreen({
     showScreenRef.current = showScreen
     readOnlyRef.current = readOnly
   })
+
+  useImperativeHandle(foldSwitchRef, () => ({
+    prepareFoldSwitch: () => streamRef.current?.prepareFoldSwitch() ?? false
+  , acceptFoldSwitch: revision => streamRef.current?.acceptFoldSwitch(revision)
+  , cancelFoldSwitch: () => streamRef.current?.cancelFoldSwitch()
+  }), [])
 
   useEffect(() => {
     const root = rootRef.current
@@ -113,9 +123,11 @@ export function DeviceScreen({
       , onWdaInputReady: setWdaInputReady
       , onStatusChange: setStreamStatus
       , ...(onAndroidDisplayChange ? {onAndroidDisplay: onAndroidDisplayChange} : {})
+      , ...(onFoldSwitchInterrupted ? {onFoldSwitchInterrupted} : {})
       , onAndroidInputReady: revision => {
         setAndroidInputRevision(revision)
         setHasFrame(revision !== null)
+        onAndroidInputReady?.(revision)
       }
     })
     streamRef.current = stream
@@ -144,13 +156,15 @@ export function DeviceScreen({
       setDisplayError(false)
       onAndroidDisplayChange?.(null)
       setAndroidInputRevision(null)
+      onAndroidInputReady?.(null)
       delete screen.inputScaler
     }
-  }, [url, wdaScreen, onAndroidDisplayChange])
+  }, [url, wdaScreen, onAndroidDisplayChange, onAndroidInputReady, onFoldSwitchInterrupted])
 
   useEffect(() => {
     streamRef.current?.checkEnabled()
-  }, [device.using, device.usage, device.owner?.email, device.present, device.ready, device.status
+  }, [device.using, device.usage, device.owner?.email, device.owner?.reservationId
+    , device.present, device.ready, device.status
     , device.ios?.locked, readOnly, showScreen, url])
 
   useEffect(() => {
@@ -196,7 +210,7 @@ export function DeviceScreen({
         <canvas className='hacky-stretcher' width={1} height={1} />
       </div>
       {!hasFrame && showScreen && !displayError && !streamStatus && (
-        <div className='screen-placeholder'>
+        <div className='screen-placeholder screen-loading'>
           <Loader color='gray' type='dots' />
         </div>
       )}

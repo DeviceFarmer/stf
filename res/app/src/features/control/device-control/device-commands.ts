@@ -7,8 +7,8 @@ export function rotationOf(device: Device): number {
   return device.display ? device.display.rotation : 0
 }
 
-export function rotateBy(control: Control, device: Device, delta: number, standalone: boolean) {
-  control.rotate((rotationOf(device) + delta + 360) % 360)
+export function rotateBy(control: Control, rotation: number, delta: number, standalone: boolean) {
+  control.rotate((rotation + delta + 360) % 360)
   if (standalone) {
     window.resizeTo(window.outerHeight, window.outerWidth)
   }

@@ -27,6 +27,7 @@ export interface AndroidDisplayState {
   selected: AndroidDisplayTarget
   singleTouch: boolean
   posture?: Fold4PostureMode
+  projection?: true
 }
 
 export interface ScreenStreamOptions {
@@ -46,9 +47,16 @@ export interface ScreenStreamOptions {
   onStatusChange: (status: ScreenStreamStatus) => void
   onAndroidDisplay?: (state: AndroidDisplayState | null) => void
   onAndroidInputReady?: (revision: string | null) => void
+  onFoldSwitchInterrupted?: () => void
 }
 
-export interface ScreenStream {
+export interface FoldSwitchScreen {
+  prepareFoldSwitch: () => boolean
+  acceptFoldSwitch: (revision: string) => void
+  cancelFoldSwitch: () => void
+}
+
+export interface ScreenStream extends FoldSwitchScreen {
   checkEnabled: () => void
   resize: () => void
   retry: () => void
@@ -60,7 +68,14 @@ interface BoundSize {
   h: number
 }
 
+interface FoldSwitch {
+  previousRevision: string
+  revision: string | null
+  frame: {revision: string, data: Blob} | null
+}
+
 const MAX_HEVC_RETRIES = 3
+const FOLD_TRANSITION_MS = 250
 
 const streamOptions = {
   autoScaleForRetina: true
@@ -107,11 +122,17 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   let hevc: ReturnType<typeof startHevcScreen> | null = null
   let wdaInputReady = false
   let androidDisplay: AndroidDisplayTarget | null = null
+  let foldPostureSupported = false
+  let revisionedProjection = false
+  let foldSwitch: FoldSwitch | null = null
+  let drawnFoldFrame: {display: AndroidDisplayTarget, reservationId: string} | null = null
+  let cancelFoldTransition: (() => void) | null = null
   // Legacy Android providers send frames without a display revision.
   let appliedDisplay: string | null | undefined
   let androidInputReady: string | null = null
 
   let adjustedBoundSize: BoundSize | null = null
+  let lastSize: string | null = null
   let cachedEnabled = false
   let canvasAspect = 1
   let parentAspect = 1
@@ -129,7 +150,12 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
 
   function sendSize() {
     if (!isIPhone() && ws && isOpen() && adjustedBoundSize) {
-      ws.send(`size ${adjustedBoundSize.w}x${adjustedBoundSize.h}`)
+      const revision = revisionedProjection && androidDisplay ? `${androidDisplay.revision} ` : ''
+      const message = `size ${revision}${adjustedBoundSize.w}x${adjustedBoundSize.h}`
+      if (message !== lastSize) {
+        ws.send(message)
+        lastSize = message
+      }
     }
   }
 
@@ -161,18 +187,30 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     }
   }
 
-  function clearFrame() {
+  function setAndroidInputReady(revision: string | null) {
+    if (androidInputReady !== revision) {
+      androidInputReady = revision
+      options.onAndroidInputReady?.(revision)
+    }
+  }
+
+  function clearFrame(keepFoldFrame = false) {
     if (wdaInputReady) {
       wdaInputReady = false
       options.onWdaInputReady(false)
     }
-    if (androidInputReady !== null) {
-      androidInputReady = null
-      options.onAndroidInputReady?.(null)
-    }
+    setAndroidInputReady(null)
     frameGeneration += 1
-    g.clearRect(0, 0, canvas.width, canvas.height)
-    root.classList.remove('has-frame')
+    cancelFoldTransition?.()
+    if (!keepFoldFrame) {
+      if (foldSwitch) {
+        foldSwitch = null
+        options.onFoldSwitchInterrupted?.()
+      }
+      drawnFoldFrame = null
+      g.clearRect(0, 0, canvas.width, canvas.height)
+      root.classList.remove('has-frame')
+    }
   }
 
   function adjustBoundedSize(w: number, h: number): BoundSize {
@@ -209,12 +247,8 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       return false
     }
 
-    const next = isSideways(screen.rotation) ? adjustBoundedSize(h, w) : adjustBoundedSize(w, h)
-
-    if (!adjustedBoundSize || next.w !== adjustedBoundSize.w || next.h !== adjustedBoundSize.h) {
-      adjustedBoundSize = next
-      sendSize()
-    }
+    adjustedBoundSize = isSideways(screen.rotation) ? adjustBoundedSize(h, w) : adjustBoundedSize(w, h)
+    sendSize()
     return true
   }
 
@@ -404,12 +438,19 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     root.classList.toggle('quirk-always-upright', alwaysUpright)
   }
 
+  function canKeepFoldFrame() {
+    const reservationId = getDevice().owner?.reservationId
+    return foldPostureSupported && !!reservationId && reservationId === drawnFoldFrame?.reservationId &&
+      options.canControl() && shouldUpdateScreen()
+  }
+
   function updateAndroidDisplay(state: AndroidDisplayState) {
     const target = state?.selected
     if (typeof target?.id === 'number' && target.id !== 0) {
       // An earlier preview may still stream a secondary display. Never mark its frames
       // ready for input on the primary display.
       androidDisplay = null
+      foldPostureSupported = false
       appliedDisplay = null
       transportLost = true
       clearFrame()
@@ -420,18 +461,22 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     if (!isDisplayTarget(target) || typeof state.singleTouch !== 'boolean') {
       return
     }
+    const posture = isFold4PostureMode(state.posture) ? state.posture : null
+    foldPostureSupported = posture !== null
+    revisionedProjection = state.projection === true
     if (androidDisplay?.revision !== target.revision) {
       appliedDisplay = null
-      clearFrame()
+      clearFrame(canKeepFoldFrame())
       androidDisplay = target
       screen.rotation = target.rotation
       screen.inputScaler = scalingCoordinator(target.width, target.height)
-      updateBounds()
     }
+    updateBounds()
     options.onAndroidDisplay?.({
       selected: target
     , singleTouch: state.singleTouch
-    , ...(isFold4PostureMode(state.posture) ? {posture: state.posture} : {})
+    , ...(posture ? {posture} : {})
+    , ...(revisionedProjection ? {projection: true} : {})
     })
   }
 
@@ -500,7 +545,117 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     }
   }
 
+  function snapshotFoldFrame(display: AndroidDisplayTarget): HTMLCanvasElement | null {
+    const previous = drawnFoldFrame?.display
+    if (!previous ||
+      (previous.width === display.width && previous.height === display.height) ||
+      !canKeepFoldFrame() ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || typeof canvas.animate !== 'function' ||
+      !canvas.offsetWidth || !canvas.offsetHeight) {
+      return null
+    }
+
+    // Freeze the old layout outside .positioner, whose sizing and rotation will change.
+    const snapshot = document.createElement('canvas')
+    const context = snapshot.getContext('2d')
+    if (!context) {
+      return null
+    }
+    snapshot.width = canvas.width
+    snapshot.height = canvas.height
+    context.drawImage(canvas, 0, 0)
+    snapshot.className = 'fold-transition-frame'
+    snapshot.setAttribute('aria-hidden', 'true')
+
+    const rect = canvas.getBoundingClientRect()
+    const bounds = root.getBoundingClientRect()
+    const transforms = [positioner, canvas].map(element => getComputedStyle(element).transform)
+      .filter(transform => transform && transform !== 'none')
+    Object.assign(snapshot.style, {
+      width: `${canvas.offsetWidth}px`
+    , height: `${canvas.offsetHeight}px`
+    , left: `${rect.left - bounds.left + (rect.width - canvas.offsetWidth) / 2}px`
+    , top: `${rect.top - bounds.top + (rect.height - canvas.offsetHeight) / 2}px`
+    , transform: transforms.join(' ')
+    })
+    return snapshot
+  }
+
+  function fadeFoldFrame(snapshot: HTMLCanvasElement, ready: () => void) {
+    root.append(snapshot)
+    const options = {duration: FOLD_TRANSITION_MS, easing: 'ease-in-out'}
+    const incoming = canvas.animate([{opacity: 0}, {opacity: 1}], options)
+    const outgoing = snapshot.animate([{opacity: 1}, {opacity: 0}], {...options, fill: 'forwards'})
+    const dispose = () => {
+      outgoing.onfinish = null
+      outgoing.cancel()
+      incoming.cancel()
+      snapshot.remove()
+      cancelFoldTransition = null
+    }
+    cancelFoldTransition = dispose
+    outgoing.onfinish = () => {
+      dispose()
+      ready()
+    }
+  }
+
+  function prepareFoldSwitch() {
+    if (foldSwitch || !androidInputReady || !canKeepFoldFrame()) {
+      return false
+    }
+    foldSwitch = {previousRevision: androidInputReady, revision: null, frame: null}
+    clearFrame(true)
+    return true
+  }
+
+  function drawBufferedFoldFrame(frame: FoldSwitch['frame']) {
+    if (frame && ws && shouldUpdateScreen() && frame.revision === appliedDisplay &&
+      frame.revision === androidDisplay?.revision) {
+      drawFrame(frame.data, ws)
+    }
+  }
+
+  function acceptFoldSwitch(revision: string) {
+    if (!foldSwitch) {
+      return
+    }
+    const {previousRevision, frame} = foldSwitch
+    if (revision === previousRevision && revision === appliedDisplay && revision === androidDisplay?.revision &&
+      canKeepFoldFrame()) {
+      foldSwitch = null
+      setAndroidInputReady(revision)
+      drawBufferedFoldFrame(frame)
+      return
+    }
+    foldSwitch.revision = revision
+    foldSwitch.frame = null
+    if (frame?.revision === revision) {
+      drawBufferedFoldFrame(frame)
+    }
+  }
+
+  function cancelFoldSwitch() {
+    if (!foldSwitch) {
+      return
+    }
+    const {frame} = foldSwitch
+    foldSwitch = null
+    cancelFoldTransition?.()
+    if (appliedDisplay && appliedDisplay === androidDisplay?.revision &&
+      appliedDisplay === drawnFoldFrame?.display.revision && canKeepFoldFrame()) {
+      setAndroidInputReady(appliedDisplay)
+    }
+    drawBufferedFoldFrame(frame)
+  }
+
   function drawFrame(data: Blob, socket: WebSocket) {
+    if (foldSwitch && (!foldSwitch.revision || foldSwitch.revision !== appliedDisplay)) {
+      if (appliedDisplay) {
+        foldSwitch.frame = {revision: appliedDisplay, data}
+      }
+      return
+    }
     framesReceived += 1
     const frame = framesReceived
     const generation = frameGeneration
@@ -514,10 +669,26 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         }
         newestDrawnFrame = frame
         try {
+          const display = androidDisplay && androidInputReady !== androidDisplay.revision && !cancelFoldTransition ?
+            androidDisplay : null
+          const snapshot = display ? snapshotFoldFrame(display) : null
           drawImage(bitmap, bitmap.width, bitmap.height)
-          if (androidDisplay && androidInputReady !== androidDisplay.revision) {
-            androidInputReady = androidDisplay.revision
-            options.onAndroidInputReady?.(androidInputReady)
+          if (display) {
+            const reservationId = getDevice().owner?.reservationId
+            drawnFoldFrame = foldPostureSupported && reservationId ? {display, reservationId} : null
+            const ready = () => {
+              if (generation === frameGeneration && shouldUpdateScreen() &&
+                reservationId === getDevice().owner?.reservationId) {
+                foldSwitch = null
+                setAndroidInputReady(display.revision)
+              }
+            }
+            if (snapshot) {
+              fadeFoldFrame(snapshot, ready)
+            }
+            else {
+              ready()
+            }
           }
           if (wdaScreen && !wdaInputReady) {
             retryAttempt = 0
@@ -592,6 +763,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     const native = iphone && !wdaScreen
     socket.binaryType = native ? 'arraybuffer' : 'blob'
     ws = socket
+    lastSize = null
     socket.onmessage = (message: MessageEvent) => {
       if (ws !== socket || stopped) {
         return
@@ -650,7 +822,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
           if (androidDisplay) {
             if (!isDisplayTarget(banner.display) || banner.display.revision !== androidDisplay.revision) {
               appliedDisplay = null
-              clearFrame()
+              clearFrame(canKeepFoldFrame())
               return
             }
             appliedDisplay = androidDisplay.revision
@@ -762,5 +934,5 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   }
   resize()
 
-  return {checkEnabled, resize, retry, stop}
+  return {checkEnabled, resize, retry, stop, prepareFoldSwitch, acceptFoldSwitch, cancelFoldSwitch}
 }

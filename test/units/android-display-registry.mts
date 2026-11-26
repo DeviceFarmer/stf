@@ -30,6 +30,25 @@ describe('Android display registry', function() {
     })
     assert.equal(parsePrimaryDisplay(overlays.join('\n')), null)
     assert.equal(parsePrimaryDisplay(builtIn.replace('isValid=true', 'isValid=false')), null)
+    assert.equal(parsePrimaryDisplay(builtIn.replace('state ON', 'state OFF')), null)
+    const unsettled = builtIn.replace('state ON', 'state ON, committedState OFF')
+    assert.equal(parsePrimaryDisplay(unsettled), null)
+  })
+
+  it('reads dozing display geometry only with an explicit opt-in', function() {
+    const line = displayLine(0, 'Built-in Screen', 'INTERNAL')
+    const doze = line.replace('state ON', 'state DOZE, committedState DOZE')
+    const suspend = line.replace('state ON', 'state DOZE_SUSPEND, committedState UNKNOWN')
+
+    assert.equal(parsePrimaryDisplay(doze), null)
+    assert.deepEqual(parsePrimaryDisplay(doze, true)?.doze, {
+      state: 'DOZE', committed: 'DOZE'
+    })
+    assert.deepEqual(parsePrimaryDisplay(suspend, true)?.doze, {
+      state: 'DOZE_SUSPEND', committed: 'UNKNOWN'
+    })
+    assert.equal(parsePrimaryDisplay(doze.replace('committedState DOZE', 'committedState ON'),
+      true), null)
   })
 
   it('updates the stream when the active panel or its geometry changes', async() => {
@@ -81,9 +100,11 @@ describe('Android display registry', function() {
     assert.equal(display.target.rotation, 90)
   })
 
-  it('probes after an in-flight sample taken before a posture change', async() => {
+  it('waits for two active samples and ignores an in-flight probe and rotation', async() => {
     let resolve!: (geometry: typeof primary) => void
     let probeCount = 0
+    const cover = {...primary, width: 904, height: 2316}
+    const samples = [primary, cover, {...cover, width: 900}, cover, cover]
     const display = new AndroidDisplayRegistry(primaryProperties(), () => {
       probeCount += 1
       if (probeCount === 1) {
@@ -91,17 +112,77 @@ describe('Android display registry', function() {
           resolve = done
         })
       }
-      return Promise.resolve({...primary, width: 904, height: 2316})
+      return Promise.resolve(samples.shift() ?? null)
     })
 
     const before = display.refresh()
     await Promise.resolve()
-    const after = display.refreshAfterTransition()
-    resolve(primary)
+    const original = display.target
+    const revisions: string[] = []
+    display.on('change', target => revisions.push(target.revision))
+    display.beginTransition()
+    assert.equal(display.isTransitioning, true)
+    await display.refresh()
+    display.updateRotation(90)
+    const after = display.refreshAfterTransition(geometry => geometry.width === cover.width)
+    resolve({...primary, rotation: 270})
     await before
-    await after
-    assert.equal(probeCount, 2)
+    assert.equal(display.target, original)
+    const ready = await after
+    display.endTransition()
+    assert.equal(display.isTransitioning, false)
+    assert.equal(probeCount, 6)
+    assert.equal(display.target, ready)
     assert.equal(display.target.width, 904)
+    assert.equal(display.target.rotation, 0)
+    assert.deepEqual(revisions, [ready.revision])
+  })
+
+  it('preserves the ready frame revision when returning to the same panel', async() => {
+    const display = new AndroidDisplayRegistry(primaryProperties(), async() => primary)
+    const original = display.target
+    display.beginTransition()
+    const ready = await display.refreshAfterTransition()
+    display.endTransition()
+    assert.equal(ready, original)
+    assert.equal(display.target, original)
+  })
+
+  it('requires two matching doze samples from the same panel after Follow hinge', async() => {
+    const inner = displayLine(0, 'Built-in Screen', 'INTERNAL')
+      .replace('800 x 600', '1812 x 2176')
+    const changedPanel = inner.replace('uniqueId "0"', 'uniqueId "1"')
+    const doze = inner.replace('state ON', 'state DOZE, committedState DOZE')
+    const changedDoze = changedPanel.replace('state ON', 'state DOZE, committedState DOZE')
+    const unknown = doze.replace('committedState DOZE', 'committedState UNKNOWN')
+    const samples = [inner, changedDoze, changedDoze, unknown, doze, doze]
+    const display = new AndroidDisplayRegistry(primaryProperties(), async(_signal, allowDoze) =>
+      parsePrimaryDisplay(samples.shift() ?? '', allowDoze))
+
+    await display.refresh()
+    const original = display.target
+    display.beginTransition()
+    const ready = await display.refreshAfterTransition(geometry => geometry.width === 1812, true)
+    display.endTransition()
+
+    assert.equal(samples.length, 0)
+    assert.equal(ready, original)
+    assert.equal(display.target, original)
+  })
+
+  it('keeps waiting for an active sample on forced Fold4 posture changes', async() => {
+    const inner = displayLine(0, 'Built-in Screen', 'INTERNAL')
+    const doze = inner.replace('state ON', 'state DOZE, committedState DOZE')
+    const samples = [inner, doze, doze, inner, inner]
+    const display = new AndroidDisplayRegistry(primaryProperties(), async() =>
+      parsePrimaryDisplay(samples.shift() ?? '', true))
+    await display.refresh()
+
+    display.beginTransition()
+    await display.refreshAfterTransition()
+    display.endTransition()
+
+    assert.equal(samples.length, 0)
   })
 
   it('keeps the previous stream geometry when discovery fails', async() => {
