@@ -585,57 +585,68 @@ function getUserAccessTokens(req: ApiRequest, res: Response) {
     })
 }
 
+class InvalidAdbKeyError extends Error {}
+
+function adbKeysUpdated(req: ApiRequest) {
+  req.options.push.send([
+    req.user.group
+  , wireutil.envelope(new wire.AdbKeysUpdatedMessage())
+  ])
+}
+
+function respondAdbKeyTaken(res: Response) {
+  // Whose key it is stays private
+  apiutil.respond(res, 409, 'Conflict (adb public key belongs to another user)')
+}
+
 function addAdbPublicKey(req: ApiRequest, res: Response) {
   var data = req.swagger.params.adb.value
-  Promise.resolve(adb.util.parsePublicKey(data.publickey))
+  Promise.try(function() {
+    return adb.util.parsePublicKey(data.publickey)
+  })
+    .catch(function(err) {
+      throw new InvalidAdbKeyError(err.message)
+    })
     .then(function(key) {
       return dbapi.lookupUsersByAdbKey(key.fingerprint)
         .then(function(cursor) {
           return cursor.toArray()
         })
-        .then(function(users) {
-          return {
-            key: {
-              title: data.title || key.comment
-            , fingerprint: key.fingerprint
-            , publicKey: data.publickey.trim()
-            }
-          , users: users
+        .then(function(users: {email: string}[]) {
+          if (users.some(function(user) {
+            return user.email === req.user.email
+          })) {
+            apiutil.respond(res, 200, 'Unchanged (adb public key)')
+            return null
           }
-        })
-    })
-    .then(function(data) {
-      if (data.users.length) {
-        return res.json({
-          success: true
-        })
-      }
-      else {
-        return dbapi.insertUserAdbKey(req.user.email, data.key)
-          .then(function() {
-            return res.json({
-              success: true
-            })
+          if (users.length) {
+            respondAdbKeyTaken(res)
+            return null
+          }
+          return dbapi.insertUserAdbKey(req.user.email, {
+            title: data.title || key.comment
+          , fingerprint: key.fingerprint
+          , publicKey: data.publickey.trim()
           })
-      }
+            .then(function() {
+              adbKeysUpdated(req)
+              apiutil.respond(res, 200, 'Added (adb public key)', {
+                adbPublicKey: {
+                  title: data.title || key.comment
+                , fingerprint: key.fingerprint
+                }
+              })
+            })
+        })
     })
-    .then(function() {
-      req.options.push.send([
-        req.user.group
-      , wireutil.envelope(new wire.AdbKeysUpdatedMessage())
-      ])
+    .catch(InvalidAdbKeyError, function(err) {
+      apiutil.respond(res, 400, 'Bad Request (invalid adb public key: ' + err.message + ')')
     })
     .catch(dbapi.DuplicateSecondaryIndexError, function() {
-      // No-op
-      return res.json({
-        success: true
-      })
-    }).catch(function(err) {
-      log.error('Failed to insert new adb key fingerprint: ', err.stack)
-      return res.status(500).json({
-        success: false
-      , message: 'Unable to insert new adb key fingerprint to database'
-      })
+      respondAdbKeyTaken(res)
+    })
+    .catch(function(err) {
+      apiutil.internalError(res, 'Failed to insert new adb key fingerprint: ', err.stack)
     })
 }
 
