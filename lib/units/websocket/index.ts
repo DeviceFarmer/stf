@@ -843,8 +843,17 @@ export default function(options: WebsocketOptions) {
         })
         .on('user.keys.adb.remove', function(data) {
           return dbapi.deleteUserAdbKey(user.email, data.fingerprint)
-            .then(function() {
+            .then(function(stats) {
               socket.emit('user.keys.adb.removed', data)
+              if (stats.replaced) {
+                // So the user's devices stop accepting the key for new connections
+                push.send([
+                  user.group
+                , wireutil.envelope(new wire.AdbKeysUpdatedMessage({
+                    removedFingerprint: data.fingerprint
+                  }))
+                ])
+              }
             })
         })
         // Touch events

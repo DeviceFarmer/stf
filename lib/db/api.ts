@@ -167,6 +167,7 @@ interface DbApi {
   insertUserAdbKey(email: string, key: AdbKey): Promise<r.WriteResult>
   setUserAdbPublicKey(fingerprint: string, publicKey: string): Promise<r.WriteResult>
   loadUserAdbPublicKeys(email: string): Promise<string[]>
+  loadUserAdbKeys(email: string): Promise<Pick<AdbKey, 'title' | 'fingerprint'>[]>
   deleteUserAdbKey(email: string, fingerprint: string): Promise<r.WriteResult>
   lookupUsersByAdbKey(fingerprint: string): Promise<r.Cursor>
   lookupUserByAdbFingerprint(fingerprint: string): Promise<UserIdentity | null>
@@ -1475,11 +1476,30 @@ dbapi.loadUserAdbPublicKeys = function(email) {
     })('publicKey'))
 }
 
+// Title and fingerprint only, so a key listing never hands out more than the user can see in the UI
+dbapi.loadUserAdbKeys = function(email) {
+  // An array, not a cursor, despite what the typings say for a plucked sequence
+  var keys = (r.table('users').get<UserDocument>(email) as UserExpression)('adbKeys').default([])
+  return db.run<Pick<AdbKey, 'title' | 'fingerprint'>[]>(
+    (keys as unknown as r.Sequence).pluck('title', 'fingerprint') as
+      unknown as r.Operation<Pick<AdbKey, 'title' | 'fingerprint'>[]>
+  )
+}
+
+// Leaves the document alone unless the key is there, so "replaced" tells whether a key was removed.
+// Writing the filtered list unconditionally would count a user without any adbKeys as changed.
 dbapi.deleteUserAdbKey = function(email, fingerprint) {
-  return db.run(r.table('users').get<UserDocument>(email).update({
-    adbKeys: r.row('adbKeys').default([]).filter(function(key) {
-      return key('fingerprint').ne(fingerprint)
-    })
+  return db.run(r.table('users').get<UserDocument>(email).update(function(user) {
+    var keys = user('adbKeys').default([])
+    return r.branch(
+      keys('fingerprint').contains(fingerprint)
+    , {
+        adbKeys: keys.filter(function(key) {
+          return key('fingerprint').ne(fingerprint)
+        })
+      }
+    , {}
+    )
   }))
 }
 

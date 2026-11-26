@@ -39,6 +39,7 @@ export type ApiParams = {
   title: SwaggerParam<string>
   device: SwaggerParam<DevicePayload & {device?: DevicePayload}>
   adb: SwaggerParam<AdbKeyPayload>
+  fingerprint: SwaggerParam<string>
   redirected?: SwaggerParam<boolean>
 }
 
