@@ -145,6 +145,6 @@ console.log(${port})
   }
 })
 
-it('stops only the worker\'s own CoreDevice media during cleanup', async() => {
+it('passes the Python CoreDevice worker tests', async() => {
   await runCommand('python3', ['-B', join(import.meta.dirname, 'coredevice_worker_test.py')], 30000)
 })

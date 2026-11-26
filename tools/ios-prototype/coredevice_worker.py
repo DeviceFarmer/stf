@@ -70,6 +70,8 @@ class ScreenServer(screen_stream.ScreenStreamServer):
         # result. Without a stop, the device keeps these streams until its
         # 20-second RTCP timeout, so the next STF session could not start.
         quiet_checks = 3 if startup_interrupted else 1
+        stop_failed = False
+        reported_unstopped = False
         while True:
             async with DisplayService(self._rsd) as display:
                 status = await asyncio.wait_for(display.get_media_stream_server_status(), 3)
@@ -79,9 +81,19 @@ class ScreenServer(screen_stream.ScreenStreamServer):
             identifiers = owned_stream_identifiers(owned)
             if identifiers:
                 try:
-                    await asyncio.wait_for(self.stop_streams(identifiers), 3)
+                    stopped = await asyncio.wait_for(self.stop_streams(identifiers), 3)
                 except Exception:
-                    logging.warning("Could not stop owned CoreDevice media", exc_info=True)
+                    if stop_failed:
+                        logging.debug("Owned CoreDevice media stop failed again")
+                    else:
+                        stop_failed = True
+                        logging.warning("Could not stop owned CoreDevice media", exc_info=True)
+                else:
+                    unstopped = [identifier for identifier in identifiers
+                                 if identifier not in stopped]
+                    if unstopped and not reported_unstopped:
+                        reported_unstopped = True
+                        logging.warning("CoreDevice did not stop owned streams %s", unstopped)
             if owned:
                 quiet_checks = 1
             else:
@@ -92,7 +104,9 @@ class ScreenServer(screen_stream.ScreenStreamServer):
 
     async def stop_streams(self, identifiers):
         async with DisplayService(self._rsd) as display:
-            await display.stop_media_stream(stop_all=False, identifiers=identifiers)
+            reply = await display.stop_media_stream(stop_all=False, identifiers=identifiers)
+        stopped = reply.get("stoppedStreams") if isinstance(reply, dict) else None
+        return set(stopped) if isinstance(stopped, list) else set()
 
     async def _eager_stream_start(self):
         try:
@@ -192,7 +206,7 @@ def owned_stream_identifiers(sessions):
     identifiers = []
     for session in sessions:
         ssrc = session.get("connection", {}).get("streamConfig", {}).get("RemoteSSRC")
-        if isinstance(ssrc, int) and not isinstance(ssrc, bool) and 0 < ssrc <= 0xFFFFFFFF:
+        if isinstance(ssrc, int) and not isinstance(ssrc, bool) and 0 <= ssrc <= 0xFFFFFFFF:
             identifiers.append(ssrc)
     return identifiers
 
