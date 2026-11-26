@@ -1,5 +1,97 @@
 # Changelog
 
+## 3.10.0 (2026-11-26)
+
+* feat(automation): add read-only viewing of automated devices by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1053
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1065
+* build(deps): bump url-join from 5.1.1 to 6.0.0 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1066
+* ci: harden Playwright setup, SIM boot race, and Android AVD jobs by @koral-- in https://github.com/DeviceFarmer/stf/pull/1107
+* build(deps): bump minimatch from 10.2.6 to 11.0.3 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1108
+* Preserve gesture order across processors by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1069
+* Keep iOS WDA sessions alive during slow Appium commands by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1068
+* Add a Kubernetes Helm chart by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1067
+* build: drop outDir from lib/tsconfig.json so CodeQL scans lib/ by @koral-- in https://github.com/DeviceFarmer/stf/pull/1110
+* chore(deps): bump @devicefarmer helper packages by @koral-- in https://github.com/DeviceFarmer/stf/pull/1111
+* fix(device): handle zero-DPI headless displays without Infinity size errors by @koral-- in https://github.com/DeviceFarmer/stf/pull/1115
+* fix(api): include description in getUser response by @koral-- in https://github.com/DeviceFarmer/stf/pull/1113
+* fix(websocket): prevent MaxListenersExceededWarning and refcount channel subscriptions by @koral-- in https://github.com/DeviceFarmer/stf/pull/1114
+* fix(pathutil): resolve hoisted dependencies from ancestor node_modules by @koral-- in https://github.com/DeviceFarmer/stf/pull/1112
+* feat(browsers): replace stf-browser-db with curated official SVGs and trademark notice by @koral-- in https://github.com/DeviceFarmer/stf/pull/1116
+* fix(auth-oauth2): mount session middleware when --oauth-state is enabled by @koral-- in https://github.com/DeviceFarmer/stf/pull/1117
+* feat(auth): add configurable --cookie-same-site and --cookie-secure for iframe embeds by @koral-- in https://github.com/DeviceFarmer/stf/pull/1118
+* fix(screen): handle screen WebSocket error events without crashing worker by @koral-- in https://github.com/DeviceFarmer/stf/pull/1119
+* fix(auth): never redirect to a protocol-relative URL after login by @koral-- in https://github.com/DeviceFarmer/stf/pull/1121
+* Reduce the Ubuntu runtime image with multi-stage builds by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1070
+* feat(ui): automatically reconnect Socket.IO, device trackers, and control stream on restart by @koral-- in https://github.com/DeviceFarmer/stf/pull/1120
+* build(deps-dev): bump jsdom from 30.1.3 to 31.0.0 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1122
+* Require both architecture digests before publishing Docker tags by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1123
+* docs(api): document GET /user/devices/{serial} and GET /user/accessTokens (#783) by @jeffrey-graham in https://github.com/DeviceFarmer/stf/pull/1109
+* docs: document --cookie-same-site and --cookie-secure by @koral-- in https://github.com/DeviceFarmer/stf/pull/1126
+* docs(browsers): make browser icon attribution match the fetch tool by @koral-- in https://github.com/DeviceFarmer/stf/pull/1127
+* fix(auth): reject --cookie-same-site none when COOKIE_SECURE=false by @koral-- in https://github.com/DeviceFarmer/stf/pull/1128
+* build: track package-lock.json and install with npm ci by @koral-- in https://github.com/DeviceFarmer/stf/pull/1129
+* build(deps): bump the npm-minor-and-patch group with 3 updates by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1130
+* fix(deps): clear the transitive dependency alerts by @koral-- in https://github.com/DeviceFarmer/stf/pull/1131
+* build(deps): bump the npm-minor-and-patch group with 5 updates by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1133
+* fix(clipboard): read the clipboard through the agent on Android 10+ by @koral-- in https://github.com/DeviceFarmer/stf/pull/1132
+* build(deps-dev): bump @tabler/icons-react from 3.51.0 to 3.52.0 in the npm-minor-and-patch group by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1137
+* feat(ios)!: use CoreDevice on iOS 27+ with WDA for earlier versions by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1124
+* fix: relaunch the dead agent and deliver the device.identify reply by @koral-- in https://github.com/DeviceFarmer/stf/pull/1134
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1138
+* fix(websocket): wait for the user's own join to persist before denying by @koral-- in https://github.com/DeviceFarmer/stf/pull/1135
+* docs(browsers): take the DuckDuckGo icon from its Apache-2.0 Android repo by @koral-- in https://github.com/DeviceFarmer/stf/pull/1141
+* fix(processor): keep a late leave from freeing a device that was taken again by @koral-- in https://github.com/DeviceFarmer/stf/pull/1140
+* docs(browsers): take the DuckDuckGo icon as an SVG instead of converting it by @koral-- in https://github.com/DeviceFarmer/stf/pull/1142
+* fix(websocket): require ownership for every Android device command by @koral-- in https://github.com/DeviceFarmer/stf/pull/1143
+* build(deps-dev): bump the npm-minor-and-patch group with 5 updates by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1144
+* feat: report SIM card changes to a webhook by @metatrongya in https://github.com/DeviceFarmer/stf/pull/1139
+* feat(coordinator): add persistent device leases for Appium by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1125
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1147
+* fix(ui): animate the device list Customize button by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1146
+* build(deps): bump the npm-minor-and-patch group with 4 updates by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1148
+* docs: ship the full Apache-2.0 text in LICENSE and move notices to NOTICE by @koral-- in https://github.com/DeviceFarmer/stf/pull/1150
+* docs(deployment): give all stf-auth unit examples access to RethinkDB by @koral-- in https://github.com/DeviceFarmer/stf/pull/1149
+* docs: document device states (#677) by @koral-- in https://github.com/DeviceFarmer/stf/pull/1151
+* feat(ui): add smooth navigation and theme transitions by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1152
+* fix(ios): report recovering after an accepted restart or power off by @koral-- in https://github.com/DeviceFarmer/stf/pull/1154
+* fix(provider): register devices in unknown adb states (recovery, no permissions, …) by @koral-- in https://github.com/DeviceFarmer/stf/pull/1156
+* Fix using for absent devices, require online status to reserve, drop unused ready state by @koral-- in https://github.com/DeviceFarmer/stf/pull/1157
+* docs(api): describe the device object in the Swagger spec by @koral-- in https://github.com/DeviceFarmer/stf/pull/1155
+* fix(processor): restore a rebooted device with its usage and timeout by @koral-- in https://github.com/DeviceFarmer/stf/pull/1158
+* feat(ui): use the DeviceFarmer logo in STF by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1145
+* build(deps): bump the npm-minor-and-patch group with 8 updates by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1159
+* build(deps-dev): bump z-schema from 6.0.2 to 12.7.0 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1160
+* build(deps-dev): bump js-yaml from 4.3.2 to 5.5.0 by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1161
+* fix(install): retry after uninstall on INSTALL_FAILED_UPDATE_INCOMPATIBLE by @koral-- in https://github.com/DeviceFarmer/stf/pull/1162
+* fix(device): reply to identify only after the identify screen shows by @koral-- in https://github.com/DeviceFarmer/stf/pull/1163
+* build(deps): bump DeviceFarmer helper packages by @koral-- in https://github.com/DeviceFarmer/stf/pull/1164
+* build(deps): bump the npm-minor-and-patch group with 10 updates by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1165
+* feat(ios): show WDA expiry and support on-demand renewal by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1153
+* fix: keep a rebooting device for its previous user in the web UI by @koral-- in https://github.com/DeviceFarmer/stf/pull/1167
+* docs(coordinator): say how to generate project tokens by @koral-- in https://github.com/DeviceFarmer/stf/pull/1168
+* fix(install): push the APK again before retrying after uninstall by @koral-- in https://github.com/DeviceFarmer/stf/pull/1170
+* fix(websocket): keep a late leave from cancelling a newer invite by @koral-- in https://github.com/DeviceFarmer/stf/pull/1171
+* fix(ios): stop the old CoreDevice stream when a screen session ends by @koral-- in https://github.com/DeviceFarmer/stf/pull/1172
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1173
+* build(deps-dev): bump @tanstack/react-query from 5.108.2 to 5.108.3 in the npm-minor-and-patch group by @dependabot[bot] in https://github.com/DeviceFarmer/stf/pull/1174
+* build(deps): bump @devicefarmer/adbkit to 4.2.1 by @koral-- in https://github.com/DeviceFarmer/stf/pull/1176
+* fix(control): keep typing hotkeys out of text fields by @koral-- in https://github.com/DeviceFarmer/stf/pull/1177
+* fix(ui): simplify iPhone health badges in the device grid by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1169
+* feat(api): list and delete adb public keys, reject keys owned by others by @koral-- in https://github.com/DeviceFarmer/stf/pull/1178
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1179
+* fix: adb key API review follow-ups by @koral-- in https://github.com/DeviceFarmer/stf/pull/1180
+* feat(ios): sleep the screen between device reservations by @mdub1na in https://github.com/DeviceFarmer/stf/pull/1166
+* fix(ios): find the WDA profile when Xcode signed it with a wildcard App ID by @koral-- in https://github.com/DeviceFarmer/stf/pull/1181
+* Updates for project STF by @transifex-integration[bot] in https://github.com/DeviceFarmer/stf/pull/1182
+* fix(app): serve the UI entry bundle with a content-based ETag by @koral-- in https://github.com/DeviceFarmer/stf/pull/1183
+
+### New Contributors
+
+* @jeffrey-graham made their first contribution in https://github.com/DeviceFarmer/stf/pull/1109
+* @metatrongya made their first contribution in https://github.com/DeviceFarmer/stf/pull/1139
+
+**Full Changelog**: https://github.com/DeviceFarmer/stf/compare/v3.9.0...v3.10.0
+
 ## 3.9.0 (2026-10-26)
 
 * Replace the AngularJS web UI with React by @matanbaruch in https://github.com/DeviceFarmer/stf/pull/1027
