@@ -45,6 +45,13 @@ const textFields = [
   , ['a textarea', '<textarea></textarea>']
   , ['a contentEditable element', '<div contenteditable="true"></div>']
 ]
+// focusable after a click, but typing there produces no text
+const otherInputs = [
+  ['a checkbox', '<input type="checkbox">']
+  , ['a radio button', '<input type="radio">']
+  , ['a read-only text input (Mantine Select)', '<input type="text" readonly>']
+  , ['a button', '<button></button>']
+]
 
 describe('device control keyboard shortcuts', () => {
   it.each([[true, false], [false, false], [true, true], [false, true]])(
@@ -93,6 +100,21 @@ describe('typing shortcuts in text fields', () => {
     const event = press(field(html), shiftW)
     expect(setPlatform).not.toHaveBeenCalled()
     expect(event.defaultPrevented).toBe(false)
+  })
+
+  it.each(otherInputs)('toggles Web/Native with shift+W in %s', (_, html) => {
+    renderHotkeys()
+    const event = press(field(html), shiftW)
+    expect(setPlatform).toHaveBeenCalledWith('native')
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it.each(otherInputs)('switches the device charset with shift+space in %s', (_, html) => {
+    const control = renderHotkeys()
+    const event = press(field(html), shiftSpace)
+    expect(control.keyPress).toHaveBeenCalledWith('switch_charset')
+    // otherwise the browser toggles the checkbox or opens the dropdown
+    expect(event.defaultPrevented).toBe(true)
   })
 
   it('switches the device charset with shift+space in the screen keyboard', () => {
