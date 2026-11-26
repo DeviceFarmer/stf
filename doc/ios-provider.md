@@ -332,11 +332,14 @@ capture, the Coordinator releases the allocation. An exact-serial request
 reports `ios_screen_wake_failed`. A pool request can try other matching devices
 until its original queue deadline.
 
-The provider locks the screen after 30 seconds without a reservation. A new
-reservation cancels the pending lock. After an Appium lease ends, the delay
-starts once WDA has returned to STF. Existing API automation captures, including
-WDA renewal, leave the screen available after release. Coordinator-managed sleep
-requires the updated STF API and Coordinator to mark their captures.
+The provider locks the screen 30 seconds after a manual reservation or
+Coordinator lease ends, or after an unowned phone registers on startup or
+reconnect. A new reservation cancels the pending lock. After an Appium lease
+ends, the delay starts once WDA has returned to STF. A failed lock is retried
+after 60 seconds, with up to three attempts per idle period. The iPhone status
+shows a warning if all attempts fail. Existing API automation captures,
+including WDA renewal, leave the screen available after release. Coordinator-managed
+sleep requires the updated STF API and Coordinator to mark their captures.
 
 **Restart iPhone** and **Power off iPhone** require an in-product confirmation
 and the current owner. They use go-ios diagnostics for the selected UDID, not a

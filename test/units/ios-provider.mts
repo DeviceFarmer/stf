@@ -67,6 +67,7 @@ describe('Linux iOS integration', function() {
     let failKeepalive = false
     let appiumResponse = Promise.resolve(200)
     let lockResponse = Promise.resolve()
+    const lockFailures: Array<'http' | 'unlocked'> = []
     let idleLockCancelled = false
     let protectedLock = false
     const errors: unknown[] = []
@@ -157,6 +158,15 @@ describe('Linux iOS integration', function() {
             if (res.destroyed) {
               return
             }
+            const failure = lockFailures.shift()
+            if (failure === 'http') {
+              res.writeHead(502).end('{"error":"IOS_LOCK_FAILED"}')
+              return
+            }
+            if (failure === 'unlocked') {
+              res.end('{"locked":false}')
+              return
+            }
           }
           const locked = req.url === '/lock' || protectedLock
           state.ios!.locked = locked
@@ -201,10 +211,13 @@ describe('Linux iOS integration', function() {
         new wire.DeviceRequirement('serial', serial, wire.RequirementType.EXACT)
       ], usage, leaseId, screenLifecycle), true)
     }
-    const join = async(timeout = 900000, usage?: string, leaseId?: string,
-      screenLifecycle?: boolean) => {
+    const register = async() => {
       await bridge.poll()
       send(new wire.DeviceRegisteredMessage(serial), false, bridge.solo)
+    }
+    const join = async(timeout = 900000, usage?: string, leaseId?: string,
+      screenLifecycle?: boolean) => {
+      await register()
       requestGroup(timeout, usage, leaseId, screenLifecycle)
       await until(() => bridge.owner !== null)
     }
@@ -235,8 +248,8 @@ describe('Linux iOS integration', function() {
     , mode: () => bridge.screenMode()
     , connectInput: (id, signal, fail) => bridge.connectCoreDeviceInput(id, signal, fail)
     })
-    return {bridge, state, requests, sent, send, transact, join, requestGroup, gesture, errors
-      , activateInput, expectTouches, screenServer, screens, wdaScreens
+    return {bridge, state, requests, sent, send, transact, register, join, requestGroup, gesture
+      , errors, activateInput, expectTouches, screenServer, screens, wdaScreens
       , holdAutomation: () => {
         let finish!: (status: number) => void
         appiumResponse = new Promise(resolve => {
@@ -260,6 +273,9 @@ describe('Linux iOS integration', function() {
       }
       , failDevice: () => {
         failDevice = true
+      }
+      , failLocks: (...failures: typeof lockFailures) => {
+        lockFailures.push(...failures)
       }
       , idleLockCancelled: () => idleLockCancelled
       , failKeepalive: () => {
@@ -372,6 +388,101 @@ describe('Linux iOS integration', function() {
       clock.tick(30000)
       await f.bridge.poll()
       assert.deepEqual(f.requests, [])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('locks an idle phone that registered on startup without a reservation', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      await f.bridge.poll()
+      clock.tick(30000)
+      await f.bridge.poll()
+      assert.equal(f.requests.length, 0)
+      await f.register()
+      clock.tick(29999)
+      await f.bridge.poll()
+      assert.equal(f.requests.length, 0)
+      clock.tick(1)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), ['/lock'])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('starts a fresh idle grace period after the runtime reconnects', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    try {
+      await f.join(900000, 'automation', 'coordinator-lease', true)
+      const release = await f.transact(new wire.AutomationLeaseMessage(
+        serial, owner, 'coordinator-lease', 'release'))
+      assert.equal(release.success, true)
+      clock.tick(10000)
+      f.state.instance = 'replacement-runtime'
+      await f.register()
+      clock.tick(29999)
+      await f.bridge.poll()
+      assert.ok(!f.requests.some(request => request.path === '/lock'))
+      clock.tick(1)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      assert.deepEqual(f.requests.map(request => request.path), [
+        '/unlock', '/automation', '/automation', '/lock'
+      ])
+    }
+    finally {
+      clock.restore()
+    }
+  })
+
+  it('backs off failed locks, reports exhaustion and retries in the next idle period', async() => {
+    const f = await fixture({autoScreenSleep: true})
+    const clock = sinon.useFakeTimers({toFake: ['Date']})
+    const locks = () => f.requests.filter(request => request.path === '/lock').length
+    const healthReason = () => {
+      const property = f.sent.filter(item =>
+        item.envelope.type === wire.DevicePropertiesMessage.$code).at(-1)!
+      const message = wire.DevicePropertiesMessage.decode(property.envelope.message)
+      return JSON.parse(message.properties[0]!.value).reason
+    }
+    try {
+      f.failLocks('http', 'unlocked', 'http')
+      await f.register()
+      clock.tick(30000)
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await f.bridge.poll()
+        await until(() => f.errors.length === attempt)
+        clock.tick(59999)
+        await f.bridge.poll()
+        assert.equal(locks(), attempt)
+        assert.equal(healthReason(), attempt === 3 ? 'screen_lock_failed' : 'ready')
+        clock.tick(1)
+      }
+      await f.bridge.poll()
+      assert.equal(locks(), 3)
+      assert.equal(f.state.ios!.locked, false)
+
+      await f.join()
+      await f.bridge.poll()
+      assert.equal(healthReason(), 'ready')
+      await f.bridge.leave('ungroup_request')
+      f.failLocks('http')
+      clock.tick(30000)
+      await f.bridge.poll()
+      await until(() => f.errors.length === 4)
+      clock.tick(60000)
+      await f.bridge.poll()
+      await until(() => f.state.ios!.locked === true)
+      clock.tick(60000)
+      await f.bridge.poll()
+      assert.equal(locks(), 5)
     }
     finally {
       clock.restore()

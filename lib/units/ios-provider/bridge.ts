@@ -28,6 +28,8 @@ interface Point {x: number, y: number}
 
 const touchSequenceSize = 100
 const screenSleepDelayMs = 30000
+const screenLockRetryDelayMs = 60000
+const screenLockMaxAttempts = 3
 const screenLockRequestTimeoutMs = 50000
 
 class ScreenWakeError extends Error {
@@ -55,6 +57,7 @@ export class IosBridge {
   private reservationQueue = Promise.resolve()
   private sleepOnRelease = false
   private sleepAt: number | null = null
+  private lockAttempts = 0
   private idleLockAbort: AbortController | null = null
   private wakeRequired = true
   private queue = Promise.resolve()
@@ -88,6 +91,9 @@ export class IosBridge {
       .on(wire.DeviceRegisteredMessage, (_channel, message) => {
         if (message.serial === options.serial && this.identity && !this.registered) {
           this.registered = true
+          if (options.autoScreenSleep && !this.owner && this.sleepAt === null) {
+            this.scheduleIdleLock()
+          }
           this.broadcast(new wire.DeviceReadyMessage(options.serial, this.channel))
         }
       })
@@ -541,6 +547,11 @@ export class IosBridge {
     }
   }
 
+  private scheduleIdleLock() {
+    this.lockAttempts = 0
+    this.sleepAt = Date.now() + screenSleepDelayMs
+  }
+
   private sleepIfIdle() {
     if (this.sleepAt === null || Date.now() < this.sleepAt || this.idleLockAbort) {
       return
@@ -550,6 +561,7 @@ export class IosBridge {
     this.idleLockAbort = controller
     // Keep polling and sending heartbeats while the lock operation holds the reservation queue.
     this.changeReservation(async() => {
+      let locked = false
       try {
         if (controller.signal.aborted || !this.registered || this.owner || this.appiumHandoff ||
             epoch !== this.epoch) {
@@ -566,10 +578,13 @@ export class IosBridge {
         if (result.locked !== true) {
           throw new Error('iPhone screen did not lock')
         }
+        locked = true
       }
       finally {
         if (!controller.signal.aborted && epoch === this.epoch && !this.appiumHandoff) {
-          this.sleepAt = null
+          this.lockAttempts = locked ? 0 : this.lockAttempts + 1
+          this.sleepAt = locked || this.lockAttempts >= screenLockMaxAttempts ? null :
+            Date.now() + screenLockRetryDelayMs
         }
         this.idleLockAbort = null
       }
@@ -639,6 +654,7 @@ export class IosBridge {
       this.ownerAbort = new AbortController()
       this.owner = {...owner, reservationId}
       this.sleepAt = null
+      this.lockAttempts = 0
       this.automated = automated
       // An unmarked automation capture may be holding the device for WDA maintenance.
       this.sleepOnRelease = Boolean(this.options.autoScreenSleep && (!automated || screenLifecycle))
@@ -687,7 +703,7 @@ export class IosBridge {
     this.owner = null
     this.automated = false
     if (owner && this.sleepOnRelease && reason !== 'device_absent') {
-      this.sleepAt = Date.now() + screenSleepDelayMs
+      this.scheduleIdleLock()
     }
     this.sleepOnRelease = false
     this.epoch++
@@ -842,12 +858,14 @@ export class IosBridge {
     if (!state.ios) {
       return
     }
-    const value = JSON.stringify(state.ios)
-    const {updatedAt: _updatedAt, ...health} = state.ios
+    const screenLockFailed = state.state === 'ready' && state.ios.locked !== true &&
+      this.lockAttempts >= screenLockMaxAttempts
+    const status = screenLockFailed ? {...state.ios, reason: 'screen_lock_failed'} : state.ios
+    const {updatedAt: _updatedAt, ...health} = status
     const comparable = JSON.stringify(health)
     if (comparable !== this.lastHealth) {
       this.broadcast(new wire.DevicePropertiesMessage(this.options.serial, [
-        new wire.DeviceProperty('stf.ios.status', value)
+        new wire.DeviceProperty('stf.ios.status', JSON.stringify(status))
       ]))
       this.lastHealth = comparable
     }
@@ -855,6 +873,7 @@ export class IosBridge {
 
   absent() {
     this.sleepAt = null
+    this.lockAttempts = 0
     this.idleLockAbort?.abort()
     // WDA can report an unlocked cached state after restarting on an asleep iPhone.
     this.wakeRequired = true
