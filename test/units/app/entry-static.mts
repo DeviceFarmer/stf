@@ -84,7 +84,7 @@ describe('prebuilt entry bundle', function() {
   it('serves an entry rebuilt in place while the unit runs', async function() {
     var url = await deploy('load("321.1b680a6f6799084dd8b7.chunk.js")')
     var etag = (await get(url)).headers.etag
-    var file = path.join(directories[0], 'app.entry.js')
+    var file = path.join(directories[0]!, 'app.entry.js')
     var newBuild = 'load("321.889d73a000aed0f7d844.chunk.js")'
     await fs.writeFile(file, newBuild)
     var rebuilt = new Date(PACKED.getTime() + 1000)
@@ -99,7 +99,7 @@ describe('prebuilt entry bundle', function() {
       this.skip()
     }
     var url = await deploy('load("321.1b680a6f6799084dd8b7.chunk.js")')
-    await fs.chmod(path.join(directories[0], 'app.entry.js'), 0)
+    await fs.chmod(path.join(directories[0]!, 'app.entry.js'), 0)
     var response = await get(url)
     expect(response.status).to.be.at.least(400)
     expect(response.headers).to.not.have.property('etag')
