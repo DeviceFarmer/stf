@@ -26,6 +26,7 @@ import auth from './middleware/auth.js'
 import deviceIconMiddleware from './middleware/device-icons.js'
 import browserIconMiddleware from './middleware/browser-icons.js'
 import appstoreIconMiddleware from './middleware/appstore-icons.js'
+import entryStatic from './middleware/entry-static.js'
 
 import markdownServe from 'markdown-serve'
 
@@ -73,8 +74,7 @@ export default function(options: AppOptions) {
   if (fs.existsSync(pathutil.resource('build'))) {
     log.info('Using pre-built resources')
     app.use(compression())
-    app.use('/static/app/build/entry',
-      serveStatic(pathutil.resource('build/entry')))
+    app.use('/static/app/build/entry', entryStatic(pathutil.resource('build/entry')))
     app.use('/static/app/build', serveStatic(pathutil.resource('build'), {
       maxAge: '10d'
     }))
