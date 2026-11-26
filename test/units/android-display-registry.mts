@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
-import {AndroidDisplayRegistry, parsePrimaryDisplay, parsePrimaryDisplayLayout} from
-  '../../lib/units/device/plugins/util/display.js'
+import {Readable} from 'node:stream'
+import displayPlugin, {
+  AndroidDisplayRegistry, parsePrimaryDisplay, parsePrimaryDisplayLayout
+} from '../../lib/units/device/plugins/util/display.js'
 
 const primary = {id: 0, width: 1080, height: 2400, rotation: 0}
 
@@ -12,6 +14,53 @@ function displayLine(id: number, name: string, type: string, rotation = 0) {
   return `Display id ${id}: DisplayInfo{"${name}", displayId ${id}, real 800 x 600, ` +
     `app 700 x 500, rotation ${rotation}, state ON, type ${type}, ` +
     `uniqueId "${id}", layerStack ${id}}, DisplayMetrics{width=800, height=600}, isValid=true`
+}
+
+const shellDisplay = 'DisplayInfo{"Built-in Screen", displayId 0", displayGroupId 0, ' +
+  'real 1768 x 2208, rotation 0, state ON, type INTERNAL, uniqueId "local:443", ' +
+  'address {port=131, model=0x55}, deviceProductInfo null}'
+const legacyDump = [
+  'DISPLAY MANAGER (dumpsys display)'
+, 'Display Devices: size=2'
+, '  DisplayDeviceInfo{"Other panel", type INTERNAL, state ON}'
+, 'LogicalDisplayMapper:'
+, '  Logical Displays: size=2'
+, '  Display 0:'
+, '    mDisplayId=0'
+, '    mPhase=1'
+, '    mPrimaryDisplayDevice=Built-in Screen'
+, `    mBaseDisplayInfo=${shellDisplay}`
+, '    mOverrideDisplayInfo=' + shellDisplay.replace('1768 x 2208', '2208 x 1768')
+    .replace('rotation 0', 'rotation 1').replace('state ON', 'state OFF')
+    .replace('local:443', 'local:442').replace('port=131', 'port=130')
+, '  Display 1:'
+, '    mDisplayId=1'
+, '    mPhase=1'
+, '    mBaseDisplayInfo=' + shellDisplay.replace('displayId 0"', 'displayId 1"')
+, '  DeviceStateToLayoutMap:'
+, '    state(2): [{addr: {port=130, model=0x66}, dispId: 0(ON)}, ' +
+    '{addr: {port=131}, dispId: 1(OFF)}]'
+, 'Callbacks: size=0'
+].join('\n')
+
+async function displayWithShell(samples: string[]) {
+  const commands: string[][] = []
+  const signals: AbortSignal[] = []
+  const streams: Readable[] = []
+  const adb = {client: {getDevice: () => ({
+    shell: async(args: string[], {signal}: {signal: AbortSignal}) => {
+      commands.push(args)
+      signals.push(signal)
+      const stream = Readable.from([Buffer.from(samples.shift() ?? '')])
+      streams.push(stream)
+      return stream
+    }
+  })}}
+  const service = {getDisplay: async() => primaryProperties(), on: () => {}}
+  const display = await displayPlugin.invoke({serial: 'fixture'}, adb, {}, service, {
+    publicUrl: primaryProperties().url
+  }) as AndroidDisplayRegistry
+  return {display, commands, signals, streams}
 }
 
 describe('Android display registry', function() {
@@ -51,6 +100,66 @@ describe('Android display registry', function() {
       true), null)
   })
 
+  it('reads the quoted primary display ID in Android 13 shell output', async() => {
+    const android13 = [
+      'Displays:', displayLine(2, 'Other panel', 'INTERNAL')
+    , 'Display id 0: ' + shellDisplay + ', DisplayMetrics{width=1768, height=2208}, isValid=true'
+    ].join('\n')
+    const off = android13.replace('state ON', 'state OFF')
+    const {display, commands} = await displayWithShell([android13, off, legacyDump])
+    await display.refresh()
+    const active = display.target
+    assert.equal(active.width, 1768)
+    assert.equal(active.height, 2208)
+    assert.deepEqual(parsePrimaryDisplay(android13)?.address, {port: 131, model: '0x55'})
+    await display.refresh()
+    assert.equal(display.target, active)
+    assert.deepEqual(commands, Array.from({length: 2}, () => ['cmd', 'display', 'get-displays']))
+  })
+
+  it('uses the Android 12L dump and waits for the layout address on the active panel', async() => {
+    const cover = legacyDump.replace(shellDisplay,
+      shellDisplay.replace('port=131, model=0x55', 'port=130, model=0x66'))
+    const {display, commands, signals, streams} = await displayWithShell([
+      'Unknown command: get-displays\n', legacyDump, legacyDump, legacyDump, legacyDump
+    , cover, cover
+    ])
+    await display.refresh()
+    const inner = display.target
+    assert.equal(inner.width, 1768)
+    assert.equal(inner.height, 2208)
+    assert.equal(inner.rotation, 90)
+    assert.equal(signals[0], signals[1], 'both commands share the same deadline')
+
+    display.beginTransition()
+    const selected = await display.refreshAfterPosture(2, false, true)
+    display.endTransition()
+
+    assert.notEqual(selected.revision, inner.revision)
+    assert.equal(selected.width, inner.width)
+    assert.deepEqual(commands, [
+      ['cmd', 'display', 'get-displays']
+    , ...Array.from({length: 6}, () => ['dumpsys', 'display'])
+    ])
+    assert.ok(streams.every(stream => stream.destroyed))
+  })
+
+  it('does not use another Android 12L panel when display 0 is inactive or incomplete', async() => {
+    const {display} = await displayWithShell([
+      'Unknown command: get-displays'
+    , legacyDump.replace('mPhase=1', 'mPhase=0')
+    , legacyDump.replace(shellDisplay, shellDisplay.replace('state ON', 'state OFF'))
+    , legacyDump.replace('mPrimaryDisplayDevice=Built-in Screen', 'mPrimaryDisplayDevice=null')
+    , legacyDump.replace(/^ {4}mOverrideDisplayInfo=.*\n/m, '')
+    , legacyDump.replace(shellDisplay, shellDisplay.replace('state ON', 'state DOZE'))
+    ])
+    const original = display.target
+    for (let i = 0; i < 5; i++) {
+      await display.refresh()
+      assert.equal(display.target, original)
+    }
+  })
+
   it('uses the enabled primary panel address declared by Android for a state', function() {
     const dump = [
       'DeviceStateToLayoutMap:'
@@ -62,6 +171,10 @@ describe('Android display registry', function() {
     assert.equal(parsePrimaryDisplayLayout(dump, 19), null)
     assert.equal(parsePrimaryDisplayLayout(dump, 9), null)
     assert.equal(parsePrimaryDisplayLayout(dump + '\n' + dump, 7), null)
+    assert.deepEqual(parsePrimaryDisplayLayout(legacyDump, 2), {port: 130, model: '0x66'})
+    const disabled = legacyDump.replace('dispId: 0(ON)', 'dispId: 0(OFF)')
+      .replace('dispId: 1(OFF)', 'dispId: 1(ON)')
+    assert.equal(parsePrimaryDisplayLayout(disabled, 2), null)
   })
 
   it('waits for the mapped panel when its predecessor has the same size', async() => {

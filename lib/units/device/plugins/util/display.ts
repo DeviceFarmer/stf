@@ -27,6 +27,7 @@ const log = logger.createLogger('device:plugins:display')
 const primaryDisplayId = 0
 const displaySampleIntervalMs = 120
 const displaySettleTimeoutMs = 2500
+const displayShellTimeoutMs = 2000
 
 type DozeState = 'DOZE' | 'DOZE_SUSPEND'
 
@@ -73,22 +74,55 @@ export function parsePrimaryDisplayLayout(
   if (rows.length !== 1) {
     return null
   }
-  const primaryAddress = /\bdispId:\s*0\(ON\),[^{}]*?\baddr:\s*(\{[^{}]*\})/
-  const display = primaryAddress.exec(rows[0]!)
-  return display ? parsePhysicalAddress(display[1]!) : null
+  // Older Android releases print the address before the display ID.
+  const records = rows[0]!.match(/\{(?:[^{}]|\{[^{}]*\})*\}/g) ?? []
+  const enabledPrimary = records.filter(record => /\bdispId:\s*0\(ON\)(?=[,}])/.test(record))
+  const address = enabledPrimary.length === 1 &&
+    /\baddr:\s*(\{[^{}]*\})/.exec(enabledPrimary[0]!)?.[1]
+  return address ? parsePhysicalAddress(address) : null
 }
 
 export function parsePrimaryDisplay(output: string, allowDoze = false): DisplayGeometry | null {
-  const line = output.split('\n').find(row =>
-    /^\s*Display id 0: DisplayInfo\{.*?, displayId 0,/.test(row) &&
-    row.includes(', type INTERNAL,') && row.trimEnd().endsWith('isValid=true'))
-  const dimensions = line && /, real (\d+) x (\d+),/.exec(line)
-  const orientation = line && /, rotation ([0-3]),/.exec(line)
-  if (!line || !dimensions || !orientation) {
+  const line = output.split('\n').map(row => row.trim()).find(row =>
+    row.startsWith('Display id 0: ') && row.endsWith('isValid=true'))
+  return line ? parsePrimaryDisplayInfo(line.slice('Display id 0: '.length), allowDoze) : null
+}
+
+function parsePrimaryDisplayDump(output: string, allowDoze: boolean): DisplayGeometry | null {
+  const sections = output.split(/^[ \t]+Logical Displays: size=\d+[ \t]*\r?$/m)
+  if (sections.length !== 2) {
     return null
   }
-  const state = /, state (\w+),/.exec(line)?.[1]
-  const committed = /, committedState (\w+),/.exec(line)?.[1]
+  const logical = sections[1]!.split(/^\S.*$/m, 1)[0]!
+  const primary = logical.split(/^[ \t]+Display 0:[ \t]*\r?$/m)
+  if (primary.length !== 2) {
+    return null
+  }
+  const fields = primary[1]!.split(/^[ \t]+Display \d+:/m, 1)[0]!
+  const active = /^[ \t]+mDisplayId=0[ \t]*\r?$/m.test(fields) &&
+    /^[ \t]+mPhase=1[ \t]*\r?$/m.test(fields) &&
+    /^[ \t]+mPrimaryDisplayDevice=(?!null[ \t]*\r?$)\S/m.test(fields)
+  const base = /^[ \t]+mBaseDisplayInfo=(DisplayInfo\{[^\r\n]+\})[ \t]*\r?$/m.exec(fields)?.[1]
+  const override = /^[ \t]+mOverrideDisplayInfo=(null|DisplayInfo\{[^\r\n]+\})[ \t]*\r?$/m
+    .exec(fields)?.[1]
+  // WindowManager overrides geometry, while the base record owns the panel and power state.
+  return active && base && override ?
+    parsePrimaryDisplayInfo(base, allowDoze, override === 'null' ? base : override) : null
+}
+
+function parsePrimaryDisplayInfo(
+  info: string, allowDoze: boolean, geometryInfo = info
+): DisplayGeometry | null {
+  // Android 12L and 13 include an extra quote after the logical display ID.
+  const primary = /^DisplayInfo\{.*?, displayId 0"?,/
+  const dimensions = /, real (\d+) x (\d+),/.exec(geometryInfo)
+  const orientation = /, rotation ([0-3]),/.exec(geometryInfo)
+  if (!primary.test(info) || !primary.test(geometryInfo) || !info.includes(', type INTERNAL,') ||
+      !dimensions || !orientation) {
+    return null
+  }
+  const state = /, state (\w+),/.exec(info)?.[1]
+  const committed = /, committedState (\w+),/.exec(info)?.[1]
   const active = state === 'ON' && (!committed || committed === 'ON' || committed === 'UNKNOWN')
   const dozing = allowDoze && (state === 'DOZE' || state === 'DOZE_SUSPEND') &&
     (committed === state || committed === 'UNKNOWN')
@@ -100,8 +134,8 @@ export function parsePrimaryDisplay(output: string, allowDoze = false): DisplayG
   if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
     return null
   }
-  const uniqueId = /, uniqueId "([^"]*)"/.exec(line)?.[1]
-  const addressText = /, address (\{[^{}]*\})/.exec(line)?.[1]
+  const uniqueId = /, uniqueId "([^"]*)"/.exec(info)?.[1]
+  const addressText = /, address (\{[^{}]*\})/.exec(info)?.[1]
   const address = addressText ? parsePhysicalAddress(addressText) : null
   const geometry = {
     ...naturalGeometry(primaryDisplayId, width, height, Number(orientation[1]))
@@ -340,9 +374,8 @@ export default syrup.serial()
         })
     }
 
-    async function readDisplayOutput(args: string[], deadline?: AbortSignal) {
-      const timeout = AbortSignal.timeout(2000)
-      const signal = deadline ? AbortSignal.any([timeout, deadline]) : timeout
+    async function readDisplayOutput(args: string[], signal: AbortSignal) {
+      signal.throwIfAborted()
       const stream = await adb.client.getDevice(options.serial).shell(args, {signal})
       try {
         return (await streamutil.readAll(stream)).toString()
@@ -352,13 +385,25 @@ export default syrup.serial()
       }
     }
 
+    let useDisplayDump = false
     async function readPrimary(deadline?: AbortSignal, allowDoze = false) {
-      const output = await readDisplayOutput(['cmd', 'display', 'get-displays'], deadline)
-      return parsePrimaryDisplay(output, allowDoze)
+      const timeout = AbortSignal.timeout(displayShellTimeoutMs)
+      const signal = deadline ? AbortSignal.any([timeout, deadline]) : timeout
+      if (!useDisplayDump) {
+        const output = await readDisplayOutput(['cmd', 'display', 'get-displays'], signal)
+        if (output.trim() !== 'Unknown command: get-displays') {
+          return parsePrimaryDisplay(output, allowDoze)
+        }
+        useDisplayDump = true
+      }
+      const output = await readDisplayOutput(['dumpsys', 'display'], signal)
+      return parsePrimaryDisplayDump(output, allowDoze)
     }
 
     async function readLayout(state: number) {
-      return parsePrimaryDisplayLayout(await readDisplayOutput(['dumpsys', 'display']), state)
+      const dump = await readDisplayOutput(['dumpsys', 'display'],
+        AbortSignal.timeout(displayShellTimeoutMs))
+      return parsePrimaryDisplayLayout(dump, state)
     }
 
     log.info('Reading display info')
