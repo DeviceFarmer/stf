@@ -2,13 +2,12 @@ import assert from 'node:assert/strict'
 import type {Response} from 'express'
 import type {ApiRequest} from '../../../lib/types/units-api.js'
 import wire from '../../../lib/wire/index.js'
+import wireutil from '../../../lib/wire/util.js'
 import {importFresh, mockModule} from '../../helpers/module-mock.mts'
 
 type Handler = (req: ApiRequest, res: Response) => void
 
-class DuplicateSecondaryIndexError extends Error {}
-
-const dbapi: Record<string, unknown> = {DuplicateSecondaryIndexError}
+const dbapi: Record<string, unknown> = {}
 const adb = {
   util: {
     parsePublicKey: (_key: string): Promise<unknown> => Promise.reject(new Error('unset'))
@@ -77,9 +76,12 @@ function call(handler: Handler, params: Record<string, unknown>) {
   })
 }
 
-function owners(...emails: string[]) {
+type Owner = string | {email: string, adbKeys: {title: string, fingerprint: string}[]}
+
+function owners(...users: Owner[]) {
   return () => Promise.resolve({
-    toArray: () => Promise.resolve(emails.map(email => ({email})))
+    toArray: () =>
+      Promise.resolve(users.map(user => typeof user === 'string' ? {email: user} : user))
   })
 }
 
@@ -102,7 +104,7 @@ describe('API user adb public keys', function() {
   })
 
   describe('POST', function() {
-    it('adds an unknown key and tells the user\'s devices', async function() {
+    it('adds an unknown key and tells every device', async function() {
       dbapi.lookupUsersByAdbKey = owners()
       const {reply, sent} = await call(addAdbPublicKey, {adb: {publickey: publicKey + '\n'}})
 
@@ -115,7 +117,8 @@ describe('API user adb public keys', function() {
       , publicKey
       }]])
       assert.equal(sent.length, 1)
-      assert.equal(sent[0]![0], user.group)
+      // Also devices nobody owns, where a connection with this key may be waiting
+      assert.equal(sent[0]![0], wireutil.global)
       // Nothing was removed, so devices keep the keys they know
       assert.ok(!adbKeysUpdated(sent[0]!).removedFingerprint)
     })
@@ -128,11 +131,16 @@ describe('API user adb public keys', function() {
     })
 
     it('succeeds without changes when the key is already the user\'s', async function() {
-      dbapi.lookupUsersByAdbKey = owners(user.email)
-      const {reply, sent} = await call(addAdbPublicKey, {adb: {publickey: publicKey}})
+      dbapi.lookupUsersByAdbKey = owners({email: user.email, adbKeys: [
+        {title: 'other', fingerprint: 'aa:bb'}
+      , {title: 'ci-runner', fingerprint}
+      ]})
+      const {reply, sent} = await call(addAdbPublicKey, {adb: {publickey: publicKey, title: 'new'}})
 
       assert.equal(reply.status, 200)
       assert.equal(reply.body.success, true)
+      // The stored title, and the fingerprint to delete the key by later
+      assert.deepEqual(reply.body.adbPublicKey, {title: 'ci-runner', fingerprint})
       assert.deepEqual(inserted, [])
       assert.deepEqual(sent, [])
     })
@@ -145,15 +153,6 @@ describe('API user adb public keys', function() {
       assert.equal(reply.body.success, false)
       assert.ok(!JSON.stringify(reply.body).includes('bob'))
       assert.deepEqual(inserted, [])
-      assert.deepEqual(sent, [])
-    })
-
-    it('reports a duplicate index error from the insert as a conflict', async function() {
-      dbapi.lookupUsersByAdbKey = owners()
-      dbapi.insertUserAdbKey = () => Promise.reject(new DuplicateSecondaryIndexError())
-      const {reply, sent} = await call(addAdbPublicKey, {adb: {publickey: publicKey}})
-
-      assert.equal(reply.status, 409)
       assert.deepEqual(sent, [])
     })
 

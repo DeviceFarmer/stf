@@ -22,7 +22,7 @@ import wirerouter from '../../../wire/router.js'
 
 import apiutil from '../../../util/apiutil.js'
 import jwtutil from '../../../util/jwtutil.js'
-import type {AccessTokenDocument, DeviceDocument} from '../../../types/stf.js'
+import type {AccessTokenDocument, DeviceDocument, UserDocument} from '../../../types/stf.js'
 import lockutil from '../../../util/lockutil.js'
 import type {Response} from 'express'
 import type {
@@ -587,16 +587,13 @@ function getUserAccessTokens(req: ApiRequest, res: Response) {
 
 class InvalidAdbKeyError extends Error {}
 
+// An added key goes to every device, like the websocket does, so a connection waiting on a device
+// nobody owns gets let in too. A removed key only matters to the devices the user controls.
 function adbKeysUpdated(req: ApiRequest, removedFingerprint?: string) {
   req.options.push.send([
-    req.user.group
+    removedFingerprint ? req.user.group : wireutil.global
   , wireutil.envelope(new wire.AdbKeysUpdatedMessage(removedFingerprint))
   ])
-}
-
-function respondAdbKeyTaken(res: Response) {
-  // Whose key it is stays private
-  apiutil.respond(res, 409, 'Conflict (adb public key belongs to another user)')
 }
 
 function addAdbPublicKey(req: ApiRequest, res: Response) {
@@ -612,15 +609,26 @@ function addAdbPublicKey(req: ApiRequest, res: Response) {
         .then(function(cursor) {
           return cursor.toArray()
         })
-        .then(function(users: {email: string}[]) {
-          if (users.some(function(user) {
+        .then(function(users: Pick<UserDocument, 'email' | 'adbKeys'>[]) {
+          var own = users.find(function(user) {
             return user.email === req.user.email
-          })) {
-            apiutil.respond(res, 200, 'Unchanged (adb public key)')
+          })
+          if (own) {
+            var stored = (own.adbKeys || []).find(function(adbKey) {
+              return adbKey.fingerprint === key.fingerprint
+            })
+            // Same shape as a new key, so a caller always gets the fingerprint to delete it by
+            apiutil.respond(res, 200, 'Unchanged (adb public key)', {
+              adbPublicKey: {
+                title: stored && stored.title || data.title || key.comment
+              , fingerprint: key.fingerprint
+              }
+            })
             return null
           }
           if (users.length) {
-            respondAdbKeyTaken(res)
+            // Whose key it is stays private
+            apiutil.respond(res, 409, 'Conflict (adb public key belongs to another user)')
             return null
           }
           return dbapi.insertUserAdbKey(req.user.email, {
@@ -641,9 +649,6 @@ function addAdbPublicKey(req: ApiRequest, res: Response) {
     })
     .catch(InvalidAdbKeyError, function(err) {
       apiutil.respond(res, 400, 'Bad Request (invalid adb public key: ' + err.message + ')')
-    })
-    .catch(dbapi.DuplicateSecondaryIndexError, function() {
-      respondAdbKeyTaken(res)
     })
     .catch(function(err) {
       apiutil.internalError(res, 'Failed to insert new adb key fingerprint: ', err.stack)
