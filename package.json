@@ -44,7 +44,7 @@
     "@aws-sdk/client-s3": "^3.1131.0",
     "@aws-sdk/credential-providers": "^3.1131.0",
     "@cypress/request": "^4.0.1",
-    "@devicefarmer/adbkit": "^4.2.0",
+    "@devicefarmer/adbkit": "^4.2.1",
     "@devicefarmer/adbkit-apkreader": "^4.0.0",
     "@devicefarmer/minicap-prebuilt": "^2.7.4",
     "@devicefarmer/minirev-prebuilt": "^1.0.1",
