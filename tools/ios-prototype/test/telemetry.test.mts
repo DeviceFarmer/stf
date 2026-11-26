@@ -61,6 +61,13 @@ describe('iPhone diagnostics and WDA profiles', () => {
     assert.deepEqual(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z')
       , profile('2026-10-22T12:00:00Z')], bundle, selected, now),
     {profile: 'valid', expiresAt: '2026-10-22T12:00:00.000Z'})
+    // The most specific wildcard signs the runner
+    assert.deepEqual(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z')
+      , wildcard('TEAM.test.*', '2026-10-17T12:00:00Z')], bundle, selected, now),
+    {profile: 'expiring', expiresAt: '2026-10-17T12:00:00.000Z'})
+    // Two teams' equally specific wildcards: which one signed the runner is unknown
+    assert.equal(profileStatus([wildcard('TEAM.*', '2026-11-16T12:00:00Z')
+      , wildcard('OTHER.*', '2026-11-20T12:00:00Z')], bundle, selected, now).profile, 'ambiguous')
   })
 
   it('reports actionable failure reasons without exposing raw subprocess messages', () => {

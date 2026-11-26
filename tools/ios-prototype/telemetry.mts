@@ -19,12 +19,16 @@ export function profileStatus(
     return typeof id === 'string' ? id.slice(id.indexOf('.') + 1) : null
   }
   // An explicit App ID wins. Xcode's automatic signing falls back to a wildcard profile
-  // ("TEAM.*" or "TEAM.prefix.*"), which only signs the runner when no explicit one matches.
+  // ("TEAM.*" or "TEAM.prefix.*"), which only signs the runner when no explicit one matches, and
+  // then the most specific wildcard. Equally specific ones from different teams stay ambiguous:
+  // nothing here tells which team signed the runner.
   const exact = profiles.filter(p => appId(p) === bundleId && covers(p))
-  const matching = exact.length ? exact : profiles.filter(p => {
+  const wildcards = profiles.filter(p => {
     const id = appId(p)
     return id !== null && id.endsWith('*') && bundleId.startsWith(id.slice(0, -1)) && covers(p)
   })
+  const longest = Math.max(0, ...wildcards.map(p => appId(p)!.length))
+  const matching = exact.length ? exact : wildcards.filter(p => appId(p)!.length === longest)
   const dates = matching.map(p => {
     const value = p.ExpirationDate
     return typeof value === 'string' ? Date.parse(/[Zz]|[+-]\d\d:\d\d$/.test(value) ?
