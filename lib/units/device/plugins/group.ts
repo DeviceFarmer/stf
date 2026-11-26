@@ -49,10 +49,12 @@ export default syrup.serial()
   ) {
     var log = logger.createLogger('device:plugins:group')
     var currentGroup: OwnerMessage | null = null
+    let currentUsage: string | null = null
     let currentLeaseId: string | null = null
     let joining: Promise<OwnerMessage> | null = null
     let leaving: Promise<OwnerMessage> | null = null
     let stopping = false
+    const beforeLeave: Array<(owner: OwnerMessage) => PromiseLike<void>> = []
 
     var plugin = new events.EventEmitter() as GroupPlugin
     const automationLease = new AutomationLease(() => {
@@ -66,6 +68,15 @@ export default syrup.serial()
 
       return currentGroup
     })
+
+    plugin.isManualOwner = (requester, reservationId) => !!reservationId &&
+      !joining && !leaving && !stopping && currentLeaseId === null &&
+      (currentUsage === null || currentUsage === 'manual') &&
+      currentGroup?.email === requester && currentGroup.reservationId === reservationId
+
+    plugin.beforeLeave = handler => {
+      beforeLeave.push(handler)
+    }
 
     plugin.join = function(
       newGroup: OwnerMessage, timeout, usage, identifier, leaseId
@@ -90,6 +101,7 @@ export default syrup.serial()
             automationLease.start(group.email, automationLeaseId, timeout ?? options.groupTimeout)
           }
           currentGroup = group
+          currentUsage = usage ?? null
           currentLeaseId = automationLeaseId
           log.important('Now owned by "%s"', currentGroup.email)
           log.info('Subscribing to group channel "%s"', currentGroup.group)
@@ -139,6 +151,9 @@ export default syrup.serial()
           if (reservationId && group.reservationId !== reservationId) {
             throw new grouputil.RequirementMismatchError('reservationId')
           }
+          return Promise.each(beforeLeave, handler => handler(group)).return(group)
+        })
+        .then(function(group) {
           log.important('No longer owned by "%s" (reason: %s)', group.email, reason)
           log.info('Unsubscribing from group channel "%s"', group.group)
           channels.unregister(group.group)
@@ -147,6 +162,7 @@ export default syrup.serial()
             options.serial, group, reason, reason === 'device_absent' ? null : currentLeaseId
           ))])
           automationLease.clear()
+          currentUsage = null
           currentLeaseId = null
           currentGroup = null
           plugin.emit('leave', group)
@@ -266,14 +282,23 @@ export default syrup.serial()
             , reply.fail(err.message)
             ])
           })
-          .catch(function() {
+          .catch(function(error) {
+            log.warn('Device cleanup failed: %s', error)
             push.send([channel, reply.fail('Device cleanup failed')])
           })
       })
 
     channels.on('timeout', function(channel) {
-      if (currentGroup && channel === currentGroup.group) {
-        plugin.leave('automatic_timeout').catch(log.error.bind(log))
+      const owner = currentGroup
+      if (owner && channel === owner.group) {
+        plugin.leave('automatic_timeout', owner.reservationId).catch(error => {
+          log.error('Device cleanup after timeout failed: %s', error)
+          // The timeout already unregistered this channel. Retry cleanup
+          // without releasing the reservation before its hooks succeed.
+          if (currentGroup === owner && !stopping) {
+            channels.register(channel, {timeout: 5000, alias: solo.channel})
+          }
+        })
       }
     })
 

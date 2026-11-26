@@ -1,4 +1,5 @@
-import {useState, type DragEvent} from 'react'
+import {useCallback, useRef, useState, type DragEvent} from 'react'
+import {Button} from '@mantine/core'
 import {
   IconCircle
   , IconMenu2
@@ -6,7 +7,10 @@ import {
   , IconTriangle
 } from '@tabler/icons-react'
 import {useTranslation} from '@/core/i18n'
+import {notifyFailure} from '@/ui/notify'
+import type {Fold4PostureMode} from '../../../../../../lib/types/android-display'
 import {DeviceScreen} from '../screen/DeviceScreen'
+import type {AndroidDisplayState} from '../screen/screen-stream'
 import type {PaneProps} from '../types'
 import {DeviceContextMenu} from './DeviceContextMenu'
 import {DeviceControlKey} from './DeviceControlKey'
@@ -24,7 +28,18 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
   const {t} = useTranslation()
   const [showScreen, setShowScreen] = useState(true)
   const [dragOver, setDragOver] = useState(false)
+  const [androidDisplay, setAndroidDisplay] = useState<AndroidDisplayState | null>(null)
+  const [postureRequest, setPostureRequest] = useState<{control: PaneProps['control']} | null>(null)
+  const activeRequest = useRef(postureRequest)
+  const posturePending = postureRequest?.control === control
   const actions = useDeviceActions(device, control)
+  const updateAndroidDisplay = useCallback((state: AndroidDisplayState | null) => {
+    setAndroidDisplay(state)
+    if (!state) {
+      activeRequest.current = null
+      setPostureRequest(null)
+    }
+  }, [])
 
   const ios = device.platform === 'iOS'
   useControlHotkeys(control, actions, ios, control.readOnly)
@@ -48,6 +63,58 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
     }
   }
 
+  async function setFold4Posture(mode: Fold4PostureMode) {
+    const posture = androidDisplay?.posture
+    if (!posture || posture === mode || activeRequest.current?.control === control || control.readOnly) {
+      return
+    }
+    const request = {control}
+    const {revision} = androidDisplay.selected
+    activeRequest.current = request
+    setPostureRequest(request)
+    try {
+      await control.setFold4Posture(mode, revision)
+    }
+    catch (error) {
+      if (activeRequest.current === request) {
+        notifyFailure(error, t('Foldable posture'))
+      }
+    }
+    finally {
+      if (activeRequest.current === request) {
+        activeRequest.current = null
+        setPostureRequest(null)
+      }
+    }
+  }
+
+  const postureOptions: {mode: Fold4PostureMode, label: string}[] = [
+    {mode: 'folded', label: t('Fold')}
+    , {mode: 'unfolded', label: t('Unfold')}
+    , {mode: 'sensor', label: t('Follow hinge')}
+  ]
+  const postureButtons = !ios && showScreen && androidDisplay?.posture && (
+    <div role='group' aria-label={t('Foldable posture')}>
+      <Button.Group>
+        {postureOptions.map(({mode, label}) => {
+          const selected = mode === androidDisplay.posture
+          return (
+            <Button
+              key={mode}
+              size='xs'
+              variant={selected ? 'filled' : 'default'}
+              aria-pressed={selected}
+              disabled={control.readOnly || posturePending}
+              onClick={() => setFold4Posture(mode)}
+            >
+              {label}
+            </Button>
+          )
+        })}
+      </Button.Group>
+    </div>
+  )
+
   const stage = (
     <DeviceContextMenu device={device} control={control} onStopUsing={() => actions.stopUsing(device)}>
       <div
@@ -56,7 +123,14 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
       >
-        <DeviceScreen device={device} control={control} showScreen={showScreen} />
+        <DeviceScreen
+          device={device}
+          control={control}
+          showScreen={showScreen}
+          androidDisplay={androidDisplay}
+          posturePending={posturePending}
+          onAndroidDisplayChange={updateAndroidDisplay}
+        />
       </div>
     </DeviceContextMenu>
   )
@@ -76,6 +150,7 @@ export default function DeviceControlPanel({device, control, standalone}: PanePr
         actions={actions}
         readOnly={control.readOnly}
         showScreen={showScreen}
+        postureButtons={postureButtons}
         onToggleScreen={() => setShowScreen((value) => !value)}
       />
       {stage}

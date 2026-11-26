@@ -759,6 +759,19 @@ msgstr ""
 msgid "Fingerprint"
 msgstr ""
 
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:92
+msgid "Fold"
+msgstr ""
+
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:80
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:97
+msgid "Foldable posture"
+msgstr ""
+
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:94
+msgid "Follow hinge"
+msgstr ""
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:218
 msgid "FPS"
 msgstr ""
@@ -2356,6 +2369,10 @@ msgstr ""
 
 #: res/app/src/features/settings/groups/rules.ts:105
 msgid "Unauthorized class while device list is not empty"
+msgstr ""
+
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:93
+msgid "Unfold"
 msgstr ""
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:73

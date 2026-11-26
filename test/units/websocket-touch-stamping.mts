@@ -106,6 +106,18 @@ function fixture() {
         resolve(deliver)
       }))
     }
+    , transaction(event: string, data: object): Promise<void> {
+      const responseChannel = 'tx.posture'
+      const packet = [event, device.channel, responseChannel, data]
+      return new Promise((resolve, reject) => guard(packet, error => {
+        if (error) {
+          reject(error)
+          return
+        }
+        listeners.get(event)!(device.channel, responseChannel, data)
+        resolve()
+      }))
+    }
     , owner(reservationId: string) {
       device = {...device, owner: {...device.owner, reservationId}}
       transports[1]!.emit('message', Buffer.from(wireutil.global), wireutil.envelope(
@@ -128,6 +140,38 @@ function fixture() {
     }
   }
 }
+
+describe('Fold4 posture commands', function() {
+  it('stamps the authenticated owner and rejects invalid or automated requests',
+    async function() {
+      const f = fixture()
+      try {
+        await f.transaction('display.fold4Posture', {
+          mode: 'folded', revision: 'frame-revision', requester: 'spoof@example.test'
+        })
+        const [envelope] = f.envelopes()
+        assert.equal(envelope?.type, wire.Fold4PostureMessage.$code)
+        assert.equal(envelope?.channel, 'tx.posture')
+        const command = wire.Fold4PostureMessage.decode(envelope!.message)
+        assert.equal(command.mode, 'folded')
+        assert.equal(command.revision, 'frame-revision')
+        assert.equal(command.requester, 'owner@example.test')
+
+        await f.transaction('display.fold4Posture', {mode: '0', revision: 'frame-revision'})
+        assert.equal(f.emitted.at(-1)?.[0], 'tx.cancel')
+        assert.equal(f.envelopes().length, 1)
+
+        device.usage = 'automation'
+        await assert.rejects(f.transaction('display.fold4Posture', {
+          mode: 'sensor', revision: 'frame-revision'
+        }))
+        assert.equal(f.envelopes().length, 1)
+      }
+      finally {
+        await f.close()
+      }
+    })
+})
 
 describe('server generated touch identity', function() {
   it('stamps every touch packet from authorization and distinguishes cancel from sequenced reset',

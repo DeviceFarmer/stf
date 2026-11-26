@@ -226,6 +226,8 @@ export interface GroupEvents {
 
 export interface GroupPlugin extends EventEmitter<GroupEvents> {
   get(): Bluebird<OwnerMessage>
+  isManualOwner(requester: string, reservationId: string): boolean
+  beforeLeave(handler: (owner: OwnerMessage) => PromiseLike<void>): void
   join(
     newGroup: OwnerMessage
   , timeout?: number | null

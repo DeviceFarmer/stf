@@ -12,18 +12,20 @@ import EventEmitter from 'eventemitter3'
 import wire from '../../../../wire/index.js'
 import logger from '../../../../util/logger.js'
 import lifecycle from '../../../../util/lifecycle.js'
-import {TouchGesture} from '../../../../wire/touch-gesture.js'
+import {AndroidDisplayTouch} from './display-input.js'
 import {TouchProtocol} from './protocol.js'
 import groupSyrup from '../group.js'
 import type {GroupPlugin} from '../../../../types/device-plugins.js'
 import StateQueue from '../../../../util/statequeue.js'
 import RiskyStream from '../../../../util/riskystream.js'
 import FailCounter from '../../../../util/failcounter.js'
+import streamutil from '../../../../util/streamutil.js'
 import type {Duplex} from 'stream'
 import adbSyrup from '../../support/adb.js'
 import routerSyrup from '../../support/router.js'
 import minitouchSyrup from '../../resources/minitouch.js'
 import flagsSyrup from '../util/flags.js'
+import displaySyrup, {type AndroidDisplayRegistry} from '../util/display.js'
 
 type Adb = ReturnType<typeof import('../../../../util/adbutil.js').default>
 type Router = ReturnType<typeof import('../../../../wire/router.js').default>
@@ -46,6 +48,7 @@ export default syrup.serial()
   .dependency(minitouchSyrup)
   .dependency(flagsSyrup)
   .dependency(groupSyrup)
+  .dependency(displaySyrup)
   .define(function(
     options: TouchOptions
   , adb: Adb
@@ -53,6 +56,7 @@ export default syrup.serial()
   , minitouch: Minitouch
   , flags: Flags
   , group: GroupPlugin
+  , display: AndroidDisplayRegistry
   ) {
     var log = logger.createLogger('device:plugins:touch')
 
@@ -597,15 +601,25 @@ export default syrup.serial()
       })
     }
 
+    const {width, height} = display.properties
     return startConsumer()
       .then(function(touchConsumer) {
-        const queue = new TouchGesture(() => touchConsumer.touchReset(), {
-          report: error => log.warn(error.message)
-        , onFinish: contacts => touchConsumer.touchFinish(contacts)
-        })
-        queue.setOwner(null)
-        group.on('join', owner => queue.setOwner(owner.reservationId || null))
-        group.on('leave', () => queue.setOwner(null))
+        const input = new AndroidDisplayTouch(touchConsumer, {width, height}, () => display.target,
+          async(args, signal) => {
+            const commandSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)])
+            const stream = await adb.client.getDevice(options.serial)
+              .shell(['input', '-d', '0', ...args], {signal: commandSignal})
+            try {
+              return (await streamutil.readAll(stream)).toString()
+            }
+            finally {
+              stream.destroy()
+            }
+          }, error => log.warn(error.message))
+        input.setOwner(null)
+        group.on('join', owner => input.setOwner(owner.reservationId || null))
+        group.on('leave', () => input.setOwner(null))
+        display.on('change', () => input.displayChanged())
 
         touchConsumer.on('error', function(err) {
           log.fatal('Touch consumer had an error', err.stack)
@@ -613,41 +627,13 @@ export default syrup.serial()
         })
 
         router
-          .on(wire.GestureStartMessage, function(channel, message) {
-            queue.start(message.seq, message.gestureId, message.reservationId)
-          })
-          .on(wire.GestureStopMessage, function(channel, message) {
-            queue.stop(message.seq, message.gestureId, message.reservationId)
-          })
-          .on(wire.TouchDownMessage, function(channel, message) {
-            queue.push(message.seq, function() {
-              touchConsumer.touchDown(message)
-            }, message.gestureId, message.reservationId, {type: 'down', contact: message.contact})
-          })
-          .on(wire.TouchMoveMessage, function(channel, message) {
-            queue.push(message.seq, function() {
-              touchConsumer.touchMove(message)
-            }, message.gestureId, message.reservationId, {type: 'move', contact: message.contact})
-          })
-          .on(wire.TouchUpMessage, function(channel, message) {
-            queue.push(message.seq, function() {
-              touchConsumer.touchUp(message)
-            }, message.gestureId, message.reservationId, {type: 'up', contact: message.contact})
-          })
-          .on(wire.TouchCommitMessage, function(channel, message) {
-            queue.push(message.seq, function() {
-              touchConsumer.touchCommit()
-            }, message.gestureId, message.reservationId, {type: 'commit'})
-          })
-          .on(wire.TouchResetMessage, function(channel, message) {
-            if (message.gestureId && message.cancel !== false) {
-              queue.clear(message.gestureId, message.reservationId, message.cancelThrough === true)
-            }
-            else {
-              queue.push(message.seq, () => touchConsumer.touchReset(),
-                message.gestureId, message.reservationId, {type: 'reset'})
-            }
-          })
+          .on(wire.GestureStartMessage, (_channel, message) => input.start(message))
+          .on(wire.GestureStopMessage, (_channel, message) => input.stop(message))
+          .on(wire.TouchDownMessage, (_channel, message) => input.down(message))
+          .on(wire.TouchMoveMessage, (_channel, message) => input.move(message))
+          .on(wire.TouchUpMessage, (_channel, message) => input.up(message))
+          .on(wire.TouchCommitMessage, (_channel, message) => input.commit(message))
+          .on(wire.TouchResetMessage, (_channel, message) => input.reset(message))
 
         return touchConsumer
       })

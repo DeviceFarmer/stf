@@ -20,11 +20,21 @@ import BroadcastSet from './util/broadcastset.js'
 import StateQueue from '../../../../util/statequeue.js'
 import RiskyStream from '../../../../util/riskystream.js'
 import FailCounter from '../../../../util/failcounter.js'
+import {isFold4PostureMode} from '../../../../util/displayutil.js'
+import wire from '../../../../wire/index.js'
+import wireutil from '../../../../wire/util.js'
 import type {Duplex} from 'stream'
 import type {ScreenGrabber} from '../../../../types/device.js'
+import type {GroupPlugin} from '../../../../types/device-plugins.js'
+import type {AndroidDisplayTarget, Fold4PostureMode} from '../../../../types/android-display.js'
 import adbSyrup from '../../support/adb.js'
+import routerSyrup from '../../support/router.js'
+import pushSyrup from '../../support/push.js'
 import minicapSyrup from '../../resources/minicap.js'
 import displaySyrup from '../util/display.js'
+import groupSyrup from '../group.js'
+import fold4PostureSyrup from '../fold4-posture.js'
+import {requiresDisplayInput} from '../touch/display-geometry.js'
 import optionsSyrup from './options.js'
 
 type SyrupValue<S> = S extends syrup.Syrup<infer T> ? T : never
@@ -44,15 +54,6 @@ interface Minicap {
   run(mode: string, cmd: string): Promise<Duplex>
 }
 
-interface Display {
-  properties: {
-    width: number
-    height: number
-    rotation: number
-  }
-  on(event: 'rotationChange', listener: (rotation: number) => void): unknown
-}
-
 interface FrameProducerEvents {
   start: () => void
   stop: () => void
@@ -66,11 +67,17 @@ var log = logger.createLogger('device:plugins:screen:stream')
 export interface ScreenClient {
   onStart: (producer?: any) => Promise<unknown>
   onFrame: (frame: Buffer) => Promise<unknown>
+  onDisplays?: () => Promise<unknown>
 }
 
 export interface ScreenFrameProducer {
   banner: unknown
   updateProjection: (width: number, height: number) => void
+  displayState?: () => {
+    selected: AndroidDisplayTarget
+    singleTouch: boolean
+    posture?: Fold4PostureMode
+  } | null
 }
 
 export function handleScreenConnection(
@@ -142,6 +149,14 @@ export function handleScreenConnection(
     })
   }
 
+  function wsDisplaysNotifier() {
+    const state = frameProducer.displayState?.()
+    return state ?
+      send('displays ' + JSON.stringify(state)).catch(function(err) {
+        log.warn('Failed to notify displays to client "%s": %s', id, err.message)
+      }) : Promise.resolve()
+  }
+
   // Sending a ping message every now and then makes sure that
   // reverse proxies like nginx don't time out the connection [1].
   //
@@ -156,6 +171,7 @@ export function handleScreenConnection(
         broadcastSet.insert(id, {
           onStart: wsStartNotifier
         , onFrame: wsFrameNotifier
+        , onDisplays: wsDisplaysNotifier
         })
         break
       case 'off':
@@ -185,15 +201,25 @@ export default syrup.serial()
   .dependency(minicapSyrup)
   .dependency(displaySyrup)
   .dependency(optionsSyrup)
+  .dependency(groupSyrup)
+  .dependency(routerSyrup)
+  .dependency(pushSyrup)
+  .dependency(fold4PostureSyrup)
   .define(function(
     options: ScreenStreamOptions
   , adb: Adb
   , minicap: Minicap
-  , display: Display
+  , display: SyrupValue<typeof displaySyrup>
   , screenOptions: ScreenOptions
+  , group: GroupPlugin
+  , router: SyrupValue<typeof routerSyrup>
+  , push: SyrupValue<typeof pushSyrup>
+  , fold4Posture: SyrupValue<typeof fold4PostureSyrup>
   ) {
     log.info('ScreenGrabber set to %s', minicap.grabber)
     log.info('ScreenFrameRate option set to %d', options.screenFrameRate)
+    const trackPosture = fold4Posture.mode !== null
+    const initialPrimary = {width: display.properties.width, height: display.properties.height}
 
     class FrameProducer extends EventEmitter.EventEmitter<FrameProducerEvents> {
       static STATE_STOPPED = 1
@@ -207,10 +233,13 @@ export default syrup.serial()
       declare output: RiskyStream | null
       declare socket: RiskyStream | null
       declare pid: number
-      declare banner: Awaited<ReturnType<FrameProducer['_readBanner']>> | null
+      declare banner: (Awaited<ReturnType<FrameProducer['_readBanner']>> & {
+        display?: AndroidDisplayTarget
+      }) | null
       declare parser: FrameParser | null
       declare frameConfig: FrameConfig
       declare grabber: ScreenGrabber
+      declare runningDisplay: AndroidDisplayTarget
       declare readable: boolean
       declare needsReadable: boolean
       declare failCounter: FailCounter
@@ -230,6 +259,7 @@ export default syrup.serial()
         this.parser = null
         this.frameConfig = config
         this.grabber = minicap.grabber
+        this.runningDisplay = display.target
         this.readable = false
         this.needsReadable = false
         this.failCounter = new FailCounter(3, 10000)
@@ -275,12 +305,10 @@ export default syrup.serial()
                 return this._readBanner(this.socket.stream)
               })
               .then(function(this: FrameProducer, banner) {
-                this.banner = banner
-                return this._readFrames(this.socket!.stream)
-              })
-              .then(function(this: FrameProducer) {
+                this.banner = trackPosture ? {...banner, display: this.runningDisplay} : banner
                 this.runningState = FrameProducer.STATE_STARTED
                 this.emit('start')
+                this._readFrames(this.socket!.stream)
               })
               .catch(function(this: FrameProducer) {
                 return this._stop().finally(function(this: FrameProducer) {
@@ -338,15 +366,27 @@ export default syrup.serial()
         }
       }
 
-      updateRotation(rotation: number) {
-        if (this.frameConfig.rotation === rotation) {
-          log.info('Keeping %d as current frame producer rotation', rotation)
-          return
-        }
-
-        log.info('Setting frame producer rotation to %d', rotation)
-        this.frameConfig.rotation = rotation
+      updateDisplay(target: AndroidDisplayTarget) {
+        this.frameConfig.realWidth = target.width
+        this.frameConfig.realHeight = target.height
+        this.frameConfig.rotation = target.rotation
         this._configChanged()
+      }
+
+      displayState() {
+        if (!trackPosture) {
+          return null
+        }
+        const posture = fold4Posture.mode
+        return {
+          selected: display.target
+        , singleTouch: requiresDisplayInput(display.target, initialPrimary)
+        , ...(posture ? {posture} : {})
+        }
+      }
+
+      displaysCurrentFrame() {
+        return !trackPosture || this.banner?.display?.revision === display.target.revision
       }
 
       updateProjection(width: number, height: number) {
@@ -415,24 +455,12 @@ export default syrup.serial()
       }
 
       _startService() {
+        this.runningDisplay = display.target
+        const frameRate = options.screenFrameRate > 0 ? ` -r ${options.screenFrameRate}` : ''
         log.info('Launching screen service %s', this.grabber)
-        if (options.screenFrameRate <= 0.0) {
-          return minicap.run(this.grabber, util.format(
-            '-S -Q %d -P %s'
-          , options.screenJpegQuality
-          , this.frameConfig.toString()
-          ))
+        return minicap.run(this.grabber,
+          `-S${frameRate} -Q ${options.screenJpegQuality} -P ${this.frameConfig}`)
           .timeout(10000)
-        }
-        else {
-          return minicap.run(this.grabber, util.format(
-            '-S -r %d -Q %d -P %s'
-          , options.screenFrameRate
-          , options.screenJpegQuality
-          , this.frameConfig.toString()
-          ))
-          .timeout(10000)
-        }
       }
 
       _readOutput(out: Duplex) {
@@ -651,18 +679,26 @@ export default syrup.serial()
       .then(function(wss) {
         log.info('creating FrameProducer: %s', minicap.grabber)
         var frameProducer = new FrameProducer(
-          new FrameConfig(display.properties, display.properties))
+          new FrameConfig(display.target, display.target))
         var broadcastSet = frameProducer.broadcastSet = new BroadcastSet()
+        let displayPoll: ReturnType<typeof setInterval> | undefined
 
         broadcastSet.on('nonempty', function() {
+          if (trackPosture) {
+            display.refresh()
+            displayPoll = setInterval(() => display.refresh(), 2000)
+          }
           frameProducer.start()
         })
 
         broadcastSet.on('empty', function() {
+          clearInterval(displayPoll)
           frameProducer.stop()
         })
 
         broadcastSet.on('insert', function(id) {
+          const client = broadcastSet.get(id)!
+          client.onDisplays?.()
           // If two clients join a session in the middle, one of them
           // may not release the initial size because the projection
           // doesn't necessarily change, and the producer doesn't Getting
@@ -670,25 +706,33 @@ export default syrup.serial()
           // if the producer is already up and running.
           switch (frameProducer.runningState) {
           case FrameProducer.STATE_STARTED:
-            broadcastSet.get(id)!.onStart(frameProducer)
+            if (frameProducer.displaysCurrentFrame()) {
+              client.onStart(frameProducer)
+            }
             break
           }
         })
 
-        display.on('rotationChange', function(newRotation) {
-          frameProducer.updateRotation(newRotation)
+        function notifyDisplays() {
+          broadcastSet.values().forEach(client => client?.onDisplays?.())
+        }
+        display.on('change', target => {
+          frameProducer.updateDisplay(target)
+          notifyDisplays()
         })
+        fold4Posture.on('change', notifyDisplays)
 
         frameProducer.on('start', function() {
-          broadcastSet.keys().map(function(id) {
-            return broadcastSet.get(id)!.onStart(frameProducer)
-          })
+          if (frameProducer.displaysCurrentFrame()) {
+            broadcastSet.values().forEach(client => client?.onStart(frameProducer))
+          }
         })
 
         frameProducer.on('readable', function next() {
           var frame = frameProducer.nextFrame()
           if (frame) {
-            Promise.all(broadcastSet.keys().map(function(id) {
+            const clients = frameProducer.displaysCurrentFrame() ? broadcastSet.keys() : []
+            Promise.all(clients.map(function(id) {
               return broadcastSet.get(id)!.onFrame(frame!).reflect()
             })).then(next)
           }
@@ -710,7 +754,33 @@ export default syrup.serial()
           log.error('Screen WebSocket server error: %s', err.message)
         })
 
+        const invalidatePostureRevision = () => {
+          if (trackPosture) {
+            display.invalidate()
+          }
+        }
+        group.on('join', invalidatePostureRevision)
+        group.on('leave', invalidatePostureRevision)
+        router.on(wire.Fold4PostureMessage, (channel, message) => {
+          const reply = wireutil.reply(options.serial)
+          group.get().then(async owner => {
+            if (!owner.reservationId || owner.email !== message.requester ||
+              message.revision !== display.target.revision || !isFold4PostureMode(message.mode)) {
+              throw new Error('Fold4 posture request no longer belongs to this session')
+            }
+            await fold4Posture.set(message.mode, message.requester, owner.reservationId)
+            await display.refreshAfterTransition()
+            if (!group.isManualOwner(message.requester, owner.reservationId)) {
+              throw new Error('Fold4 posture request no longer belongs to this session')
+            }
+            push.send([channel, reply.okay('success')])
+          }).catch(err => {
+            push.send([channel, reply.fail(err.message)])
+          })
+        })
+
         lifecycle.observe(function() {
+          clearInterval(displayPoll)
           for (var client of wss.clients) {
             client.terminate()
           }

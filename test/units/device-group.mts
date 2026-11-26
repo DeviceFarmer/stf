@@ -161,6 +161,87 @@ describe('Device group plugin', function() {
     expect(second.reservationId).to.not.equal(first.reservationId)
   })
 
+  it('fences manual commands and competing reservations until awaited cleanup completes',
+    async function() {
+      const {plugin, push} = setup()
+      const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+      const {reservationId} = await plugin.join(owner)
+      expect(plugin.isManualOwner(owner.email, reservationId!)).to.equal(true)
+      let beginCleanup!: () => void
+        , finishCleanup!: () => void
+      const entered = new Promise<void>(resolve => {
+        beginCleanup = resolve
+      })
+      plugin.beforeLeave(() => new Promise<void>(resolve => {
+        finishCleanup = resolve
+        beginCleanup()
+      }))
+      const leaving = plugin.leave('ungroup_request', reservationId)
+      expect(plugin.isManualOwner(owner.email, reservationId!)).to.equal(false)
+      const accepted = await plugin.join(owner).then(() => true, () => false)
+      expect(accepted).to.equal(false)
+      expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+      await entered
+      finishCleanup()
+      await leaving
+      expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(1)
+    })
+
+  it('holds ownership on cleanup failure and permits a matched release retry', async function() {
+    const {plugin, push} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    const group = await plugin.join(owner)
+    let clean = false
+    plugin.beforeLeave(async() => {
+      if (!clean) {
+        throw new Error('Sensor mode could not be restored')
+      }
+    })
+    const failed = await plugin.leave('automatic_timeout').then(() => false, () => true)
+    expect(failed).to.equal(true)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+    expect(await plugin.get()).to.equal(group)
+
+    clean = true
+    await plugin.leave('ungroup_request', group.reservationId)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(1)
+  })
+
+  it('retries an expired reservation if its cleanup failed', async function() {
+    const {plugin, push, channels} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    await plugin.join(owner)
+    let attempts = 0
+    plugin.beforeLeave(async() => {
+      if (++attempts === 1) {
+        throw new Error('Sensor mode could not be restored')
+      }
+    })
+
+    channels.emit('timeout', owner.group)
+    for (let attempt = 0; attempt < 100 && channels.register.callCount === 1; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1))
+    }
+    expect(channels.register.callCount).to.equal(2)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+
+    const released = new Promise(resolve => plugin.once('leave', resolve))
+    channels.emit('timeout', owner.group)
+    await released
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(1)
+  })
+
+  it('fences the correct owner of a managed or replayed automation reservation', async function() {
+    const {plugin} = setup()
+    const owner = new wire.OwnerMessage('ci@example.test', 'CI', 'ci-channel')
+    const replay = await plugin.join(owner, 10000, 'automation')
+    expect(plugin.isManualOwner(owner.email, replay.reservationId!)).to.equal(false)
+    await plugin.leave('test')
+    const managed = await plugin.join(owner, 10000, 'automation', 'job', 'lease')
+    expect(plugin.isManualOwner(owner.email, managed.reservationId!)).to.equal(false)
+    await plugin.leave('test')
+  })
+
   it('refuses a delayed release after the same user acquired a new reservation', async function() {
     const context = setup()
     const owner = new wire.OwnerMessage('a@example.com', 'a', 'group-channel')

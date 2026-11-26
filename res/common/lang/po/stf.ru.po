@@ -772,6 +772,19 @@ msgstr "Обнаружить устройство"
 msgid "Fingerprint"
 msgstr "Отпечаток пальца"
 
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:92
+msgid "Fold"
+msgstr "Сложить"
+
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:80
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:97
+msgid "Foldable posture"
+msgstr "Режим складывания"
+
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:94
+msgid "Follow hinge"
+msgstr "По датчику"
+
 #: res/app/src/features/control/panes/info/InfoPane.tsx:218
 msgid "FPS"
 msgstr "FPS"
@@ -2454,6 +2467,10 @@ msgstr "Неавторизован"
 #: res/app/src/features/settings/groups/rules.ts:105
 msgid "Unauthorized class while device list is not empty"
 msgstr "Недопустимый класс, пока список устройств не пуст"
+
+#: res/app/src/features/control/device-control/DeviceControlPanel.tsx:93
+msgid "Unfold"
+msgstr "Разложить"
 
 #: res/app/src/features/control/panes/dashboard/install/InstallCard.tsx:73
 msgid "Uninstall"

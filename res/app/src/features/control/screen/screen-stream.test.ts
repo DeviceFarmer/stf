@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest'
 import type {Device} from '@/core/devices/types'
-import {startScreenStream} from './screen-stream'
+import {startScreenStream, type ScreenGeometry} from './screen-stream'
 
 class Socket {
   static OPEN = 1
@@ -108,15 +108,19 @@ function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Devi
   const onFirstFrame = vi.fn()
   const onInputReady = vi.fn()
   const onWdaInputReady = vi.fn()
+  const onAndroidDisplay = vi.fn()
+  const onAndroidInputReady = vi.fn()
+  const screen: ScreenGeometry = {rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}}
   const stream = startScreenStream({url: 'wss://stf.test/screen', root
     , positioner: document.createElement('div'), canvas
-    , screen: {rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}}
+    , screen
     , wdaScreen
     , getDevice: () => device, isShown: shown, canControl, onDisplayError, onFirstFrame
-    , onInputReady, onWdaInputReady, onStatusChange})
+    , onInputReady, onWdaInputReady, onStatusChange, onAndroidDisplay, onAndroidInputReady})
   return {
     device, stream, root, context, getOtherCanvasContext, decode, bitmap, hidden, shown, onStatusChange
-  , canControl, onDisplayError, onFirstFrame, onInputReady, onWdaInputReady
+  , canControl, onDisplayError, onFirstFrame, onInputReady, onWdaInputReady, onAndroidDisplay
+  , onAndroidInputReady, screen
   }
 }
 
@@ -132,6 +136,105 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+describe('Android display stream', () => {
+  it('publishes only valid Fold4 posture metadata and clears it on disconnect', () => {
+    const {stream, onAndroidDisplay} = fixture('Android')
+    const socket = Socket.instances[0]!
+    socket.open()
+    const main = {id: 0, width: 1080, height: 2400, rotation: 0, revision: 'main-display'}
+    const metadata = {selected: main, singleTouch: false}
+    const announce = (state: unknown) => socket.message('displays ' + JSON.stringify(state))
+
+    announce({...metadata, ids: [0, 2]})
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(metadata)
+    announce({...metadata, posture: 'unfolded'})
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith({...metadata, posture: 'unfolded'})
+    announce({...metadata, posture: 'unsupported'})
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(metadata)
+    socket.close()
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(null)
+    stream.stop()
+  })
+
+  it('drops pending JPEGs when the primary display changes geometry', async() => {
+    const {stream, context, decode, bitmap, screen, onAndroidInputReady} = fixture('Android')
+    const socket = Socket.instances[0]!
+    socket.open()
+    const main = {id: 0, width: 1812, height: 2176, rotation: 0, revision: 'unfolded-frame'}
+    const folded = {id: 0, width: 904, height: 2316, rotation: 90, revision: 'folded-frame'}
+    const announce = (selected: typeof main) => socket.message('displays ' +
+      JSON.stringify({selected, singleTouch: selected === folded}))
+    const start = (display: typeof main) => socket.message('start ' +
+      JSON.stringify({display, quirks: {alwaysUpright: false}}))
+    const jpeg = new Blob([jpegFrame()], {type: 'image/jpeg'})
+
+    announce(main)
+    start(main)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(main.revision)
+    const mainScaler = screen.inputScaler
+
+    let finishDecode!: (image: typeof bitmap) => void
+    decode.mockReturnValueOnce(new Promise(resolve => {
+      finishDecode = resolve
+    }))
+    socket.message(jpeg)
+
+    announce(folded)
+    start(main)
+    socket.message(jpeg)
+    finishDecode(bitmap)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(context.drawImage).toHaveBeenCalledOnce()
+    expect(decode).toHaveBeenCalledTimes(2)
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    expect(screen.rotation).toBe(folded.rotation)
+    expect(screen.inputScaler).not.toBe(mainScaler)
+
+    start(folded)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(context.drawImage).toHaveBeenCalledTimes(2)
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(folded.revision)
+    stream.stop()
+  })
+
+  it('does not show or enable touch on frames from a secondary display', async() => {
+    const {stream, decode, onAndroidDisplay, onAndroidInputReady} = fixture('Android')
+    const socket = Socket.instances[0]!
+    socket.open()
+    const selected = {id: 2, width: 800, height: 600, rotation: 0, revision: 'secondary'}
+    const primary = {...selected, id: 0, revision: 'primary'}
+    const jpeg = new Blob([jpegFrame()], {type: 'image/jpeg'})
+    const announce = (display: typeof selected) => socket.message('displays ' +
+      JSON.stringify({selected: display, singleTouch: false}))
+    const start = (display: typeof selected) => socket.message('start ' +
+      JSON.stringify({display, quirks: {alwaysUpright: false}}))
+
+    announce(selected)
+    start(selected)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(null)
+    expect(decode).not.toHaveBeenCalled()
+    expect(onAndroidInputReady).not.toHaveBeenCalled()
+
+    announce(primary)
+    start({...selected, revision: primary.revision})
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(decode).not.toHaveBeenCalled()
+
+    start(primary)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(decode).toHaveBeenCalledOnce()
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(primary.revision)
+    stream.stop()
+  })
 })
 
 describe('iPhone WDA video', () => {

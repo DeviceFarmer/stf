@@ -66,6 +66,10 @@
   flex: 0 0 auto;
 }
 
+.rightButtonsWithPosture {
+  flex: 0 1 auto;
+}
+
 .contextArea {
   flex: 1 1 auto;
   display: flex;

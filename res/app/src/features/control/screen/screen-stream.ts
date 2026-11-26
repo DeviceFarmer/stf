@@ -3,6 +3,8 @@ import {canViewDevice, isAutomated} from '@/core/devices/enhance'
 import {scalingCoordinator, type ScalingCoordinator} from '@/core/scaling'
 import {rotator} from './rotator'
 import {startHevcScreen, supportsHevcScreen} from './screen-hevc'
+import type {AndroidDisplayTarget, Fold4PostureMode} from '../../../../../../lib/types/android-display'
+import {isFold4PostureMode} from '../../../../../../lib/util/displayutil'
 
 export interface ScreenBounds {
   x: number
@@ -21,6 +23,12 @@ export type DisplayError = false | 'secure' | 'hevc-unsupported' | 'coredevice-u
   'hevc-unavailable' | 'hevc-locked' | 'hevc-insecure' | 'hevc-automation'
 export type ScreenStreamStatus = 'reconnecting' | 'disconnected' | 'offline' | null
 
+export interface AndroidDisplayState {
+  selected: AndroidDisplayTarget
+  singleTouch: boolean
+  posture?: Fold4PostureMode
+}
+
 export interface ScreenStreamOptions {
   url: string
   root: HTMLElement
@@ -36,6 +44,8 @@ export interface ScreenStreamOptions {
   onInputReady: (sessionId: string | null) => void
   onWdaInputReady: (ready: boolean) => void
   onStatusChange: (status: ScreenStreamStatus) => void
+  onAndroidDisplay?: (state: AndroidDisplayState | null) => void
+  onAndroidInputReady?: (revision: string | null) => void
 }
 
 export interface ScreenStream {
@@ -71,6 +81,14 @@ function isSideways(rotation: number): boolean {
   return rotation === 90 || rotation === 270
 }
 
+function isDisplayTarget(target: AndroidDisplayTarget | null | undefined): target is AndroidDisplayTarget {
+  return !!target && target.id === 0 &&
+    Number.isSafeInteger(target.width) && target.width > 0 &&
+    Number.isSafeInteger(target.height) && target.height > 0 &&
+    [0, 90, 180, 270].includes(target.rotation) &&
+    typeof target.revision === 'string' && /^[a-z0-9-]{1,64}$/i.test(target.revision)
+}
+
 export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   const {root, positioner, canvas, screen, wdaScreen, getDevice} = options
   const g = canvas.getContext('2d') as CanvasRenderingContext2D
@@ -88,6 +106,10 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
   let hevcInput: 'waiting' | 'available' | 'requested' | 'ready' = 'waiting'
   let hevc: ReturnType<typeof startHevcScreen> | null = null
   let wdaInputReady = false
+  let androidDisplay: AndroidDisplayTarget | null = null
+  // Legacy Android providers send frames without a display revision.
+  let appliedDisplay: string | null | undefined
+  let androidInputReady: string | null = null
 
   let adjustedBoundSize: BoundSize | null = null
   let cachedEnabled = false
@@ -144,13 +166,17 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       wdaInputReady = false
       options.onWdaInputReady(false)
     }
+    if (androidInputReady !== null) {
+      androidInputReady = null
+      options.onAndroidInputReady?.(null)
+    }
     frameGeneration += 1
     g.clearRect(0, 0, canvas.width, canvas.height)
     root.classList.remove('has-frame')
   }
 
   function adjustBoundedSize(w: number, h: number): BoundSize {
-    const display = getDevice().display
+    const display = androidDisplay ?? getDevice().display
     const displayWidth = display ? display.width : 0
     const displayHeight = display ? display.height : 0
     let sw = w * streamOptions.density
@@ -378,6 +404,37 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
     root.classList.toggle('quirk-always-upright', alwaysUpright)
   }
 
+  function updateAndroidDisplay(state: AndroidDisplayState) {
+    const target = state?.selected
+    if (typeof target?.id === 'number' && target.id !== 0) {
+      // An earlier preview may still stream a secondary display. Never mark its frames
+      // ready for input on the primary display.
+      androidDisplay = null
+      appliedDisplay = null
+      transportLost = true
+      clearFrame()
+      options.onAndroidDisplay?.(null)
+      updateStatus()
+      return
+    }
+    if (!isDisplayTarget(target) || typeof state.singleTouch !== 'boolean') {
+      return
+    }
+    if (androidDisplay?.revision !== target.revision) {
+      appliedDisplay = null
+      clearFrame()
+      androidDisplay = target
+      screen.rotation = target.rotation
+      screen.inputScaler = scalingCoordinator(target.width, target.height)
+      updateBounds()
+    }
+    options.onAndroidDisplay?.({
+      selected: target
+    , singleTouch: state.singleTouch
+    , ...(isFold4PostureMode(state.posture) ? {posture: state.posture} : {})
+    })
+  }
+
   function hasImageAreaChanged(width: number, height: number, scale: number): boolean {
     return cachedScreen.bounds.w !== screen.bounds.w ||
       cachedScreen.bounds.h !== screen.bounds.h ||
@@ -458,6 +515,10 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         newestDrawnFrame = frame
         try {
           drawImage(bitmap, bitmap.width, bitmap.height)
+          if (androidDisplay && androidInputReady !== androidDisplay.revision) {
+            androidInputReady = androidDisplay.revision
+            options.onAndroidInputReady?.(androidInputReady)
+          }
           if (wdaScreen && !wdaInputReady) {
             retryAttempt = 0
             wdaInputReady = true
@@ -536,7 +597,7 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         return
       }
       const display = getDevice().display
-      screen.rotation = native ? 0 : (display?.rotation ?? 0)
+      screen.rotation = native ? 0 : (androidDisplay?.rotation ?? display?.rotation ?? 0)
 
       if (message.data instanceof ArrayBuffer) {
         if (hevc && shouldUpdateScreen()) {
@@ -544,7 +605,8 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
         }
       }
       else if (message.data instanceof Blob) {
-        if (!native && shouldUpdateScreen()) {
+        if (!native && shouldUpdateScreen() &&
+          (typeof appliedDisplay === 'undefined' || appliedDisplay === androidDisplay?.revision)) {
           drawFrame(message.data, socket)
         }
       }
@@ -571,8 +633,33 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       else if (typeof message.data === 'string' && message.data.startsWith('hevc ')) {
         openHevc(message.data.slice('hevc '.length), socket)
       }
-      else if (/^start /.test(message.data)) {
-        applyQuirks(JSON.parse(message.data.slice('start '.length)))
+      else if (typeof message.data === 'string' && message.data.startsWith('displays ') && !iphone) {
+        try {
+          updateAndroidDisplay(JSON.parse(message.data.slice('displays '.length)))
+        }
+        catch {
+          // Ignore malformed stream metadata.
+        }
+      }
+      else if (typeof message.data === 'string' && message.data.startsWith('start ')) {
+        try {
+          const banner = JSON.parse(message.data.slice('start '.length))
+          if (typeof banner?.quirks?.alwaysUpright !== 'boolean') {
+            return
+          }
+          if (androidDisplay) {
+            if (!isDisplayTarget(banner.display) || banner.display.revision !== androidDisplay.revision) {
+              appliedDisplay = null
+              clearFrame()
+              return
+            }
+            appliedDisplay = androidDisplay.revision
+          }
+          applyQuirks(banner)
+        }
+        catch {
+          // Ignore malformed stream metadata.
+        }
       }
       else if (!isIPhone() && message.data === 'secure_on') {
         clearFrame()
@@ -609,6 +696,11 @@ export function startScreenStream(options: ScreenStreamOptions): ScreenStream {
       cachedEnabled = false
       transportLost = true
       clearFrame()
+      if (androidDisplay) {
+        androidDisplay = null
+        appliedDisplay = null
+        options.onAndroidDisplay?.(null)
+      }
       updateStatus()
       if (iphone) {
         scheduleRetry()

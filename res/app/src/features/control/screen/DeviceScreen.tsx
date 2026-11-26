@@ -10,7 +10,7 @@ import {scalingCoordinator} from '@/core/scaling'
 import {NothingToShow} from '@/ui/NothingToShow'
 import {iosUsesWdaScreen} from '../../../../../../lib/util/ios-device-status'
 import {bindScreenKeyboard} from './screen-keyboard'
-import {startScreenStream, type DisplayError, type ScreenGeometry, type ScreenStream,
+import {startScreenStream, type AndroidDisplayState, type DisplayError, type ScreenGeometry, type ScreenStream,
   type ScreenStreamStatus} from './screen-stream'
 import {bindScreenTouch} from './screen-touch'
 import {useGuestOrientation} from './use-guest-orientation'
@@ -24,9 +24,14 @@ export interface DeviceScreenProps {
   device: Device
   control: Control
   showScreen: boolean
+  androidDisplay?: AndroidDisplayState | null
+  posturePending?: boolean
+  onAndroidDisplayChange?: (state: AndroidDisplayState | null) => void
 }
 
-export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
+export function DeviceScreen({
+  device, control, showScreen, androidDisplay = null, posturePending = false, onAndroidDisplayChange
+}: DeviceScreenProps) {
   const {t} = useTranslation()
   const streamStatusMessages = {
     reconnecting: t('Reconnecting…')
@@ -57,13 +62,18 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
   const [iosScreenSessionId, setIosScreenSessionId] = useState<string | null>(null)
   const [wdaInputReady, setWdaInputReady] = useState(false)
   const [streamStatus, setStreamStatus] = useState<ScreenStreamStatus>(null)
+  const [androidInputRevision, setAndroidInputRevision] = useState<string | null>(null)
 
   const readOnly = control.readOnly
-  const singleTouch = device.platform === 'iOS'
-  const wdaScreen = singleTouch && iosUsesWdaScreen(device.version)
+  const iphone = device.platform === 'iOS'
+  const wdaScreen = iphone && iosUsesWdaScreen(device.version)
+  const singleTouch = iphone || androidDisplay?.singleTouch === true
+  const androidReady = streamStatus === null &&
+    (!androidDisplay || androidInputRevision === androidDisplay.selected.revision)
   const iosInputReady = wdaScreen ? wdaInputReady : iosScreenSessionId !== null && device.ios?.locked !== true
-  const touchEnabled = !readOnly && (!singleTouch ||
-    (showScreen && iosInputReady && device.using && canViewDevice(device) && !isAutomated(device)))
+  const touchEnabled = !readOnly && (iphone ?
+    showScreen && iosInputReady && device.using && canViewDevice(device) && !isAutomated(device) :
+    androidReady && !posturePending)
   const url = device.display?.url
   const displayWidth = device.display?.width || 0
   const displayHeight = device.display?.height || 0
@@ -82,6 +92,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
     const root = rootRef.current
     const positioner = positionerRef.current
     const canvas = canvasRef.current
+    const screen = screenRef.current
     if (!url || !root || !positioner || !canvas) {
       return undefined
     }
@@ -91,7 +102,7 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , root
       , positioner
       , canvas
-      , screen: screenRef.current
+      , screen
       , wdaScreen
       , getDevice: () => deviceRef.current
       , isShown: () => showScreenRef.current
@@ -101,6 +112,11 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , onInputReady: setIosScreenSessionId
       , onWdaInputReady: setWdaInputReady
       , onStatusChange: setStreamStatus
+      , ...(onAndroidDisplayChange ? {onAndroidDisplay: onAndroidDisplayChange} : {})
+      , onAndroidInputReady: revision => {
+        setAndroidInputRevision(revision)
+        setHasFrame(revision !== null)
+      }
     })
     streamRef.current = stream
 
@@ -126,8 +142,11 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       setHasFrame(false)
       setStreamStatus(null)
       setDisplayError(false)
+      onAndroidDisplayChange?.(null)
+      setAndroidInputRevision(null)
+      delete screen.inputScaler
     }
-  }, [url, wdaScreen])
+  }, [url, wdaScreen, onAndroidDisplayChange])
 
   useEffect(() => {
     streamRef.current?.checkEnabled()
@@ -149,8 +168,10 @@ export function DeviceScreen({device, control, showScreen}: DeviceScreenProps) {
       , control
       , singleTouch
       , screenSessionId: wdaScreen ? null : iosScreenSessionId
+      , ...(androidInputRevision ? {displayRevision: androidInputRevision} : {})
     })
-  }, [control, touchEnabled, scaler, singleTouch, iosScreenSessionId, wdaScreen])
+  }, [control, touchEnabled, scaler, singleTouch, iosScreenSessionId, wdaScreen
+    , androidInputRevision])
 
   useEffect(() => {
     const input = inputRef.current
