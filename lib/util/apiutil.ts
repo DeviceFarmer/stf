@@ -250,6 +250,9 @@ apiutil.computeStats = function(
 , ...lock: LockHolder[]
 ) {
   if (!stats.replaced) {
+    if (res.destroyed) {
+      return false
+    }
     if (stats.skipped) {
       return apiutil.respond(res, 404, `Not Found (${objectName})`)
     }

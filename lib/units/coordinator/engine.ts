@@ -2,7 +2,8 @@ import {createHash, randomUUID} from 'node:crypto'
 import {setTimeout as wait} from 'node:timers/promises'
 import {getSystemErrorMap} from 'node:util'
 import logger from '../../util/logger.js'
-import {BackendError} from './backend.js'
+import {BackendError, IosScreenWakeError} from './backend.js'
+import {iosScreenWakeFailed} from '../../util/automation-lease.js'
 import {CoordinatorError, endpoint} from './config.js'
 import {validMaintenanceId, validMaintenanceSerial} from './maintenance.js'
 import {wdaProfileCovers} from './wda-profile.js'
@@ -638,7 +639,9 @@ export class Coordinator {
       (!input.serial || input.serial === device.serial) &&
       (!input.model || input.model === device.model) &&
       (!input.provider || input.provider === device.provider) &&
-      !this.state.leases.some(lease => this.held(lease) && lease.device.serial === device.serial)
+      !this.state.leases.some(lease => lease.device.serial === device.serial &&
+        (this.held(lease) || (lease.requestId === request.id && lease.state === 'released' &&
+          lease.error === iosScreenWakeFailed)))
   }
 
   private connection(device: FarmDevice, grid: GridStatus): Record<string, unknown> | null {
@@ -840,7 +843,8 @@ export class Coordinator {
 
   private async allocate(lease: Lease, request: AllocationRequest) {
     try {
-      await this.backend.capture(lease.device.serial, lease.id, this.stfTimeoutMs)
+      await this.backend.capture(lease.device.serial, lease.id, this.stfTimeoutMs,
+        lease.device.platform)
       const continuing = await this.exclusive(async() => {
         lease.captureConfirmed = true
         delete lease.captureUncertain
@@ -884,8 +888,19 @@ export class Coordinator {
             [403, 409].includes(error.status)) {
           lease.state = 'released'
           delete lease.captureUncertain
+          const wakeRefused = error instanceof IosScreenWakeError
+          if (wakeRefused) {
+            // Remember the rejected device for this request, including across restarts.
+            lease.error = iosScreenWakeFailed
+          }
           if (request.state === 'queued') {
-            delete request.leaseId
+            if (wakeRefused && request.input.serial) {
+              request.state = 'failed'
+              request.error = iosScreenWakeFailed
+            }
+            else {
+              delete request.leaseId
+            }
           }
         }
         else {

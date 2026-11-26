@@ -42,6 +42,12 @@ describe('iPhone health', () => {
     expect(html).toContain('rebuild the runner')
   })
 
+  it('shows the automatic screen lock warning on an available phone', () => {
+    const html = render({...device, ios: {...device.ios!, reason: 'screen_lock_failed'}})
+    expect(html).toContain('Automatic screen lock failed after three attempts.')
+    expect(html).not.toContain('Preparing the iPhone')
+  })
+
   it('distinguishes ambiguous profiles and missing device data', () => {
     expect(render({...device, ios: {...device.ios!, battery: null, storage: null
       , wda: {...device.ios!.wda, profile: 'ambiguous'}}})).toContain('earliest expiry')

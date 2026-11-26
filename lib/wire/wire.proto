@@ -489,6 +489,7 @@ message GroupMessage {
   optional string usage = 4;
   optional string leaseId = 5;
   reserved 6;
+  optional bool screenLifecycle = 7;
 }
 
 message AutomationLeaseMessage {

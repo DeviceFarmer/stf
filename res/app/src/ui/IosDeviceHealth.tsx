@@ -22,6 +22,7 @@ const reasons: Record<string, string> = {
   , wda_unavailable: gettext('WebDriverAgent is restarting. Check device unlock and developer trust.')
   , recovering: gettext('Preparing the iPhone...')
   , provider_unavailable: gettext('The iPhone provider is unavailable.')
+  , screen_lock_failed: gettext('Automatic screen lock failed after three attempts.')
   , ready: gettext('Ready')
 }
 

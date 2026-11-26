@@ -79,6 +79,7 @@ export type AddUserDeviceBody = {
   serial: string
   timeout?: number
   leaseId?: string
+  screenLifecycle?: boolean
 }
 
 export type AutomationLeaseBody = {

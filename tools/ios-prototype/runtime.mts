@@ -514,8 +514,9 @@ export class IosRuntime {
         }
       }
       else {
+        // A 0.5-second hold can invoke Siri on iOS 27. See appium/appium-ios#91.
         await wda.call('POST', '/wda/performIoHidEvent', {
-          page: 12, usage: 48, duration: 0.5
+          page: 12, usage: 48, duration: 0.2
         }, active)
       }
       const deadline = Date.now() + 5000

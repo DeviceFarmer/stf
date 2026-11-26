@@ -150,7 +150,7 @@ export interface FarmBackend {
   identity(): Promise<{email: string}>
   devices(): Promise<FarmDevice[]>
   grid(options?: {allowBusy?: boolean}): Promise<GridStatus>
-  capture(serial: string, leaseId: string, timeout: number): Promise<void>
+  capture(serial: string, leaseId: string, timeout: number, platform: Platform): Promise<void>
   renew(serial: string, leaseId: string, timeout: number): Promise<void>
   release(serial: string, leaseId: string): Promise<void>
   webdriver(method: string, path: string, body?: unknown): Promise<UpstreamResponse>

@@ -1414,6 +1414,17 @@ paths:
           description: Add User Device Status
           schema:
             $ref: "#/definitions/AddUserDeviceResponse"
+        "409":
+          description: A released lease ID or a confirmed iPhone screen unlock refusal
+          schema:
+            allOf:
+              - $ref: "#/definitions/UnexpectedErrorResponse"
+              - type: object
+                properties:
+                  code:
+                    description: Present when the provider refuses a capture before acquiring the device
+                    type: string
+                    enum: [ios_screen_wake_failed]
         default:
           description: >
             Unexpected Error:
@@ -3136,6 +3147,9 @@ definitions:
         description: Optional coordinator lease ID. Requires a configured service account. Renew and release require this exact ID.
         type: string
         pattern: '^[A-Za-z0-9_-]{1,128}$'
+      screenLifecycle:
+        description: Enable reservation-based screen management for this iOS lease when configured on the provider. Requires a managed lease ID.
+        type: boolean
       timeout:
         description: Device timeout in ms. If device is kept idle for this period, it will be automatically disconnected. Default is provider group timeout
         type: integer

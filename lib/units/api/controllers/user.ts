@@ -14,7 +14,8 @@ import logger from '../../../util/logger.js'
 import datautil from '../../../util/datautil.js'
 import deviceutil from '../../../util/deviceutil.js'
 import {
-  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, isAutomationLeaseTimeout
+  automationReleaseTimeoutMs, iosAutomationCaptureTimeoutMs, iosScreenLifecycleCaptureTimeoutMs
+, iosScreenWakeFailed, isAutomationLeaseTimeout
 } from '../../../util/automation-lease.js'
 import wire from '../../../wire/index.js'
 import wireutil from '../../../wire/util.js'
@@ -37,9 +38,12 @@ var adb = adbutil()
 
 var log = logger.createLogger('api:controllers:user')
 
-function reservationTimeout(device: DeviceDocument) {
+function reservationTimeout(device: DeviceDocument, screenLifecycle = false) {
   // The iOS provider drains CoreDevice and hands WDA over before acknowledging.
-  return device.platform === 'iOS' ? iosAutomationCaptureTimeoutMs : 5000
+  if (device.platform === 'iOS') {
+    return screenLifecycle ? iosScreenLifecycleCaptureTimeoutMs : iosAutomationCaptureTimeoutMs
+  }
+  return 5000
 }
 
 function getUser(req: ApiRequest, res: Response) {
@@ -165,6 +169,12 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   const requestedTimeout = (req.hasOwnProperty('body') ? req.body.timeout :
     req.swagger.params.timeout.value) ?? null
   const leaseId = req.body?.leaseId ?? null
+  const screenLifecycle = req.body?.screenLifecycle
+  if (Object.hasOwn(req.body || {}, 'screenLifecycle') &&
+      (typeof screenLifecycle !== 'boolean' || leaseId === null)) {
+    apiutil.respond(res, 400, 'Screen lifecycle requires a managed automation lease')
+    return
+  }
   if (leaseId !== null) {
     if (!authorizeAutomationLease(req, res)) {
       return
@@ -177,47 +187,74 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
   }
   const timeout = requestedTimeout || null
   const lock: ApiLock = {}
+  let settled = false
+  let cleanupWait: (() => void) | undefined
+  const cleanup = () => {
+    const pending = !settled
+    if (pending) {
+      settled = true
+      res.off('close', cleanup)
+      cleanupWait?.()
+    }
+    // A pending DB call can acquire the lock after the response has closed.
+    const device = lock.device
+    if (device) {
+      delete lock.device
+      lockutil.unlockDevice({device})
+    }
+    return pending
+  }
+  if (res.destroyed) {
+    return
+  }
+  res.once('close', cleanup)
 
   lockutil.lockGenericDevice(req, res, lock, dbapi.lockDeviceByCurrent)
     .then(async function(lockingSuccessed) {
-      if (lockingSuccessed) {
+      if (!lockingSuccessed || settled || res.destroyed) {
+        cleanup()
+      }
+      else {
         const device = lock.device!
 
         datautil.normalize(device, req.user)
         if (!deviceutil.isAddable(device, req.user)) {
-          lockutil.unlockDevice(lock)
+          cleanup()
           res.status(403).json({
             success: false
           , description: 'Device is being used or not available'
           })
           return
         }
-        if (leaseId && await dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)) {
-          lockutil.unlockDevice(lock)
+        const released = leaseId &&
+          await dbapi.hasDeviceAutomationRelease(serial, req.user.email, leaseId)
+        if (settled || res.destroyed) {
+          cleanup()
+          return
+        }
+        if (released) {
+          cleanup()
           apiutil.respond(res, 409, 'Automation lease ID was already released')
           return
         }
 
-        var messageListener: MessageListener
+        const responseChannel = device.platform === 'iOS' && leaseId ? 'txn_' + uuid.v4() : null
 
         // Stop waiting if the provider has not acknowledged the reservation.
-        var responseTimer = setTimeout(function() {
-          req.options.channelRouter.removeListener(wireutil.global, messageListener)
-          lockutil.unlockDevice(lock)
-          return res.status(504).json({
+        const responseTimer = setTimeout(function() {
+          if (cleanup() && !res.destroyed) {
+            res.status(504).json({
               success: false
             , description: 'Device is not responding'
-          })
-        }, reservationTimeout(device))
+            })
+          }
+        }, reservationTimeout(device, screenLifecycle))
 
-        messageListener = wirerouter()
+        const messageListener = wirerouter()
           .on(wire.JoinGroupMessage, function(channel, message) {
-            if (message.serial === serial && message.owner.email === req.user.email &&
-                (message.leaseId || null) === leaseId) {
-              clearTimeout(responseTimer)
-              req.options.channelRouter.removeListener(wireutil.global, messageListener)
-              lockutil.unlockDevice(lock)
-
+            if (String(channel) === wireutil.global && message.serial === serial &&
+                message.owner.email === req.user.email && (message.leaseId || null) === leaseId &&
+                cleanup() && !res.destroyed) {
               res.json({
                 success: true
               , description: 'Device successfully added'
@@ -227,37 +264,50 @@ function addUserDevice(req: ApiRequest<AddUserDeviceBody>, res: Response) {
               })
             }
           })
+          .on(wire.TransactionDoneMessage, function(channel, message) {
+            // Only a confirmed pre-capture wake refusal can resolve a failed transaction.
+            if (String(channel) === responseChannel && message.source === serial &&
+                message.success === false && message.data === iosScreenWakeFailed &&
+                cleanup() && !res.destroyed) {
+              res.status(409).json({success: false, code: iosScreenWakeFailed
+                , description: 'iPhone screen could not be unlocked'})
+            }
+          })
           .handler()
 
+        cleanupWait = () => {
+          clearTimeout(responseTimer)
+          req.options.channelRouter.removeListener(wireutil.global, messageListener)
+          if (responseChannel) {
+            req.options.channelRouter.removeListener(responseChannel, messageListener)
+            req.options.sub.unsubscribe(responseChannel)
+          }
+        }
         req.options.channelRouter.on(wireutil.global, messageListener)
-        var usage = 'automation'
-
-        req.options.push.send([
-          device.channel
-        , wireutil.envelope(
-            new wire.GroupMessage(
-              new wire.OwnerMessage(
-                req.user.email
-              , req.user.name
-              , req.user.group
-              )
-            , timeout
-            , wireutil.toDeviceRequirements({
-              serial: {
-                value: serial
-              , match: 'exact'
-              }
-            })
-            , usage
-            , leaseId
-            )
-          )
-        ])
+        if (responseChannel) {
+          req.options.channelRouter.on(responseChannel, messageListener)
+          req.options.sub.subscribe(responseChannel)
+        }
+        if (res.destroyed) {
+          cleanup()
+          return
+        }
+        const group = new wire.GroupMessage(
+          new wire.OwnerMessage(req.user.email, req.user.name, req.user.group)
+        , timeout
+        , wireutil.toDeviceRequirements({serial: {value: serial, match: 'exact'}})
+        , 'automation'
+        , leaseId
+        , device.platform === 'iOS' && screenLifecycle === true ? true : null
+        )
+        req.options.push.send([device.channel, responseChannel ?
+          wireutil.transaction(responseChannel, group) : wireutil.envelope(group)])
       }
     })
     .catch(function(err) {
-      lockutil.unlockDevice(lock)
-      apiutil.internalError(res, `Failed to take control of ${serial} device: `, err.stack)
+      if (cleanup() && !res.destroyed) {
+        apiutil.internalError(res, `Failed to take control of ${serial} device: `, err.stack)
+      }
     })
 }
 

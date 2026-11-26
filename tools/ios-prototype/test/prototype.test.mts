@@ -213,7 +213,7 @@ describe('iOS prototype HTTP and WDA integration', () => {
     assert.deepEqual(await (await f.request('/lock', {})).json(), {locked: true})
     const power = f.calls.filter(call => call.path.endsWith('/wda/performIoHidEvent'))
     assert.equal(power.length, 1)
-    assert.deepEqual(power[0]!.body, {page: 12, usage: 48, duration: 0.5})
+    assert.deepEqual(power[0]!.body, {page: 12, usage: 48, duration: 0.2})
     assert.deepEqual(await (await f.request('/lock', {})).json(), {locked: true})
     assert.equal(f.calls.filter(call => call.path.endsWith('/wda/performIoHidEvent')).length, 1)
     assert.equal(f.runtime.telemetry.status.locked, true)

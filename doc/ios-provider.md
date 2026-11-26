@@ -312,9 +312,9 @@ tunnel, developer-image and WDA/session startup failures. Recovery retries
 automatically. A screen lock keeps the phone present and owned while WDA remains
 ready. The live screen is available after unlock. The owner can use
 **Lock screen / Unlock screen**;
-iOS 27 locks through a short fixed Power IOHID event; earlier versions use the
-standard English/Russian AssistiveTouch Lock Screen action and restore its
-settings. An asleep iOS 26 phone may need the system Home command before its
+iOS 27 uses a 200 ms IOHID Power press to avoid activating Siri. Earlier versions
+use the standard English/Russian AssistiveTouch Lock Screen action and restore
+its settings. An asleep iOS 26 phone may need the system Home command before its
 AssistiveTouch control is available. Unlock explicitly wakes the system UI
 before WDA's unlock command. Both UI buttons stay available because WDA's cached
 lock flag can lag a sleeping screen. Repeating Lock on a known locked device
@@ -322,6 +322,25 @@ does not send another Power press. Automatic unlock supports a simple lock
 without a passcode. If iOS requires a passcode, unlock the phone in person before
 starting the live screen. WDA Home, text and screenshots remain available through
 their existing commands. Shaking and app activation require an unlocked phone.
+
+Set `--auto-screen-sleep` on an iOS provider to wake the iPhone when it is
+reserved in STF or by the Coordinator. STF waits for the phone to unlock before
+starting control or handing WDA to Appium. Enable this option after verifying
+that **Lock screen** and **Unlock screen** work on the phone without a passcode.
+The first reservation after the provider or iOS runtime reconnects explicitly
+wakes the phone because WDA can report a stale lock state. If wake fails before
+capture, the Coordinator releases the allocation. An exact-serial request
+reports `ios_screen_wake_failed`. A pool request can try other matching devices
+until its original queue deadline.
+
+The provider locks the screen 30 seconds after a manual reservation or
+Coordinator lease ends, or after an unowned phone registers on startup or
+reconnect. A new reservation cancels the pending lock. After an Appium lease
+ends, the delay starts once WDA has returned to STF. A failed lock is retried
+after 60 seconds, with up to three attempts per idle period. The iPhone status
+shows a warning if all attempts fail. Existing API automation captures,
+including WDA renewal, leave the screen available after release. Coordinator-managed
+sleep requires the updated STF API and Coordinator to mark their captures.
 
 **Restart iPhone** and **Power off iPhone** require an in-product confirmation
 and the current owner. They use go-ios diagnostics for the selected UDID, not a
