@@ -30,6 +30,11 @@ interface FoldableState {
   override: number | null
 }
 
+export interface PostureTransition {
+  previous: number | null
+  committed: number
+}
+
 interface RotationRecovery {
   rotation: {initial: RotationMode, applied: RotationLock[]} | null
   fixed: Exclude<FixedRotationMode, 'enabled'> | null
@@ -63,7 +68,7 @@ export class FoldablePosture extends EventEmitter<{change: [mode: FoldablePostur
   private currentMode: FoldablePostureMode | null = null
   private owned: readonly number[] = []
   private markerMayExist = false
-  private pending: Promise<FoldableState> | null = null
+  private pending: Promise<PostureTransition> | null = null
   private rotationPending: Promise<void> | null = null
   private rotationRecovery: RotationRecovery | null = null
 
@@ -81,10 +86,6 @@ export class FoldablePosture extends EventEmitter<{change: [mode: FoldablePostur
 
   get supported() {
     return this.states !== null
-  }
-
-  get stateIdentifiers(): Readonly<FoldableStates> | null {
-    return this.states
   }
 
   async initialize() {
@@ -190,11 +191,7 @@ export class FoldablePosture extends EventEmitter<{change: [mode: FoldablePostur
       this.restoreSensor() : this.force(mode, states[mode], requester, reservationId)
     this.pending = operation
     try {
-      const {committed} = await operation
-      if (committed === states.folded) {
-        return 'folded'
-      }
-      return committed === states.unfolded ? 'unfolded' : null
+      return await operation
     }
     finally {
       this.pending = null
@@ -349,7 +346,7 @@ export class FoldablePosture extends EventEmitter<{change: [mode: FoldablePostur
     this.assertOwnedOverride(state)
     if (state.committed === expected && state.override === expected) {
       this.publish(mode)
-      return state
+      return {previous: state.committed, committed: state.committed}
     }
     if (!this.isManualOwner(requester, reservationId)) {
       throw new Error('Foldable posture reservation changed')
@@ -373,7 +370,7 @@ export class FoldablePosture extends EventEmitter<{change: [mode: FoldablePostur
         await this.writeMarker([expected])
       }
       this.publish(mode)
-      return confirmed
+      return {previous: state.committed, committed: confirmed.committed}
     }
     catch (error) {
       try {
@@ -391,10 +388,14 @@ export class FoldablePosture extends EventEmitter<{change: [mode: FoldablePostur
 
   private async restoreSensor(signal?: AbortSignal) {
     let failure: unknown
+    let previous: number | null = null
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         signal?.throwIfAborted()
         const state = await this.readState(signal)
+        if (attempt === 0) {
+          previous = state.committed
+        }
         this.assertOwnedOverride(state)
         if (state.override !== null) {
           await this.shell([...stateCommand, 'state', 'reset'], signal)
@@ -412,7 +413,7 @@ export class FoldablePosture extends EventEmitter<{change: [mode: FoldablePostur
         this.markerMayExist = false
         this.owned = []
         this.publish('sensor')
-        return confirmed
+        return {previous, committed: confirmed.committed}
       }
       catch (error) {
         signal?.throwIfAborted()
@@ -544,6 +545,7 @@ export default syrup.serial()
     const posture = new FoldablePosture(shell, group.isManualOwner, error => log.warn('%s', error))
     await posture.initialize()
     if (posture.supported) {
+      group.manageManualRotation()
       group.beforeManualJoin(signal => posture.prepare(signal))
       group.beforeLeave(() => posture.release())
     }

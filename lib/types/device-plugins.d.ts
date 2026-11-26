@@ -232,6 +232,7 @@ export interface GroupPlugin extends EventEmitter<GroupEvents> {
   isManualOwner(requester: string, reservationId: string): boolean
   beforeManualJoin(handler: (signal: AbortSignal) => PromiseLike<void>): void
   beforeLeave(handler: (owner: OwnerMessage) => PromiseLike<void>): void
+  manageManualRotation(): void
   join(
     newGroup: OwnerMessage
   , timeout?: number | null

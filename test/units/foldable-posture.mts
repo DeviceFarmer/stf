@@ -112,9 +112,9 @@ describe('Android foldable provider posture', function() {
   it('uses the tested commands and verifies sensor control on leave', async function() {
     const f = fakeDevice()
     await f.posture.initialize()
-    assert.equal(await f.set('folded'), 'folded')
+    assert.deepEqual(await f.set('folded'), {previous: 3, committed: 0})
     assert.equal(f.hardware.marker, '0')
-    assert.equal(await f.set('unfolded'), 'unfolded')
+    assert.deepEqual(await f.set('unfolded'), {previous: 0, committed: 3})
     assert.equal(f.hardware.marker, '3')
     f.releaseOwner()
     await f.posture.release()
@@ -124,13 +124,13 @@ describe('Android foldable provider posture', function() {
     assert.equal(f.hardware.marker, null)
   })
 
-  it('returns the verified physical panel when changing back to the hinge', async function() {
+  it('reports the committed state, including intermediate hinge positions', async function() {
     const f = fakeDevice()
     await f.posture.initialize()
     await f.set('folded')
-    assert.equal(await f.set('sensor'), 'unfolded')
+    assert.deepEqual(await f.set('sensor'), {previous: 0, committed: 3})
     f.hardware.base = f.hardware.committed = 2
-    assert.equal(await f.set('sensor'), null, 'intermediate hinge state does not identify a panel')
+    assert.deepEqual(await f.set('sensor'), {previous: 2, committed: 2})
   })
 
   it('holds a manual angle and restores the previous lock on release', async function() {
@@ -307,10 +307,9 @@ describe('Android foldable provider posture', function() {
     f.hardware.resources = {folded: '2\n', unfolded: '4\n'}
     f.hardware.base = f.hardware.committed = 4
     await f.posture.initialize()
-    assert.deepEqual(f.posture.stateIdentifiers, {folded: 2, unfolded: 4})
-    assert.equal(await f.set('folded'), 'folded')
+    assert.deepEqual(await f.set('folded'), {previous: 4, committed: 2})
     assert.equal(f.hardware.marker, '2')
-    assert.equal(await f.set('unfolded'), 'unfolded')
+    assert.deepEqual(await f.set('unfolded'), {previous: 2, committed: 4})
     await f.posture.release()
     assert.deepEqual(f.overrideCommands(), ['2', '4', 'reset'])
   })
@@ -406,8 +405,17 @@ describe('Android foldable provider posture', function() {
         return Readable.from([Buffer.from(await f.shell(args))])
       }
     })}}
-    const group = {isManualOwner: () => true, beforeManualJoin: () => {}, beforeLeave: () => {}}
+    let managedRotation = false
+    const group = {
+      isManualOwner: () => true
+    , manageManualRotation: () => {
+      managedRotation = true
+    }
+    , beforeManualJoin: () => {}
+    , beforeLeave: () => {}
+    }
     const posture = await plugin.invoke({serial: 'fixture'}, adb, group) as FoldablePosture
+    assert.equal(managedRotation, true)
     await posture.set('folded', manualOwner, reservation)
     await posture.release()
     assert.deepEqual(f.overrideCommands(), ['0', 'reset'])
@@ -422,8 +430,12 @@ describe('Android foldable provider posture', function() {
     const adb = {client: {getDevice: () => ({
       shell: async(args: string[]) => Readable.from([Buffer.from(await f.shell(args))])
     })}}
-    const group = {isManualOwner: () => true
-      , beforeManualJoin: () => hooks++, beforeLeave: () => hooks++}
+    const group = {
+      isManualOwner: () => true
+    , manageManualRotation: () => hooks++
+    , beforeManualJoin: () => hooks++
+    , beforeLeave: () => hooks++
+    }
     const posture = await plugin.invoke({serial: 'fixture'}, adb, group) as FoldablePosture
     assert.equal(posture.supported, false)
     assert.equal(hooks, 0)

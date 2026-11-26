@@ -11,7 +11,7 @@ import type {GroupPlugin} from '../../lib/types/device-plugins.js'
 
 type Handler = (channel: string, message: unknown) => Bluebird<void>
 
-function setup() {
+function setup(screenReset = false) {
   var handlers: Record<number, Handler> = {}
   var router = {
     on: function(type: {$code: number}, handler: Handler) {
@@ -29,9 +29,11 @@ function setup() {
     wake: sinon.spy()
   , acquireWakeLock: sinon.spy()
   , releaseWakeLock: sinon.spy()
+  , pressKey: sinon.spy()
+  , thawRotation: sinon.spy()
   }
   var plugin = group.invoke(
-    {serial: 'test-device', groupTimeout: 1000}
+    {serial: 'test-device', groupTimeout: 1000, screenReset}
   , {channel: 'solo-channel'}
   , {}
   , service
@@ -40,7 +42,7 @@ function setup() {
   , sub
   , channels
   ) as GroupPlugin
-  return {plugin: plugin, handlers: handlers, push: push, channels: channels}
+  return {plugin, handlers, push, channels, service}
 }
 
 function messages(push: ReturnType<typeof setup>['push'], code: number) {
@@ -292,6 +294,38 @@ describe('Device group plugin', function() {
     await plugin.leave('ungroup_request', group.reservationId)
     expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(1)
   })
+
+  for (const [usage, managed, thaw] of [
+    ['manual', true, false]
+  , [null, true, false]
+  , ['manual', false, true]
+  , ['automation', true, true]
+  ] as const) {
+    it(`returns to Home with the expected rotation cleanup for ${usage ?? 'default'} ` +
+      `(managed: ${managed})`, async function() {
+      const context = setup(true)
+      const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+      if (managed) {
+        context.plugin.manageManualRotation()
+      }
+      const cleanup = sinon.stub().resolves()
+      context.plugin.beforeLeave(cleanup)
+
+      const joined = await transaction(context, wire.GroupMessage,
+        new wire.GroupMessage(owner, 10000, [], usage))
+      expect(joined.success).to.equal(true)
+      const {reservationId} = lastJoin(context.push).owner
+      const released = await transaction(context, wire.UngroupMessage,
+        new wire.UngroupMessage([], reservationId))
+
+      expect(released.success).to.equal(true)
+      expect(cleanup.callCount).to.equal(1)
+      expect(context.service.pressKey.calledOnceWithExactly('home')).to.equal(true)
+      expect(cleanup.calledBefore(context.service.pressKey)).to.equal(true)
+      expect(context.service.thawRotation.callCount).to.equal(thaw ? 1 : 0)
+      expect(context.service.releaseWakeLock.callCount).to.equal(1)
+    })
+  }
 
   it('retries an expired reservation if its cleanup failed', async function() {
     const {plugin, push, channels} = setup()

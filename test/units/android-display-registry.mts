@@ -78,13 +78,53 @@ describe('Android display registry', function() {
     const old = display.target
 
     display.beginTransition()
-    const active = await display.refreshAfterPosture(19, false)
+    const active = await display.refreshAfterPosture(19, false, true)
     display.endTransition()
 
     assert.equal(samples.length, 0)
     assert.equal(active.width, old.width)
     assert.equal(active.height, old.height)
     assert.notEqual(active.revision, old.revision)
+  })
+
+  it('waits for a physical change when the target layout is unavailable', async() => {
+    const samePanel = {...primary, uniqueId: 'inside', address: {port: 12}}
+    const rotated = {...samePanel, rotation: 90}
+    const cover = {...rotated, width: 904, height: 2316}
+    const samples = [samePanel, samePanel, rotated, rotated, cover, cover]
+    const display = new AndroidDisplayRegistry(
+      primaryProperties(), async() => samples.shift() ?? null, async() => null
+    )
+    const original = display.target
+
+    display.beginTransition()
+    const ready = await display.refreshAfterPosture(19, false, true)
+    display.endTransition()
+
+    assert.equal(samples.length, 0)
+    assert.equal(ready.width, cover.width)
+    assert.equal(ready.height, cover.height)
+    assert.notEqual(ready.revision, original.revision)
+  })
+
+  it('accepts a different physical address without a change in panel size', async() => {
+    const inner = {...primary, uniqueId: 'internal', address: {port: 12}}
+    const outer = {...inner, address: {port: 14}}
+    const samples = [inner, inner, inner, outer, outer]
+    const display = new AndroidDisplayRegistry(
+      primaryProperties(), async() => samples.shift() ?? null
+    )
+    await display.refresh()
+    const original = display.target
+
+    display.beginTransition()
+    const ready = await display.refreshAfterPosture(19, false, true)
+    display.endTransition()
+
+    assert.equal(samples.length, 0)
+    assert.equal(ready.width, original.width)
+    assert.equal(ready.height, original.height)
+    assert.notEqual(ready.revision, original.revision)
   })
 
   it('updates the stream when the active panel or its geometry changes', async() => {
@@ -178,7 +218,7 @@ describe('Android display registry', function() {
     const display = new AndroidDisplayRegistry(primaryProperties(), async() => primary)
     const original = display.target
     display.beginTransition()
-    const ready = await display.refreshAfterTransition()
+    const ready = await display.refreshAfterPosture(19, true, false)
     display.endTransition()
     assert.equal(ready, original)
     assert.equal(display.target, original)

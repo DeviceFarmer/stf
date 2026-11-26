@@ -54,6 +54,7 @@ export default syrup.serial()
     let joining: Promise<OwnerMessage> | null = null
     let leaving: Promise<OwnerMessage> | null = null
     let stopping = false
+    let manualRotationManaged = false
     const shutdown = new AbortController()
     const beforeManualJoin: Array<(signal: AbortSignal) => PromiseLike<void>> = []
     const beforeLeave: Array<(owner: OwnerMessage) => PromiseLike<void>> = []
@@ -82,6 +83,10 @@ export default syrup.serial()
 
     plugin.beforeLeave = handler => {
       beforeLeave.push(handler)
+    }
+
+    plugin.manageManualRotation = () => {
+      manualRotationManaged = true
     }
 
     plugin.join = function(
@@ -164,6 +169,7 @@ export default syrup.serial()
           return Promise.each(beforeLeave, handler => handler(group)).return(group)
         })
         .then(function(group) {
+          const thawRotation = !manualRotationManaged || !isManualUsage(currentUsage)
           log.important('No longer owned by "%s" (reason: %s)', group.email, reason)
           log.info('Unsubscribing from group channel "%s"', group.group)
           channels.unregister(group.group)
@@ -175,6 +181,13 @@ export default syrup.serial()
           currentUsage = null
           currentLeaseId = null
           currentGroup = null
+          if (options.screenReset) {
+            service.pressKey('home')
+            if (thawRotation) {
+              service.thawRotation()
+            }
+          }
+          service.releaseWakeLock()
           plugin.emit('leave', group)
           return group
         })
@@ -189,14 +202,6 @@ export default syrup.serial()
     plugin.on('join', function() {
       service.wake()
       service.acquireWakeLock()
-    })
-
-    plugin.on('leave', function() {
-      if (options.screenReset) {
-        service.pressKey('home')
-        service.thawRotation()
-      }
-      service.releaseWakeLock()
     })
 
     router

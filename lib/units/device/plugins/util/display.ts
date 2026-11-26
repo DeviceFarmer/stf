@@ -117,6 +117,15 @@ function sameGeometry(left: DisplayGeometry, right: DisplayGeometry): boolean {
     left.address?.port === right.address?.port && left.address?.model === right.address?.model
 }
 
+function panelChanged(prior: DisplayGeometry, current: DisplayGeometry): boolean {
+  const before = prior.address
+  const after = current.address
+  return prior.width !== current.width || prior.height !== current.height ||
+    Boolean(prior.uniqueId && current.uniqueId && prior.uniqueId !== current.uniqueId) ||
+    Boolean(before && after && (before.port !== after.port ||
+      (before.model && after.model && before.model !== after.model)))
+}
+
 export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDisplayEvents> {
   readonly id = primaryDisplayId
   private geometry: DisplayGeometry
@@ -161,22 +170,28 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
   }
 
   async refreshAfterPosture(
-    state: number | null, allowSamePanelDoze: boolean
+    state: number, allowSamePanelDoze: boolean, stateChanged: boolean
   ): Promise<AndroidDisplayTarget> {
     let expected: PhysicalDisplayAddress | null = null
-    if (state !== null && this.readLayout) {
+    if (this.readLayout) {
       expected = await this.readLayout(state).catch((error: unknown) => {
         log.debug('Unable to read the Android device-state display layout: %s', error)
         return null
       })
     }
-    return this.refreshAfterTransition(({address}) => !expected ||
-      (address?.port === expected.port && (!expected.model || address.model === expected.model)),
-      allowSamePanelDoze)
+    return this.refreshAfterTransition((geometry, prior) => {
+      if (expected) {
+        const {address} = geometry
+        return address?.port === expected.port &&
+          (!expected.model || address.model === expected.model)
+      }
+      // Without a layout, an unchanged view cannot confirm a new physical state.
+      return !stateChanged || panelChanged(prior, geometry)
+    }, allowSamePanelDoze)
   }
 
   async refreshAfterTransition(
-    accepts: (geometry: DisplayGeometry) => boolean = () => true
+    accepts: (geometry: DisplayGeometry, prior: DisplayGeometry) => boolean = () => true
   , allowSamePanelDoze = false
   ): Promise<AndroidDisplayTarget> {
     await this.refreshing
@@ -194,7 +209,7 @@ export class AndroidDisplayRegistry extends EventEmitter.EventEmitter<AndroidDis
         deadline.throwIfAborted()
         const samePanel = sample?.uniqueId && sameGeometry(prior, sample)
         const powerReady = !sample?.doze || (allowSamePanelDoze && samePanel)
-        const candidate = sample && accepts(sample) && powerReady ? sample : null
+        const candidate = sample && accepts(sample, prior) && powerReady ? sample : null
         if (candidate && previous && sameGeometry(previous, candidate) &&
           candidate.doze?.state === previous.doze?.state &&
           candidate.doze?.committed === previous.doze?.committed) {

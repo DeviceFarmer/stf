@@ -33,7 +33,7 @@ import pushSyrup from '../../support/push.js'
 import minicapSyrup from '../../resources/minicap.js'
 import displaySyrup from '../util/display.js'
 import groupSyrup from '../group.js'
-import foldablePostureSyrup from '../foldable-posture.js'
+import foldablePostureSyrup, {type PostureTransition} from '../foldable-posture.js'
 import serviceSyrup from '../service.js'
 import {requiresDisplayInput} from '../touch/display-geometry.js'
 import optionsSyrup from './options.js'
@@ -880,6 +880,9 @@ export default syrup.serial()
         group.on('leave', invalidatePostureRevision)
 
         async function prepareDisplay<T>(prepare: () => PromiseLike<T>) {
+          if (display.isTransitioning) {
+            throw new Error('A foldable display change is already in progress')
+          }
           frameProducer.beginPostureTransition()
           display.beginTransition()
           try {
@@ -919,21 +922,20 @@ export default syrup.serial()
             }
             const id: string = reservationId
             const requestedMode: FoldablePostureMode = mode
-            function refreshPanel(
-              panel: Exclude<FoldablePostureMode, 'sensor'> | null, allowDoze: boolean
-            ) {
-              const state = panel ? foldablePosture.stateIdentifiers?.[panel] ?? null : null
-              return display.refreshAfterPosture(state, allowDoze)
+            function refreshPanel({previous, committed}: PostureTransition, allowDoze: boolean) {
+              return display.refreshAfterPosture(committed, allowDoze, previous !== committed)
             }
             async function applyPosture() {
-              const panel = await foldablePosture.set(requestedMode, requester, id)
+              const transition = await foldablePosture.set(requestedMode, requester, id)
               try {
-                return await refreshPanel(panel, requestedMode === 'sensor')
+                return await refreshPanel(transition, requestedMode === 'sensor')
               }
               catch (error) {
                 if (requestedMode !== 'sensor' && group.isManualOwner(requester, id)) {
                   try {
-                    await refreshPanel(await foldablePosture.set('sensor', requester, id), true)
+                    const restored = await foldablePosture.set('sensor', requester, id)
+                    // The failed refresh kept the geometry from before the request.
+                    await refreshPanel({...restored, previous: transition.previous}, true)
                   }
                   catch (restoreError) {
                     log.warn('Hinge restore after display timeout failed: %s', restoreError)
