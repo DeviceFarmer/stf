@@ -16,7 +16,11 @@ import adbkeyutil from '../../../util/adbkeyutil.js'
 import type {ExtendedPublicKey} from '@devicefarmer/adbkit'
 type TcpUsbServer = import('@devicefarmer/adbkit/dist/src/adb/tcpusb/server.js').default
 import type {EventEmitter} from 'events'
-import type {ConnectStartMessageFields, OwnerMessage} from '../../../types/wire.js'
+import type {
+  AdbKeysUpdatedMessage
+, ConnectStartMessageFields
+, OwnerMessage
+} from '../../../types/wire.js'
 import type {
   Adb
 , ConnectPlugin
@@ -65,10 +69,18 @@ export default syrup.serial()
     // signature from it is the same outcome the auth handler below would reach for that owner.
     var knownKeys: ExtendedPublicKey[] = []
 
+    // Fingerprints removed while the current owner has the device. A key list read before the
+    // removal (a ConnectStart still being handled) or a join that was already under way could
+    // otherwise put the key back into knownKeys for the rest of the session.
+    var removedFingerprints = new Set<string>()
+
     plugin.port = options.connectPort
     plugin.url = urlformat(options.connectUrlPattern, plugin.port)
 
     function addKnownKey(key: ExtendedPublicKey) {
+      if (removedFingerprints.has(key.fingerprint)) {
+        return
+      }
       var known = knownKeys.some(function(knownKey) {
         return knownKey.fingerprint === key.fingerprint
       })
@@ -81,6 +93,7 @@ export default syrup.serial()
       if (!fingerprint) {
         return
       }
+      removedFingerprints.add(fingerprint)
       // In place, the bridge holds on to this array
       var index = knownKeys.findIndex(function(knownKey) {
         return knownKey.fingerprint === fingerprint
@@ -196,9 +209,17 @@ export default syrup.serial()
               }
             }
 
+            // A removed key can't be what this connection is waiting for, and asking again would
+            // show the user another "add adb key" dialog for it
+            function keysUpdatedListener(channel: unknown, message: AdbKeysUpdatedMessage) {
+              if (!message.removedFingerprint) {
+                notify()
+              }
+            }
+
             group.on('join', joinListener)
             group.on('autojoin', autojoinListener)
-            router.on(wire.AdbKeysUpdatedMessage, notify)
+            router.on(wire.AdbKeysUpdatedMessage, keysUpdatedListener)
 
             notify()
 
@@ -207,7 +228,7 @@ export default syrup.serial()
               .finally(function() {
                 group.removeListener('join', joinListener)
                 group.removeListener('autojoin', autojoinListener)
-                router.removeListener(wire.AdbKeysUpdatedMessage, notify)
+                router.removeListener(wire.AdbKeysUpdatedMessage, keysUpdatedListener)
               })
           }
         })
@@ -241,6 +262,7 @@ export default syrup.serial()
 
     plugin.stop = Promise.method(function() {
       knownKeys.length = 0
+      removedFingerprints.clear()
       if (plugin.isRunning()) {
         activeServer!.close()
         activeServer!.end()

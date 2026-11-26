@@ -10,8 +10,13 @@ import connect from '../../lib/units/device/plugins/connect.js'
 
 type Handler = (channel: string, message?: unknown) => void
 
-async function setup() {
-  const bridgeOptions: {knownPublicKeys?: {fingerprint: string}[]} = {}
+type Key = {fingerprint: string, comment?: string}
+
+async function setup(getGroup?: () => Bluebird<{email: string, group: string}>) {
+  const bridgeOptions: {
+    knownPublicKeys?: Key[]
+    auth?: (key: Key) => Bluebird<void>
+  } = {}
   const server = Object.assign(new EventEmitter(), {
     listen: sinon.spy(function(this: EventEmitter) {
       setImmediate(() => this.emit('listening'))
@@ -42,7 +47,7 @@ async function setup() {
     (handlers.get(type) || []).forEach(handler => handler('channel', message))
   const push = {send: sinon.spy()}
   const group = Object.assign(new EventEmitter(), {
-    get: () => Bluebird.resolve({email: 'alice@example.com', group: 'alice-group'})
+    get: getGroup || (() => Bluebird.resolve({email: 'alice@example.com', group: 'alice-group'}))
   , keepalive: sinon.spy()
   })
   const solo = {channel: 'solo'}
@@ -50,7 +55,7 @@ async function setup() {
     {serial: 'emulator-5554', connectPort: 7401, connectUrlPattern: '${publicIp}:${publicPort}'}
   , adb, router, push, group, solo, () => '127.0.0.1:7401'
   )
-  return {bridgeOptions, emit, push}
+  return {bridgeOptions, emit, push, group}
 }
 
 async function until(condition: () => boolean) {
@@ -90,5 +95,86 @@ describe('Device connect plugin known keys', function() {
 
     emit(wire.AdbKeysUpdatedMessage, new wire.AdbKeysUpdatedMessage({removedFingerprint: 'other'}))
     expect(known.map(key => key.fingerprint)).to.deep.equal(['fp-k2'])
+  })
+})
+
+describe('Device connect plugin removed keys', function() {
+  beforeEach(function() {
+    sinon.stub(lifecycle, 'observe')
+    sinon.stub(lifecycle, 'share')
+    sinon.stub(console, 'warn')
+  })
+
+  afterEach(function() {
+    sinon.restore()
+  })
+
+  function removed(fingerprint: string) {
+    return new wire.AdbKeysUpdatedMessage({removedFingerprint: fingerprint})
+  }
+
+  it('keeps out a key removed while an older ConnectStart was handled', async function() {
+    let releaseGroup!: () => void
+    const groupReady = new Bluebird<void>(resolve => {
+      releaseGroup = resolve
+    })
+    const {bridgeOptions, emit, push} = await setup(() =>
+      groupReady.then(() => ({email: 'alice@example.com', group: 'alice-group'})))
+
+    // The key list was read before the removal, the removal arrives while it's being handled
+    emit(wire.ConnectStartMessage, new wire.ConnectStartMessage('alice@example.com', ['k1', 'k2']))
+    emit(wire.AdbKeysUpdatedMessage, removed('fp-k1'))
+    releaseGroup()
+    await until(() => push.send.callCount >= 2)
+
+    expect(bridgeOptions.knownPublicKeys!.map(key => key.fingerprint)).to.deep.equal(['fp-k2'])
+  })
+
+  it('lets a join that was under way in without caching the removed key', async function() {
+    const {bridgeOptions, emit, push, group} = await setup()
+    emit(wire.ConnectStartMessage, new wire.ConnectStartMessage('alice@example.com', []))
+    await until(() => push.send.callCount >= 2)
+
+    const joined = bridgeOptions.auth!({fingerprint: 'fp-k3', comment: 'alice@host'})
+    emit(wire.AdbKeysUpdatedMessage, removed('fp-k3'))
+    // The processor looked the key up before it was removed
+    group.emit('autojoin', 'fp-k3', true)
+    await joined
+
+    expect(bridgeOptions.knownPublicKeys).to.deep.equal([])
+  })
+
+  it('forgets removed keys when the owner leaves', async function() {
+    const {bridgeOptions, emit, push, group} = await setup()
+    emit(wire.ConnectStartMessage, new wire.ConnectStartMessage('alice@example.com', ['k1']))
+    await until(() => push.send.callCount >= 2)
+    emit(wire.AdbKeysUpdatedMessage, removed('fp-k1'))
+
+    group.emit('leave')
+    await until(() => bridgeOptions.knownPublicKeys!.length === 0)
+    emit(wire.ConnectStartMessage, new wire.ConnectStartMessage('alice@example.com', ['k1']))
+    await until(() => bridgeOptions.knownPublicKeys!.length > 0)
+
+    expect(bridgeOptions.knownPublicKeys!.map(key => key.fingerprint)).to.deep.equal(['fp-k1'])
+  })
+
+  it('asks again for a waiting key when a key was added, not removed', async function() {
+    const {bridgeOptions, emit, push, group} = await setup()
+    emit(wire.ConnectStartMessage, new wire.ConnectStartMessage('alice@example.com', []))
+    await until(() => push.send.callCount >= 2)
+
+    const joins = () => push.send.getCalls().filter(call => call.args[0][0] === 'solo').length
+    bridgeOptions.auth!({fingerprint: 'fp-k4', comment: 'alice@host'}).catch(() => {})
+    await until(() => joins() === 1)
+
+    emit(wire.AdbKeysUpdatedMessage, removed('fp-other'))
+    await new Promise(resolve => setTimeout(resolve, 20))
+    expect(joins()).to.equal(1)
+
+    emit(wire.AdbKeysUpdatedMessage, new wire.AdbKeysUpdatedMessage())
+    await until(() => joins() === 2)
+    expect(joins()).to.equal(2)
+    // Settles the waiting connection, so its timeout doesn't outlive the test
+    group.emit('autojoin', 'fp-k4', false)
   })
 })
