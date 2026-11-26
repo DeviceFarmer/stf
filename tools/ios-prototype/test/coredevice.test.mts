@@ -7,6 +7,7 @@ import {join} from 'node:path'
 import {it} from 'node:test'
 
 import {CoreDeviceSession} from '../coredevice.mts'
+import {runCommand} from '../process.mts'
 
 it('waits for the worker to dispatch input before accepting another touch', async() => {
   const dir = await mkdtemp(join(tmpdir(), 'stf-ios-worker-'))
@@ -142,4 +143,8 @@ console.log(${port})
     server.closeAllConnections()
     await rm(dir, {recursive: true, force: true})
   }
+})
+
+it('passes the Python CoreDevice worker tests', async() => {
+  await runCommand('python3', ['-B', join(import.meta.dirname, 'coredevice_worker_test.py')], 30000)
 })

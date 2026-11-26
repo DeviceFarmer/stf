@@ -41,7 +41,7 @@ class ScreenServer(screen_stream.ScreenStreamServer):
 
         # The pinned serve() hardcodes a device-wide stop after closing its
         # local transports. Override only its dependency in this one-server
-        # process. The status API exposes UUID ownership but no scoped stop ID.
+        # process; wait_for_media_expiry() stops only this worker's streams.
         original_display_service = screen_stream.DisplayService
         screen_stream.DisplayService = LocalDisplayService
         try:
@@ -67,18 +67,46 @@ class ScreenServer(screen_stream.ScreenStreamServer):
 
     async def wait_for_media_expiry(self, *, startup_interrupted):
         # Let a dispatched start settle before accepting an initially empty
-        # result. Once local RTCP stops, the device expires these streams.
+        # result. Without a stop, the device keeps these streams until its
+        # 20-second RTCP timeout, so the next STF session could not start.
         quiet_checks = 3 if startup_interrupted else 1
+        stop_failed = False
+        reported_unstopped = False
         while True:
             async with DisplayService(self._rsd) as display:
                 status = await asyncio.wait_for(display.get_media_stream_server_status(), 3)
-            if any(owns_session(self, session) for session in status.get("sessions", [])):
+            owned = [
+                session for session in status.get("sessions", []) if owns_session(self, session)
+            ]
+            identifiers = owned_stream_identifiers(owned)
+            if identifiers:
+                try:
+                    stopped = await asyncio.wait_for(self.stop_streams(identifiers), 3)
+                except Exception:
+                    if stop_failed:
+                        logging.debug("Owned CoreDevice media stop failed again")
+                    else:
+                        stop_failed = True
+                        logging.warning("Could not stop owned CoreDevice media", exc_info=True)
+                else:
+                    unstopped = [identifier for identifier in identifiers
+                                 if identifier not in stopped]
+                    if unstopped and not reported_unstopped:
+                        reported_unstopped = True
+                        logging.warning("CoreDevice did not stop owned streams %s", unstopped)
+            if owned:
                 quiet_checks = 1
             else:
                 quiet_checks -= 1
                 if quiet_checks == 0:
                     return
             await asyncio.sleep(1)
+
+    async def stop_streams(self, identifiers):
+        async with DisplayService(self._rsd) as display:
+            reply = await display.stop_media_stream(stop_all=False, identifiers=identifiers)
+        stopped = reply.get("stoppedStreams") if isinstance(reply, dict) else None
+        return set(stopped) if isinstance(stopped, list) else set()
 
     async def _eager_stream_start(self):
         try:
@@ -170,6 +198,17 @@ async def serve(config, stop, commands):
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await task
+
+
+def owned_stream_identifiers(sessions):
+    # CoreDevice identifies a stream by our side's SSRC, which it reports as
+    # RemoteSSRC. A device-wide stop returns these IDs as stoppedStreams.
+    identifiers = []
+    for session in sessions:
+        ssrc = session.get("connection", {}).get("streamConfig", {}).get("RemoteSSRC")
+        if isinstance(ssrc, int) and not isinstance(ssrc, bool) and 0 <= ssrc <= 0xFFFFFFFF:
+            identifiers.append(ssrc)
+    return identifiers
 
 
 def owns_session(server, session):
