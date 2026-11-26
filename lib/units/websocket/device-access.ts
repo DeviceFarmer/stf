@@ -42,8 +42,9 @@ export class DevicePacketAccess {
   private readonly lagging = new Map<string, LaggingRow>()
   private readonly misses = new Map<string, {until: number, groups: string}>()
   private readonly resolving = new Map<string, Promise<DeviceAccess | null | undefined>>()
-  // This user's group.invite transactions still waiting for a reply, by response channel.
-  private readonly invites = new Map<string, {channel: string, session: number}>()
+  // This user's group.invite transactions still waiting for a reply, by response channel,
+  // with the reservation of a late leave seen since the invite went out.
+  private readonly invites = new Map<string, {channel: string, session: number, left?: string}>()
   private revision = 0
   private subscriptionsChanged = 0
   private overflowed = false
@@ -57,7 +58,7 @@ export class DevicePacketAccess {
 
   joined(serial: string, usage?: string | null, owner?: DeviceAccess['owner'],
     automationLeaseId?: string | null) {
-    this.sessions.set(serial, this.revision + 1)
+    this.bump(serial)
     this.update(serial, {usage: usage || null, automationLeaseId: automationLeaseId || null
       , ...(owner ? {owner} : {})})
   }
@@ -65,9 +66,28 @@ export class DevicePacketAccess {
   released(serial: string, owner?: DeviceAccess['owner']): boolean {
     if (owner && (this.owners.has(serial) ?
       !sameOwner(this.owners.get(serial), owner) : this.overflowed)) {
+      // This leave may be newer than an invite that a late leave let through, and
+      // could be for the very reservation that invite's reply names.
+      for (const [responseChannel, invite] of this.invites) {
+        if (invite.left && this.source(invite.channel) === serial) {
+          this.invites.delete(responseChannel)
+        }
+      }
       return false
     }
-    this.sessions.set(serial, this.revision + 1)
+    const previous = this.sessions.get(serial)
+    // A leave of the reservation this socket last saw join predates any reservation the
+    // device grants after it, so it does not make a pending invite's reply stale. An
+    // evicted session cannot tell whether anything else happened since the invite.
+    if (owner?.reservationId && this.owners.has(serial) && previous) {
+      for (const invite of this.invites.values()) {
+        if (invite.session === previous && this.source(invite.channel) === serial) {
+          invite.session = this.revision + 1
+          invite.left = owner.reservationId
+        }
+      }
+    }
+    this.bump(serial)
     this.update(serial, {owner: null, usage: null, automationLeaseId: null})
     return true
   }
@@ -89,7 +109,10 @@ export class DevicePacketAccess {
    * The device answers an invite after announcing the join, but the two can reach
    * this socket through different processors, so the reply may come first. Treat
    * a successful reply naming this user as the join, unless a join or leave for the
-   * device was seen since the invite went out, which is at least as new. Only the
+   * device was seen since the invite went out, which is at least as new. The one
+   * exception is a late leave of the reservation this socket last saw join: after a
+   * kick and a re-invite, that leave can still be on its way. It is older than any
+   * other reservation, so a reply naming a different one is taken. Only the
    * owner is taken from it: a re-invite by the current owner gets a reply but no
    * join notification, and its row keeps whatever usage it had. Like any
    * notification, this only makes the guard wait for the row; it never allows.
@@ -110,8 +133,9 @@ export class DevicePacketAccess {
       return
     }
     if (owner?.email && owner.email === email && this.source(invite.channel) === serial &&
-        this.session(invite.channel) === invite.session) {
-      this.sessions.set(serial, this.revision + 1)
+        this.session(invite.channel) === invite.session &&
+        (!invite.left || (owner.reservationId && owner.reservationId !== invite.left))) {
+      this.bump(serial)
       this.update(serial, {owner})
     }
   }
@@ -244,6 +268,12 @@ export class DevicePacketAccess {
 
   source(channel: string): string {
     return channel.startsWith('ios:') ? channel.slice(4) : this.channels.get(channel) || channel
+  }
+
+  // Starts a new session for the device, kept last so eviction drops the stalest one.
+  private bump(serial: string) {
+    this.sessions.delete(serial)
+    this.sessions.set(serial, this.revision + 1)
   }
 
   private remember(channel: string, serial: string) {
