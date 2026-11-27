@@ -72,6 +72,7 @@ export default syrup.serial()
       // reports: the installing_app ticks are already running by then.
       function pushApp(reportProgress = true) {
         var resolve_!: (value: string) => void, reject_!: (err: Error) => void
+          , source!: stream.Transform
         var promise = new Promise<string>(function(resolve, reject) {
           resolve_ = resolve
           reject_ = reject
@@ -92,7 +93,7 @@ export default syrup.serial()
 
         // We need to catch the Content-Length on the fly or we risk
         // losing some of the initial chunks.
-        var contentLength: number | null = null
+        var contentLength: number | null = null // NaN when storage sends none
         req.on('response', function(res) {
           var status = res.statusCode || 0
           if (status < 200 || status >= 300) {
@@ -102,6 +103,12 @@ export default syrup.serial()
             return
           }
           contentLength = parseInt(res.headers['content-length'] as string, 10)
+          // A connection that drops mid-body may not emit an error.
+          res.on('close', function() {
+            if (!res.complete) {
+              source.destroy(new Error(util.format('Connection to %s closed early', href)))
+            }
+          })
         })
 
         var target = '/data/local/tmp/_app.apk'
@@ -129,15 +136,27 @@ export default syrup.serial()
         }
         promise.then(stopWatchingForStall, stopWatchingForStall)
 
+        // A failed install must not leave the download running.
+        promise.catch(function() {
+          req.abort()
+          source.destroy()
+        })
+
         // Not Readable.wrap(): it destroys the wrapper as soon as the request closes, which
         // drops an APK that finished downloading before adbkit started reading it.
-        var source = new stream.Transform({
+        source = new stream.Transform({
           transform: function(chunk: Buffer, encoding, callback) {
             downloaded += chunk.length
             noteActivity()
             callback(null, chunk)
           }
         , flush: function(callback) {
+            var truncated = Number.isFinite(contentLength) && contentLength !== downloaded
+            if (downloaded === 0 || truncated) {
+              callback(new Error(util.format(
+                'Storage sent %d of %s bytes of %s', downloaded, contentLength || 'some', href)))
+              return
+            }
             downloadDone = true
             finishIfComplete()
             callback()
@@ -163,11 +182,18 @@ export default syrup.serial()
               }
               waitingForDeviceFile = true
               var deadline = Date.now() + 60000
+              var lastSize = -1
               ;(function check() {
                 adb.stat(options.serial, target)
                   .then(function(fileStats) {
                     if (fileStats.size === size) {
                       endListener()
+                    }
+                    else if (fileStats.size !== lastSize) {
+                      // The device is still writing, so the transfer has not stalled.
+                      lastSize = fileStats.size
+                      noteActivity()
+                      setTimeout(check, 250)
                     }
                     else if (Date.now() > deadline) {
                       reject_(new Error(

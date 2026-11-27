@@ -40,6 +40,7 @@ function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
     EventEmitter & {cancel: sinon.SinonSpy, stats: {bytesTransferred: number}}
   > = []
   var installs = 0
+  var received = 0
   var state = {installed: Boolean(options.installed)}
 
   var adb = {
@@ -59,6 +60,7 @@ function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
       function read() {
         source.on('data', function(chunk: Buffer) {
           chunks.push(chunk)
+          received += chunk.length
         })
         source.on('end', function() {
           var data = Buffer.concat(chunks)
@@ -112,7 +114,12 @@ function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
     })
   }
 
-  return {adb, calls, files, state, transfers}
+  return {
+    adb, calls, files, state, transfers
+  , received: function() {
+      return received
+    }
+  }
 }
 
 describe('device APK transfer', function() {
@@ -125,12 +132,28 @@ describe('device APK transfer', function() {
   // Responses that never end, to destroy once the test is over.
   var hanging: http.ServerResponse[] = []
   var hangAfterFirstByte = false
+  // What the server does instead of answering normally.
+  var misbehave: 'empty' | 'cut' | null = null
 
   before(function(done) {
     server = http.createServer(function(req, res) {
       var status = statuses.shift() || 200
       var body = status === 200 ? bytes : Buffer.from('Not Found')
       res.statusCode = status
+      if (misbehave === 'empty') {
+        res.setHeader('Content-Length', 0)
+        res.end()
+        return
+      }
+      if (misbehave === 'cut') {
+        // Promises the whole APK, sends the first bytes and drops the connection.
+        res.setHeader('Content-Length', bytes.length)
+        res.write(bytes.subarray(0, 3))
+        setTimeout(function() {
+          res.destroy()
+        }, 20)
+        return
+      }
       if (hangAfterFirstByte) {
         res.setHeader('Content-Length', bytes.length)
         res.write(bytes.subarray(0, 1))
@@ -156,6 +179,7 @@ describe('device APK transfer', function() {
     statuses = []
     omitContentLength = false
     hangAfterFirstByte = false
+    misbehave = null
   })
 
   afterEach(function() {
@@ -261,10 +285,15 @@ describe('device APK transfer', function() {
       while (!hanging.length) {
         await new Promise(setImmediate)
       }
-      // Let the first byte reach the plugin.
-      for (var i = 0; i < 20; i++) {
+      // Let the first byte reach the plugin; the loop ends with the test's own timeout.
+      while (device.received() === 0) {
         await new Promise(setImmediate)
       }
+      var aborted = new Promise<void>(function(resolve) {
+        hanging[0]!.on('close', function() {
+          resolve()
+        })
+      })
       await clock.tickAsync(60000)
 
       var {response} = await result
@@ -272,6 +301,20 @@ describe('device APK transfer', function() {
       expect(device.transfers[0]!.cancel.called).to.equal(true)
       expect(response.success).to.equal(false)
       expect(response.data).to.equal('INSTALL_ERROR_TIMEOUT')
+      // The download is closed too, not left open to leak the socket.
+      await aborted
+    })
+  })
+
+  ;(['empty', 'cut'] as const).forEach(function(kind) {
+    it('should not install an APK from a ' + kind + ' download', async function() {
+      misbehave = kind
+      var device = createFakeDevice(bytes, {installErrors: [null], emitEnd: false})
+
+      var {response} = await install(device.adb)
+      expect(device.adb.installRemote.called).to.equal(false)
+      expect(response.success).to.equal(false)
+      expect(response.data).to.equal('INSTALL_ERROR_DOWNLOAD')
     })
   })
 
