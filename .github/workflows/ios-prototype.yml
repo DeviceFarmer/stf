@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        node: ['22.18.0', '24']
+        node: ['22.18.0', '24', '26']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

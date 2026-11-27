@@ -32,7 +32,7 @@ const expected = JSON.parse(fs.readFileSync(path.join(root, 'expected.json')))
 const secret = '/run/secrets/npmrc'
 const phase = process.argv[2]
 const command = process.argv[3]
-assert.equal(process.versions.node.split('.')[0], '22', 'Expected Node.js 22')
+assert.equal(process.versions.node.split('.')[0], '26', 'Expected Node.js 26')
 assert.equal(process.getuid(), expected.uid, 'Unexpected npm user ID')
 assert.equal(process.getgid(), expected.uid, 'Unexpected npm group ID')
 assert.equal(fs.existsSync('/build/.npmrc'), false, 'Context .npmrc reached COPY')
