@@ -20,6 +20,9 @@ import adbSyrup from '../support/adb.js'
 import routerSyrup from '../support/router.js'
 import pushSyrup from '../support/push.js'
 
+// How long a transfer may go without a byte from storage or a progress report from adb.
+const STALL_TIMEOUT = 60000
+
 interface InstallError extends Error {
   code?: string
 }
@@ -101,9 +104,50 @@ export default syrup.serial()
           contentLength = parseInt(res.headers['content-length'] as string, 10)
         })
 
-        var source = new stream.Readable().wrap(req as unknown as NodeJS.ReadableStream)
-        source.on('error', downloadFailed)
         var target = '/data/local/tmp/_app.apk'
+        var downloaded = 0
+        var downloadDone = false
+        var transferred = 0
+        var stall: {timer?: NodeJS.Timeout, over?: boolean} = {}
+        var finishIfComplete = function() {}
+
+        // Whatever happens to the download or the device, a transfer that stops moving
+        // must not leave the install waiting for ever.
+        function noteActivity() {
+          clearTimeout(stall.timer)
+          if (stall.over) {
+            return
+          }
+          stall.timer = setTimeout(function() {
+            reject_(new Promise.TimeoutError('Transfer of "' + target + '" stalled'))
+          }, STALL_TIMEOUT)
+        }
+
+        function stopWatchingForStall() {
+          stall.over = true
+          clearTimeout(stall.timer)
+        }
+        promise.then(stopWatchingForStall, stopWatchingForStall)
+
+        // Not Readable.wrap(): it destroys the wrapper as soon as the request closes, which
+        // drops an APK that finished downloading before adbkit started reading it.
+        var source = new stream.Transform({
+          transform: function(chunk: Buffer, encoding, callback) {
+            downloaded += chunk.length
+            noteActivity()
+            callback(null, chunk)
+          }
+        , flush: function(callback) {
+            downloadDone = true
+            finishIfComplete()
+            callback()
+          }
+        })
+        req.on('error', function(err: Error) {
+          source.destroy(err)
+        })
+        source.on('error', downloadFailed)
+        req.pipe(source)
 
         return adb.push(options.serial, source, target)
           .timeout(10000)
@@ -144,25 +188,27 @@ export default syrup.serial()
               })()
             }
 
-            function progressListener(stats: PushTransfer['stats']) {
-              if (contentLength) {
-                // Progress 0% to 50%
-                if (reportProgress) {
-                  sendProgress(
-                    'pushing_app'
-                  , 50 * Math.max(0, Math.min(
-                      1
-                    , stats.bytesTransferred / contentLength
-                    ))
-                  )
-                }
-                // 'end' never fires on Node >= 16, and bytesTransferred counts bytes handed to adb, not bytes
-                // written on the device: wait for the file to reach its full size before installing it.
-                if ((stats.bytesTransferred / contentLength) === 1 &&
-                     (process.versions.node.split('.')[0] as unknown as number) >= 16) {
-                  waitForDeviceFile(contentLength)
-                }
+            // 'end' never fires on Node >= 16, and bytesTransferred counts bytes handed to adb, not
+            // bytes written on the device: once the whole download is handed over, wait for the
+            // file to reach its full size before installing it. The size comes from the download
+            // itself, as storage may not send a Content-Length.
+            finishIfComplete = function() {
+              if (downloadDone && transferred >= downloaded) {
+                waitForDeviceFile(downloaded)
               }
+            }
+
+            function progressListener(stats: PushTransfer['stats']) {
+              transferred = stats.bytesTransferred
+              noteActivity()
+              if (contentLength && reportProgress) {
+                // Progress 0% to 50%
+                sendProgress(
+                  'pushing_app'
+                , 50 * Math.max(0, Math.min(1, transferred / contentLength))
+                )
+              }
+              finishIfComplete()
             }
 
             function errorListener(err: Error) {
@@ -172,6 +218,9 @@ export default syrup.serial()
             transfer.on('progress', progressListener)
             transfer.on('error', errorListener)
             transfer.on('end', endListener)
+            transferred = transfer.stats.bytesTransferred
+            noteActivity()
+            finishIfComplete()
 
             return promise
               .catch(function(err) {
