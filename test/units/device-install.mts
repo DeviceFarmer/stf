@@ -22,6 +22,12 @@ interface FakeDeviceOptions {
   installed?: boolean
   // What adbkit's uninstall() rejects with, if it does.
   uninstallError?: Error | null
+  // Milliseconds before the transfer starts reading the source, like adbkit does once
+  // its sync connection is open. Defaults to reading at once.
+  readerDelay?: number
+  // Whether the transfer emits 'end'. adbkit's never does on Node >= 16, so the plugin
+  // must not depend on it.
+  emitEnd?: boolean
 }
 
 // Mimics the adbkit calls the plugin makes against a device that keeps pushed files in
@@ -30,8 +36,11 @@ interface FakeDeviceOptions {
 function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
   var files = new Map<string, Buffer>()
   var calls: string[] = []
-  var transfers: Array<EventEmitter & {cancel: sinon.SinonSpy}> = []
+  var transfers: Array<
+    EventEmitter & {cancel: sinon.SinonSpy, stats: {bytesTransferred: number}}
+  > = []
   var installs = 0
+  var received = 0
   var state = {installed: Boolean(options.installed)}
 
   var adb = {
@@ -42,21 +51,36 @@ function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
     ) {
       expect(serial).to.equal('test-device')
       calls.push('push ' + destination)
-      var transfer = Object.assign(new EventEmitter(), {cancel: sinon.spy()})
+      var transfer = Object.assign(new EventEmitter(), {
+        cancel: sinon.spy()
+      , stats: {bytesTransferred: 0}
+      })
       transfers.push(transfer)
       var chunks: Buffer[] = []
-      source.on('data', function(chunk: Buffer) {
-        chunks.push(chunk)
-      })
-      source.on('end', function() {
-        var data = Buffer.concat(chunks)
-        files.set(destination, data)
-        transfer.emit('progress', {bytesTransferred: data.length, bytesTotal: data.length})
-        transfer.emit('end')
-      })
-      source.on('error', function(err: Error) {
-        transfer.emit('error', err)
-      })
+      function read() {
+        source.on('data', function(chunk: Buffer) {
+          chunks.push(chunk)
+          received += chunk.length
+        })
+        source.on('end', function() {
+          var data = Buffer.concat(chunks)
+          files.set(destination, data)
+          transfer.stats.bytesTransferred = data.length
+          transfer.emit('progress', transfer.stats)
+          if (options.emitEnd !== false) {
+            transfer.emit('end')
+          }
+        })
+        source.on('error', function(err: Error) {
+          transfer.emit('error', err)
+        })
+      }
+      if (options.readerDelay) {
+        setTimeout(read, options.readerDelay)
+      }
+      else {
+        read()
+      }
       return Promise.resolve(transfer)
     })
   , stat: sinon.stub().callsFake(function(serial: string, path: string) {
@@ -90,7 +114,12 @@ function createFakeDevice(bytes: Buffer, options: FakeDeviceOptions) {
     })
   }
 
-  return {adb, calls, files, state, transfers}
+  return {
+    adb, calls, files, state, transfers
+  , received: function() {
+      return received
+    }
+  }
 }
 
 describe('device APK transfer', function() {
@@ -98,12 +127,45 @@ describe('device APK transfer', function() {
   var bytes = Buffer.from([80, 75, 3, 4, 0, 255, 42])
   // HTTP status for each storage request in a test, 200 once they run out.
   var statuses: number[] = []
+  // Like S3 behind a proxy: the body is chunked and has no Content-Length.
+  var omitContentLength = false
+  // Responses that never end, to destroy once the test is over.
+  var hanging: http.ServerResponse[] = []
+  var hangAfterFirstByte = false
+  // What the server does instead of answering normally.
+  var misbehave: 'empty' | 'cut' | null = null
 
   before(function(done) {
     server = http.createServer(function(req, res) {
       var status = statuses.shift() || 200
       var body = status === 200 ? bytes : Buffer.from('Not Found')
       res.statusCode = status
+      if (misbehave === 'empty') {
+        res.setHeader('Content-Length', 0)
+        res.end()
+        return
+      }
+      if (misbehave === 'cut') {
+        // Promises the whole APK, sends the first bytes and drops the connection.
+        res.setHeader('Content-Length', bytes.length)
+        res.write(bytes.subarray(0, 3))
+        setTimeout(function() {
+          res.destroy()
+        }, 20)
+        return
+      }
+      if (hangAfterFirstByte) {
+        res.setHeader('Content-Length', bytes.length)
+        res.write(bytes.subarray(0, 1))
+        hanging.push(res)
+        return
+      }
+      if (omitContentLength) {
+        // end(body) alone would make Node add the header; writing first keeps it chunked.
+        res.write(body)
+        res.end()
+        return
+      }
       res.setHeader('Content-Length', body.length)
       res.end(body)
     })
@@ -115,13 +177,22 @@ describe('device APK transfer', function() {
 
   beforeEach(function() {
     statuses = []
+    omitContentLength = false
+    hangAfterFirstByte = false
+    misbehave = null
+  })
+
+  afterEach(function() {
+    hanging.splice(0).forEach(function(res) {
+      res.destroy()
+    })
   })
 
   after(function(done) {
     server.close(done)
   })
 
-  function install(adb: ReturnType<typeof createFakeDevice>['adb']) {
+  function install(adb: ReturnType<typeof createFakeDevice>['adb'], timeout = 1500) {
     var router = createRouter()
     var progress: string[] = []
     var result = new Promise<TransactionDone>(function(resolve) {
@@ -144,7 +215,7 @@ describe('device APK transfer', function() {
     , launch: false
     })
 
-    return result.timeout(1500).then(function(response) {
+    return (timeout ? result.timeout(timeout) : result).then(function(response) {
       return {response, progress}
     })
   }
@@ -166,6 +237,84 @@ describe('device APK transfer', function() {
       expect(device.files.size).to.equal(0)
       expect(response.success).to.equal(!errorCode)
       expect(response.data).to.equal(errorCode || 'INSTALL_SUCCEEDED')
+    })
+  })
+
+  // The whole body is in the first packet, so the download is over before adbkit has
+  // opened its connection and starts reading.
+  it('should push an APK that finished downloading before the transfer began reading',
+    async function() {
+      var device = createFakeDevice(bytes, {
+        installErrors: [null]
+      , readerDelay: 50
+      , emitEnd: false
+      })
+
+      var {response} = await install(device.adb)
+      expect(device.calls).to.deep.equal(['push ' + APK, 'install ' + APK])
+      expect(response.success).to.equal(true)
+    })
+
+  it('should install when storage sends no Content-Length', async function() {
+    omitContentLength = true
+    var device = createFakeDevice(bytes, {installErrors: [null], emitEnd: false})
+
+    var {response} = await install(device.adb)
+    expect(device.calls).to.deep.equal(['push ' + APK, 'install ' + APK])
+    expect(response.success).to.equal(true)
+  })
+
+  describe('when storage stops sending', function() {
+    var clock: sinon.SinonFakeTimers
+
+    beforeEach(function() {
+      // Only the timers: the sockets keep running on the real event loop.
+      clock = sinon.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+    })
+
+    afterEach(function() {
+      clock.restore()
+    })
+
+    it('should give up with a timeout instead of waiting for ever', async function() {
+      hangAfterFirstByte = true
+      var device = createFakeDevice(bytes, {installErrors: [null], emitEnd: false})
+
+      // No test timeout of its own: that would be a faked timer too.
+      var result = install(device.adb, 0)
+      while (!hanging.length) {
+        await new Promise(setImmediate)
+      }
+      // Let the first byte reach the plugin; the loop ends with the test's own timeout.
+      while (device.received() === 0) {
+        await new Promise(setImmediate)
+      }
+      var aborted = new Promise<void>(function(resolve) {
+        hanging[0]!.on('close', function() {
+          resolve()
+        })
+      })
+      await clock.tickAsync(60000)
+
+      var {response} = await result
+      expect(device.calls).to.deep.equal(['push ' + APK])
+      expect(device.transfers[0]!.cancel.called).to.equal(true)
+      expect(response.success).to.equal(false)
+      expect(response.data).to.equal('INSTALL_ERROR_TIMEOUT')
+      // The download is closed too, not left open to leak the socket.
+      await aborted
+    })
+  })
+
+  ;(['empty', 'cut'] as const).forEach(function(kind) {
+    it('should not install an APK from a ' + kind + ' download', async function() {
+      misbehave = kind
+      var device = createFakeDevice(bytes, {installErrors: [null], emitEnd: false})
+
+      var {response} = await install(device.adb)
+      expect(device.adb.installRemote.called).to.equal(false)
+      expect(response.success).to.equal(false)
+      expect(response.data).to.equal('INSTALL_ERROR_DOWNLOAD')
     })
   })
 
