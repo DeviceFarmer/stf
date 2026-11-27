@@ -32,7 +32,7 @@ const expected = JSON.parse(fs.readFileSync(path.join(root, 'expected.json')))
 const secret = '/run/secrets/npmrc'
 const phase = process.argv[2]
 const command = process.argv[3]
-assert.equal(process.versions.node.split('.')[0], '26', 'Expected Node.js 26')
+assert.equal(process.versions.node.split('.')[0], expected.node, 'Expected Node.js ' + expected.node)
 assert.equal(process.getuid(), expected.uid, 'Unexpected npm user ID')
 assert.equal(process.getgid(), expected.uid, 'Unexpected npm group ID')
 assert.equal(fs.existsSync('/build/.npmrc'), false, 'Context .npmrc reached COPY')
@@ -237,6 +237,9 @@ def main():
     args = parser.parse_args()
     repository = Path(__file__).resolve().parents[2]
     source = (args.dockerfile or repository / 'Dockerfile').read_text()
+    node_major = re.search(r'^ARG NODE_VERSION=(\d+)\.', source, re.M)
+    if not node_major:
+        raise ValueError('The Dockerfile has no ARG NODE_VERSION')
     ignore = repository / '.dockerignore'
     scoped_ignore = repository / 'Dockerfile.dockerignore'
     image = json.loads(run(['docker', 'image', 'inspect', args.image]))[0]
@@ -288,7 +291,7 @@ def main():
                     probe = context / '.npmrc-smoke'
                     probe.mkdir()
                     (probe / 'probe.cjs').write_text(PROBE)
-                    (probe / 'expected.json').write_text(json.dumps({'uid': uid, 'secret': with_secret,
+                    (probe / 'expected.json').write_text(json.dumps({'node': node_major.group(1), 'uid': uid, 'secret': with_secret,
                                                                            'lockfile': lockfile,
                                                                            'operation': uuid.uuid4().hex}))
                     dockerfile = temporary / (variant + '.Dockerfile')
