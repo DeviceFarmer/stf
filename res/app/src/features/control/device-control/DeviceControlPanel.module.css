@@ -66,6 +66,31 @@
   flex: 0 0 auto;
 }
 
+.rightButtonsWithPosture {
+  flex: 0 1 auto;
+}
+
+.postureButton {
+  transition: background-color 250ms ease, border-color 250ms ease, color 250ms ease;
+}
+
+.postureControls[aria-busy='true'] .postureButton[aria-pressed='true'] {
+  background-color: var(--button-bg, var(--mantine-primary-color-filled));
+  color: var(--button-color);
+}
+
+.postureButton[data-pending] {
+  background-color: var(--mantine-primary-color-light);
+  border-color: var(--mantine-primary-color-light-hover);
+  color: var(--mantine-primary-color-light-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .postureButton {
+    transition: none;
+  }
+}
+
 .contextArea {
   flex: 1 1 auto;
   display: flex;

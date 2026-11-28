@@ -11,7 +11,7 @@ import type {GroupPlugin} from '../../lib/types/device-plugins.js'
 
 type Handler = (channel: string, message: unknown) => Bluebird<void>
 
-function setup() {
+function setup(screenReset = false) {
   var handlers: Record<number, Handler> = {}
   var router = {
     on: function(type: {$code: number}, handler: Handler) {
@@ -29,9 +29,11 @@ function setup() {
     wake: sinon.spy()
   , acquireWakeLock: sinon.spy()
   , releaseWakeLock: sinon.spy()
+  , pressKey: sinon.spy()
+  , thawRotation: sinon.spy()
   }
   var plugin = group.invoke(
-    {serial: 'test-device', groupTimeout: 1000}
+    {serial: 'test-device', groupTimeout: 1000, screenReset}
   , {channel: 'solo-channel'}
   , {}
   , service
@@ -40,7 +42,7 @@ function setup() {
   , sub
   , channels
   ) as GroupPlugin
-  return {plugin: plugin, handlers: handlers, push: push, channels: channels}
+  return {plugin, handlers, push, channels, service}
 }
 
 function messages(push: ReturnType<typeof setup>['push'], code: number) {
@@ -96,6 +98,20 @@ describe('Device group plugin', function() {
     return autoGroup(context.handlers, 'fingerprint').then(function() {
       expect(joins).to.eql(['fingerprint'])
     })
+  })
+
+  it('reports a failed autojoin when device preparation rejects', async function() {
+    const context = setup()
+    const autojoins: Array<[string, boolean]> = []
+    context.plugin.on('autojoin', (identifier, joined) => autojoins.push([identifier, joined]))
+    context.plugin.beforeManualJoin(async() => {
+      throw new Error('Unable to confirm the hinge state')
+    })
+
+    await autoGroup(context.handlers, 'fingerprint', 'manual')
+
+    expect(autojoins).to.eql([['fingerprint', false]])
+    expect(messages(context.push, wire.JoinGroupMessage.$code)).to.have.length(0)
   })
 
   it('should not send the autojoin identifier as the usage', function() {
@@ -159,6 +175,191 @@ describe('Device group plugin', function() {
     await plugin.leave('test')
     const second = await plugin.join(owner)
     expect(second.reservationId).to.not.equal(first.reservationId)
+  })
+
+  it('prepares only fresh manual reservations before publishing ownership', async function() {
+    const {plugin, push, channels} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    let started!: () => void
+      , finish!: () => void
+    const entered = new Promise<void>(resolve => {
+      started = resolve
+    })
+    const prepare = sinon.stub<[], Promise<void>>().resolves()
+    prepare.onFirstCall().callsFake(() => new Promise<void>(resolve => {
+      finish = resolve
+      started()
+    }))
+    plugin.beforeManualJoin(prepare)
+    const acquiring = plugin.join(owner)
+    await entered
+    expect(await plugin.join(owner).then(() => true, () => false)).to.equal(false)
+    expect(await plugin.get().then(() => true, () => false)).to.equal(false)
+    expect(channels.register.callCount).to.equal(0)
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(0)
+    finish()
+    const acquired = await acquiring
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(1)
+    expect(await plugin.join(owner)).to.equal(acquired)
+    expect(prepare.callCount).to.equal(1)
+    await plugin.leave('test')
+
+    await plugin.join(owner, 10000, 'automation', 'job', 'lease')
+    expect(prepare.callCount).to.equal(1)
+    await plugin.leave('test')
+
+    await plugin.join(owner)
+    expect(prepare.callCount).to.equal(2)
+  })
+
+  it('does not publish ownership on failed preparation and allows a retry', async function() {
+    const {plugin, push} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    let ready = false
+    plugin.beforeManualJoin(async() => {
+      if (!ready) {
+        throw new Error('Sensor state not confirmed')
+      }
+    })
+    expect(await plugin.join(owner).then(() => true, () => false)).to.equal(false)
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(0)
+    ready = true
+    await plugin.join(owner, 10000, 'manual')
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(1)
+  })
+
+  it('aborts manual preparation on worker shutdown before announcing ownership', async function() {
+    const {plugin, push} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    let started!: () => void
+    const entered = new Promise<void>(resolve => {
+      started = resolve
+    })
+    plugin.beforeManualJoin(signal => new Promise<void>(resolve => {
+      // A command that settles concurrently with shutdown must still not acquire the device.
+      signal.addEventListener('abort', () => resolve(), {once: true})
+      started()
+    }))
+    const joined = plugin.join(owner).then(() => true, () => false)
+    await entered
+    const stop = (lifecycle.observe as sinon.SinonStub).lastCall.args[0] as () => Promise<unknown>
+    await stop()
+    expect(await joined).to.equal(false)
+    expect(messages(push, wire.JoinGroupMessage.$code)).to.have.length(0)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+  })
+
+  it('fences manual commands and competing reservations until awaited cleanup completes',
+    async function() {
+      const {plugin, push} = setup()
+      const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+      const {reservationId} = await plugin.join(owner)
+      expect(plugin.isManualOwner(owner.email, reservationId!)).to.equal(true)
+      let beginCleanup!: () => void
+        , finishCleanup!: () => void
+      const entered = new Promise<void>(resolve => {
+        beginCleanup = resolve
+      })
+      plugin.beforeLeave(() => new Promise<void>(resolve => {
+        finishCleanup = resolve
+        beginCleanup()
+      }))
+      const leaving = plugin.leave('ungroup_request', reservationId)
+      expect(plugin.isManualOwner(owner.email, reservationId!)).to.equal(false)
+      const accepted = await plugin.join(owner).then(() => true, () => false)
+      expect(accepted).to.equal(false)
+      expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+      await entered
+      finishCleanup()
+      await leaving
+      expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(1)
+    })
+
+  it('holds ownership on cleanup failure and permits a matched release retry', async function() {
+    const {plugin, push} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    const group = await plugin.join(owner)
+    let clean = false
+    plugin.beforeLeave(async() => {
+      if (!clean) {
+        throw new Error('Sensor mode could not be restored')
+      }
+    })
+    const failed = await plugin.leave('automatic_timeout').then(() => false, () => true)
+    expect(failed).to.equal(true)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+    expect(await plugin.get()).to.equal(group)
+
+    clean = true
+    await plugin.leave('ungroup_request', group.reservationId)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(1)
+  })
+
+  for (const [usage, managed, thaw] of [
+    ['manual', true, false]
+  , [null, true, false]
+  , ['manual', false, true]
+  , ['automation', true, true]
+  ] as const) {
+    it(`returns to Home with the expected rotation cleanup for ${usage ?? 'default'} ` +
+      `(managed: ${managed})`, async function() {
+      const context = setup(true)
+      const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+      if (managed) {
+        context.plugin.manageManualRotation()
+      }
+      const cleanup = sinon.stub().resolves()
+      context.plugin.beforeLeave(cleanup)
+
+      const joined = await transaction(context, wire.GroupMessage,
+        new wire.GroupMessage(owner, 10000, [], usage))
+      expect(joined.success).to.equal(true)
+      const {reservationId} = lastJoin(context.push).owner
+      const released = await transaction(context, wire.UngroupMessage,
+        new wire.UngroupMessage([], reservationId))
+
+      expect(released.success).to.equal(true)
+      expect(cleanup.callCount).to.equal(1)
+      expect(context.service.pressKey.calledOnceWithExactly('home')).to.equal(true)
+      expect(cleanup.calledBefore(context.service.pressKey)).to.equal(true)
+      expect(context.service.thawRotation.callCount).to.equal(thaw ? 1 : 0)
+      expect(context.service.releaseWakeLock.callCount).to.equal(1)
+    })
+  }
+
+  it('retries an expired reservation if its cleanup failed', async function() {
+    const {plugin, push, channels} = setup()
+    const owner = new wire.OwnerMessage('operator@example.test', 'Operator', 'local')
+    await plugin.join(owner)
+    let attempts = 0
+    plugin.beforeLeave(async() => {
+      if (++attempts === 1) {
+        throw new Error('Sensor mode could not be restored')
+      }
+    })
+
+    channels.emit('timeout', owner.group)
+    for (let attempt = 0; attempt < 100 && channels.register.callCount === 1; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1))
+    }
+    expect(channels.register.callCount).to.equal(2)
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(0)
+
+    const released = new Promise(resolve => plugin.once('leave', resolve))
+    channels.emit('timeout', owner.group)
+    await released
+    expect(messages(push, wire.LeaveGroupMessage.$code)).to.have.length(1)
+  })
+
+  it('fences the correct owner of a managed or replayed automation reservation', async function() {
+    const {plugin} = setup()
+    const owner = new wire.OwnerMessage('ci@example.test', 'CI', 'ci-channel')
+    const replay = await plugin.join(owner, 10000, 'automation')
+    expect(plugin.isManualOwner(owner.email, replay.reservationId!)).to.equal(false)
+    await plugin.leave('test')
+    const managed = await plugin.join(owner, 10000, 'automation', 'job', 'lease')
+    expect(plugin.isManualOwner(owner.email, managed.reservationId!)).to.equal(false)
+    await plugin.leave('test')
   })
 
   it('refuses a delayed release after the same user acquired a new reservation', async function() {

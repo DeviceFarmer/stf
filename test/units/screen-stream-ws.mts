@@ -3,6 +3,7 @@ import {expect} from 'chai'
 import sinon from 'sinon'
 import WebSocket from 'ws'
 import BroadcastSet from '../../lib/units/device/plugins/screen/util/broadcastset.js'
+import {matchesDisplayBanner} from '../../lib/units/device/plugins/screen/util/banner.js'
 import {
   handleScreenConnection
 , type ScreenClient
@@ -35,6 +36,29 @@ describe('screen stream WebSocket error handling (#36)', function() {
 
   afterEach(function() {
     clock.restore()
+  })
+
+  it('accepts legacy size and forwards a revision only for a subscribed client', function() {
+    const ws = new MockWebSocket()
+    const broadcastSet = new BroadcastSet<ScreenClient>()
+    const updateProjection = sinon.spy()
+    handleScreenConnection(
+      ws as unknown as WebSocket, broadcastSet, {banner: null, updateProjection}, 1000
+    )
+
+    ws.emit('message', 'size 640x480')
+    ws.emit('message', 'size primary-rev 800x480')
+    expect(updateProjection.callCount).to.equal(1)
+    expect(updateProjection.firstCall.args.slice(0, 2)).to.deep.equal([640, 480])
+    expect(updateProjection.firstCall.args[2]).to.be.undefined
+
+    ws.emit('message', 'on')
+    ws.emit('message', 'size primary-rev 800x480')
+    expect(updateProjection.secondCall.args).to.deep.equal([800, 480, 'primary-rev'])
+    ws.emit('message', 'off')
+    ws.emit('message', 'size old-rev 900x480')
+    expect(updateProjection.callCount).to.equal(2)
+    ws.terminate()
   })
 
   it('handles ECONNRESET error without crashing and cleans up client and timer', function() {
@@ -189,5 +213,29 @@ describe('screen stream WebSocket error handling (#36)', function() {
     expect(closedError).to.exist
     expect(closedError!.message).to.include('CLOSED')
     expect(broadcastSet.keys()).to.have.lengthOf(0)
+  })
+})
+
+describe('Fold4 capture banner', function() {
+  const display = {id: 0, width: 904, height: 2316, rotation: 0, revision: 'cover'}
+  const banner = {
+    version: 1, length: 24, pid: 1
+  , realWidth: 904, realHeight: 2316, virtualWidth: 390, virtualHeight: 1000, orientation: 0
+  , quirks: {alwaysUpright: true, dumb: false, tear: false}
+  }
+
+  it('matches the active physical panel and tolerates integer projection rounding', function() {
+    expect(matchesDisplayBanner(banner, display)).to.equal(true)
+    const wrongPanel = {...banner, realWidth: 1812, realHeight: 2176}
+    expect(matchesDisplayBanner(wrongPanel, display)).to.equal(false)
+    expect(matchesDisplayBanner({...banner, virtualWidth: 600}, display)).to.equal(false)
+  })
+
+  it('normalizes both minicap-apk landscape axes for an upright banner', function() {
+    const rotated = {...banner, orientation: 90, realWidth: 2316, realHeight: 904
+    , virtualWidth: 1000, virtualHeight: 390}
+    const landscape = {...display, rotation: 90}
+    expect(matchesDisplayBanner(rotated, landscape)).to.equal(true)
+    expect(matchesDisplayBanner({...rotated, orientation: 0}, landscape)).to.equal(false)
   })
 })

@@ -20,7 +20,7 @@ interface Gesture {
   timer: ReturnType<typeof setTimeout> | null
   gap: number | null
   next: number | null
-  start: number | null
+  start: {seq: number, activate?: Operation} | null
   heldContacts: Set<number>
 }
 
@@ -47,6 +47,7 @@ interface GestureOptions {
   maxStartAgeMs?: number
   futureClockSkewMs?: number
   onFinish?: (heldContacts: ReadonlySet<number>) => void
+  onCancel?: (matches: (gestureId: string | null) => boolean) => void
 }
 
 const cycle = 100
@@ -234,7 +235,7 @@ export class TouchGesture {
     return entry
   }
 
-  start(seq: number, id?: string | null, reservationId?: string | null) {
+  start(seq: number, id?: string | null, reservationId?: string | null, activate?: Operation) {
     if (!Number.isInteger(seq) || seq < 0 || seq >= cycle || !this.allowed(id, reservationId)) {
       return
     }
@@ -256,7 +257,7 @@ export class TouchGesture {
     }
     clearTimeout(entry.timer!)
     entry.timer = null
-    entry.start = seq
+    entry.start = activate ? {seq, activate} : {seq}
     const currentSource = this.current?.id && this.source(this.current.id)
     const nextSource = key && this.source(key)
     if (this.current && currentSource && nextSource && currentSource.source === nextSource.source) {
@@ -317,7 +318,8 @@ export class TouchGesture {
     this.pending.delete(entry.id || legacy)
     this.pendingPackets -= pending.size
     entry.pending = null
-    const seq = entry.start!
+    const {seq, activate} = entry.start!
+    activate?.()
     entry.next = (seq + 1) % cycle
     // Fill the locked queue before Start so arrival order cannot skip the first Down.
     for (const [position, packet] of [...pending].sort(([left], [right]) =>
@@ -494,28 +496,29 @@ export class TouchGesture {
   clear(id?: string | null, reservationId?: string | null, through = false) {
     if (id) {
       const source = through ? this.source(id) : null
-      const matches = (entry: Gesture) => {
+      const matches = (gestureId: string | null) => {
         if (!through) {
-          return entry.id === id
+          return gestureId === id
         }
-        const identity = entry.id && this.source(entry.id)
-        return source && identity && identity.source === source.source &&
+        const identity = gestureId && this.source(gestureId)
+        return !!source && !!identity && identity.source === source.source &&
           identity.order <= source.order
       }
       const accepted = [...this.pending.values(), ...(this.current ? [this.current] : [])]
-        .some(matches)
+        .some(entry => matches(entry.id))
       if (!this.allowed(id, reservationId) || (through && !source) ||
           (!accepted && !this.fresh(id)) || !this.rememberSource(id, true)) {
         return
       }
+      this.options.onCancel?.(matches)
       // Remove the whole cancelled range before releasing the head: promoting it
       // first could execute another cancelled gesture's already buffered tail.
       for (const pending of [...this.pending.values()]) {
-        if (matches(pending)) {
+        if (matches(pending.id)) {
           this.forget(pending)
         }
       }
-      if (this.current && matches(this.current)) {
+      if (this.current && matches(this.current.id)) {
         this.reset()
         const current = this.current
         this.current = null

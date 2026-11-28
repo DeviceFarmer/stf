@@ -12,16 +12,21 @@ import type {Control} from '@/core/control'
 import type {Device} from '@/core/devices/types'
 import {useTranslation} from '@/core/i18n'
 import {useStandalone} from '@/ui/modes'
-import {rotateBy, saveScreenshot} from './device-commands'
+import {rotateBy, rotationOf, saveScreenshot} from './device-commands'
+import type {DeviceActions} from './use-device-actions'
 
-export function DeviceMenuItems({device, control, onStopUsing}: {
+export function DeviceMenuItems({device, control, onStopUsing, rotationActions}: {
   device: Device
   control: Control
   onStopUsing: () => void
+  rotationActions?: Pick<DeviceActions, 'rotateBy' | 'rotationDisabled'>
 }) {
   const {t} = useTranslation()
   const standalone = useStandalone()
   const ios = device.platform === 'iOS'
+  const rotationDisabled = control.readOnly || rotationActions?.rotationDisabled === true
+  const rotate = rotationActions?.rotateBy ??
+    ((delta: number) => rotateBy(control, rotationOf(device), delta, standalone))
 
   return (
     <>
@@ -39,14 +44,14 @@ export function DeviceMenuItems({device, control, onStopUsing}: {
         {t('Recents')}
       </Menu.Item>
       <Menu.Divider />
-      <Menu.Item disabled={control.readOnly}
-        leftSection={<IconRotate size={16} />} onClick={() => rotateBy(control, device, 90, standalone)}>
+      <Menu.Item disabled={rotationDisabled}
+        leftSection={<IconRotate size={16} />} onClick={() => rotate(90)}>
         {t('Rotate Left')}
       </Menu.Item>
       <Menu.Item
-        disabled={control.readOnly}
+        disabled={rotationDisabled}
         leftSection={<IconRotateClockwise size={16} />}
-        onClick={() => rotateBy(control, device, -90, standalone)}
+        onClick={() => rotate(-90)}
       >
         {t('Rotate Right')}
       </Menu.Item>

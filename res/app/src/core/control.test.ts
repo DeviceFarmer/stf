@@ -18,6 +18,7 @@ describe('read-only device control', () => {
     await expect(control.shell('echo hello')).rejects.toThrow('read-only')
     await expect(control.install({href: 'artifact', manifest: {}, launch: false})).rejects.toThrow('read-only')
     await expect(control.iosPower('shutdown')).rejects.toThrow('read-only')
+    await expect(control.setFoldablePosture('folded', 'screen-revision')).rejects.toThrow('read-only')
     await expect(control.rebootAndKeep()).rejects.toThrow('read-only')
     expect(emit).not.toHaveBeenCalled()
     expect(transaction).not.toHaveBeenCalled()
@@ -28,6 +29,18 @@ describe('read-only device control', () => {
     readOnly = true
     control.home()
     expect(emit).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends Foldable posture changes as a transaction fenced by the current display revision', async() => {
+    const target = {serial: 'fold4'} as Device
+    const reply = {success: true}
+    transaction.mockReturnValueOnce({channel: 'posture-response', promise: Promise.resolve(reply)})
+    const control = createControl(target, 'device-channel', () => false)
+
+    await expect(control.setFoldablePosture('unfolded', 'screen-revision')).resolves.toBe(reply)
+    expect(transaction).toHaveBeenCalledExactlyOnceWith(target, 20000, 'Foldable posture request timed out')
+    expect(emit).toHaveBeenCalledExactlyOnceWith('display.foldablePosture', 'device-channel',
+      'posture-response', {mode: 'unfolded', revision: 'screen-revision'})
   })
   it('preserves progress chaining for denied installations and shell commands', async() => {
     const control = createControl({serial: 'phone'} as Device, 'channel', () => true)

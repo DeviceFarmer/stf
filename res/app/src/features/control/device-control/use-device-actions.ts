@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useRef, useState} from 'react'
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router'
 import type {Control} from '@/core/control'
 import {useUserDevices} from '@/core/devices/store'
@@ -11,38 +11,106 @@ import {rotateBy, rotationOf} from './device-commands'
 
 export type Orientation = 'portrait' | 'landscape'
 
-const ROTATION_SETTLE_MS = 400
+interface StreamRotation {
+  angle: number | null
+  revision: string | null
+  ready: boolean
+}
 
-function isPortrait(rotation: number): boolean {
+interface RotationRequest {
+  control: Control
+  revision: string
+  timer: ReturnType<typeof setTimeout>
+}
+
+const ROTATION_SETTLE_MS = 400
+const ROTATION_FRAME_TIMEOUT_MS = 5000
+
+function isPortrait(rotation: number | null): boolean {
   return rotation === 0 || rotation === 180
 }
 
-function isLandscape(rotation: number): boolean {
+function isLandscape(rotation: number | null): boolean {
   return rotation === 90 || rotation === 270
 }
 
-export function useDeviceActions(device: Device, control: Control) {
+function orientationOf(rotation: number | null): Orientation | null {
+  if (isPortrait(rotation)) {
+    return 'portrait'
+  }
+  if (isLandscape(rotation)) {
+    return 'landscape'
+  }
+  return null
+}
+
+export function useDeviceActions(device: Device, control: Control, streamRotation?: StreamRotation) {
   const navigate = useNavigate()
   const standalone = useStandalone()
   const {devices: groupDevices} = useUserDevices()
   const deviceRef = useRef(device)
   const [currentRotation, setCurrentRotation] = useState<Orientation>('portrait')
-  const rotation = rotationOf(device)
+  const [rotationRequest, setRotationRequest] = useState<RotationRequest | null>(null)
+  const activeRotation = useRef<RotationRequest | null>(null)
+  const deviceRotation = rotationOf(device)
+  const rotation = streamRotation ? streamRotation.angle : deviceRotation
+  const streamReady = streamRotation?.ready
+  const streamRevision = streamRotation?.revision
+  const rotationDisabled = Boolean(streamRotation && (!streamReady || rotationRequest?.control === control))
 
   useLayoutEffect(() => {
     deviceRef.current = device
   })
 
   useEffect(() => {
-    if (isPortrait(rotation)) {
-      setCurrentRotation('portrait')
+    const orientation = orientationOf(deviceRotation)
+    if (orientation) {
+      setCurrentRotation(orientation)
     }
-    else if (isLandscape(rotation)) {
-      setCurrentRotation('landscape')
+  }, [deviceRotation])
+
+  const finishRotation = useCallback(() => {
+    clearTimeout(activeRotation.current?.timer)
+    activeRotation.current = null
+    setRotationRequest(null)
+  }, [])
+
+  useEffect(() => {
+    const request = activeRotation.current
+    if (request && (request.control !== control ||
+      (streamReady && streamRevision && streamRevision !== request.revision))) {
+      finishRotation()
     }
-  }, [rotation])
+  }, [control, finishRotation, streamReady, streamRevision])
+
+  useEffect(() => () => {
+    clearTimeout(activeRotation.current?.timer)
+  }, [])
+
+  function beginRotation(changesAngle: boolean) {
+    if (!streamRotation) {
+      return true
+    }
+    if (rotationDisabled || activeRotation.current || !streamRevision) {
+      return false
+    }
+    if (changesAngle) {
+      const timer = setTimeout(finishRotation, ROTATION_FRAME_TIMEOUT_MS)
+      const request = {control, revision: streamRevision, timer}
+      activeRotation.current = request
+      setRotationRequest(request)
+    }
+    return true
+  }
 
   function tryToRotate(orientation: Orientation) {
+    if (streamRotation) {
+      const angle = orientation === 'portrait' ? 0 : 90
+      if (beginRotation(angle !== streamRotation.angle)) {
+        control.rotate(angle)
+      }
+      return
+    }
     setCurrentRotation(orientation)
     if (orientation === 'portrait') {
       control.rotate(0)
@@ -96,8 +164,14 @@ export function useDeviceActions(device: Device, control: Control) {
   return {
     groupDevices
     , rotation
-    , currentRotation
-    , rotateBy: (delta: number) => rotateBy(control, deviceRef.current, delta, standalone)
+    , rotationDisabled
+    , currentRotation: streamRotation ? orientationOf(rotation) : currentRotation
+    , rotateBy: (delta: number) => {
+      const source = streamRotation ? streamRotation.angle : rotationOf(deviceRef.current)
+      if (source !== null && beginRotation(delta % 360 !== 0)) {
+        rotateBy(control, source, delta, standalone)
+      }
+    }
     , tryToRotate
     , stopUsing
     , controlDevice

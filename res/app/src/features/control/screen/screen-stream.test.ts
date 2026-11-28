@@ -1,6 +1,6 @@
-import {afterEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 import type {Device} from '@/core/devices/types'
-import {startScreenStream} from './screen-stream'
+import {startScreenStream, type ScreenGeometry} from './screen-stream'
 
 class Socket {
   static OPEN = 1
@@ -108,16 +108,58 @@ function fixture(platform = 'iOS', canDecodeHevc = true, overrides: Partial<Devi
   const onFirstFrame = vi.fn()
   const onInputReady = vi.fn()
   const onWdaInputReady = vi.fn()
+  const onAndroidDisplay = vi.fn()
+  const onAndroidInputReady = vi.fn()
+  const screen: ScreenGeometry = {rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}}
   const stream = startScreenStream({url: 'wss://stf.test/screen', root
     , positioner: document.createElement('div'), canvas
-    , screen: {rotation: 0, bounds: {x: 0, y: 0, w: 0, h: 0}}
+    , screen
     , wdaScreen
     , getDevice: () => device, isShown: shown, canControl, onDisplayError, onFirstFrame
-    , onInputReady, onWdaInputReady, onStatusChange})
+    , onInputReady, onWdaInputReady, onStatusChange, onAndroidDisplay, onAndroidInputReady})
   return {
-    device, stream, root, context, getOtherCanvasContext, decode, bitmap, hidden, shown, onStatusChange
-  , canControl, onDisplayError, onFirstFrame, onInputReady, onWdaInputReady
+    device, stream, root, canvas, context, getOtherCanvasContext, decode, bitmap, hidden, shown, onStatusChange
+  , canControl, onDisplayError, onFirstFrame, onInputReady, onWdaInputReady, onAndroidDisplay
+  , onAndroidInputReady, screen
   }
+}
+
+function foldFixture(reducedMotion = false) {
+  const owner = {email: 'operator@example.test', reservationId: 'reservation-one'}
+  const view = fixture('Android', true, {owner})
+  Object.defineProperties(view.canvas, {offsetWidth: {value: 300}, offsetHeight: {value: 400}})
+  vi.stubGlobal('matchMedia', () => ({matches: reducedMotion}))
+  const snapshotContext = {drawImage: vi.fn()}
+  view.getOtherCanvasContext.mockReturnValue(snapshotContext as unknown as CanvasRenderingContext2D)
+
+  const prototype = HTMLCanvasElement.prototype
+  const previousAnimate = Object.getOwnPropertyDescriptor(prototype, 'animate')
+  const animate = vi.fn((_keyframes: Keyframe[], _options: KeyframeAnimationOptions) => ({
+    cancel: vi.fn(), onfinish: null as (() => void) | null
+  }))
+  Object.defineProperty(prototype, 'animate', {value: animate, configurable: true})
+  onTestFinished(() => {
+    if (previousAnimate) {
+      Object.defineProperty(prototype, 'animate', previousAnimate)
+    }
+    else {
+      Reflect.deleteProperty(prototype, 'animate')
+    }
+  })
+
+  const socket = Socket.instances[0]!
+  socket.open()
+  const unfolded = {id: 0, width: 1812, height: 2176, rotation: 0, revision: 'inner'}
+  const folded = {...unfolded, width: 904, height: 2316, revision: 'outer'}
+  const announce = (display: typeof unfolded, posture = 'folded') => socket.message('displays ' +
+    JSON.stringify({selected: display, singleTouch: display === folded, posture, projection: true}))
+  const start = (display: typeof unfolded) => socket.message('start ' +
+    JSON.stringify({display, quirks: {alwaysUpright: false}}))
+  async function frame() {
+    socket.message(new Blob([jpegFrame()], {type: 'image/jpeg'}))
+    await vi.advanceTimersByTimeAsync(0)
+  }
+  return {...view, animate, snapshotContext, socket, unfolded, folded, announce, start, frame}
 }
 
 async function showHevcFrame(socket: Socket) {
@@ -132,6 +174,283 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+describe('Android display stream', () => {
+  it('publishes only valid Foldable posture metadata and clears it on disconnect', () => {
+    const {stream, onAndroidDisplay} = fixture('Android')
+    const socket = Socket.instances[0]!
+    socket.open()
+    const main = {id: 0, width: 1080, height: 2400, rotation: 0, revision: 'main-display'}
+    const metadata = {selected: main, singleTouch: false}
+    const announce = (state: unknown) => socket.message('displays ' + JSON.stringify(state))
+
+    announce({...metadata, ids: [0, 2]})
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(metadata)
+    announce({...metadata, posture: 'unfolded'})
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith({...metadata, posture: 'unfolded'})
+    announce({...metadata, posture: 'unsupported'})
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(metadata)
+    socket.close()
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(null)
+    stream.stop()
+  })
+
+  it('drops pending JPEGs when the primary display changes geometry', async() => {
+    const {stream, context, decode, bitmap, screen, onAndroidInputReady} = fixture('Android')
+    const socket = Socket.instances[0]!
+    socket.open()
+    const main = {id: 0, width: 1812, height: 2176, rotation: 0, revision: 'unfolded-frame'}
+    const folded = {id: 0, width: 904, height: 2316, rotation: 90, revision: 'folded-frame'}
+    const announce = (selected: typeof main) => socket.message('displays ' +
+      JSON.stringify({selected, singleTouch: selected === folded}))
+    const start = (display: typeof main) => socket.message('start ' +
+      JSON.stringify({display, quirks: {alwaysUpright: false}}))
+    const jpeg = new Blob([jpegFrame()], {type: 'image/jpeg'})
+
+    announce(main)
+    start(main)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(main.revision)
+    const mainScaler = screen.inputScaler
+
+    let finishDecode!: (image: typeof bitmap) => void
+    decode.mockReturnValueOnce(new Promise(resolve => {
+      finishDecode = resolve
+    }))
+    socket.message(jpeg)
+
+    announce(folded)
+    start(main)
+    socket.message(jpeg)
+    finishDecode(bitmap)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(context.drawImage).toHaveBeenCalledOnce()
+    expect(decode).toHaveBeenCalledTimes(2)
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    expect(screen.rotation).toBe(folded.rotation)
+    expect(screen.inputScaler).not.toBe(mainScaler)
+
+    start(folded)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(context.drawImage).toHaveBeenCalledTimes(2)
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(folded.revision)
+    stream.stop()
+  })
+
+  it('does not show or enable touch on frames from a secondary display', async() => {
+    const {stream, decode, onAndroidDisplay, onAndroidInputReady} = fixture('Android')
+    const socket = Socket.instances[0]!
+    socket.open()
+    const selected = {id: 2, width: 800, height: 600, rotation: 0, revision: 'secondary'}
+    const primary = {...selected, id: 0, revision: 'primary'}
+    const jpeg = new Blob([jpegFrame()], {type: 'image/jpeg'})
+    const announce = (display: typeof selected) => socket.message('displays ' +
+      JSON.stringify({selected: display, singleTouch: false}))
+    const start = (display: typeof selected) => socket.message('start ' +
+      JSON.stringify({display, quirks: {alwaysUpright: false}}))
+
+    announce(selected)
+    start(selected)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onAndroidDisplay).toHaveBeenLastCalledWith(null)
+    expect(decode).not.toHaveBeenCalled()
+    expect(onAndroidInputReady).not.toHaveBeenCalled()
+
+    announce(primary)
+    start({...selected, revision: primary.revision})
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(decode).not.toHaveBeenCalled()
+
+    start(primary)
+    socket.message(jpeg)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(decode).toHaveBeenCalledOnce()
+    expect(onAndroidInputReady).toHaveBeenLastCalledWith(primary.revision)
+    stream.stop()
+  })
+})
+
+describe('Foldable panel transition', () => {
+  it('freezes before the command and buffers a matching frame until the provider confirms it', async() => {
+    const view = foldFixture()
+    view.announce(view.unfolded, 'sensor')
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.socket.sent.filter(message => message.startsWith('size inner '))).toHaveLength(1)
+    expect(view.stream.prepareFoldSwitch('folded')).toBe(true)
+    expect(view.stream.prepareFoldSwitch('folded')).toBe(false)
+    await view.frame()
+    expect(view.decode).toHaveBeenCalledOnce()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+
+    view.announce(view.folded)
+    view.start(view.folded)
+    await view.frame()
+    expect(view.socket.sent.filter(message => message.startsWith('size outer '))).toHaveLength(1)
+    expect(view.decode).toHaveBeenCalledOnce()
+    expect(view.animate).not.toHaveBeenCalled()
+
+    view.stream.acceptFoldSwitch(view.folded.revision)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(view.decode).toHaveBeenCalledTimes(2)
+    expect(view.animate).toHaveBeenCalledTimes(2)
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    view.animate.mock.results[1]!.value.onfinish?.()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(view.folded.revision)
+    view.stream.stop()
+  })
+
+  it('restores input immediately when the confirmed panel stayed the same', async() => {
+    const view = foldFixture()
+    view.announce(view.unfolded, 'unfolded')
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.stream.prepareFoldSwitch('sensor')).toBe(true)
+    view.announce(view.unfolded, 'sensor')
+    view.stream.acceptFoldSwitch(view.unfolded.revision)
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(view.unfolded.revision)
+    expect(view.animate).not.toHaveBeenCalled()
+    expect(view.decode).toHaveBeenCalledOnce()
+    view.stream.stop()
+  })
+
+  it.each(['before', 'after'])('uses a newer hinge frame announced %s the acknowledgement', async(order) => {
+    const view = foldFixture()
+    view.announce(view.unfolded, 'unfolded')
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.stream.prepareFoldSwitch('sensor')).toBe(true)
+
+    const confirmed = {...view.unfolded, revision: 'hinge-confirmed'}
+    view.announce(confirmed, 'sensor')
+    if (order === 'after') {
+      view.stream.acceptFoldSwitch(confirmed.revision)
+    }
+    view.announce(view.folded, 'sensor')
+    view.start(view.folded)
+    await view.frame()
+    if (order === 'before') {
+      expect(view.animate).not.toHaveBeenCalled()
+      view.stream.acceptFoldSwitch(confirmed.revision)
+      await vi.advanceTimersByTimeAsync(0)
+    }
+
+    expect(view.animate).toHaveBeenCalledTimes(2)
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    view.animate.mock.results[1]!.value.onfinish?.()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(view.folded.revision)
+    view.stream.stop()
+  })
+
+  it('keeps waiting when the acknowledged hinge revision has not appeared on this stream', async() => {
+    const view = foldFixture()
+    view.announce(view.unfolded, 'unfolded')
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.stream.prepareFoldSwitch('sensor')).toBe(true)
+    view.stream.acceptFoldSwitch('missing-revision')
+    view.announce(view.folded, 'sensor')
+    view.start(view.folded)
+    await view.frame()
+
+    expect(view.decode).toHaveBeenCalledOnce()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    view.stream.stop()
+  })
+
+  it('uses the final canvas angle immediately for revisioned rotation', async() => {
+    const view = foldFixture()
+    expect(view.root.classList.contains('revisioned-rotation')).toBe(false)
+    view.announce(view.unfolded, 'sensor')
+    expect(view.root.classList.contains('revisioned-rotation')).toBe(true)
+    view.start(view.unfolded)
+    await view.frame()
+
+    const landscape = {...view.unfolded, rotation: 90, revision: 'landscape'}
+    view.announce(landscape, 'sensor')
+    view.start(landscape)
+    await view.frame()
+    expect(view.canvas.style.transform).toBe('rotate(-90deg)')
+    expect(view.screen.rotation).toBe(90)
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(landscape.revision)
+    view.stream.stop()
+    expect(view.root.classList.contains('revisioned-rotation')).toBe(false)
+  })
+
+  it('holds the old frame until the new panel draws, then crossfades before enabling input', async() => {
+    const view = foldFixture()
+    view.announce(view.unfolded, 'unfolded')
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith('inner')
+
+    view.announce(view.folded)
+    view.start(view.unfolded)
+    await view.frame()
+    expect(view.root.classList.contains('has-frame')).toBe(true)
+    expect(view.context.drawImage).toHaveBeenCalledOnce()
+    expect(view.animate).not.toHaveBeenCalled()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+
+    view.start(view.folded)
+    await view.frame()
+    const previous = view.root.querySelector<HTMLCanvasElement>('.fold-transition-frame')!
+    expect(previous.style.width).toBe('300px')
+    expect(previous.style.height).toBe('400px')
+    expect(previous.getAttribute('aria-hidden')).toBe('true')
+    expect(view.snapshotContext.drawImage).toHaveBeenCalledExactlyOnceWith(view.canvas, 0, 0)
+    expect(view.animate.mock.calls.map(([, animation]) => animation.duration)).toEqual([250, 250])
+    await view.frame()
+    expect(view.animate).toHaveBeenCalledTimes(2)
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+
+    view.animate.mock.results[1]!.value.onfinish?.()
+    expect(view.root.querySelector('.fold-transition-frame')).toBeNull()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith('outer')
+    view.stream.stop()
+  })
+
+  it.each([
+    {reason: 'when the panel stays the same', reducedMotion: false}
+  , {reason: 'with reduced motion enabled', reducedMotion: true}
+  ])('skips the fade $reason', async({reducedMotion}) => {
+    const view = foldFixture(reducedMotion)
+    view.announce(view.unfolded)
+    view.start(view.unfolded)
+    await view.frame()
+
+    const next = reducedMotion ? view.folded : {...view.unfolded, revision: 'new-revision'}
+    view.announce(next, 'sensor')
+    view.start(next)
+    await view.frame()
+    expect(view.animate).not.toHaveBeenCalled()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(next.revision)
+    view.stream.stop()
+  })
+
+  it('removes the outgoing frame on a secure display event without enabling input', async() => {
+    const view = foldFixture()
+    view.announce(view.unfolded)
+    view.start(view.unfolded)
+    await view.frame()
+    view.announce(view.folded)
+    view.start(view.folded)
+    await view.frame()
+    expect(view.root.querySelector('.fold-transition-frame')).not.toBeNull()
+
+    const outgoing = view.animate.mock.results[1]!.value
+    view.socket.message('secure_on')
+    expect(outgoing.cancel).toHaveBeenCalledOnce()
+    expect(outgoing.onfinish).toBeNull()
+    expect(view.root.querySelector('.fold-transition-frame')).toBeNull()
+    expect(view.onAndroidInputReady).toHaveBeenLastCalledWith(null)
+    view.stream.stop()
+  })
 })
 
 describe('iPhone WDA video', () => {

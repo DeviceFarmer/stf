@@ -106,6 +106,18 @@ function fixture() {
         resolve(deliver)
       }))
     }
+    , transaction(event: string, data: object): Promise<void> {
+      const responseChannel = 'tx.posture'
+      const packet = [event, device.channel, responseChannel, data]
+      return new Promise((resolve, reject) => guard(packet, error => {
+        if (error) {
+          reject(error)
+          return
+        }
+        listeners.get(event)!(device.channel, responseChannel, data)
+        resolve()
+      }))
+    }
     , owner(reservationId: string) {
       device = {...device, owner: {...device.owner, reservationId}}
       transports[1]!.emit('message', Buffer.from(wireutil.global), wireutil.envelope(
@@ -128,6 +140,59 @@ function fixture() {
     }
   }
 }
+
+describe('Foldable posture commands', function() {
+  it('stamps the authenticated owner and rejects invalid or automated requests',
+    async function() {
+      const f = fixture()
+      try {
+        await f.transaction('display.foldablePosture', {
+          mode: 'folded', revision: 'frame-revision', requester: 'spoof@example.test'
+        })
+        const [envelope] = f.envelopes()
+        assert.equal(envelope?.type, wire.FoldablePostureMessage.$code)
+        assert.equal(envelope?.channel, 'tx.posture')
+        const command = wire.FoldablePostureMessage.decode(envelope!.message)
+        assert.equal(command.mode, 'folded')
+        assert.equal(command.revision, 'frame-revision')
+        assert.equal(command.requester, 'owner@example.test')
+
+        await f.transaction('display.foldablePosture', {mode: '0', revision: 'frame-revision'})
+        assert.equal(f.emitted.at(-1)?.[0], 'tx.cancel')
+        assert.equal(f.envelopes().length, 1)
+
+        device.usage = 'automation'
+        await assert.rejects(f.transaction('display.foldablePosture', {
+          mode: 'sensor', revision: 'frame-revision'
+        }))
+        assert.equal(f.envelopes().length, 1)
+      }
+      finally {
+        await f.close()
+      }
+    })
+
+  it('keeps a rotation tied to the reservation authorized before delivery', async function() {
+    const f = fixture()
+    try {
+      const delayed = await f.dispatch('display.rotate', {
+        rotation: 90, requester: 'spoof@example.test', reservationId: 'spoof'
+      }, true)
+      f.owner('second')
+      delayed()
+
+      const [envelope] = f.envelopes()
+      assert.equal(envelope?.type, wire.RotateMessage.$code)
+      const message = wire.RotateMessage.decode(envelope!.message)
+      assert.equal(message.rotation, 90)
+      assert.equal(message.requester, 'owner@example.test')
+      assert.equal(message.reservationId, 'first')
+    }
+    finally {
+      await f.close()
+    }
+  })
+})
 
 describe('server generated touch identity', function() {
   it('stamps every touch packet from authorization and distinguishes cancel from sequenced reset',

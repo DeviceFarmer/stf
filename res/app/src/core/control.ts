@@ -4,6 +4,7 @@ import {createTransaction, type ProgressPromise, type TransactionResult} from '.
 import keycodesMapped from './keycodes-mapped.json'
 import type {Device} from './devices/types'
 import {isAutomated} from './devices/enhance'
+import type {FoldablePostureMode} from '../../../../lib/types/android-display'
 
 const mappedKeys = keycodesMapped as Record<string, string>
 
@@ -35,13 +36,15 @@ export function createControl(target: Device, channel: string, isReadOnly = () =
     }
   }
 
-  function sendTwoWay(action: string, data?: unknown, timeoutMs?: number): TxPromise {
+  function sendTwoWay(
+    action: string, data?: unknown, timeoutMs?: number, timeoutReason?: string
+  ): TxPromise {
     if (isReadOnly()) {
       const denied = Promise.reject(new Error('Device is read-only during automation')) as TxPromise
       denied.progressed = () => denied
       return denied
     }
-    const tx = createTransaction(target, timeoutMs)
+    const tx = createTransaction(target, timeoutMs, timeoutReason)
     emit(action, channel, tx.channel, data)
     return tx.promise
   }
@@ -66,8 +69,12 @@ export function createControl(target: Device, channel: string, isReadOnly = () =
       return isReadOnly()
     }
     , channel
-    , gestureStart: (seq: number, screenSessionId?: string) =>
-      sendOneWay('input.gestureStart', screenSessionId ? {seq, screenSessionId} : {seq})
+    , gestureStart: (seq: number, screenSessionId?: string, displayRevision?: string) =>
+      sendOneWay('input.gestureStart', {
+        seq
+      , ...(screenSessionId ? {screenSessionId} : {})
+      , ...(displayRevision ? {displayRevision} : {})
+      })
     , gestureStop: (seq: number) => sendOneWay('input.gestureStop', {seq})
     , touchDown: (seq: number, contact: number, x: number, y: number, pressure?: number) =>
       sendOneWay('input.touchDown', {seq, contact, x, y, pressure})
@@ -102,6 +109,8 @@ export function createControl(target: Device, channel: string, isReadOnly = () =
         api.post(`/api/v1/user/devices/${target.serial}/reboot?keepOwnership=true`)
     , rotate: (rotation: number, lock?: boolean) =>
       sendOneWay('display.rotate', {rotation, lock})
+    , setFoldablePosture: (mode: FoldablePostureMode, revision: string) =>
+      sendTwoWay('display.foldablePosture', {mode, revision}, 20000, 'Foldable posture request timed out')
     , testForward: (forward: ForwardSpec) => sendTwoWay('forward.test', {
       targetHost: forward.targetHost
       , targetPort: Number(forward.targetPort)

@@ -41,6 +41,7 @@ interface PacketGuardOptions {
   persistWaitMs?: number
   resetGesture?: (channel: string, identity?: AuthorizedInput) => void
   onAuthorizedInput?: (packet: readonly unknown[], identity: AuthorizedInput) => void
+  onAuthorizedRotation?: (data: unknown, reservationId: string | null) => void
 }
 
 interface PendingPacket {
@@ -318,6 +319,9 @@ export function createDevicePacketGuard(
       if (input) {
         options.onAuthorizedInput?.(entry.packet,
           gestures.get(channel)?.scope || {gestureId: null, reservationId})
+      }
+      if (event === 'display.rotate') {
+        options.onAuthorizedRotation?.(entry.packet[2], reservationId)
       }
       if (event === 'input.gestureStop') {
         gestures.delete(channel)

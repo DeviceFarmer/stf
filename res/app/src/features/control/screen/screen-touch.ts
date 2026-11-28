@@ -11,6 +11,7 @@ export interface ScreenTouchOptions {
   control: Control
   singleTouch: boolean
   screenSessionId: string | null
+  displayRevision?: string
 }
 
 const SEQ_CYCLE = 100
@@ -18,7 +19,7 @@ const MOUSE_PRESSURE = 0.5
 const SECONDARY_BUTTON = 3
 
 export function bindScreenTouch(options: ScreenTouchOptions): () => void {
-  const {root, input, fingers, screen, scaler, control, singleTouch, screenSessionId} = options
+  const {root, input, fingers, screen, scaler, control, singleTouch, screenSessionId, displayRevision} = options
   const slots: number[] = []
   const slotted: Record<string, number> = Object.create(null)
   let seq = -1
@@ -151,7 +152,10 @@ export function bindScreenTouch(options: ScreenTouchOptions): () => void {
 
   function startGesture(kind: 'mouse' | 'touch') {
     activeGesture = kind
-    if (screenSessionId) {
+    if (displayRevision) {
+      control.gestureStart(nextSeq(), undefined, displayRevision)
+    }
+    else if (screenSessionId) {
       control.gestureStart(nextSeq(), screenSessionId)
     }
     else {

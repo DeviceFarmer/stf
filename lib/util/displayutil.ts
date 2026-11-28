@@ -1,4 +1,9 @@
 import type {DeviceDisplayMessageFields} from '../types/wire.js'
+import type {FoldablePostureMode} from '../types/android-display.js'
+
+export function isFoldablePostureMode(value: unknown): value is FoldablePostureMode {
+  return value === 'folded' || value === 'unfolded' || value === 'sensor'
+}
 
 export function computeDisplaySize(
   width: number

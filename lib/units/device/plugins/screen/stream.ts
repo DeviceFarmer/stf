@@ -13,18 +13,29 @@ import split from 'split'
 
 import logger from '../../../../util/logger.js'
 import lifecycle from '../../../../util/lifecycle.js'
-import bannerutil from './util/banner.js'
+import bannerutil, {matchesDisplayBanner} from './util/banner.js'
 import FrameParser from './util/frameparser.js'
 import FrameConfig from './util/frameconfig.js'
 import BroadcastSet from './util/broadcastset.js'
 import StateQueue from '../../../../util/statequeue.js'
 import RiskyStream from '../../../../util/riskystream.js'
 import FailCounter from '../../../../util/failcounter.js'
+import {isFoldablePostureMode} from '../../../../util/displayutil.js'
+import wire from '../../../../wire/index.js'
+import wireutil from '../../../../wire/util.js'
 import type {Duplex} from 'stream'
 import type {ScreenGrabber} from '../../../../types/device.js'
+import type {GroupPlugin} from '../../../../types/device-plugins.js'
+import type {AndroidDisplayTarget, FoldablePostureMode} from '../../../../types/android-display.js'
 import adbSyrup from '../../support/adb.js'
+import routerSyrup from '../../support/router.js'
+import pushSyrup from '../../support/push.js'
 import minicapSyrup from '../../resources/minicap.js'
 import displaySyrup from '../util/display.js'
+import groupSyrup from '../group.js'
+import foldablePostureSyrup, {type PostureTransition} from '../foldable-posture.js'
+import serviceSyrup from '../service.js'
+import {requiresDisplayInput} from '../touch/display-geometry.js'
 import optionsSyrup from './options.js'
 
 type SyrupValue<S> = S extends syrup.Syrup<infer T> ? T : never
@@ -44,15 +55,6 @@ interface Minicap {
   run(mode: string, cmd: string): Promise<Duplex>
 }
 
-interface Display {
-  properties: {
-    width: number
-    height: number
-    rotation: number
-  }
-  on(event: 'rotationChange', listener: (rotation: number) => void): unknown
-}
-
 interface FrameProducerEvents {
   start: () => void
   stop: () => void
@@ -62,15 +64,23 @@ interface FrameProducerEvents {
 }
 
 var log = logger.createLogger('device:plugins:screen:stream')
+const foldProjectionWaitMs = 200
 
 export interface ScreenClient {
   onStart: (producer?: any) => Promise<unknown>
   onFrame: (frame: Buffer) => Promise<unknown>
+  onDisplays?: () => Promise<unknown>
 }
 
 export interface ScreenFrameProducer {
   banner: unknown
-  updateProjection: (width: number, height: number) => void
+  updateProjection: (width: number, height: number, revision?: string) => void
+  displayState?: () => {
+    selected: AndroidDisplayTarget
+    singleTouch: boolean
+    posture?: FoldablePostureMode
+    projection?: true
+  } | null
 }
 
 export function handleScreenConnection(
@@ -142,6 +152,14 @@ export function handleScreenConnection(
     })
   }
 
+  function wsDisplaysNotifier() {
+    const state = frameProducer.displayState?.()
+    return state ?
+      send('displays ' + JSON.stringify(state)).catch(function(err) {
+        log.warn('Failed to notify displays to client "%s": %s', id, err.message)
+      }) : Promise.resolve()
+  }
+
   // Sending a ping message every now and then makes sure that
   // reverse proxies like nginx don't time out the connection [1].
   //
@@ -149,13 +167,15 @@ export function handleScreenConnection(
   pingTimer = setInterval(wsPingNotifier, pingInterval)
 
   ws.on('message', function(data) {
-    var match = /^(on|off|(size) ([0-9]+)x([0-9]+))$/.exec(data as unknown as string)
+    const match = /^(on|off|(size) (?:([a-z0-9-]{1,64}) )?(\d+)x(\d+))$/i
+      .exec(data as unknown as string)
     if (match) {
       switch (match[2] || match[1]) {
       case 'on':
         broadcastSet.insert(id, {
           onStart: wsStartNotifier
         , onFrame: wsFrameNotifier
+        , onDisplays: wsDisplaysNotifier
         })
         break
       case 'off':
@@ -163,8 +183,9 @@ export function handleScreenConnection(
         // Keep pinging even when the screen is off.
         break
       case 'size':
-        frameProducer.updateProjection(
-          Number(match[3]), Number(match[4]))
+        if (!match[3] || broadcastSet.get(id)) {
+          frameProducer.updateProjection(Number(match[4]), Number(match[5]), match[3])
+        }
         break
       }
     }
@@ -185,15 +206,27 @@ export default syrup.serial()
   .dependency(minicapSyrup)
   .dependency(displaySyrup)
   .dependency(optionsSyrup)
+  .dependency(groupSyrup)
+  .dependency(routerSyrup)
+  .dependency(pushSyrup)
+  .dependency(foldablePostureSyrup)
+  .dependency(serviceSyrup)
   .define(function(
     options: ScreenStreamOptions
   , adb: Adb
   , minicap: Minicap
-  , display: Display
+  , display: SyrupValue<typeof displaySyrup>
   , screenOptions: ScreenOptions
+  , group: GroupPlugin
+  , router: SyrupValue<typeof routerSyrup>
+  , push: SyrupValue<typeof pushSyrup>
+  , foldablePosture: SyrupValue<typeof foldablePostureSyrup>
+  , service: SyrupValue<typeof serviceSyrup>
   ) {
     log.info('ScreenGrabber set to %s', minicap.grabber)
     log.info('ScreenFrameRate option set to %d', options.screenFrameRate)
+    const trackPosture = foldablePosture.supported
+    const initialPrimary = {width: display.properties.width, height: display.properties.height}
 
     class FrameProducer extends EventEmitter.EventEmitter<FrameProducerEvents> {
       static STATE_STOPPED = 1
@@ -207,16 +240,26 @@ export default syrup.serial()
       declare output: RiskyStream | null
       declare socket: RiskyStream | null
       declare pid: number
-      declare banner: Awaited<ReturnType<FrameProducer['_readBanner']>> | null
+      declare banner: (Awaited<ReturnType<FrameProducer['_readBanner']>> & {
+        display?: AndroidDisplayTarget
+      }) | null
       declare parser: FrameParser | null
       declare frameConfig: FrameConfig
       declare grabber: ScreenGrabber
+      declare runningDisplay: AndroidDisplayTarget
       declare readable: boolean
       declare needsReadable: boolean
       declare failCounter: FailCounter
       declare failed: boolean
       declare readableListener: () => void
       declare broadcastSet: BroadcastSet<ScreenClient>
+      private postureHeld = false
+      private awaitingProjection: {
+        revision: string
+        timer: ReturnType<typeof setTimeout>
+      } | null = null
+      private restartPending = false
+      private bannerRetryRevision: string | null = null
 
       constructor(config: FrameConfig) {
         super()
@@ -230,6 +273,7 @@ export default syrup.serial()
         this.parser = null
         this.frameConfig = config
         this.grabber = minicap.grabber
+        this.runningDisplay = display.target
         this.readable = false
         this.needsReadable = false
         this.failCounter = new FailCounter(3, 10000)
@@ -254,6 +298,9 @@ export default syrup.serial()
           // Just wait.
           break
         case FrameProducer.STATE_STOPPED:
+          if (this.postureHeld || this.awaitingProjection) {
+            return
+          }
           if (this.desiredState.next() === FrameProducer.STATE_STARTED) {
             this.runningState = FrameProducer.STATE_STARTING
             this._startService().bind(this)
@@ -275,12 +322,24 @@ export default syrup.serial()
                 return this._readBanner(this.socket.stream)
               })
               .then(function(this: FrameProducer, banner) {
-                this.banner = banner
-                return this._readFrames(this.socket!.stream)
-              })
-              .then(function(this: FrameProducer) {
+                if (trackPosture && !matchesDisplayBanner(banner, this.runningDisplay)) {
+                  const {revision, width, height, rotation} = this.runningDisplay
+                  log.warn('Foldable capture %dx%d/%d did not match the display %dx%d/%d',
+                    banner.realWidth, banner.realHeight, banner.orientation,
+                    width, height, rotation)
+                  return this._stop(true).then(async() => {
+                    await display.refresh()
+                    if (this.broadcastSet.count && this.bannerRetryRevision !== revision) {
+                      this.bannerRetryRevision = revision
+                      this.start()
+                    }
+                  })
+                }
+                this.bannerRetryRevision = null
+                this.banner = trackPosture ? {...banner, display: this.runningDisplay} : banner
                 this.runningState = FrameProducer.STATE_STARTED
                 this.emit('start')
+                return this._readFrames(this.socket!.stream)
               })
               .catch(function(this: FrameProducer) {
                 return this._stop().finally(function(this: FrameProducer) {
@@ -323,12 +382,25 @@ export default syrup.serial()
 
       stop() {
         log.info('Requesting frame producer to stop')
+        this.clearProjectionWait()
+        this.restartPending = false
+        this.bannerRetryRevision = null
         this.desiredState.push(FrameProducer.STATE_STOPPED)
         this._ensureState()
       }
 
       restart() {
+        if (this.postureHeld || this.awaitingProjection) {
+          this.restartPending = true
+          return
+        }
+        this.restartPending = false
         switch (this.runningState) {
+        case FrameProducer.STATE_STOPPED:
+          if (trackPosture && this.broadcastSet.count) {
+            this.start()
+          }
+          break
         case FrameProducer.STATE_STARTED:
         case FrameProducer.STATE_STARTING:
           this.desiredState.push(FrameProducer.STATE_STOPPED)
@@ -338,29 +410,100 @@ export default syrup.serial()
         }
       }
 
-      updateRotation(rotation: number) {
-        if (this.frameConfig.rotation === rotation) {
-          log.info('Keeping %d as current frame producer rotation', rotation)
-          return
+      updateDisplay(target: AndroidDisplayTarget) {
+        const changed = this.frameConfig.realWidth !== target.width ||
+          this.frameConfig.realHeight !== target.height ||
+          this.frameConfig.rotation !== target.rotation
+        this.frameConfig.realWidth = target.width
+        this.frameConfig.realHeight = target.height
+        this.frameConfig.rotation = target.rotation
+        if (trackPosture && this.broadcastSet.count && (changed || this.awaitingProjection)) {
+          this.waitForProjection(target.revision)
         }
-
-        log.info('Setting frame producer rotation to %d', rotation)
-        this.frameConfig.rotation = rotation
         this._configChanged()
       }
 
-      updateProjection(width: number, height: number) {
-        if (this.frameConfig.virtualWidth === width &&
-            this.frameConfig.virtualHeight === height) {
-          log.info(
-            'Keeping %dx%d as current frame producer projection', width, height)
+      waitForProjection(revision: string) {
+        this.clearProjectionWait()
+        const timer = setTimeout(() => this.finishProjectionWait(revision), foldProjectionWaitMs)
+        this.awaitingProjection = {revision, timer}
+      }
+
+      private clearProjectionWait() {
+        if (this.awaitingProjection) {
+          clearTimeout(this.awaitingProjection.timer)
+          this.awaitingProjection = null
+        }
+      }
+
+      private finishProjectionWait(revision: string) {
+        if (this.awaitingProjection?.revision === revision) {
+          this.clearProjectionWait()
+          this.resume()
+        }
+      }
+
+      beginPostureTransition() {
+        if (this.postureHeld || this.awaitingProjection) {
+          throw new Error('The Foldable display is already preparing')
+        }
+        this.postureHeld = true
+      }
+
+      endPostureTransition() {
+        this.postureHeld = false
+        this.resume()
+        if (this.displaysCurrentFrame()) {
+          // A viewer that joined while frames were held has not received a banner yet.
+          this.emit('start')
+        }
+      }
+
+      private resume() {
+        if (this.postureHeld || this.awaitingProjection) {
           return
         }
+        if (this.restartPending) {
+          this.restart()
+        }
+        this._ensureState()
+      }
 
-        log.info('Setting frame producer projection to %dx%d', width, height)
-        this.frameConfig.virtualWidth = width
-        this.frameConfig.virtualHeight = height
-        this._configChanged()
+      displayState() {
+        if (!trackPosture) {
+          return null
+        }
+        const posture = foldablePosture.mode
+        return {
+          selected: display.target
+        , singleTouch: requiresDisplayInput(display.target, initialPrimary)
+        , projection: true as const
+        , ...(posture ? {posture} : {})
+        }
+      }
+
+      displaysCurrentFrame() {
+        return !trackPosture || (!this.postureHeld && !this.awaitingProjection &&
+          this.runningState === FrameProducer.STATE_STARTED &&
+          this.banner?.display?.revision === display.target.revision)
+      }
+
+      updateProjection(width: number, height: number, revision?: string) {
+        if (!Number.isSafeInteger(width) || width <= 0 ||
+          !Number.isSafeInteger(height) || height <= 0 ||
+          (revision && (!trackPosture || revision !== display.target.revision))) {
+          return
+        }
+        if (this.frameConfig.virtualWidth !== width ||
+            this.frameConfig.virtualHeight !== height) {
+          log.info('Setting frame producer projection to %dx%d', width, height)
+          this.frameConfig.virtualWidth = width
+          this.frameConfig.virtualHeight = height
+          this._configChanged()
+        }
+        if (revision) {
+          this.finishProjectionWait(revision)
+        }
       }
 
       nextFrame() {
@@ -394,13 +537,17 @@ export default syrup.serial()
 
       _socketEnded() {
         log.warn('Connection to minicap ended unexpectedly')
-        this.failCounter.inc()
+        if (!this.postureHeld && !this.awaitingProjection) {
+          this.failCounter.inc()
+        }
         this.restart()
       }
 
       _outputEnded() {
         log.warn('Shell keeping minicap running ended unexpectedly')
-        this.failCounter.inc()
+        if (!this.postureHeld && !this.awaitingProjection) {
+          this.failCounter.inc()
+        }
         this.restart()
       }
 
@@ -415,24 +562,12 @@ export default syrup.serial()
       }
 
       _startService() {
+        this.runningDisplay = display.target
+        const frameRate = options.screenFrameRate > 0 ? ` -r ${options.screenFrameRate}` : ''
         log.info('Launching screen service %s', this.grabber)
-        if (options.screenFrameRate <= 0.0) {
-          return minicap.run(this.grabber, util.format(
-            '-S -Q %d -P %s'
-          , options.screenJpegQuality
-          , this.frameConfig.toString()
-          ))
+        return minicap.run(this.grabber,
+          `-S${frameRate} -Q ${options.screenJpegQuality} -P ${this.frameConfig}`)
           .timeout(10000)
-        }
-        else {
-          return minicap.run(this.grabber, util.format(
-            '-S -r %d -Q %d -P %s'
-          , options.screenFrameRate
-          , options.screenJpegQuality
-          , this.frameConfig.toString()
-          ))
-          .timeout(10000)
-        }
       }
 
       _readOutput(out: Duplex) {
@@ -444,6 +579,10 @@ export default syrup.serial()
           }
 
           if (/ERROR/.test(line)) {
+            if (this.postureHeld || this.awaitingProjection) {
+              log.warn('Minicap error while Foldable display is preparing: "%s"', line)
+              return
+            }
             log.fatal('minicap error: "%s"', line)
             lifecycle.fatal()
             return
@@ -495,7 +634,7 @@ export default syrup.serial()
         return tryConnect(5, 100)
       }
 
-      _stop() {
+      _stop(recoverable = false) {
         return this._disconnectService(this.socket).bind(this)
           .timeout(2000)
           .then(function(this: FrameProducer) {
@@ -510,7 +649,12 @@ export default syrup.serial()
             // being quite aggressive. But if we do, well... assume it
             // stopped anyway for now.
             this.runningState = FrameProducer.STATE_STOPPED
-            this.emit('error', err)
+            if (recoverable) {
+              log.warn('Failed to stop previous Foldable capture: %s', err.message)
+            }
+            else {
+              this.emit('error', err)
+            }
             this.emit('stop')
           })
           .finally(function(this: FrameProducer) {
@@ -651,18 +795,27 @@ export default syrup.serial()
       .then(function(wss) {
         log.info('creating FrameProducer: %s', minicap.grabber)
         var frameProducer = new FrameProducer(
-          new FrameConfig(display.properties, display.properties))
+          new FrameConfig(display.target, display.target))
         var broadcastSet = frameProducer.broadcastSet = new BroadcastSet()
+        let displayPoll: ReturnType<typeof setInterval> | undefined
 
         broadcastSet.on('nonempty', function() {
+          if (trackPosture) {
+            frameProducer.waitForProjection(display.target.revision)
+            display.refresh()
+            displayPoll = setInterval(() => display.refresh(), 2000)
+          }
           frameProducer.start()
         })
 
         broadcastSet.on('empty', function() {
+          clearInterval(displayPoll)
           frameProducer.stop()
         })
 
         broadcastSet.on('insert', function(id) {
+          const client = broadcastSet.get(id)!
+          client.onDisplays?.()
           // If two clients join a session in the middle, one of them
           // may not release the initial size because the projection
           // doesn't necessarily change, and the producer doesn't Getting
@@ -670,25 +823,33 @@ export default syrup.serial()
           // if the producer is already up and running.
           switch (frameProducer.runningState) {
           case FrameProducer.STATE_STARTED:
-            broadcastSet.get(id)!.onStart(frameProducer)
+            if (frameProducer.displaysCurrentFrame()) {
+              client.onStart(frameProducer)
+            }
             break
           }
         })
 
-        display.on('rotationChange', function(newRotation) {
-          frameProducer.updateRotation(newRotation)
+        function notifyDisplays() {
+          broadcastSet.values().forEach(client => client?.onDisplays?.())
+        }
+        display.on('change', target => {
+          frameProducer.updateDisplay(target)
+          notifyDisplays()
         })
+        foldablePosture.on('change', notifyDisplays)
 
         frameProducer.on('start', function() {
-          broadcastSet.keys().map(function(id) {
-            return broadcastSet.get(id)!.onStart(frameProducer)
-          })
+          if (frameProducer.displaysCurrentFrame()) {
+            broadcastSet.values().forEach(client => client?.onStart(frameProducer))
+          }
         })
 
         frameProducer.on('readable', function next() {
           var frame = frameProducer.nextFrame()
           if (frame) {
-            Promise.all(broadcastSet.keys().map(function(id) {
+            const clients = frameProducer.displaysCurrentFrame() ? broadcastSet.keys() : []
+            Promise.all(clients.map(function(id) {
               return broadcastSet.get(id)!.onFrame(frame!).reflect()
             })).then(next)
           }
@@ -710,7 +871,91 @@ export default syrup.serial()
           log.error('Screen WebSocket server error: %s', err.message)
         })
 
+        const invalidatePostureRevision = () => {
+          if (trackPosture) {
+            display.invalidate()
+          }
+        }
+        group.on('join', invalidatePostureRevision)
+        group.on('leave', invalidatePostureRevision)
+
+        async function prepareDisplay<T>(prepare: () => PromiseLike<T>) {
+          if (display.isTransitioning) {
+            throw new Error('A foldable display change is already in progress')
+          }
+          frameProducer.beginPostureTransition()
+          display.beginTransition()
+          try {
+            return await prepare()
+          }
+          catch (error) {
+            display.invalidate()
+            throw error
+          }
+          finally {
+            display.endTransition()
+            frameProducer.endPostureTransition()
+          }
+        }
+
+        if (trackPosture) {
+          service.setRotationHandler((rotation, requester, reservationId) => {
+            if (!requester || !reservationId || !group.isManualOwner(requester, reservationId) ||
+              ![0, 90, 180, 270].includes(rotation)) {
+              return
+            }
+            prepareDisplay(async() => {
+              await foldablePosture.rotate(rotation, requester, reservationId)
+              await display.refreshAfterTransition(geometry => geometry.rotation === rotation)
+            }).catch(error => log.warn('Foldable rotation failed: %s', error))
+          })
+        }
+
+        router.on(wire.FoldablePostureMessage, (channel, message) => {
+          const reply = wireutil.reply(options.serial)
+          const {mode, revision, requester} = message
+          group.get().then(async({reservationId}) => {
+            if (!trackPosture || !reservationId ||
+              !group.isManualOwner(requester, reservationId) ||
+              revision !== display.target.revision || !isFoldablePostureMode(mode)) {
+              throw new Error('Foldable posture request no longer belongs to this session')
+            }
+            const id: string = reservationId
+            const requestedMode: FoldablePostureMode = mode
+            function refreshPanel({previous, committed}: PostureTransition, allowDoze: boolean) {
+              return display.refreshAfterPosture(committed, allowDoze, previous !== committed)
+            }
+            async function applyPosture() {
+              const transition = await foldablePosture.set(requestedMode, requester, id)
+              try {
+                return await refreshPanel(transition, requestedMode === 'sensor')
+              }
+              catch (error) {
+                if (requestedMode !== 'sensor' && group.isManualOwner(requester, id)) {
+                  try {
+                    const restored = await foldablePosture.set('sensor', requester, id)
+                    // The failed refresh kept the geometry from before the request.
+                    await refreshPanel({...restored, previous: transition.previous}, true)
+                  }
+                  catch (restoreError) {
+                    log.warn('Hinge restore after display timeout failed: %s', restoreError)
+                  }
+                }
+                throw error
+              }
+            }
+            const ready = await prepareDisplay(applyPosture)
+            if (!group.isManualOwner(requester, reservationId)) {
+              throw new Error('Foldable posture request no longer belongs to this session')
+            }
+            push.send([channel, reply.okay('success', {mode, revision: ready.revision})])
+          }).catch(err => {
+            push.send([channel, reply.fail(err.message)])
+          })
+        })
+
         lifecycle.observe(function() {
+          clearInterval(displayPoll)
           for (var client of wss.clients) {
             client.terminate()
           }

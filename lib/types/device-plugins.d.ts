@@ -185,6 +185,9 @@ export interface ServicePlugin extends EventEmitter<ServiceEvents> {
   getDisplay(id: number): Bluebird<DisplayProperties>
   wake(): void
   rotate(rotation: number): void
+  setRotationHandler(
+    handler: (rotation: number, requester?: string | null, reservationId?: string | null) => void
+  ): void
   freezeRotation(rotation: number): void
   thawRotation(): void
   version(): Bluebird<string | null>
@@ -226,6 +229,10 @@ export interface GroupEvents {
 
 export interface GroupPlugin extends EventEmitter<GroupEvents> {
   get(): Bluebird<OwnerMessage>
+  isManualOwner(requester: string, reservationId: string): boolean
+  beforeManualJoin(handler: (signal: AbortSignal) => PromiseLike<void>): void
+  beforeLeave(handler: (owner: OwnerMessage) => PromiseLike<void>): void
+  manageManualRotation(): void
   join(
     newGroup: OwnerMessage
   , timeout?: number | null

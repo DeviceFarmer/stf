@@ -49,10 +49,16 @@ export default syrup.serial()
   ) {
     var log = logger.createLogger('device:plugins:group')
     var currentGroup: OwnerMessage | null = null
+    let currentUsage: string | null = null
     let currentLeaseId: string | null = null
     let joining: Promise<OwnerMessage> | null = null
     let leaving: Promise<OwnerMessage> | null = null
     let stopping = false
+    let manualRotationManaged = false
+    const shutdown = new AbortController()
+    const beforeManualJoin: Array<(signal: AbortSignal) => PromiseLike<void>> = []
+    const beforeLeave: Array<(owner: OwnerMessage) => PromiseLike<void>> = []
+    const isManualUsage = (usage?: string | null) => (usage ?? 'manual') === 'manual'
 
     var plugin = new events.EventEmitter() as GroupPlugin
     const automationLease = new AutomationLease(() => {
@@ -67,6 +73,22 @@ export default syrup.serial()
       return currentGroup
     })
 
+    plugin.isManualOwner = (requester, reservationId) => !!reservationId &&
+      !joining && !leaving && !stopping && currentLeaseId === null && isManualUsage(currentUsage) &&
+      currentGroup?.email === requester && currentGroup.reservationId === reservationId
+
+    plugin.beforeManualJoin = handler => {
+      beforeManualJoin.push(handler)
+    }
+
+    plugin.beforeLeave = handler => {
+      beforeLeave.push(handler)
+    }
+
+    plugin.manageManualRotation = () => {
+      manualRotationManaged = true
+    }
+
     plugin.join = function(
       newGroup: OwnerMessage, timeout, usage, identifier, leaseId
     ) {
@@ -80,9 +102,13 @@ export default syrup.serial()
           }
           return currentGroup!
         })
-        .catch(grouputil.NoGroupError, function() {
+        .catch(grouputil.NoGroupError, async function() {
           if (stopping) {
             throw new Error('Device worker is stopping')
+          }
+          if (!leaseId && isManualUsage(usage) && beforeManualJoin.length) {
+            await Promise.each(beforeManualJoin, prepare => prepare(shutdown.signal))
+            shutdown.signal.throwIfAborted()
           }
           const group = new wire.OwnerMessage({...newGroup, reservationId: randomUUID()})
           const automationLeaseId = usage === 'automation' ? leaseId || null : null
@@ -90,6 +116,7 @@ export default syrup.serial()
             automationLease.start(group.email, automationLeaseId, timeout ?? options.groupTimeout)
           }
           currentGroup = group
+          currentUsage = usage ?? null
           currentLeaseId = automationLeaseId
           log.important('Now owned by "%s"', currentGroup.email)
           log.info('Subscribing to group channel "%s"', currentGroup.group)
@@ -139,6 +166,10 @@ export default syrup.serial()
           if (reservationId && group.reservationId !== reservationId) {
             throw new grouputil.RequirementMismatchError('reservationId')
           }
+          return Promise.each(beforeLeave, handler => handler(group)).return(group)
+        })
+        .then(function(group) {
+          const thawRotation = !manualRotationManaged || !isManualUsage(currentUsage)
           log.important('No longer owned by "%s" (reason: %s)', group.email, reason)
           log.info('Unsubscribing from group channel "%s"', group.group)
           channels.unregister(group.group)
@@ -147,8 +178,16 @@ export default syrup.serial()
             options.serial, group, reason, reason === 'device_absent' ? null : currentLeaseId
           ))])
           automationLease.clear()
+          currentUsage = null
           currentLeaseId = null
           currentGroup = null
+          if (options.screenReset) {
+            service.pressKey('home')
+            if (thawRotation) {
+              service.thawRotation()
+            }
+          }
+          service.releaseWakeLock()
           plugin.emit('leave', group)
           return group
         })
@@ -163,14 +202,6 @@ export default syrup.serial()
     plugin.on('join', function() {
       service.wake()
       service.acquireWakeLock()
-    })
-
-    plugin.on('leave', function() {
-      if (options.screenReset) {
-        service.pressKey('home')
-        service.thawRotation()
-      }
-      service.releaseWakeLock()
     })
 
     router
@@ -241,7 +272,10 @@ export default syrup.serial()
           .then(function() {
             plugin.emit('autojoin', message.identifier, true)
           })
-          .catch(grouputil.AlreadyGroupedError, function() {
+          .catch(function(error) {
+            if (!(error instanceof grouputil.AlreadyGroupedError)) {
+              log.warn('Device preparation for autojoin failed: %s', error)
+            }
             plugin.emit('autojoin', message.identifier, false)
           })
       })
@@ -266,19 +300,29 @@ export default syrup.serial()
             , reply.fail(err.message)
             ])
           })
-          .catch(function() {
+          .catch(function(error) {
+            log.warn('Device cleanup failed: %s', error)
             push.send([channel, reply.fail('Device cleanup failed')])
           })
       })
 
     channels.on('timeout', function(channel) {
-      if (currentGroup && channel === currentGroup.group) {
-        plugin.leave('automatic_timeout').catch(log.error.bind(log))
+      const owner = currentGroup
+      if (owner && channel === owner.group) {
+        plugin.leave('automatic_timeout', owner.reservationId).catch(error => {
+          log.error('Device cleanup after timeout failed: %s', error)
+          // The timeout already unregistered this channel. Retry cleanup
+          // without releasing the reservation before its hooks succeed.
+          if (currentGroup === owner && !stopping) {
+            channels.register(channel, {timeout: 5000, alias: solo.channel})
+          }
+        })
       }
     })
 
     lifecycle.observe(function() {
       stopping = true
+      shutdown.abort(new Error('Device worker is stopping'))
       return plugin.leave('device_absent')
         .catch(grouputil.NoGroupError, function() {
           return true

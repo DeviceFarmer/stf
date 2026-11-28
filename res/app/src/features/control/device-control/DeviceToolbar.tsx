@@ -1,4 +1,5 @@
 import {ActionIcon, Divider, Group, Menu, Text, Tooltip, UnstyledButton} from '@mantine/core'
+import type {ReactNode} from 'react'
 import {
   IconChevronDown
   , IconDeviceMobile
@@ -69,27 +70,34 @@ function DeviceNameMenu({device, actions}: {device: Device, actions: DeviceActio
   )
 }
 
-export function DeviceToolbar({device, actions, showScreen, onToggleScreen, readOnly = false}: {
+export function DeviceToolbar({
+  device, actions, showScreen, onToggleScreen, readOnly = false, postureButtons
+}: {
   device: Device
   actions: DeviceActions
   readOnly?: boolean
   showScreen: boolean
   onToggleScreen: () => void
+  postureButtons?: ReactNode
 }) {
   const {t} = useTranslation()
-  const rotationSuffix = `(${t('Current rotation:')} ${actions.rotation}°)`
+  const rotationSuffix = actions.rotation === null ? '' :
+    ` (${t('Current rotation:')} ${actions.rotation}°)`
+  const rotationDisabled = readOnly || actions.rotationDisabled
+  const rightButtons = postureButtons ? classes.rightButtonsWithPosture : classes.rightButtons
 
   return (
     <div className={`${classes.toolbar} stf-vnc-navbar`}>
       <DeviceNameMenu device={device} actions={actions} />
-      <Group gap={6} wrap='nowrap' className={`${classes.rightButtons} stf-vnc-right-buttons`}>
+      <Group gap={6} wrap={postureButtons ? 'wrap' : 'nowrap'} justify='flex-end'
+        className={`${rightButtons} stf-vnc-right-buttons`}>
         {device.platform !== 'iOS' && <>
         <ActionIcon.Group>
-          <Tooltip label={`${t('Portrait')} ${rotationSuffix}`} position='bottom'>
+          <Tooltip label={`${t('Portrait')}${rotationSuffix}`} position='bottom'>
             <ActionIcon
               size='md'
               variant={actions.currentRotation === 'portrait' ? 'filled' : 'default'}
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Portrait')}
               aria-pressed={actions.currentRotation === 'portrait'}
               onClick={() => actions.tryToRotate('portrait')}
@@ -97,11 +105,11 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen, read
               <IconDeviceMobile size={16} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label={`${t('Landscape')} ${rotationSuffix}`} position='bottom'>
+          <Tooltip label={`${t('Landscape')}${rotationSuffix}`} position='bottom'>
             <ActionIcon
               size='md'
               variant={actions.currentRotation === 'landscape' ? 'filled' : 'default'}
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Landscape')}
               aria-pressed={actions.currentRotation === 'landscape'}
               onClick={() => actions.tryToRotate('landscape')}
@@ -115,7 +123,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen, read
             <ActionIcon
               size='md'
               variant='default'
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Rotate Left')}
               onClick={() => actions.rotateBy(90)}
             >
@@ -126,7 +134,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen, read
             <ActionIcon
               size='md'
               variant='default'
-              disabled={readOnly}
+              disabled={rotationDisabled}
               aria-label={t('Rotate Right')}
               onClick={() => actions.rotateBy(-90)}
             >
@@ -134,6 +142,7 @@ export function DeviceToolbar({device, actions, showScreen, onToggleScreen, read
             </ActionIcon>
           </Tooltip>
         </ActionIcon.Group>
+        {postureButtons}
         <Divider orientation='vertical' />
         </>}
         <Tooltip label={showScreen ? t('Hide Screen') : t('Show Screen')} position='bottom'>

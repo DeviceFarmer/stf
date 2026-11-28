@@ -38,12 +38,24 @@
   border-radius: 14px;
 }
 
-.device-screen.has-frame canvas.screen {
+.device-screen.revisioned-rotation canvas.screen {
+  transition: box-shadow 200ms ease;
+}
+
+.device-screen.has-frame canvas.screen,
+.device-screen .fold-transition-frame {
   background: #000;
   box-shadow:
     0 0 0 6px #050608,
     0 0 0 7px rgba(255, 255, 255, 0.1),
     0 22px 56px rgba(0, 0, 0, 0.55);
+}
+
+.device-screen .fold-transition-frame {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 14px;
 }
 
 .device-screen .positioner .hacky-stretcher {
@@ -129,6 +141,16 @@
   justify-content: center;
   pointer-events: none;
   color: rgba(255, 255, 255, 0.45);
+}
+
+.device-screen.has-frame .screen-loading {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device-screen .fold-transition-frame {
+    display: none;
+  }
 }
 
 .device-screen .screen-error {
