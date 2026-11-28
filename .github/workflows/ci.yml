@@ -232,6 +232,52 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
 
+  # The project runs on Node 26, but `engines` still allows 22.18+. Run the
+  # unit specs on the older lines so a Node 26-only API cannot slip through.
+  unit-compat:
+    name: Unit tests / Node ${{ matrix.node }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.18.0', '24']
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Restore dependency cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            node_modules
+          key: ${{ needs.build.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: mocha unit specs
+        id: unit
+        run: npm run test:unit
+
+      - name: Record verdict
+        if: always()
+        run: |
+          bash .github/scripts/verdict.sh 'unit-node-${{ matrix.node }}' \
+            'Unit tests (mocha, Node ${{ matrix.node }})' \
+            '${{ steps.unit.outcome || job.status }}' 'the unit specs on a supported older Node'
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verdict-unit-node-${{ matrix.node }}
+          path: verdict.json
+          retention-days: 3
+          if-no-files-found: warn
+
   component:
     name: Component tests
     needs: build
@@ -1003,7 +1049,7 @@ jobs:
 
   report:
     name: Report
-    needs: [plan, build, lint, unit, component, integration, android, compose]
+    needs: [plan, build, lint, unit, unit-compat, component, integration, android, compose]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -1031,7 +1077,7 @@ jobs:
           # as a failure rather than quietly vanishing from the table. The
           # Android side comes from the same file the matrix is built from, so
           # adding a leg cannot leave it unenforced.
-          EXPECTED_TIERS: build lint unit component integration compose
+          EXPECTED_TIERS: build lint unit unit-node-22.18.0 unit-node-24 component integration compose
           EXPECTED_ANDROID_FILE: .github/android-matrix.json
         run: node .github/scripts/render-report.mts verdicts report.md
 

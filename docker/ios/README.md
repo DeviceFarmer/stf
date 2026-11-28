@@ -127,7 +127,7 @@ If Xcode already installed the runner, do not copy the artifact just to run it.
 ## Prepare Linux
 
 Use a local, rootful Docker Engine with the Compose plugin, an official Node.js
-22.18+ or 24 build with native TypeScript support,
+22.18+, 24 or 26 build with native TypeScript support,
 Git, `/dev/net/tun` and host `usbmuxd`. CI uses Ubuntu 24.04; the clean hardware
 trial used Ubuntu 26.04 amd64. Docker Desktop, rootless Docker and remote Docker contexts are not the
 USB launch path. Follow [Docker's Ubuntu installation guide](https://docs.docker.com/engine/install/ubuntu/)

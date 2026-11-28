@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 5
     strategy:
       matrix:
-        node: ['22.18.0', '24']
+        node: ['22.18.0', '24', '26']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: '.nvmrc'
       - name: Render and validate the local stack without a phone
         run: >-
           node tools/ios-prototype/compose.mts prepare
@@ -61,14 +61,14 @@ jobs:
       - name: Initialize an existing non-root-owned device volume
         run: |
           docker volume create stf-ios-state-check
-          docker run --rm --volume stf-ios-state-check:/state node:24-bookworm-slim \
+          docker run --rm --volume stf-ios-state-check:/state node:26-bookworm-slim \
             node -e 'require("fs").chownSync("/state",1000,1000)'
           docker run --rm --user 0:0 --cap-drop ALL --cap-add CHOWN --cap-add FOWNER \
             --volume stf-ios-state-check:/state \
             --volume "$PWD/tools/ios-prototype/container.mts:/container.mts:ro" \
-            node:24-bookworm-slim node /container.mts init
+            node:26-bookworm-slim node /container.mts init
           docker run --rm --user 1000:1000 --volume stf-ios-state-check:/state \
-            node:24-bookworm-slim node -e 'require("fs").writeFileSync("/state/home/test","ok")'
+            node:26-bookworm-slim node -e 'require("fs").writeFileSync("/state/home/test","ok")'
           docker volume rm stf-ios-state-check
 
   image:
@@ -104,6 +104,6 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: '.nvmrc'
       - name: Test signing and installation without Apple tools or devices
         run: python3 -B -m unittest discover -s tools/wda-renewal -p 'test_*.py'

@@ -41,7 +41,7 @@ power command already accepted by iOS.
 ## Runtime dependencies
 
 The runtime entry point uses Node.js native TypeScript support without npm
-libraries. Use an official Node.js 22.18+ or 24 build and verify
+libraries. Use an official Node.js 22.18+, 24 or 26 build and verify
 `node -p process.features.typescript`; some distribution builds disable it.
 
 | Dependency | Tested source |

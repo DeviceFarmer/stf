@@ -270,15 +270,13 @@ the jobs compile and bundle in their own steps, and `npm pack` and
 without the lockfile. `test/playwright` has no lockfile; its cache key hashes
 its own `package.json`.
 
-Every job reads its Node version from `.nvmrc` (22.23.4), which is also what the
+Every job reads its Node version from `.nvmrc` (26.13.1), which is also what the
 `Dockerfile` and `.semaphore/semaphore.yml` use, so CI tests the runtime the
 project actually ships rather than a second version pinned in the workflow.
-
-The npm publish job in `release.yml` is the exception: it pins Node 24, because
-npm trusted publishing needs Node 22.14.0 or later and npm 11.5.1 or later, and
-22.23.4 ships npm 10.x. The tarball's bundle is therefore built on a runtime no
-test tier exercises. Nothing else in the release path needs it, so the rest
-reads `.nvmrc` like every other job.
+Node 26 ships npm 11.20.0, satisfying npm trusted publishing's 11.5.1+
+requirement, so the npm publish job in `release.yml` reads `.nvmrc` as well.
+`engines` still allows Node 22.18 and later, so the `unit-compat` job runs the
+unit specs on 22.18.0 and 24 as well.
 
 For the Playwright suite you need a running `stf local`:
 

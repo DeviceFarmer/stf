@@ -18,7 +18,9 @@ WORKDIR /app
 # Copy app source.
 COPY . /tmp/build/
 
-# Install app requirements
+# Install app requirements. Node stays on 22: nodejs.org publishes no armv7l
+# binaries for 24 or 26. Needs a decision before Node 22 reaches end of life
+# (2027-04-30): build Node from source, or drop this image.
 RUN export DEBIAN_FRONTEND=noninteractive && \
     echo '--- Updating repositories' && \
     apt-get update && \

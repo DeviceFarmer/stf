@@ -32,7 +32,7 @@ const expected = JSON.parse(fs.readFileSync(path.join(root, 'expected.json')))
 const secret = '/run/secrets/npmrc'
 const phase = process.argv[2]
 const command = process.argv[3]
-assert.equal(process.versions.node.split('.')[0], '22', 'Expected Node.js 22')
+assert.equal(process.versions.node.split('.')[0], expected.node, 'Expected Node.js ' + expected.node)
 assert.equal(process.getuid(), expected.uid, 'Unexpected npm user ID')
 assert.equal(process.getgid(), expected.uid, 'Unexpected npm group ID')
 assert.equal(fs.existsSync('/build/.npmrc'), false, 'Context .npmrc reached COPY')
@@ -43,13 +43,13 @@ if (phase === 'after') {
   assert.equal(fs.readFileSync(path.join(root, process.argv[3] + '.ok'), 'utf8'), 'ok\n')
   process.exit(0)
 }
-assert.equal(fs.existsSync(secret), expected.secret, 'Optional secret mount is incorrect')
+assert.equal(fs.existsSync(secret), expected.mounted, 'Optional secret mount is incorrect')
 if (phase === 'install') {
   assert.equal(command, expected.lockfile ? 'ci' : 'install',
     'The lockfile decides between npm ci and npm install')
 }
 let registry = 'https://registry.npmjs.org/'
-if (expected.secret) {
+if (expected.mounted) {
   assert.equal(fs.statSync(secret).mode & 0o777, 0o444, 'Secret must be mode 0444')
   const match = fs.readFileSync(secret, 'utf8').match(/^registry=(.+)$/m)
   assert(match, 'Synthetic secret has no registry setting')
@@ -237,6 +237,9 @@ def main():
     args = parser.parse_args()
     repository = Path(__file__).resolve().parents[2]
     source = (args.dockerfile or repository / 'Dockerfile').read_text()
+    node_major = re.search(r'^ARG NODE_VERSION=(\d+)\.', source, re.M)
+    if not node_major:
+        raise ValueError('The Dockerfile has no ARG NODE_VERSION')
     ignore = repository / '.dockerignore'
     scoped_ignore = repository / 'Dockerfile.dockerignore'
     image = json.loads(run(['docker', 'image', 'inspect', args.image]))[0]
@@ -264,13 +267,13 @@ def main():
             secret.write_text('registry=https://' + secret_marker.decode() + '.invalid/\n'
                               + '//example.invalid/:_authToken=' + token_marker.decode() + '\n')
             for uid in (998, 999):
-                for with_secret in (False, True):
-                    variant = str(uid) + ('-secret' if with_secret else '-default')
+                for mounted in (False, True):
+                    variant = str(uid) + ('-secret' if mounted else '-default')
                     # UID 999 takes the npm ci branch, UID 998 the npm install branch.
                     lockfile = uid == 999
                     print('Checking npmrc: UID ' + str(uid) + ', '
-                          + ('secret supplied' if with_secret else 'npm defaults'), flush=True)
-                    checks = {'uid': uid, 'secret': with_secret, 'lockfile': lockfile,
+                          + ('secret supplied' if mounted else 'npm defaults'), flush=True)
+                    checks = {'uid': uid, 'mounted': mounted, 'lockfile': lockfile,
                               'phases': [], 'layers': 'pending'}
                     report['variants'].append(checks)
                     context = temporary / variant
@@ -288,7 +291,7 @@ def main():
                     probe = context / '.npmrc-smoke'
                     probe.mkdir()
                     (probe / 'probe.cjs').write_text(PROBE)
-                    (probe / 'expected.json').write_text(json.dumps({'uid': uid, 'secret': with_secret,
+                    (probe / 'expected.json').write_text(json.dumps({'node': node_major.group(1), 'uid': uid, 'mounted': mounted,
                                                                            'lockfile': lockfile,
                                                                            'operation': uuid.uuid4().hex}))
                     dockerfile = temporary / (variant + '.Dockerfile')
@@ -301,7 +304,7 @@ def main():
                         command = ['docker', 'build', '--platform', args.platform, '--network=none',
                                    '--pull=false', '--target', stage, '--tag', tag,
                                    '--file', str(dockerfile)]
-                        if with_secret:
+                        if mounted:
                             command += ['--secret', 'id=npmrc,src=' + str(secret)]
                         command.append(str(context))
                         run(command, markers, env=environment)

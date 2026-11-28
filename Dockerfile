@@ -7,7 +7,7 @@ ARG UBUNTU_IMAGE=ubuntu:22.04@sha256:076e7bf82319619f28dd0aa9c02ab34b055ad371003
 
 FROM ${UBUNTU_IMAGE} AS node-base
 ARG TARGETARCH
-ARG NODE_VERSION=22.23.4
+ARG NODE_VERSION=26.13.1
 RUN set -eu; \
     export DEBIAN_FRONTEND=noninteractive; \
     apt-get update; \
