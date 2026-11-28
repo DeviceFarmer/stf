@@ -273,14 +273,10 @@ its own `package.json`.
 Every job reads its Node version from `.nvmrc` (26.13.1), which is also what the
 `Dockerfile` and `.semaphore/semaphore.yml` use, so CI tests the runtime the
 project actually ships rather than a second version pinned in the workflow.
+Node 26 ships npm 11.20.0, satisfying npm trusted publishing's 11.5.1+
+requirement, so the npm publish job in `release.yml` reads `.nvmrc` as well.
 `engines` still allows Node 22.18 and later, so the `unit-compat` job runs the
 unit specs on 22.18.0 and 24 as well.
-
-The npm publish job in `release.yml` is the exception: it pins Node 24, because
-npm trusted publishing needs npm 11.5.1 or later. Node 26 ships a newer npm, so
-the pin may no longer be needed; it was not rechecked. The tarball's bundle is
-built on a runtime other than `.nvmrc`'s. Nothing else in the release path needs
-it, so the rest reads `.nvmrc` like every other job.
 
 For the Playwright suite you need a running `stf local`:
 

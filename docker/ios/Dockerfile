@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim
+FROM node:26-bookworm-slim
 ARG TARGETARCH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

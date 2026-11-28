@@ -100,10 +100,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
-
-      - name: Take npm to a version that can publish with OIDC
-        run: npm install -g npm@^11.5.1
+          node-version-file: '.nvmrc'
 
       - name: Configure a fast apt mirror
         uses: vegardit/fast-apt-mirror.sh@806c59276adfff2df420124ad5e4587f018c358a

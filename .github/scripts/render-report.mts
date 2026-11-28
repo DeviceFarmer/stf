@@ -46,6 +46,8 @@ var CORE_LABELS: Record<string, string> = {
   build: 'Build (npm + webpack)'
 , lint: 'Lint (eslint + jsonlint + translations + workflow shell)'
 , unit: 'Unit tests (mocha)'
+, 'unit-node-22.18.0': 'Unit tests (mocha, Node 22.18.0)'
+, 'unit-node-24': 'Unit tests (mocha, Node 24)'
 , component: 'Component tests (vitest + React)'
 , integration:
     'Integration + device-less E2E (stf local + RethinkDB + Playwright)'
